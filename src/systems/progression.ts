@@ -1,12 +1,14 @@
 /**
  * Pure XP / level rules for DUNJUNZ.
- * Formula curve: harder each level, still slice-friendly.
+ * Unbounded formula curve (no level-10 / level-20 soft max for play).
+ * A high safety ceiling avoids infinite loops on corrupt XP.
  */
 
-export const MAX_LEVEL = 20;
+/** Loop safety only — not a design cap players should hit in normal play. */
+export const LEVEL_SAFETY_CEILING = 999;
 export const ATTR_POINTS_PER_LEVEL = 2;
 
-/** XP required to go from level L → L+1. */
+/** XP required to go from level L → L+1. Grows with L. */
 export function xpToAdvanceFrom(level: number): number {
   const L = Math.max(1, Math.floor(level));
   return Math.floor(6 + 4 * L + 0.5 * L * L);
@@ -44,25 +46,30 @@ export interface GrantXpResult {
   attrPoints: number;
 }
 
+/** Highest level whose cumulative XP threshold is <= xp. */
 export function levelFromXp(xp: number): number {
   const safe = Math.max(0, Math.floor(xp));
   let level = 1;
-  for (let L = 2; L <= MAX_LEVEL; L++) {
-    if (safe >= xpToReachLevel(L)) level = L;
+  // Walk until next band costs more than remaining XP
+  while (level < LEVEL_SAFETY_CEILING) {
+    const needForNext = xpToReachLevel(level + 1);
+    if (safe >= needForNext) level += 1;
     else break;
   }
   return level;
 }
 
+/** XP still needed for next level (always > 0 under safety ceiling). */
 export function xpToNext(xp: number): number {
   const level = levelFromXp(xp);
-  if (level >= MAX_LEVEL) return 0;
+  if (level >= LEVEL_SAFETY_CEILING) return 0;
   return xpToReachLevel(level + 1) - xp;
 }
 
+/** Progress within current level band for HUD. */
 export function xpProgressInLevel(xp: number): { into: number; need: number } {
   const level = levelFromXp(xp);
-  if (level >= MAX_LEVEL) return { into: 0, need: 0 };
+  if (level >= LEVEL_SAFETY_CEILING) return { into: 0, need: 0 };
   const floor = xpToReachLevel(level);
   const ceil = xpToReachLevel(level + 1);
   return { into: xp - floor, need: ceil - floor };
@@ -91,8 +98,10 @@ export function enemyXpReward(kind: string): number {
   return ENEMY_XP[kind] ?? 1;
 }
 
-/** Sample cumulative thresholds for docs/tests (levels 1–10). */
-export function sampleXpTable(max = 10): { level: number; cumulative: number; band: number }[] {
+/** Sample cumulative thresholds for docs/tests. */
+export function sampleXpTable(
+  max = 20,
+): { level: number; cumulative: number; band: number }[] {
   const rows = [];
   for (let L = 1; L <= max; L++) {
     rows.push({
@@ -103,3 +112,6 @@ export function sampleXpTable(max = 10): { level: number; cumulative: number; ba
   }
   return rows;
 }
+
+/** @deprecated Use LEVEL_SAFETY_CEILING — kept so old imports don't break. */
+export const MAX_LEVEL = LEVEL_SAFETY_CEILING;

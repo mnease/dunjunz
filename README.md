@@ -41,7 +41,7 @@ Progress is stored in `localStorage` (`dunjunz-save-v1`).
 
 ## RPG systems (v0.4)
 
-- **XP curve** — formula `6 + 4L + 0.5L²` per level band; harder as you climb
+- **XP curve** — formula `6 + 4L + 0.5L²` per level band; harder as you climb; **no level-10 cap** (levels continue)
 - **Attributes** — STR DEX VIT INT LCK; **+2 points per level**; spend in inventory with **1–5**
 - **8 equip slots** — weapon, helmet, breastplate, greaves, shoes, gloves, amulet, key
 - **Rarity + enhancement** — common→legendary; gear rolls on chest open (LCK helps)

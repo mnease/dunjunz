@@ -31,14 +31,17 @@ describe('XP formula scaling', () => {
   it('band costs increase with level', () => {
     expect(xpToAdvanceFrom(1)).toBeLessThan(xpToAdvanceFrom(5));
     expect(xpToAdvanceFrom(5)).toBeLessThan(xpToAdvanceFrom(10));
+    expect(xpToAdvanceFrom(10)).toBeLessThan(xpToAdvanceFrom(25));
   });
 
-  it('levelFromXp matches cumulative thresholds', () => {
+  it('levelFromXp matches cumulative thresholds past 10', () => {
     expect(levelFromXp(0)).toBe(1);
     expect(levelFromXp(xpToReachLevel(2))).toBe(2);
     expect(levelFromXp(xpToReachLevel(5))).toBe(5);
     expect(levelFromXp(xpToReachLevel(10) - 1)).toBe(9);
     expect(levelFromXp(xpToReachLevel(10))).toBe(10);
+    expect(levelFromXp(xpToReachLevel(20))).toBe(20);
+    expect(levelFromXp(xpToReachLevel(50))).toBe(50);
   });
 
   it('grantXp awards attr points on level up', () => {
