@@ -119,6 +119,15 @@ function drawItemIcon(
     ctx.fillRect(11, 4, 2, 3);
     return;
   }
+  if (itemId === 'mild_sword') {
+    ctx.fillStyle = '#dfe6f0';
+    ctx.fillRect(11, 4, 2, 14);
+    ctx.fillStyle = '#c9a227';
+    ctx.fillRect(8, 14, 8, 2);
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(11, 16, 2, 4);
+    return;
+  }
   if (itemId === 'leather_armor') {
     ctx.fillStyle = '#8b5a2b';
     ctx.fillRect(6, 7, 12, 12);
@@ -274,6 +283,7 @@ export function generateTextures(scene: Phaser.Scene): void {
   const iconIds = [
     'empty',
     'potion',
+    'mild_sword',
     'leather_armor',
     'reinforced_leather',
     'gold_trinket',

@@ -21,6 +21,7 @@ export function defaultSave(): SaveData {
     coins: 0,
     inventory: {},
     armor: 0,
+    equippedWeapon: null,
     equippedArmor: null,
     equippedAmulet: null,
   };
@@ -56,6 +57,12 @@ export function loadSave(): SaveData {
       xp: typeof parsed.xp === 'number' ? parsed.xp : base.xp,
       coins: typeof parsed.coins === 'number' ? parsed.coins : base.coins,
       armor: typeof parsed.armor === 'number' ? parsed.armor : base.armor,
+      equippedWeapon:
+        typeof parsed.equippedWeapon === 'string'
+          ? parsed.equippedWeapon
+          : parsed.equippedWeapon === null
+            ? null
+            : base.equippedWeapon,
       equippedArmor:
         typeof parsed.equippedArmor === 'string'
           ? parsed.equippedArmor

@@ -30,6 +30,9 @@ import {
   autoEquipEmptySlots,
   cycleAmuletEquip,
   cycleArmorEquip,
+  cycleWeaponEquip,
+  hasWeaponEquipped,
+  syncDerivedStats,
   useInventoryItem,
 } from '../systems/inventory';
 import { loadSave, writeSave } from '../systems/save';
@@ -179,6 +182,7 @@ export class GameScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.I,
       Phaser.Input.Keyboard.KeyCodes.U,
       Phaser.Input.Keyboard.KeyCodes.N,
+      Phaser.Input.Keyboard.KeyCodes.W,
     ]);
     this.cursors = kb.createCursorKeys();
     this.keys = {
@@ -212,6 +216,7 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-ONE', this.onUseItemKey, this);
     kb.on('keydown-A', this.onArmorEquipKey, this);
     kb.on('keydown-N', this.onAmuletEquipKey, this);
+    kb.on('keydown-W', this.onWeaponEquipKey, this);
 
     this.player = this.physics.add.sprite(0, 0, 'player');
     this.player.setScale(SCALE);
@@ -246,6 +251,7 @@ export class GameScene extends Phaser.Scene {
       kb.off('keydown-ONE', this.onUseItemKey, this);
       kb.off('keydown-A', this.onArmorEquipKey, this);
       kb.off('keydown-N', this.onAmuletEquipKey, this);
+      kb.off('keydown-W', this.onWeaponEquipKey, this);
       writeSave(this.save);
     });
 
@@ -348,6 +354,21 @@ export class GameScene extends Phaser.Scene {
     this.game.events.emit('toast', result.message);
   };
 
+  private onWeaponEquipKey = (): void => {
+    // Only while inventory open so W still moves up in the world
+    if (!this.inventoryOpen || this.dialogLocked || this.paused) return;
+    const result = cycleWeaponEquip(this.save);
+    if (!result.ok) {
+      this.game.events.emit('toast', result.reason);
+      return;
+    }
+    this.save = result.save;
+    writeSave(this.save);
+    this.emitHud();
+    this.game.events.emit('inventory-refresh', this.save);
+    this.game.events.emit('toast', result.message);
+  };
+
   private onArmorEquipKey = (): void => {
     // Only equip while inventory is open so A still moves left in the world
     if (!this.inventoryOpen || this.dialogLocked || this.paused) return;
@@ -382,13 +403,23 @@ export class GameScene extends Phaser.Scene {
     return TILE * SCALE * 1.75;
   }
 
-  /** Grant starter sword (old man gift or ground pickup). */
+  /** Grant starter sword (old man gift or ground pickup) into weapon slot. */
   private grantSword(showDialog = true): void {
-    if (this.save.hasSword) return;
-    this.save.hasSword = true;
     if (!this.save.collected.includes('starter-sword')) {
       this.save.collected.push('starter-sword');
     }
+    // Add weapon to bag if missing
+    if ((this.save.inventory.mild_sword ?? 0) <= 0) {
+      this.save.inventory = {
+        ...this.save.inventory,
+        mild_sword: 1,
+      };
+    }
+    // Auto-equip if weapon slot empty
+    if (!this.save.equippedWeapon) {
+      this.save.equippedWeapon = 'mild_sword';
+    }
+    this.save = syncDerivedStats(this.save);
     // Remove ground sword if still present
     const ground = this.actors.find((a) => a.id === 'starter-sword' && a.alive);
     if (ground) {
@@ -402,8 +433,9 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('dialog-show', [
         'YOU GOT THE SWORD OF',
         'MILD ENTHUSIASM!',
+        'IT IS IN YOUR WEAPON SLOT.',
         'PRESS SPACE OR Z TO SWING.',
-        'TRY NOT TO HIT THE FURNITURE.',
+        'I BAG · W TO CYCLE WEAPON.',
       ]);
     } else {
       this.game.events.emit('toast', 'SWORD EQUIPPED!');
@@ -695,7 +727,7 @@ export class GameScene extends Phaser.Scene {
 
   private hitEnemy(actor: Actor): void {
     if (!actor.alive || actor.hurtCooldown > 0 || !this.attacking) return;
-    if (!this.save.hasSword) return;
+    if (!hasWeaponEquipped(this.save)) return;
 
     actor.hurtCooldown = 250;
     actor.hp -= 1;
@@ -957,8 +989,11 @@ export class GameScene extends Phaser.Scene {
   private tryAttack(): void {
     if (this.attacking || this.dialogLocked || this.paused) return;
 
-    if (!this.save.hasSword) {
-      this.game.events.emit('toast', 'NO SWORD YET — TALK TO THE OLD MAN');
+    if (!hasWeaponEquipped(this.save)) {
+      this.game.events.emit(
+        'toast',
+        'NO WEAPON EQUIPPED — TALK TO OLD MAN / [I] THEN W',
+      );
       return;
     }
 

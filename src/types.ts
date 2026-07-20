@@ -29,13 +29,14 @@ export type EntityKind =
 /** Inventory item ids used by loot + shop + equip. */
 export type ItemId =
   | 'potion'
+  | 'mild_sword'
   | 'leather_armor'
   | 'reinforced_leather'
   | 'gold_trinket'
   | 'shiny_bauble'
   | 'tinker_oil';
 
-export type EquipSlot = 'armor' | 'amulet';
+export type EquipSlot = 'weapon' | 'armor' | 'amulet';
 
 export type LootKind = 'coins' | 'potion' | 'armor' | 'treasure';
 
@@ -74,6 +75,10 @@ export interface SaveData {
   roomId: string;
   hp: number;
   maxHp: number;
+  /**
+   * Derived: true when a weapon is equipped (kept for HUD / old code paths).
+   * Source of truth is equippedWeapon.
+   */
   hasSword: boolean;
   hasKey: boolean;
   bossDefeated: boolean;
@@ -89,6 +94,8 @@ export interface SaveData {
    * Recomputed by inventory.syncDerivedStats — do not treat as source of truth.
    */
   armor: number;
+  /** Equipped weapon item id, or null. */
+  equippedWeapon: string | null;
   /** Equipped armor piece item id, or null. */
   equippedArmor: string | null;
   /** Equipped amulet / trinket item id, or null. */

@@ -22,7 +22,9 @@ import {
   computeArmor,
   cycleAmuletEquip,
   cycleArmorEquip,
+  cycleWeaponEquip,
   equipItem,
+  hasWeaponEquipped,
   listInventory,
   unequipSlot,
   useInventoryItem,
@@ -163,6 +165,7 @@ describe('save defaults include RPG fields', () => {
     expect(s.coins).toBe(0);
     expect(s.inventory).toEqual({});
     expect(s.armor).toBe(0);
+    expect(s.equippedWeapon).toBeNull();
     expect(s.equippedArmor).toBeNull();
     expect(s.equippedAmulet).toBeNull();
   });
@@ -296,14 +299,32 @@ describe('appearance keys', () => {
   it('playerTextureKey reflects equipped armor amulet and sword', () => {
     const save = {
       ...defaultSave(),
-      hasSword: true,
+      equippedWeapon: 'mild_sword',
       equippedArmor: 'leather_armor',
       equippedAmulet: 'gold_trinket',
-      inventory: { leather_armor: 1, gold_trinket: 1 },
+      inventory: { mild_sword: 1, leather_armor: 1, gold_trinket: 1 },
     };
     const key = playerTextureKeyFromSave(save);
     expect(key).toBe('player_leather_armor_gold_trinket_s');
     const bare = playerTextureKey(appearanceFromSave(defaultSave()));
     expect(bare).toBe('player_none_none_n');
+  });
+
+  it('weapon equip enables hasWeaponEquipped and cycles', () => {
+    const save = {
+      ...defaultSave(),
+      inventory: { mild_sword: 1 },
+    };
+    const r = cycleWeaponEquip(save);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.equippedWeapon).toBe('mild_sword');
+    expect(hasWeaponEquipped(r.save)).toBe(true);
+    expect(r.save.hasSword).toBe(true);
+    const u = unequipSlot(r.save, 'weapon');
+    expect(u.ok).toBe(true);
+    if (!u.ok) return;
+    expect(hasWeaponEquipped(u.save)).toBe(false);
+    expect(u.save.hasSword).toBe(false);
   });
 });

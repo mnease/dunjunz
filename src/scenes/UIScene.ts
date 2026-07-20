@@ -35,10 +35,13 @@ export class UIScene extends Phaser.Scene {
   private invHelp: Phaser.GameObjects.Text | null = null;
   private invAvatar: Phaser.GameObjects.Image | null = null;
   private invAvatarPlate: Phaser.GameObjects.Rectangle | null = null;
+  private invWeaponSlot: Phaser.GameObjects.Image | null = null;
   private invArmorSlot: Phaser.GameObjects.Image | null = null;
   private invAmuletSlot: Phaser.GameObjects.Image | null = null;
+  private invWeaponIcon: Phaser.GameObjects.Image | null = null;
   private invArmorIcon: Phaser.GameObjects.Image | null = null;
   private invAmuletIcon: Phaser.GameObjects.Image | null = null;
+  private invWeaponLabel: Phaser.GameObjects.Text | null = null;
   private invArmorLabel: Phaser.GameObjects.Text | null = null;
   private invAmuletLabel: Phaser.GameObjects.Text | null = null;
   private invSlotHints: Phaser.GameObjects.Text | null = null;
@@ -188,20 +191,40 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(depth + 2);
 
-    // Right: equip slots
+    // Right: equip slots (weapon / armor / amulet)
     const slotX = 420;
+    this.invWeaponSlot = this.add
+      .image(slotX, 130, 'slot_frame')
+      .setScale(1.5)
+      .setScrollFactor(0)
+      .setDepth(depth + 1);
+    this.invWeaponIcon = this.add
+      .image(slotX, 130, 'icon_empty')
+      .setScale(1.7)
+      .setScrollFactor(0)
+      .setDepth(depth + 2);
+    this.invWeaponLabel = this.add
+      .text(slotX + 48, 118, 'WEAPON [W]\n(empty)', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
+        color: '#dfe6f0',
+        lineSpacing: 6,
+      })
+      .setScrollFactor(0)
+      .setDepth(depth + 2);
+
     this.invArmorSlot = this.add
-      .image(slotX, 150, 'slot_frame')
-      .setScale(1.6)
+      .image(slotX, 210, 'slot_frame')
+      .setScale(1.5)
       .setScrollFactor(0)
       .setDepth(depth + 1);
     this.invArmorIcon = this.add
-      .image(slotX, 150, 'icon_empty')
-      .setScale(1.8)
+      .image(slotX, 210, 'icon_empty')
+      .setScale(1.7)
       .setScrollFactor(0)
       .setDepth(depth + 2);
     this.invArmorLabel = this.add
-      .text(slotX + 50, 140, 'ARMOR [A]\n(empty)', {
+      .text(slotX + 48, 198, 'ARMOR [A]\n(empty)', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#ffc857',
@@ -211,17 +234,17 @@ export class UIScene extends Phaser.Scene {
       .setDepth(depth + 2);
 
     this.invAmuletSlot = this.add
-      .image(slotX, 250, 'slot_frame')
-      .setScale(1.6)
+      .image(slotX, 290, 'slot_frame')
+      .setScale(1.5)
       .setScrollFactor(0)
       .setDepth(depth + 1);
     this.invAmuletIcon = this.add
-      .image(slotX, 250, 'icon_empty')
-      .setScale(1.8)
+      .image(slotX, 290, 'icon_empty')
+      .setScale(1.7)
       .setScrollFactor(0)
       .setDepth(depth + 2);
     this.invAmuletLabel = this.add
-      .text(slotX + 50, 240, 'AMULET [N]\n(empty)', {
+      .text(slotX + 48, 278, 'AMULET [N]\n(empty)', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#ff6b9d',
@@ -231,7 +254,7 @@ export class UIScene extends Phaser.Scene {
       .setDepth(depth + 2);
 
     this.invStats = this.add
-      .text(slotX - 40, 310, '', {
+      .text(slotX - 40, 340, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '9px',
         color: '#f4f0ff',
@@ -255,7 +278,7 @@ export class UIScene extends Phaser.Scene {
       .text(
         GAME_W / 2,
         GAME_H - 36,
-        'A ARMOR  ·  N AMULET  ·  U POTION  ·  I/ESC CLOSE',
+        'W WEAPON  ·  A ARMOR  ·  N AMULET  ·  U POTION  ·  I/ESC CLOSE',
         {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '8px',
@@ -336,10 +359,13 @@ export class UIScene extends Phaser.Scene {
       this.invHelp = null;
       this.invAvatar = null;
       this.invAvatarPlate = null;
+      this.invWeaponSlot = null;
       this.invArmorSlot = null;
       this.invAmuletSlot = null;
+      this.invWeaponIcon = null;
       this.invArmorIcon = null;
       this.invAmuletIcon = null;
+      this.invWeaponLabel = null;
       this.invArmorLabel = null;
       this.invAmuletLabel = null;
       this.invSlotHints = null;
@@ -382,6 +408,9 @@ export class UIScene extends Phaser.Scene {
     this.setInvPieceVisible(this.invAvatarPlate, open);
     this.setInvPieceVisible(this.invAvatar, open);
     this.setInvPieceVisible(this.invYouLabel, open);
+    this.setInvPieceVisible(this.invWeaponSlot, open);
+    this.setInvPieceVisible(this.invWeaponIcon, open);
+    this.setInvPieceVisible(this.invWeaponLabel, open);
     this.setInvPieceVisible(this.invArmorSlot, open);
     this.setInvPieceVisible(this.invArmorIcon, open);
     this.setInvPieceVisible(this.invArmorLabel, open);
@@ -404,8 +433,13 @@ export class UIScene extends Phaser.Scene {
     }
 
     // Slot icons
+    const weaponId = save.equippedWeapon;
     const armorId = save.equippedArmor;
     const amuletId = save.equippedAmulet;
+    if (this.invWeaponIcon) {
+      const k = itemIconKey(weaponId);
+      this.invWeaponIcon.setTexture(this.textures.exists(k) ? k : 'icon_empty');
+    }
     if (this.invArmorIcon) {
       const k = itemIconKey(armorId);
       this.invArmorIcon.setTexture(this.textures.exists(k) ? k : 'icon_empty');
@@ -415,6 +449,10 @@ export class UIScene extends Phaser.Scene {
       this.invAmuletIcon.setTexture(this.textures.exists(k) ? k : 'icon_empty');
     }
 
+    if (this.invWeaponLabel) {
+      const name = weaponId ? getItemInfo(weaponId).name : '(empty)';
+      this.invWeaponLabel.setText(`WEAPON [W]\n${name}`);
+    }
     if (this.invArmorLabel) {
       const name = armorId ? getItemInfo(armorId).name : '(empty)';
       this.invArmorLabel.setText(`ARMOR [A]\n${name}`);
@@ -430,7 +468,7 @@ export class UIScene extends Phaser.Scene {
           `COINS  ${save.coins}c`,
           `HP     ${save.hp}/${save.maxHp}`,
           `DEF    ${save.armor}`,
-          save.hasSword ? 'SWORD  yes' : 'SWORD  no',
+          save.equippedWeapon ? 'WEAPON yes' : 'WEAPON no',
           save.hasKey ? 'KEY    yes' : 'KEY    no',
         ].join('\n'),
       );
@@ -453,6 +491,7 @@ export class UIScene extends Phaser.Scene {
           const tags: string[] = [];
           if (item.equipped) tags.push('WORN');
           if (item.usable) tags.push('U');
+          if (item.slot === 'weapon') tags.push('W');
           if (item.slot === 'armor') tags.push('A');
           if (item.slot === 'amulet') tags.push('N');
           const tag = tags.length ? ` [${tags.join(' ')}]` : '';

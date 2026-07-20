@@ -27,6 +27,13 @@ export const ITEM_CATALOG: Record<string, ItemInfo> = {
     usable: true,
     heal: 4,
   },
+  mild_sword: {
+    id: 'mild_sword',
+    name: 'SWORD OF MILD ENTHUSIASM',
+    blurb: 'Weapon slot. Swing with Space/Z. [W]',
+    usable: false,
+    slot: 'weapon',
+  },
   leather_armor: {
     id: 'leather_armor',
     name: 'LEATHER ARMOR',
@@ -100,9 +107,18 @@ export function computeArmor(save: SaveData): number {
   return def;
 }
 
-/** Refresh derived armor field after equip changes. */
+/** True when a weapon is equipped (can swing). */
+export function hasWeaponEquipped(save: SaveData): boolean {
+  return !!save.equippedWeapon && (save.inventory[save.equippedWeapon] ?? 0) > 0;
+}
+
+/** Refresh derived armor + hasSword after equip changes. */
 export function syncDerivedStats(save: SaveData): SaveData {
-  return { ...save, armor: computeArmor(save) };
+  return {
+    ...save,
+    armor: computeArmor(save),
+    hasSword: hasWeaponEquipped(save),
+  };
 }
 
 export function listInventory(save: SaveData): InventoryLine[] {
@@ -112,6 +128,7 @@ export function listInventory(save: SaveData): InventoryLine[] {
     if (!count || count <= 0) continue;
     const info = getItemInfo(id);
     const equipped =
+      (info.slot === 'weapon' && save.equippedWeapon === id) ||
       (info.slot === 'armor' && save.equippedArmor === id) ||
       (info.slot === 'amulet' && save.equippedAmulet === id);
     lines.push({
@@ -195,7 +212,9 @@ export function equipItem(save: SaveData, itemId: string): EquipResult {
   }
 
   let next: SaveData = { ...save };
-  if (info.slot === 'armor') {
+  if (info.slot === 'weapon') {
+    next = { ...next, equippedWeapon: itemId };
+  } else if (info.slot === 'armor') {
     next = { ...next, equippedArmor: itemId };
   } else {
     next = { ...next, equippedAmulet: itemId };
@@ -211,7 +230,12 @@ export function equipItem(save: SaveData, itemId: string): EquipResult {
 /** Clear a slot. Item stays in bag. */
 export function unequipSlot(save: SaveData, slot: EquipSlot): EquipResult {
   let next: SaveData = { ...save };
-  if (slot === 'armor') {
+  if (slot === 'weapon') {
+    if (!save.equippedWeapon) {
+      return { ok: false, save, reason: 'NO WEAPON EQUIPPED' };
+    }
+    next = { ...next, equippedWeapon: null };
+  } else if (slot === 'armor') {
     if (!save.equippedArmor) {
       return { ok: false, save, reason: 'NO ARMOR EQUIPPED' };
     }
@@ -223,10 +247,12 @@ export function unequipSlot(save: SaveData, slot: EquipSlot): EquipResult {
     next = { ...next, equippedAmulet: null };
   }
   next = syncDerivedStats(next);
+  const label =
+    slot === 'weapon' ? 'WEAPON' : slot === 'armor' ? 'ARMOR' : 'AMULET';
   return {
     ok: true,
     save: next,
-    message: slot === 'armor' ? 'ARMOR UNEQUIPPED' : 'AMULET UNEQUIPPED',
+    message: `${label} UNEQUIPPED`,
   };
 }
 
@@ -237,6 +263,9 @@ export function toggleEquipItem(save: SaveData, itemId: string): EquipResult {
   const info = getItemInfo(itemId);
   if (!info.slot) {
     return { ok: false, save, reason: 'CANNOT EQUIP THAT' };
+  }
+  if (info.slot === 'weapon' && save.equippedWeapon === itemId) {
+    return unequipSlot(save, 'weapon');
   }
   if (info.slot === 'armor' && save.equippedArmor === itemId) {
     return unequipSlot(save, 'armor');
@@ -258,41 +287,47 @@ export function bagItemsForSlot(save: SaveData, slot: EquipSlot): string[] {
     });
 }
 
+function cycleSlot(
+  save: SaveData,
+  slot: EquipSlot,
+  emptyReason: string,
+): EquipResult {
+  const options = bagItemsForSlot(save, slot);
+  if (options.length === 0) {
+    return { ok: false, save, reason: emptyReason };
+  }
+  const cur =
+    slot === 'weapon'
+      ? save.equippedWeapon
+      : slot === 'armor'
+        ? save.equippedArmor
+        : save.equippedAmulet;
+  if (!cur || !options.includes(cur)) {
+    return equipItem(save, options[0]);
+  }
+  const idx = options.indexOf(cur);
+  if (idx >= options.length - 1) {
+    return unequipSlot(save, slot);
+  }
+  return equipItem(save, options[idx + 1]);
+}
+
+/** Cycle weapon: equip / next / unequip. */
+export function cycleWeaponEquip(save: SaveData): EquipResult {
+  return cycleSlot(save, 'weapon', 'NO WEAPON IN BAG');
+}
+
 /**
  * Cycle armor: if none equipped, equip first bag armor;
  * if equipped, move to next armor in bag or unequip after last.
  */
 export function cycleArmorEquip(save: SaveData): EquipResult {
-  const options = bagItemsForSlot(save, 'armor');
-  if (options.length === 0) {
-    return { ok: false, save, reason: 'NO ARMOR IN BAG' };
-  }
-  const cur = save.equippedArmor;
-  if (!cur || !options.includes(cur)) {
-    return equipItem(save, options[0]);
-  }
-  const idx = options.indexOf(cur);
-  if (idx >= options.length - 1) {
-    return unequipSlot(save, 'armor');
-  }
-  return equipItem(save, options[idx + 1]);
+  return cycleSlot(save, 'armor', 'NO ARMOR IN BAG');
 }
 
 /** Cycle amulet the same way. */
 export function cycleAmuletEquip(save: SaveData): EquipResult {
-  const options = bagItemsForSlot(save, 'amulet');
-  if (options.length === 0) {
-    return { ok: false, save, reason: 'NO AMULET IN BAG' };
-  }
-  const cur = save.equippedAmulet;
-  if (!cur || !options.includes(cur)) {
-    return equipItem(save, options[0]);
-  }
-  const idx = options.indexOf(cur);
-  if (idx >= options.length - 1) {
-    return unequipSlot(save, 'amulet');
-  }
-  return equipItem(save, options[idx + 1]);
+  return cycleSlot(save, 'amulet', 'NO AMULET IN BAG');
 }
 
 /**
@@ -300,16 +335,25 @@ export function cycleAmuletEquip(save: SaveData): EquipResult {
  */
 export function autoEquipEmptySlots(save: SaveData): SaveData {
   let next = { ...save };
-  if (!next.equippedArmor) {
-    const armor = bagItemsForSlot(next, 'armor');
-    if (armor.length) next = { ...next, equippedArmor: armor[0] };
-  }
+
   // Clear equipped if item missing from bag
+  if (next.equippedWeapon && (next.inventory[next.equippedWeapon] ?? 0) <= 0) {
+    next = { ...next, equippedWeapon: null };
+  }
   if (next.equippedArmor && (next.inventory[next.equippedArmor] ?? 0) <= 0) {
     next = { ...next, equippedArmor: null };
   }
   if (next.equippedAmulet && (next.inventory[next.equippedAmulet] ?? 0) <= 0) {
     next = { ...next, equippedAmulet: null };
+  }
+
+  if (!next.equippedWeapon) {
+    const weapons = bagItemsForSlot(next, 'weapon');
+    if (weapons.length) next = { ...next, equippedWeapon: weapons[0] };
+  }
+  if (!next.equippedArmor) {
+    const armor = bagItemsForSlot(next, 'armor');
+    if (armor.length) next = { ...next, equippedArmor: armor[0] };
   }
   if (!next.equippedAmulet) {
     const amulets = bagItemsForSlot(next, 'amulet');
@@ -319,16 +363,27 @@ export function autoEquipEmptySlots(save: SaveData): SaveData {
 }
 
 /**
- * Migrate older saves: grant phantom leather if they only had free DEF,
- * wire equip slots, recompute armor.
+ * Migrate older saves: grant phantom leather / sword if they only had flags,
+ * wire equip slots, recompute derived stats.
  */
 export function migrateEquipment(save: SaveData): SaveData {
   let next: SaveData = {
     ...save,
+    equippedWeapon: save.equippedWeapon ?? null,
     equippedArmor: save.equippedArmor ?? null,
     equippedAmulet: save.equippedAmulet ?? null,
     inventory: { ...save.inventory },
   };
+
+  // Old hasSword without bag sword → grant mild_sword
+  if (
+    next.hasSword &&
+    bagItemsForSlot(next, 'weapon').length === 0 &&
+    !next.equippedWeapon
+  ) {
+    next.inventory.mild_sword = (next.inventory.mild_sword ?? 0) + 1;
+    next.equippedWeapon = 'mild_sword';
+  }
 
   // Old saves applied DEF without equip — if DEF>0 and no armor piece, grant one
   if (
@@ -347,7 +402,12 @@ export function migrateEquipment(save: SaveData): SaveData {
     }
   }
 
-  // Prefer equipped id if still in bag; else auto-fill empty
+  if (
+    next.equippedWeapon &&
+    (next.inventory[next.equippedWeapon] ?? 0) <= 0
+  ) {
+    next.equippedWeapon = null;
+  }
   if (
     next.equippedArmor &&
     (next.inventory[next.equippedArmor] ?? 0) <= 0
@@ -367,6 +427,9 @@ export function migrateEquipment(save: SaveData): SaveData {
 
 /** Full panel text for inventory UI. */
 export function formatInventoryPanel(save: SaveData): string {
+  const weaponName = save.equippedWeapon
+    ? getItemInfo(save.equippedWeapon).name
+    : '(none)';
   const armorName = save.equippedArmor
     ? getItemInfo(save.equippedArmor).name
     : '(none)';
@@ -380,13 +443,13 @@ export function formatInventoryPanel(save: SaveData): string {
     `DEF: ${save.armor}  (from gear)`,
     '',
     'SLOTS:',
+    `  WEAPON [W]: ${weaponName}`,
     `  ARMOR  [A]: ${armorName}`,
     `  AMULET [N]: ${amuletName}`,
     '',
   ];
 
   const gear: string[] = [];
-  if (save.hasSword) gear.push('SWORD OF MILD ENTHUSIASM');
   if (save.hasKey) gear.push('KEY: "FRIEND"');
   if (save.bossDefeated) gear.push('DENTED CROWN');
   if (gear.length) {
@@ -404,6 +467,7 @@ export function formatInventoryPanel(save: SaveData): string {
       const tags: string[] = [];
       if (item.equipped) tags.push('WORN');
       if (item.usable) tags.push('U USE');
+      if (item.slot === 'weapon') tags.push('W');
       if (item.slot === 'armor') tags.push('A');
       if (item.slot === 'amulet') tags.push('N');
       const tag = tags.length ? `  [${tags.join(' ')}]` : '';
@@ -413,7 +477,7 @@ export function formatInventoryPanel(save: SaveData): string {
   }
 
   lines.push('');
-  lines.push('A CYCLE ARMOR  ·  N CYCLE AMULET');
+  lines.push('W WEAPON  ·  A ARMOR  ·  N AMULET');
   lines.push('U USE POTION  ·  I/ESC CLOSE');
   return lines.join('\n');
 }

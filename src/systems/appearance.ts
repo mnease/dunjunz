@@ -24,10 +24,14 @@ export function appearanceFromSave(save: SaveData): AppearanceSpec {
   const amulet = (AMULET_LOOKS.includes(save.equippedAmulet as AmuletLook)
     ? save.equippedAmulet
     : 'none') as AmuletLook;
+  // Sword on hip when any weapon is equipped
+  const sword = !!(
+    save.equippedWeapon && (save.inventory[save.equippedWeapon] ?? 0) > 0
+  );
   return {
     armor,
     amulet,
-    sword: !!save.hasSword,
+    sword,
   };
 }
 
