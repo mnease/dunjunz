@@ -341,48 +341,71 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(9, 9, 4, 2);
   });
 
+  // Wide door graphic (single tile — fills full width, not multi-D ASCII)
   canvasTex(scene, 'tile-door', TILE, TILE, (ctx) => {
     ctx.fillStyle = hex(COLORS.floor);
     ctx.fillRect(0, 0, TILE, TILE);
+    // Arch frame
+    ctx.fillStyle = '#5a4510';
+    ctx.fillRect(0, 0, 16, 2);
+    ctx.fillRect(0, 0, 2, 16);
+    ctx.fillRect(14, 0, 2, 16);
+    // Door leaves (wide)
     ctx.fillStyle = '#8b6914';
-    ctx.fillRect(2, 0, 12, 16);
+    ctx.fillRect(2, 1, 5, 14);
+    ctx.fillRect(9, 1, 5, 14);
+    ctx.fillStyle = '#a07828';
+    ctx.fillRect(3, 2, 3, 3);
+    ctx.fillRect(10, 2, 3, 3);
+    // Handles
     ctx.fillStyle = hex(COLORS.gold);
-    ctx.fillRect(11, 7, 2, 2);
+    ctx.fillRect(6, 7, 1, 2);
+    ctx.fillRect(9, 7, 1, 2);
   });
 
   canvasTex(scene, 'tile-locked', TILE, TILE, (ctx) => {
     ctx.fillStyle = hex(COLORS.floor);
     ctx.fillRect(0, 0, TILE, TILE);
+    ctx.fillStyle = '#3a2810';
+    ctx.fillRect(0, 0, 16, 2);
+    ctx.fillRect(0, 0, 2, 16);
+    ctx.fillRect(14, 0, 2, 16);
     ctx.fillStyle = '#5a3d1a';
-    ctx.fillRect(2, 0, 12, 16);
+    ctx.fillRect(2, 1, 12, 14);
+    // Big lock plate
     ctx.fillStyle = '#888';
-    ctx.fillRect(6, 5, 4, 5);
+    ctx.fillRect(5, 5, 6, 7);
     ctx.fillStyle = hex(COLORS.gold);
     ctx.fillRect(7, 7, 2, 2);
+    ctx.fillRect(7, 9, 2, 2);
   });
 
   canvasTex(scene, 'tile-stairs', TILE, TILE, (ctx) => {
-    // Stairs DOWN — darker, steps receding
+    // Wide stairs DOWN — full-tile tread width
     ctx.fillStyle = '#2a2038';
     ctx.fillRect(0, 0, TILE, TILE);
     ctx.fillStyle = '#6a5a8a';
-    for (let i = 0; i < 4; i++) {
-      ctx.fillRect(2, 2 + i * 3, 12 - i * 2, 2);
+    for (let i = 0; i < 5; i++) {
+      const y = 1 + i * 3;
+      const inset = i; // slight recede but stay wide
+      ctx.fillRect(1 + inset, y, 14 - inset * 2, 2);
     }
     ctx.fillStyle = '#ff6b9d';
-    ctx.fillRect(7, 1, 2, 2);
+    ctx.fillRect(6, 1, 4, 2); // wide DOWN marker
   });
 
   canvasTex(scene, 'tile-stairs-up', TILE, TILE, (ctx) => {
-    // Stairs UP — lighter, steps rising
+    // Wide stairs UP — full-tile tread width
     ctx.fillStyle = '#3a4060';
     ctx.fillRect(0, 0, TILE, TILE);
     ctx.fillStyle = '#9ab0d0';
-    for (let i = 0; i < 4; i++) {
-      ctx.fillRect(2 + i, 12 - i * 3, 12 - i * 2, 2);
+    for (let i = 0; i < 5; i++) {
+      const y = 13 - i * 3;
+      const inset = 4 - i;
+      ctx.fillRect(1 + Math.max(0, inset), y, 14 - Math.max(0, inset) * 2, 2);
     }
     ctx.fillStyle = '#7dffb3';
-    ctx.fillRect(7, 1, 2, 2);
+    ctx.fillRect(6, 1, 4, 2); // wide UP marker
   });
 
   canvasTex(scene, 'tile-pad', TILE, TILE, (ctx) => {

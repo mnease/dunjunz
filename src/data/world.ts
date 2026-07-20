@@ -12,6 +12,8 @@ import type { RoomDef } from '../types';
  * - north/south/east/west links are bidirectional and match edge doors.
  * - Left edge doors only exist when `west` is set (same for all sides).
  * - Stairs: S uses stairsDown, U uses stairsUp (different dungeon floors).
+ * - ONE door / stair tile only (D L S U). Never DD/SS/UU — wide look is
+ *   in the texture art, not multi-tile ASCII.
  *
  * SURFACE (floor 0)
  *   (0,0) overworld --E-- (1,0) overworld_east
@@ -50,7 +52,7 @@ export const ROOMS: Record<string, RoomDef> = {
       '#gg........ggg#',
       '#g...dddd...gg#',
       '#g..dddddd..gg.',
-      '#g...dSSd...gg.',
+      '#g....dS.d..gg.',
       '#g....dd....gg.',
       '#gg........ggg#',
       '#ggg~~~~~~gggg#',
@@ -186,12 +188,12 @@ export const ROOMS: Record<string, RoomDef> = {
     east: 'b1_cube',
     stairsUp: 'overworld',
     tiles: [
-      '########DD######',
+      '########D#######',
       '#..............#',
       '#..####..####..#',
       '#..#........#..#',
       '#..#........#...',
-      '#......UU......#',
+      '#......U.......#',
       '#..#........#...',
       '#..#........#..#',
       '#..####..####..#',
@@ -311,7 +313,7 @@ export const ROOMS: Record<string, RoomDef> = {
     south: 'b1_entrance',
     west: 'b1_trek',
     tiles: [
-      '########LL######',
+      '########L#######',
       '#..............#',
       '#..##......##..#',
       '#..............#',
@@ -321,7 +323,7 @@ export const ROOMS: Record<string, RoomDef> = {
       '#..##......##..#',
       '#..............#',
       '#..............#',
-      '########DD######',
+      '########D#######',
     ],
     entities: [
       {
@@ -431,7 +433,7 @@ export const ROOMS: Record<string, RoomDef> = {
     north: 'b1_descent',
     south: 'b1_gate',
     tiles: [
-      '########DD######',
+      '########D#######',
       '#..............#',
       '#.####....####.#',
       '#.#..........#.#',
@@ -441,7 +443,7 @@ export const ROOMS: Record<string, RoomDef> = {
       '#.#..........#.#',
       '#.####....####.#',
       '#..............#',
-      '########DD######',
+      '########D#######',
     ],
     entities: [
       {
