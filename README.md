@@ -79,6 +79,17 @@ Intentional spellings: Dunjunz, woodz, dezertz, mapz, forjing, Princesz Prizella
 - **Vite + TypeScript** — build tooling
 - **Vercel** — static hosting (`vercel.json` included)
 
+## Project Hive Mind
+
+Dunjunz has an **isolated Hive Mind silo** (domain-scoped MCP token on Forge):
+
+- Domains: `dunjunz-build` (writes), `dunjunz-fact` (pins), `dunjunz` (lore)
+- Tenant slug: `dunjunz`
+- Setup notes: [`HIVE.md`](./HIVE.md) · agent rules: [`AGENTS.md`](./AGENTS.md)
+- Local MCP: copy `.grok/config.toml.example` → `.grok/config.toml` with the project bearer
+
+This is separate from the primary Elastic Hive operator memory so game sessions stay free of platform clutter.
+
 ## Deploy (NeaseMedia)
 
 ### Option A — Vercel CLI (team `neasemedia`)

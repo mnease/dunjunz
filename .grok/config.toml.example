@@ -1,0 +1,29 @@
+# Copy to config.toml and fill the bearer from Hive Mind token registry.
+# Label: grok-dunjunz-isolated-2026-07-20
+# Issue (on Forge-connected host):
+#   node scripts/issue-mcp-token.js \
+#     --label grok-dunjunz-isolated-YYYY-MM-DD \
+#     --allow 'dunjunz,dunjunz-build,dunjunz-fact' \
+#     --write-domain dunjunz-build --rate 120
+
+[mcp_servers.grok_com_hive_mind]
+url = "https://elastichive.com/mcp/grok"
+type = "http"
+enabled = true
+
+[mcp_servers.grok_com_hive_mind.headers]
+Authorization = "Bearer ${HIVE_MCP_TOKEN_DUNJUNZ}"
+
+[mcp_servers.grok_com_hive_mind.env]
+HIVE_MCP_TOKEN_DUNJUNZ = "PASTE_BEARER_HERE"
+
+[mcp_servers.hive_mind]
+url = "https://elastichive.com/mcp/grok"
+type = "http"
+enabled = true
+
+[mcp_servers.hive_mind.headers]
+Authorization = "Bearer ${HIVE_MCP_TOKEN_DUNJUNZ}"
+
+[mcp_servers.hive_mind.env]
+HIVE_MCP_TOKEN_DUNJUNZ = "PASTE_BEARER_HERE"
