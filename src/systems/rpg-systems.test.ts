@@ -16,6 +16,10 @@ import {
 } from './loot';
 import {
   attemptPurchase,
+  attemptSell,
+  attemptSellIndex,
+  listPlayerSellables,
+  sellUnitPrice,
   SHOPS,
   shopGridDims,
   shopIndexFromDir,
@@ -207,6 +211,71 @@ describe('shop purchase', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.save.stacks.potion).toBe(3);
+  });
+});
+
+describe('shop sell (tinkerer dual-pane)', () => {
+  it('sellUnitPrice is half single-unit shop price', () => {
+    // potion buy 15 → sell 7
+    expect(sellUnitPrice('potion', 'tinkerer')).toBe(7);
+    // leather gloves buy 35 → sell 17
+    expect(sellUnitPrice('leather_gloves', 'tinkerer')).toBe(17);
+  });
+
+  it('sell stack decrements and pays coins', () => {
+    let save = defaultSave();
+    save.coins = 0;
+    save.stacks = { potion: 2 };
+    const r = attemptSell(save, 'tinkerer', {
+      kind: 'stack',
+      templateId: 'potion',
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.stacks.potion).toBe(1);
+    expect(r.save.coins).toBe(7);
+    expect(r.coins).toBe(7);
+  });
+
+  it('sell equipped gear unequips, removes from bag, pays', () => {
+    let save = grantMildSword(defaultSave());
+    save.coins = 10;
+    const uid = save.equipped.weapon;
+    expect(uid).toBeTruthy();
+    const r = attemptSell(save, 'tinkerer', {
+      kind: 'instance',
+      uid: uid!,
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.bag.find((b) => b.uid === uid)).toBeUndefined();
+    expect(r.save.equipped.weapon).toBeNull();
+    expect(r.save.hasSword).toBe(false);
+    expect(r.save.coins).toBeGreaterThan(10);
+  });
+
+  it('listPlayerSellables includes stacks and equipped gear', () => {
+    let save = grantMildSword(defaultSave());
+    save.stacks = { potion: 1 };
+    const list = listPlayerSellables(save, 'tinkerer');
+    expect(list.some((t) => t.templateId === 'potion')).toBe(true);
+    expect(list.some((t) => t.templateId === 'mild_sword' && t.equipped)).toBe(
+      true,
+    );
+  });
+
+  it('attemptSellIndex sells by bag grid index', () => {
+    let save = defaultSave();
+    save.stacks = { potion: 1 };
+    save.coins = 0;
+    const list = listPlayerSellables(save, 'tinkerer');
+    const idx = list.findIndex((t) => t.templateId === 'potion');
+    expect(idx).toBeGreaterThanOrEqual(0);
+    const r = attemptSellIndex(save, 'tinkerer', idx);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.stacks.potion).toBeUndefined();
+    expect(r.save.coins).toBe(7);
   });
 });
 

@@ -25,9 +25,13 @@ import {
 } from '../systems/loot';
 import {
   attemptPurchase,
+  attemptSellIndex,
   getShop,
+  listPlayerSellables,
+  SHOP_BAG_COLS,
+  SHOP_STOCK_COLS,
   shopIndexFromDir,
-  shopGridDims,
+  type ShopPane,
 } from '../systems/shop';
 import {
   appearanceFromSave,
@@ -188,6 +192,8 @@ export class GameScene extends Phaser.Scene {
   private shopOpen = false;
   private shopId: string | null = null;
   private shopSelected = 0;
+  private shopBagSelected = 0;
+  private shopPane: ShopPane = 'stock';
   private paused = false;
   private transitionLock = false;
   private roomOriginX = 0;
@@ -210,6 +216,8 @@ export class GameScene extends Phaser.Scene {
     this.shopOpen = false;
     this.shopId = null;
     this.shopSelected = 0;
+    this.shopBagSelected = 0;
+    this.shopPane = 'stock';
     this.paused = false;
     this.attacking = false;
     this.invuln = 0;
@@ -430,14 +438,24 @@ export class GameScene extends Phaser.Scene {
     this.shopOpen = open;
     if (!open) {
       this.shopId = null;
+      this.shopPane = 'stock';
     }
     if (open && this.player.body) {
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     }
   };
 
-  private onShopCursor = (index: number): void => {
-    this.shopSelected = index;
+  private onShopCursor = (
+    payload: number | { pane: ShopPane; index: number },
+  ): void => {
+    if (typeof payload === 'number') {
+      this.shopSelected = payload;
+      this.shopPane = 'stock';
+      return;
+    }
+    this.shopPane = payload.pane;
+    if (payload.pane === 'stock') this.shopSelected = payload.index;
+    else this.shopBagSelected = payload.index;
   };
 
   private onAttackKey = (): void => {
@@ -469,7 +487,7 @@ export class GameScene extends Phaser.Scene {
   private onBuyKey = (): void => {
     if (this.paused || this.dialogCloseCooldown > 0) return;
     if (this.shopOpen) {
-      this.buySelectedShopItem();
+      this.confirmShopTrade();
       return;
     }
     if (this.dialogLocked || this.panelOpen()) return;
@@ -484,9 +502,25 @@ export class GameScene extends Phaser.Scene {
     this.game.events.emit('inventory-toggle', this.save);
   };
 
-  private onMapzKey = (): void => {
+  private onMapzKey = (event?: KeyboardEvent): void => {
     if (this.paused) return; // pause uses M for title (handled in update)
-    if (this.inventoryOpen || this.forjingOpen || this.shopOpen) return;
+    // Tab while shop open: switch dual pane. M does nothing while shopping.
+    if (this.shopOpen) {
+      const isM =
+        !!event &&
+        (event.key === 'm' || event.key === 'M' || event.code === 'KeyM');
+      if (isM) return;
+      this.shopPane = this.shopPane === 'stock' ? 'bag' : 'stock';
+      const index =
+        this.shopPane === 'stock' ? this.shopSelected : this.shopBagSelected;
+      this.game.events.emit('shop-select', { pane: this.shopPane, index });
+      this.game.events.emit(
+        'toast',
+        this.shopPane === 'stock' ? 'BUY PANE' : 'SELL PANE',
+      );
+      return;
+    }
+    if (this.inventoryOpen || this.forjingOpen) return;
     // Allow open even while dialog is up (pickup says PRESS M)
     this.openMapzPanel();
   };
@@ -1562,12 +1596,26 @@ export class GameScene extends Phaser.Scene {
     }
     this.shopId = shopId;
     this.shopSelected = 0;
+    this.shopBagSelected = 0;
+    this.shopPane = 'stock';
     this.game.events.emit('shop-toggle', {
       save: this.save,
       shopId,
       selectedIndex: 0,
+      bagSelectedIndex: 0,
+      pane: 'stock',
     });
-    this.game.events.emit('toast', 'TINKERER SHOP');
+    this.game.events.emit('toast', 'TINKERER — BUY LEFT, SELL RIGHT');
+  }
+
+  /** Enter/B: buy from stock pane, or sell from bag pane. */
+  private confirmShopTrade(): void {
+    if (!this.shopId) return;
+    if (this.shopPane === 'bag') {
+      this.sellSelectedBagItem();
+      return;
+    }
+    this.buySelectedShopItem();
   }
 
   private buySelectedShopItem(): void {
@@ -1598,18 +1646,116 @@ export class GameScene extends Phaser.Scene {
     this.game.events.emit('inventory-refresh', this.save);
   }
 
+  private sellSelectedBagItem(): void {
+    if (!this.shopId) return;
+    const result = attemptSellIndex(
+      this.save,
+      this.shopId,
+      this.shopBagSelected,
+    );
+    if (!result.ok) {
+      if (result.reason === 'nothing_to_sell') {
+        this.game.events.emit('toast', 'NOTHING TO SELL');
+      } else {
+        this.game.events.emit('toast', 'CANNOT SELL THAT');
+      }
+      return;
+    }
+    this.save = result.save;
+    writeSave(this.save);
+    this.emitHud();
+    const bag = listPlayerSellables(this.save, this.shopId);
+    if (this.shopBagSelected >= bag.length) {
+      this.shopBagSelected = Math.max(0, bag.length - 1);
+    }
+    this.game.events.emit(
+      'toast',
+      `SOLD ${result.name} (+${result.coins}c)`,
+    );
+    this.game.events.emit('shop-refresh', this.save);
+    this.game.events.emit('inventory-refresh', this.save);
+    this.game.events.emit('shop-select', {
+      pane: 'bag',
+      index: this.shopBagSelected,
+    });
+  }
+
   private navShop(dir: 'up' | 'down' | 'left' | 'right'): void {
     if (!this.shopOpen || !this.shopId) return;
     const shop = getShop(this.shopId);
-    if (!shop?.stock.length) return;
-    const { cols } = shopGridDims(shop.stock.length, 4);
-    this.shopSelected = shopIndexFromDir(
-      this.shopSelected,
-      shop.stock.length,
+    if (!shop) return;
+
+    if (this.shopPane === 'stock') {
+      if (!shop.stock.length) {
+        if (dir === 'right') {
+          this.shopPane = 'bag';
+          this.game.events.emit('shop-select', {
+            pane: 'bag',
+            index: this.shopBagSelected,
+          });
+        }
+        return;
+      }
+      const cols = SHOP_STOCK_COLS;
+      const col = this.shopSelected % cols;
+      // Right edge → jump to bag pane
+      if (dir === 'right' && col === cols - 1) {
+        this.shopPane = 'bag';
+        const bag = listPlayerSellables(this.save, this.shopId);
+        if (bag.length && this.shopBagSelected >= bag.length) {
+          this.shopBagSelected = 0;
+        }
+        this.game.events.emit('shop-select', {
+          pane: 'bag',
+          index: this.shopBagSelected,
+        });
+        return;
+      }
+      this.shopSelected = shopIndexFromDir(
+        this.shopSelected,
+        shop.stock.length,
+        cols,
+        dir,
+      );
+      this.game.events.emit('shop-select', {
+        pane: 'stock',
+        index: this.shopSelected,
+      });
+      return;
+    }
+
+    // Bag pane
+    const bag = listPlayerSellables(this.save, this.shopId);
+    if (!bag.length) {
+      if (dir === 'left') {
+        this.shopPane = 'stock';
+        this.game.events.emit('shop-select', {
+          pane: 'stock',
+          index: this.shopSelected,
+        });
+      }
+      return;
+    }
+    const cols = SHOP_BAG_COLS;
+    const col = this.shopBagSelected % cols;
+    if (dir === 'left' && col === 0) {
+      this.shopPane = 'stock';
+      this.game.events.emit('shop-select', {
+        pane: 'stock',
+        index: this.shopSelected,
+      });
+      return;
+    }
+    this.shopBagSelected = shopIndexFromDir(
+      this.shopBagSelected,
+      bag.length,
       cols,
       dir,
     );
-    this.game.events.emit('shop-select', this.shopSelected);
+    this.game.events.emit('shop-select', {
+      pane: 'bag',
+      index: this.shopBagSelected,
+    });
   }
 
   private tryAttack(): void {
@@ -2031,7 +2177,7 @@ export class GameScene extends Phaser.Scene {
         }
         // E close is handled only in onInteractKey (not JustDown here)
         if (Phaser.Input.Keyboard.JustDown(this.keys.enter)) {
-          this.buySelectedShopItem();
+          this.confirmShopTrade();
         }
       }
       // Enemies still move while inventory is open so the world is not frozen unfairly

@@ -1,11 +1,22 @@
 /**
- * Merchant purchase — stacks or minted gear (v4).
+ * Merchant buy/sell — dual-pane stock (left) + player bag (right).
  * Graphic shop grid uses iconId for UI cells.
+ * Blacksmith salvage/parts is a future merchant type (not here).
  */
 
 import type { SaveData } from '../types';
-import { autoEquipEmptySlots, syncDerivedStats } from './inventory';
-import { mintItem } from './items';
+import {
+  autoEquipEmptySlots,
+  listInventory,
+  syncDerivedStats,
+  type InventoryLine,
+} from './inventory';
+import {
+  ALL_EQUIP_SLOTS,
+  displayItemName,
+  getTemplate,
+  mintItem,
+} from './items';
 
 export interface ShopItem {
   id: string;
@@ -30,13 +41,31 @@ export interface ShopDef {
   stock: ShopItem[];
 }
 
+/** Which dual-pane side has keyboard focus. */
+export type ShopPane = 'stock' | 'bag';
+
+/** One sellable cell on the player bag side (stacks + bag gear, incl. equipped). */
+export interface SellTarget {
+  kind: 'stack' | 'instance';
+  templateId: string;
+  /** Present for gear instances. */
+  uid?: string;
+  name: string;
+  iconId: string;
+  count: number;
+  /** Coins for selling one unit / this instance. */
+  sellPrice: number;
+  equipped: boolean;
+  blurb: string;
+}
+
 export const SHOPS: Record<string, ShopDef> = {
   tinkerer: {
     id: 'tinkerer',
     name: 'TRAVELING TINKERER',
     greeting: [
-      'TINKERER: RARE WARES! FAIR-ISH PRICES!',
-      'E OPEN SHOP · CLICK A SLOT · ENTER BUY',
+      'TINKERER: BUY LEFT · SELL RIGHT!',
+      'E OPEN SHOP · TAB SWITCH PANE · ENTER TRADE',
     ],
     stock: [
       {
@@ -181,8 +210,141 @@ export type PurchaseResult =
       save: SaveData;
     };
 
+export type SellResult =
+  | { ok: true; save: SaveData; name: string; coins: number }
+  | {
+      ok: false;
+      reason: 'unknown_shop' | 'not_found' | 'nothing_to_sell';
+      save: SaveData;
+    };
+
 export function getShop(shopId: string): ShopDef | undefined {
   return SHOPS[shopId];
+}
+
+/**
+ * Unit sell price: half the shop's unit buy price when listed, else a modest fallback.
+ * Tinkerer buys junk cheap — blacksmith salvage (parts) is later.
+ */
+export function sellUnitPrice(templateId: string, shopId = 'tinkerer'): number {
+  const shop = SHOPS[shopId];
+  if (shop) {
+    const unitMatch = shop.stock.find(
+      (s) => s.stackId === templateId && (s.stackCount ?? 1) === 1,
+    );
+    const packMatch = shop.stock.find((s) => s.stackId === templateId);
+    const gearMatch = shop.stock.find((s) => s.templateId === templateId);
+    const match = unitMatch ?? gearMatch ?? packMatch;
+    if (match) {
+      const units = match.stackCount ?? 1;
+      return Math.max(1, Math.floor(match.price / units / 2));
+    }
+  }
+  const t = getTemplate(templateId);
+  if (t.kind === 'key') return 8;
+  if (t.baseAtk) return Math.max(4, t.baseAtk * 6);
+  if (t.baseDef) return Math.max(4, t.baseDef * 8);
+  if (t.kind === 'consumable') return 4;
+  return 3;
+}
+
+export function inventoryLineToSellTarget(
+  line: InventoryLine,
+  shopId: string,
+): SellTarget {
+  return {
+    kind: line.uid ? 'instance' : 'stack',
+    templateId: line.templateId,
+    uid: line.uid,
+    name: line.name,
+    iconId: line.templateId,
+    count: line.count,
+    sellPrice: sellUnitPrice(line.templateId, shopId),
+    equipped: line.equipped,
+    blurb: line.blurb,
+  };
+}
+
+/** Player bag side: stacks + all bag gear (equipped shown with flag). */
+export function listPlayerSellables(
+  save: SaveData,
+  shopId: string,
+): SellTarget[] {
+  return listInventory(save).map((line) =>
+    inventoryLineToSellTarget(line, shopId),
+  );
+}
+
+export function attemptSell(
+  save: SaveData,
+  shopId: string,
+  target:
+    | { kind: 'stack'; templateId: string }
+    | { kind: 'instance'; uid: string },
+): SellResult {
+  if (!SHOPS[shopId]) {
+    return { ok: false, reason: 'unknown_shop', save };
+  }
+
+  if (target.kind === 'stack') {
+    const count = save.stacks[target.templateId] ?? 0;
+    if (count <= 0) {
+      return { ok: false, reason: 'not_found', save };
+    }
+    const price = sellUnitPrice(target.templateId, shopId);
+    const stacks = { ...save.stacks };
+    stacks[target.templateId] = count - 1;
+    if (stacks[target.templateId] <= 0) delete stacks[target.templateId];
+    const t = getTemplate(target.templateId);
+    const next = syncDerivedStats({
+      ...save,
+      stacks,
+      coins: save.coins + price,
+    });
+    return { ok: true, save: next, name: t.name, coins: price };
+  }
+
+  const inst = save.bag.find((b) => b.uid === target.uid);
+  if (!inst) {
+    return { ok: false, reason: 'not_found', save };
+  }
+  const price = sellUnitPrice(inst.templateId, shopId);
+  const equipped = { ...save.equipped };
+  for (const slot of ALL_EQUIP_SLOTS) {
+    if (equipped[slot] === inst.uid) equipped[slot] = null;
+  }
+  const bag = save.bag.filter((b) => b.uid !== inst.uid);
+  const name = displayItemName(inst);
+  const next = syncDerivedStats({
+    ...save,
+    bag,
+    equipped,
+    coins: save.coins + price,
+  });
+  // Deliberate sell does not auto-fill emptied equip slots.
+  return { ok: true, save: next, name, coins: price };
+}
+
+export function attemptSellIndex(
+  save: SaveData,
+  shopId: string,
+  bagIndex: number,
+): SellResult {
+  const list = listPlayerSellables(save, shopId);
+  if (!list.length) {
+    return { ok: false, reason: 'nothing_to_sell', save };
+  }
+  const t = list[bagIndex];
+  if (!t) {
+    return { ok: false, reason: 'not_found', save };
+  }
+  if (t.kind === 'instance' && t.uid) {
+    return attemptSell(save, shopId, { kind: 'instance', uid: t.uid });
+  }
+  return attemptSell(save, shopId, {
+    kind: 'stack',
+    templateId: t.templateId,
+  });
 }
 
 export function attemptPurchase(
@@ -241,7 +403,7 @@ export function shopCatalogLines(shopId: string): string[] {
     lines.push(`${s.name}: ${s.price}c`);
   }
   if (shop.stock.length > 6) lines.push(`...+${shop.stock.length - 6} more`);
-  lines.push('E = OPEN SHOP GRID');
+  lines.push('E = OPEN SHOP · LEFT BUY · RIGHT SELL');
   return lines;
 }
 
@@ -284,5 +446,14 @@ export function shopIndexFromDir(
 export interface ShopOpenPayload {
   save: SaveData;
   shopId: string;
+  /** Focused stock index (left pane). */
   selectedIndex?: number;
+  /** Active dual-pane side. */
+  pane?: ShopPane;
+  /** Focused bag index (right pane). */
+  bagSelectedIndex?: number;
 }
+
+/** Stock (left) and bag (right) grid column counts for dual-pane layout. */
+export const SHOP_STOCK_COLS = 3;
+export const SHOP_BAG_COLS = 4;
