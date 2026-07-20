@@ -108,6 +108,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Phaser reuses the same Scene instance — always reset runtime state on enter.
+    // Leftover dialogLocked/paused from a prior run freezes movement entirely.
+    this.dialogLocked = false;
+    this.paused = false;
+    this.attacking = false;
+    this.invuln = 0;
+    this.transitionLock = false;
+    this.padCooldown = 0;
+    this.bossIntroShown = false;
+    this.facing = 'down';
+    this.actors = [];
+    this.tileGrid = [];
+
     this.save = loadSave();
     this.roomOriginX = (GAME_W - MAP_PIXEL_W) / 2;
     this.roomOriginY = HUD_H + (GAME_H - HUD_H - MAP_PIXEL_H) / 2;
@@ -122,20 +135,11 @@ export class GameScene extends Phaser.Scene {
 
     this.walls = this.physics.add.staticGroup();
     const kb = this.input.keyboard!;
-    // Capture game keys so Space doesn't scroll the page / get eaten by the browser
+    // Only capture action keys — do not capture movement keys
     kb.addCapture([
       Phaser.Input.Keyboard.KeyCodes.SPACE,
       Phaser.Input.Keyboard.KeyCodes.Z,
       Phaser.Input.Keyboard.KeyCodes.E,
-      Phaser.Input.Keyboard.KeyCodes.ESC,
-      Phaser.Input.Keyboard.KeyCodes.UP,
-      Phaser.Input.Keyboard.KeyCodes.DOWN,
-      Phaser.Input.Keyboard.KeyCodes.LEFT,
-      Phaser.Input.Keyboard.KeyCodes.RIGHT,
-      Phaser.Input.Keyboard.KeyCodes.W,
-      Phaser.Input.Keyboard.KeyCodes.A,
-      Phaser.Input.Keyboard.KeyCodes.S,
-      Phaser.Input.Keyboard.KeyCodes.D,
     ]);
     this.cursors = kb.createCursorKeys();
     this.keys = {
@@ -150,7 +154,7 @@ export class GameScene extends Phaser.Scene {
       m: kb.addKey(Phaser.Input.Keyboard.KeyCodes.M),
     };
 
-    // Event-based attack (more reliable than JustDown alone across parallel UI scene)
+    // Event-based attack / interact
     kb.on('keydown-SPACE', this.onAttackKey, this);
     kb.on('keydown-Z', this.onAttackKey, this);
     kb.on('keydown-E', this.onInteractKey, this);
@@ -159,8 +163,8 @@ export class GameScene extends Phaser.Scene {
     this.player.setScale(SCALE);
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(10);
-    this.player.setSize(10, 10);
-    this.player.setOffset(3, 4);
+    // Body size in source pixels (texture is 16x16); Phaser scales with the sprite
+    this.player.setBodySize(10, 12, true);
 
     this.swordHit = this.physics.add.image(-999, -999, 'sword-swing');
     this.swordHit.setScale(SCALE);
@@ -174,7 +178,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.walls);
 
     this.game.events.on('dialog-state', this.onDialogState, this);
-    this.events.on('shutdown', () => {
+    this.events.once('shutdown', () => {
       this.game.events.off('dialog-state', this.onDialogState, this);
       kb.off('keydown-SPACE', this.onAttackKey, this);
       kb.off('keydown-Z', this.onAttackKey, this);
@@ -182,12 +186,25 @@ export class GameScene extends Phaser.Scene {
       writeSave(this.save);
     });
 
-    if (!this.scene.isActive('UI')) {
-      this.scene.launch('UI');
+    // Always hard-reset UI so a leftover dialog box cannot soft-lock input
+    if (this.scene.isActive('UI') || this.scene.isSleeping('UI')) {
+      this.scene.stop('UI');
     }
+    this.scene.launch('UI');
+    this.game.events.emit('dialog-state', false);
+    this.game.events.emit('pause-ui', false);
 
     this.loadRoom(this.save.roomId, true);
     this.emitHud();
+  }
+
+  private addWallAt(x: number, y: number, kind: TileKind): void {
+    const wall = this.walls.create(x, y, TEX[kind]) as Phaser.Physics.Arcade.Sprite;
+    // Invisible collider sized to one display tile — do NOT setSize(TILE*SCALE)
+    // after setScale (that oversizes bodies and freezes the player).
+    wall.setVisible(false);
+    wall.setDisplaySize(TILE * SCALE, TILE * SCALE);
+    wall.refreshBody();
   }
 
   private onDialogState = (open: boolean): void => {
@@ -296,22 +313,19 @@ export class GameScene extends Phaser.Scene {
         img.setData('mapTile', true);
 
         if (SOLID.includes(kind)) {
-          const wall = this.walls.create(
-            pos.x,
-            pos.y,
-            TEX[kind],
-          ) as Phaser.Physics.Arcade.Sprite;
-          wall.setScale(SCALE).setVisible(false).refreshBody();
-          wall.setSize(TILE * SCALE, TILE * SCALE);
+          this.addWallAt(pos.x, pos.y, kind);
         }
       }
     }
 
     // Player spawn
-    let spawn = this.findSpawn(entryFrom, fromSave);
+    const spawn = this.findSpawn(entryFrom, fromSave);
     const p = this.tileToWorld(spawn.tx, spawn.ty);
     this.player.setPosition(p.x, p.y);
-    (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    const pBody = this.player.body as Phaser.Physics.Arcade.Body;
+    pBody.setVelocity(0, 0);
+    pBody.enable = true;
+    this.player.setActive(true).setVisible(true);
 
     // Entities
     for (const def of room.entities ?? []) {
@@ -725,12 +739,7 @@ export class GameScene extends Phaser.Scene {
           .setDepth(0);
         img.setData('mapTile', true);
         if (SOLID.includes(kind)) {
-          const wall = this.walls.create(
-            pos.x,
-            pos.y,
-            TEX[kind],
-          ) as Phaser.Physics.Arcade.Sprite;
-          wall.setScale(SCALE).setVisible(false).refreshBody();
+          this.addWallAt(pos.x, pos.y, kind);
         }
       }
     }

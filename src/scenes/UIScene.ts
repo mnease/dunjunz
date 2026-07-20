@@ -19,6 +19,11 @@ export class UIScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Reset dialog/pause state — scene instance is reused across games
+    this.dialogOpen = false;
+    this.dialogLines = [];
+    this.dialogIndex = 0;
+
     this.add.rectangle(GAME_W / 2, HUD_H / 2, GAME_W, HUD_H, 0x0a0c10, 0.92);
     this.add
       .rectangle(GAME_W / 2, HUD_H - 1, GAME_W, 2, COLORS.green, 0.7)

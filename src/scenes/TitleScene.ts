@@ -94,13 +94,26 @@ export class TitleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.input.keyboard?.on('keydown-ENTER', () => this.startGame(false));
-    this.input.keyboard?.on('keydown-SPACE', () => this.startGame(false));
-    this.input.keyboard?.on('keydown-R', () => this.startGame(true));
+    const onEnter = () => this.startGame(false);
+    const onSpace = () => this.startGame(false);
+    const onNew = () => this.startGame(true);
+    this.input.keyboard?.on('keydown-ENTER', onEnter);
+    this.input.keyboard?.on('keydown-SPACE', onSpace);
+    this.input.keyboard?.on('keydown-R', onNew);
+
+    this.events.once('shutdown', () => {
+      this.input.keyboard?.off('keydown-ENTER', onEnter);
+      this.input.keyboard?.off('keydown-SPACE', onSpace);
+      this.input.keyboard?.off('keydown-R', onNew);
+    });
   }
 
   private startGame(fresh: boolean): void {
     if (fresh) clearSave();
+    // Ensure parallel UI cannot carry dialog lock into the next run
+    if (this.scene.isActive('UI') || this.scene.isSleeping('UI')) {
+      this.scene.stop('UI');
+    }
     this.scene.start('Game');
   }
 }
