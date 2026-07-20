@@ -26,6 +26,7 @@ import { appearanceFromSave, playerTextureKeyFromSave } from './appearance';
 import { effectivePrimary } from './rarity';
 import { defaultSave } from './save';
 import { mintItem } from './items';
+import { entryFromOpposite, spawnInsideEntryEdge } from './map-spawn';
 
 describe('XP formula scaling', () => {
   it('band costs increase with level', () => {
@@ -213,5 +214,76 @@ describe('listInventory', () => {
       true,
     );
     expect(lines.some((l) => l.templateId === 'gold_trinket')).toBe(true);
+  });
+});
+
+describe('door entry spawn placement', () => {
+  /** 5x5 room with doors mid-edge */
+  const grid = [
+    ['wall', 'wall', 'door', 'wall', 'wall'],
+    ['wall', 'floor', 'floor', 'floor', 'wall'],
+    ['door', 'floor', 'floor', 'floor', 'door'],
+    ['wall', 'floor', 'floor', 'floor', 'wall'],
+    ['wall', 'wall', 'door', 'wall', 'wall'],
+  ];
+
+  it('entryFromOpposite matches leave-dir contract', () => {
+    expect(entryFromOpposite('east')).toBe('west');
+    expect(entryFromOpposite('west')).toBe('east');
+    expect(entryFromOpposite('north')).toBe('south');
+    expect(entryFromOpposite('south')).toBe('north');
+  });
+
+  it('enter from west (came through left door) spawns on left', () => {
+    const s = spawnInsideEntryEdge(grid, 'west');
+    expect(s.tx).toBe(1);
+    expect(s.ty).toBe(2);
+  });
+
+  it('enter from east spawns on right', () => {
+    const s = spawnInsideEntryEdge(grid, 'east');
+    expect(s.tx).toBe(3);
+    expect(s.ty).toBe(2);
+  });
+
+  it('enter from north spawns near top', () => {
+    const s = spawnInsideEntryEdge(grid, 'north');
+    expect(s.ty).toBe(1);
+    expect(s.tx).toBe(2);
+  });
+
+  it('enter from south spawns near bottom', () => {
+    const s = spawnInsideEntryEdge(grid, 'south');
+    expect(s.ty).toBe(3);
+    expect(s.tx).toBe(2);
+  });
+
+  it('off-center west door spawns next to that opening, not room mid', () => {
+    // Opening only on left edge at y=1 (not mid y=2)
+    const off = [
+      ['wall', 'wall', 'wall', 'wall', 'wall'],
+      ['door', 'floor', 'floor', 'floor', 'wall'],
+      ['wall', 'floor', 'floor', 'floor', 'wall'],
+      ['wall', 'floor', 'floor', 'floor', 'wall'],
+      ['wall', 'wall', 'wall', 'wall', 'wall'],
+    ];
+    const s = spawnInsideEntryEdge(off, 'west');
+    expect(s.tx).toBe(1);
+    expect(s.ty).toBe(1);
+  });
+
+  it('grass edge gap (overworld-style) is treated as a door opening', () => {
+    const ow = [
+      ['wall', 'wall', 'wall', 'wall'],
+      ['wall', 'grass', 'grass', 'grass'],
+      ['wall', 'grass', 'grass', 'grass'],
+      ['wall', 'wall', 'wall', 'wall'],
+    ];
+    // open east edge at y=1,2
+    ow[1][3] = 'grass';
+    ow[2][3] = 'grass';
+    const s = spawnInsideEntryEdge(ow, 'east');
+    expect(s.tx).toBe(2);
+    expect([1, 2]).toContain(s.ty);
   });
 });

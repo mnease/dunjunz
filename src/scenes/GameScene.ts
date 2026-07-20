@@ -12,6 +12,7 @@ import {
   VIEW_TILES_W,
 } from '../config';
 import { ROOMS, resolveRoomId } from '../data/world';
+import { entryFromOpposite, spawnInsideEntryEdge } from '../systems/map-spawn';
 import {
   enemyXpReward,
   grantXp,
@@ -571,24 +572,29 @@ export class GameScene extends Phaser.Scene {
     entryFrom?: string,
     fromSave?: boolean,
   ): { tx: number; ty: number } {
-    // Came down stairs → stand next to stairs-up (or room center)
+    // Came down stairs → stand just inside room near stairs-up
     if (entryFrom === 'stairsDown') {
       const up = this.findTile('stairs_up');
       if (up) return { tx: up.tx, ty: Math.min(VIEW_TILES_H - 2, up.ty + 2) };
       return { tx: 8, ty: 8 };
     }
-    // Came up stairs → stand next to stairs-down
+    // Came up stairs → stand near stairs-down
     if (entryFrom === 'stairsUp') {
       const down = this.findTile('stairs');
       if (down) return { tx: down.tx, ty: Math.max(1, down.ty - 2) };
       return { tx: 8, ty: 4 };
     }
 
-    // Cardinal: appear just inside the opposite edge
-    if (entryFrom === 'north') return { tx: 8, ty: 9 };
-    if (entryFrom === 'south') return { tx: 8, ty: 1 };
-    if (entryFrom === 'east') return { tx: 1, ty: 5 };
-    if (entryFrom === 'west') return { tx: 14, ty: 5 };
+    // Cardinal doors: entryFrom = edge of THIS room we entered through.
+    // Exit east of prev → entryFrom 'west' → spawn on LEFT next to west door.
+    if (
+      entryFrom === 'north' ||
+      entryFrom === 'south' ||
+      entryFrom === 'east' ||
+      entryFrom === 'west'
+    ) {
+      return spawnInsideEntryEdge(this.tileGrid, entryFrom);
+    }
 
     // Default / continue: meadow center or nearest stairs / mid
     if (fromSave || !entryFrom) {
@@ -1175,25 +1181,25 @@ export class GameScene extends Phaser.Scene {
     if (this.transitionLock || this.dialogLocked) return;
     const { tx, ty } = this.worldToTile(this.player.x, this.player.y);
 
-    // Cardinal doors: left → west room, right → east, top → north, bottom → south
+    // Cardinal doors: entryFrom = opposite edge (door entered on destination room)
     if (ty <= 0 && this.room.north) {
       this.transitionLock = true;
-      this.loadRoom(this.room.north, false, 'south');
+      this.loadRoom(this.room.north, false, entryFromOpposite('north'));
       return;
     }
     if (ty >= VIEW_TILES_H - 1 && this.room.south) {
       this.transitionLock = true;
-      this.loadRoom(this.room.south, false, 'north');
+      this.loadRoom(this.room.south, false, entryFromOpposite('south'));
       return;
     }
     if (tx <= 0 && this.room.west) {
       this.transitionLock = true;
-      this.loadRoom(this.room.west, false, 'east');
+      this.loadRoom(this.room.west, false, entryFromOpposite('west'));
       return;
     }
     if (tx >= VIEW_TILES_W - 1 && this.room.east) {
       this.transitionLock = true;
-      this.loadRoom(this.room.east, false, 'west');
+      this.loadRoom(this.room.east, false, entryFromOpposite('east'));
       return;
     }
   }
