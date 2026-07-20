@@ -572,16 +572,29 @@ export class GameScene extends Phaser.Scene {
     entryFrom?: string,
     fromSave?: boolean,
   ): { tx: number; ty: number } {
-    // Came down stairs → stand just inside room near stairs-up
+    // Came down stairs → stand south of stairs-up (not ON them, or you bounce back up)
     if (entryFrom === 'stairsDown') {
       const up = this.findTile('stairs_up');
-      if (up) return { tx: up.tx, ty: Math.min(VIEW_TILES_H - 2, up.ty + 2) };
+      if (up) {
+        const ty = Math.min(VIEW_TILES_H - 2, up.ty + 2);
+        // Prefer a walkable cell south of the stair
+        if (!SOLID.includes(this.tileGrid[ty]?.[up.tx] ?? 'wall')) {
+          return { tx: up.tx, ty };
+        }
+        return { tx: up.tx, ty: Math.min(VIEW_TILES_H - 2, up.ty + 1) };
+      }
       return { tx: 8, ty: 8 };
     }
-    // Came up stairs → stand near stairs-down
+    // Came up stairs → stand north of stairs-down (not ON them)
     if (entryFrom === 'stairsUp') {
       const down = this.findTile('stairs');
-      if (down) return { tx: down.tx, ty: Math.max(1, down.ty - 2) };
+      if (down) {
+        const ty = Math.max(1, down.ty - 2);
+        if (!SOLID.includes(this.tileGrid[ty]?.[down.tx] ?? 'wall')) {
+          return { tx: down.tx, ty };
+        }
+        return { tx: down.tx, ty: Math.max(1, down.ty - 1) };
+      }
       return { tx: 8, ty: 4 };
     }
 
