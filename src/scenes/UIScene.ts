@@ -71,7 +71,11 @@ export class UIScene extends Phaser.Scene {
   private invYouLabel: Phaser.GameObjects.Text | null = null;
   private invStats: Phaser.GameObjects.Text | null = null;
   private invAttrs: Phaser.GameObjects.Text | null = null;
-  private invBagText: Phaser.GameObjects.Text | null = null;
+  private invBagTitle: Phaser.GameObjects.Text | null = null;
+  private invBagDetail: Phaser.GameObjects.Text | null = null;
+  private invBagLayer: Phaser.GameObjects.Container | null = null;
+  private invBagPieces: Phaser.GameObjects.GameObject[] = [];
+  private invBagSelected = 0;
   private invHelp: Phaser.GameObjects.Text | null = null;
   private invSlotFrames: Partial<Record<EquipSlot, Phaser.GameObjects.Image>> = {};
   private invSlotIcons: Partial<Record<EquipSlot, Phaser.GameObjects.Image>> = {};
@@ -402,50 +406,54 @@ export class UIScene extends Phaser.Scene {
 
   private buildInventoryPanel(): void {
     const d = 120;
+    this.clearInvBagPieces();
+    this.invBagLayer?.destroy();
+
     this.invBg = this.add
-      .rectangle(GAME_W / 2, GAME_H / 2 + 8, GAME_W - 32, GAME_H - 68, 0x0a0c10, 0.96)
+      .rectangle(GAME_W / 2, GAME_H / 2 + 8, GAME_W - 24, GAME_H - 56, 0x0a0c10, 0.96)
       .setStrokeStyle(3, COLORS.gold)
       .setScrollFactor(0)
       .setDepth(d);
 
     this.invTitle = this.add
-      .text(GAME_W / 2, 52, 'INVENTORY / CHARACTER', {
+      .text(GAME_W / 2, 48, 'INVENTORY / CHARACTER', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '12px',
+        fontSize: '11px',
         color: '#7dffb3',
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(d + 1);
 
+    // Compact paper-doll
     this.invAvatarPlate = this.add
-      .rectangle(130, 200, 160, 200, 0x12161f, 1)
+      .rectangle(78, 150, 100, 120, 0x12161f, 1)
       .setStrokeStyle(2, COLORS.green)
       .setScrollFactor(0)
       .setDepth(d + 1);
 
     this.invAvatar = this.add
-      .image(130, 190, 'player')
-      .setScale(SCALE * 3)
+      .image(78, 145, 'player')
+      .setScale(SCALE * 2.2)
       .setScrollFactor(0)
       .setDepth(d + 2);
 
     this.invYouLabel = this.add
-      .text(130, 300, 'YOU', {
+      .text(78, 210, 'YOU', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '8px',
+        fontSize: '7px',
         color: '#8b93a7',
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(d + 2);
 
-    // 2-column slot grid (10 slots → 5 rows)
+    // Equip slots — 2 columns × 5 rows, right of avatar
     const slots: EquipSlot[] = [...ALL_EQUIP_SLOTS];
-    const startX = 280;
-    const startY = 92;
-    const colW = 220;
-    const rowH = 42;
+    const startX = 200;
+    const startY = 78;
+    const colW = 200;
+    const rowH = 34;
     slots.forEach((slot, i) => {
       const col = i < 5 ? 0 : 1;
       const row = i % 5;
@@ -453,51 +461,68 @@ export class UIScene extends Phaser.Scene {
       const y = startY + row * rowH;
       this.invSlotFrames[slot] = this.add
         .image(x, y, 'slot_frame')
-        .setScale(1.15)
+        .setScale(0.95)
         .setScrollFactor(0)
         .setDepth(d + 1);
       this.invSlotIcons[slot] = this.add
         .image(x, y, 'icon_empty')
-        .setScale(1.35)
+        .setScale(1.15)
         .setScrollFactor(0)
         .setDepth(d + 2);
       this.invSlotLabels[slot] = this.add
-        .text(x + 36, y - 12, `${slot.toUpperCase()} [${SLOT_KEYS[slot]}]\n(empty)`, {
+        .text(x + 28, y - 8, `${slot.toUpperCase()} [${SLOT_KEYS[slot]}]\n(empty)`, {
           fontFamily: '"Press Start 2P", monospace',
-          fontSize: '7px',
+          fontSize: '6px',
           color: '#c5cde0',
-          lineSpacing: 5,
+          lineSpacing: 4,
         })
         .setScrollFactor(0)
         .setDepth(d + 2);
     });
 
+    // Stats under avatar
     this.invStats = this.add
-      .text(48, 330, '', {
+      .text(28, 230, '', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '8px',
+        fontSize: '7px',
         color: '#ffc857',
-        lineSpacing: 6,
+        lineSpacing: 5,
       })
       .setScrollFactor(0)
       .setDepth(d + 2);
 
     this.invAttrs = this.add
-      .text(280, 330, '', {
+      .text(28, 300, '', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '8px',
+        fontSize: '7px',
         color: '#7dffb3',
-        lineSpacing: 6,
+        lineSpacing: 5,
       })
       .setScrollFactor(0)
       .setDepth(d + 2);
 
-    this.invBagText = this.add
-      .text(48, 420, '', {
+    // BAG grid section (full width under equip row)
+    this.invBagTitle = this.add
+      .text(GAME_W / 2, 268, 'BAG', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '7px',
+        fontSize: '10px',
+        color: '#ffc857',
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(d + 1);
+
+    this.invBagLayer = this.add
+      .container(0, 0)
+      .setScrollFactor(0)
+      .setDepth(d + 2);
+
+    this.invBagDetail = this.add
+      .text(40, GAME_H - 78, '', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
         color: '#c5cde0',
-        wordWrap: { width: GAME_W - 96 },
+        wordWrap: { width: GAME_W - 80 },
         lineSpacing: 5,
       })
       .setScrollFactor(0)
@@ -506,11 +531,11 @@ export class UIScene extends Phaser.Scene {
     this.invHelp = this.add
       .text(
         GAME_W / 2,
-        GAME_H - 32,
-        'W O H C L F G N R K  ·  1-5 ATTR  ·  U POTION  ·  I/ESC',
+        GAME_H - 28,
+        'CLICK BAG CELL · W O H C L F G N R K EQUIP · U USE · I/ESC',
         {
           fontFamily: '"Press Start 2P", monospace',
-          fontSize: '7px',
+          fontSize: '6px',
           color: '#7dffb3',
         },
       )
@@ -519,6 +544,12 @@ export class UIScene extends Phaser.Scene {
       .setDepth(d + 2);
 
     this.setInventoryVisible(false);
+  }
+
+  private clearInvBagPieces(): void {
+    for (const p of this.invBagPieces) p.destroy();
+    this.invBagPieces = [];
+    this.invBagLayer?.removeAll(true);
   }
 
   private setInvPieceVisible(
@@ -537,8 +568,11 @@ export class UIScene extends Phaser.Scene {
     this.setInvPieceVisible(this.invYouLabel, open);
     this.setInvPieceVisible(this.invStats, open);
     this.setInvPieceVisible(this.invAttrs, open);
-    this.setInvPieceVisible(this.invBagText, open);
+    this.setInvPieceVisible(this.invBagTitle, open);
+    this.setInvPieceVisible(this.invBagDetail, open);
     this.setInvPieceVisible(this.invHelp, open);
+    this.invBagLayer?.setVisible(open);
+    if (!open) this.clearInvBagPieces();
     for (const slot of ALL_EQUIP_SLOTS) {
       this.setInvPieceVisible(this.invSlotFrames[slot], open);
       this.setInvPieceVisible(this.invSlotIcons[slot], open);
@@ -1128,37 +1162,153 @@ export class UIScene extends Phaser.Scene {
 
     this.invStats?.setText(
       [
-        `COINS  ${save.coins}c`,
-        `HP     ${save.hp}/${save.maxHp}`,
-        `DEF    ${save.armor}`,
-        `WEAPON ${save.hasSword ? 'ready' : 'none'}`,
-        `KEY    ${save.hasKey ? 'ready' : 'none'}`,
+        `COINS ${save.coins}c`,
+        `HP ${save.hp}/${save.maxHp}`,
+        `DEF ${save.armor}`,
+        `WPN ${save.hasSword ? 'Y' : '-'} KEY ${save.hasKey ? 'Y' : '-'}`,
       ].join('\n'),
     );
 
     this.invAttrs?.setText(
       [
-        `ATTR PTS: ${save.attrPoints}`,
-        `1 STR ${save.attrs.str}`,
-        `2 DEX ${save.attrs.dex}`,
-        `3 VIT ${save.attrs.vit}`,
-        `4 INT ${save.attrs.int}`,
-        `5 LCK ${save.attrs.lck}`,
+        `PTS ${save.attrPoints}`,
+        `1STR${save.attrs.str} 2DEX${save.attrs.dex}`,
+        `3VIT${save.attrs.vit} 4INT${save.attrs.int}`,
+        `5LCK${save.attrs.lck}`,
       ].join('\n'),
     );
 
+    this.renderBagGrid(save);
+  }
+
+  private renderBagGrid(save: SaveData): void {
+    if (!this.invBagLayer) return;
+    this.clearInvBagPieces();
+
     const bag = listInventory(save);
+    this.invBagTitle?.setText(`BAG (${bag.length})`);
+
     if (!bag.length) {
-      this.invBagText?.setText('BAG: (empty)');
-    } else {
-      const lines = ['BAG:'];
-      for (const b of bag.slice(0, 8)) {
-        const tag = b.equipped ? ' [WORN]' : b.usable ? ' [U]' : '';
-        lines.push(` ${b.name} x${b.count}${tag}`);
-      }
-      if (bag.length > 8) lines.push(` ...+${bag.length - 8} more`);
-      this.invBagText?.setText(lines.join('\n'));
+      const empty = this.add
+        .text(GAME_W / 2, 340, '(empty — loot creeps & chests)', {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '8px',
+          color: '#6a738a',
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0);
+      this.invBagLayer.add(empty);
+      this.invBagPieces.push(empty);
+      this.invBagDetail?.setText('PICK UP GEAR TO FILL THE BAG GRID.');
+      return;
     }
+
+    if (this.invBagSelected >= bag.length) this.invBagSelected = 0;
+
+    const cols = 8;
+    const cell = 48;
+    const gap = 8;
+    const rows = Math.ceil(bag.length / cols);
+    const gridW = cols * cell + (cols - 1) * gap;
+    const originX = GAME_W / 2 - gridW / 2 + cell / 2;
+    const originY = 300 + cell / 2;
+
+    bag.forEach((item, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      // Cap visual rows if too many (scroll would be later)
+      if (row > 3) return;
+      const x = originX + col * (cell + gap);
+      const y = originY + row * (cell + gap);
+      const selected = i === this.invBagSelected;
+      const border = selected
+        ? COLORS.gold
+        : item.equipped
+          ? COLORS.green
+          : 0x5c4d7a;
+
+      const frame = this.add
+        .rectangle(x, y, cell, cell, 0x12161f, 1)
+        .setStrokeStyle(selected ? 3 : 2, border)
+        .setScrollFactor(0)
+        .setInteractive({ useHandCursor: true });
+      frame.on('pointerdown', () => {
+        this.invBagSelected = i;
+        this.renderBagGrid(save);
+        // Double-activate: emit use/equip to game
+        this.game.events.emit('inventory-bag-activate', {
+          uid: item.uid,
+          templateId: item.templateId,
+          usable: item.usable,
+          slot: item.slot,
+        });
+      });
+      this.invBagLayer!.add(frame);
+      this.invBagPieces.push(frame);
+
+      const k = itemIconKey(item.templateId);
+      const tex = this.textures.exists(k) ? k : 'icon_empty';
+      const icon = this.add
+        .image(x, y - 4, tex)
+        .setScale(1.4)
+        .setScrollFactor(0)
+        .setAlpha(item.equipped ? 1 : 0.95);
+      this.invBagLayer!.add(icon);
+      this.invBagPieces.push(icon);
+
+      if (item.count > 1) {
+        const cnt = this.add
+          .text(x + 14, y + 12, `x${item.count}`, {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '6px',
+            color: '#ffc857',
+          })
+          .setOrigin(0.5)
+          .setScrollFactor(0);
+        this.invBagLayer!.add(cnt);
+        this.invBagPieces.push(cnt);
+      }
+
+      if (item.equipped) {
+        const tag = this.add
+          .text(x, y + 16, 'E', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '6px',
+            color: '#7dffb3',
+          })
+          .setOrigin(0.5)
+          .setScrollFactor(0);
+        this.invBagLayer!.add(tag);
+        this.invBagPieces.push(tag);
+      }
+    });
+
+    if (rows > 4) {
+      const more = this.add
+        .text(GAME_W / 2, 300 + 4 * (cell + gap) + 8, `+${bag.length - 32} more`, {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '7px',
+          color: '#6a738a',
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0);
+      this.invBagLayer.add(more);
+      this.invBagPieces.push(more);
+    }
+
+    const sel = bag[this.invBagSelected];
+    if (sel) {
+      const bits = [
+        sel.name + (sel.count > 1 ? ` x${sel.count}` : ''),
+        sel.blurb,
+      ];
+      if (sel.equipped) bits.push('[EQUIPPED]');
+      else if (sel.usable) bits.push('CLICK AGAIN / U TO USE');
+      else if (sel.slot) bits.push(`CLICK TO EQUIP · SLOT ${sel.slot.toUpperCase()}`);
+      this.invBagDetail?.setText(bits.join('\n'));
+    }
+
+    void rows;
   }
 
   private onEnterKey = (event: KeyboardEvent): void => {

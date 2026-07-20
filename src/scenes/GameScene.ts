@@ -42,6 +42,7 @@ import {
   autoEquipEmptySlots,
   computePlayerDamage,
   cycleSlotEquip,
+  equipUid,
   grantKey,
   grantMildSword,
   hasWeaponEquipped,
@@ -332,6 +333,7 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on('forjing-state', this.onForjingState, this);
     this.game.events.on('shop-state', this.onShopState, this);
     this.game.events.on('shop-cursor', this.onShopCursor, this);
+    this.game.events.on('inventory-bag-activate', this.onBagActivate, this);
     this.events.once('shutdown', () => {
       this.game.events.off('dialog-state', this.onDialogState, this);
       this.game.events.off('inventory-state', this.onInventoryState, this);
@@ -339,6 +341,7 @@ export class GameScene extends Phaser.Scene {
       this.game.events.off('forjing-state', this.onForjingState, this);
       this.game.events.off('shop-state', this.onShopState, this);
       this.game.events.off('shop-cursor', this.onShopCursor, this);
+      this.game.events.off('inventory-bag-activate', this.onBagActivate, this);
       kb.off('keydown-SPACE', this.onAttackKey, this);
       kb.off('keydown-Z', this.onAttackKey, this);
       kb.off('keydown-E', this.onInteractKey, this);
@@ -596,6 +599,41 @@ export class GameScene extends Phaser.Scene {
 
   private onWeaponEquipKey = (): void => {
     this.cycleEquip('weapon');
+  };
+
+  /** Click a bag grid cell: equip gear or use consumable. */
+  private onBagActivate = (payload: {
+    uid?: string;
+    templateId: string;
+    usable?: boolean;
+    slot?: EquipSlot;
+  }): void => {
+    if (!this.inventoryOpen || this.paused) return;
+    if (payload.usable) {
+      const result = useInventoryItem(this.save, payload.templateId);
+      if (!result.ok) {
+        this.game.events.emit('toast', result.reason);
+        return;
+      }
+      this.save = result.save;
+      writeSave(this.save);
+      this.emitHud();
+      this.game.events.emit('inventory-refresh', this.save);
+      this.game.events.emit('toast', result.message);
+      return;
+    }
+    if (payload.uid && payload.slot) {
+      const result = equipUid(this.save, payload.uid);
+      if (!result.ok) {
+        this.game.events.emit('toast', result.reason);
+        return;
+      }
+      this.save = result.save;
+      writeSave(this.save);
+      this.emitHud();
+      this.game.events.emit('inventory-refresh', this.save);
+      this.game.events.emit('toast', result.message);
+    }
   };
 
   private cycleEquip(slot: EquipSlot): void {
