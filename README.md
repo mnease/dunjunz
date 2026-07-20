@@ -29,7 +29,9 @@ npm run preview
 | E | Talk / read / open chest / mapz / forje / princesz |
 | B | Buy featured item from nearby merchant |
 | I | Open / close inventory + character sheet |
-| M | Open / close **mapz** view (current land; needs discovered mapz) |
+| M / Tab | Open / close **graphic mapz** (current land; needs discovered mapz) |
+| `[` `]` | *(mapz open)* Switch floor (e.g. B1 / B2 in Dunjunz) |
+| `,` `.` | *(mapz open)* Cycle discovered lands |
 | F | Open **forjing** when standing near a forje (inventory open: shoes slot) |
 | U | Use a healing potion from the bag |
 | W H C L F G N K | *(inventory open)* Cycle equip slots |

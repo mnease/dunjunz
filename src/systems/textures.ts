@@ -547,7 +547,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(7, 7, 2, 3);
   });
 
-  // Mapz scroll
+  // Mapz scroll (world pickup)
   canvasTex(scene, 'mapz', TILE, TILE, (ctx) => {
     ctx.fillStyle = '#d4c4a0';
     ctx.fillRect(2, 3, 12, 11);
@@ -558,6 +558,70 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(4, 5, 8, 1);
     ctx.fillRect(4, 8, 6, 1);
     ctx.fillRect(4, 11, 7, 1);
+  });
+
+  // Graphic mapz UI tiles (48×48 room cells)
+  const cell = 48;
+  const drawMapzCell = (
+    ctx: CanvasRenderingContext2D,
+    fill: string,
+    border: string,
+    mode: 'visited' | 'unknown' | 'current',
+  ) => {
+    ctx.fillStyle = '#0a0c10';
+    ctx.fillRect(0, 0, cell, cell);
+    ctx.fillStyle = fill;
+    ctx.fillRect(4, 4, cell - 8, cell - 8);
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(4.5, 4.5, cell - 9, cell - 9);
+    // Inner floor detail
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(8, 8, cell - 16, 4);
+    if (mode === 'unknown') {
+      ctx.fillStyle = border;
+      ctx.font = 'bold 22px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('?', cell / 2, cell / 2 + 1);
+    }
+    if (mode === 'current') {
+      // Player gem
+      ctx.fillStyle = '#ff6b9d';
+      ctx.beginPath();
+      ctx.moveTo(cell / 2, 14);
+      ctx.lineTo(cell / 2 + 8, 24);
+      ctx.lineTo(cell / 2, 34);
+      ctx.lineTo(cell / 2 - 8, 24);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(cell / 2 - 2, 20, 4, 4);
+    }
+  };
+
+  canvasTex(scene, 'mapz_cell_visited', cell, cell, (ctx) => {
+    drawMapzCell(ctx, '#2f6b45', '#7dffb3', 'visited');
+  });
+  canvasTex(scene, 'mapz_cell_unknown', cell, cell, (ctx) => {
+    drawMapzCell(ctx, '#1a2a20', '#5a6a60', 'unknown');
+  });
+  canvasTex(scene, 'mapz_cell_current', cell, cell, (ctx) => {
+    drawMapzCell(ctx, '#3a8a55', '#ffc857', 'current');
+  });
+  canvasTex(scene, 'mapz_stairs', 16, 16, (ctx) => {
+    ctx.fillStyle = '#ff6b9d';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(2 + i, 12 - i * 3, 12 - i * 2, 2);
+    }
+  });
+  canvasTex(scene, 'mapz_link_h', 16, 8, (ctx) => {
+    ctx.fillStyle = '#7dffb3';
+    ctx.fillRect(0, 2, 16, 4);
+  });
+  canvasTex(scene, 'mapz_link_v', 8, 16, (ctx) => {
+    ctx.fillStyle = '#7dffb3';
+    ctx.fillRect(2, 0, 4, 16);
   });
 
   // Forje anvil + glow

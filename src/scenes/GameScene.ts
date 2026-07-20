@@ -45,7 +45,6 @@ import {
 } from '../systems/inventory';
 import {
   discoverMapz,
-  formatMapzPanel,
   landForRoom,
   markRoomVisited,
   reconcileMapzFromCollected,
@@ -274,6 +273,10 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-K', () => this.cycleEquip('key'));
     kb.on('keydown-M', this.onMapzKey, this);
     kb.on('keydown-TAB', this.onMapzKey, this);
+    kb.on('keydown-OPEN_BRACKET', () => this.onMapzNav('floor-prev'));
+    kb.on('keydown-CLOSED_BRACKET', () => this.onMapzNav('floor-next'));
+    kb.on('keydown-COMMA', () => this.onMapzNav('land-prev'));
+    kb.on('keydown-PERIOD', () => this.onMapzNav('land-next'));
     kb.on('keydown-ONE', () => this.onDigitKey(1));
     kb.on('keydown-TWO', () => this.onDigitKey(2));
     kb.on('keydown-THREE', () => this.onDigitKey(3));
@@ -334,6 +337,13 @@ export class GameScene extends Phaser.Scene {
 
     this.loadRoom(this.save.roomId, true);
     this.emitHud();
+  }
+
+  private onMapzNav(
+    dir: 'floor-prev' | 'floor-next' | 'land-prev' | 'land-next',
+  ): void {
+    if (!this.mapzOpen || this.paused) return;
+    this.game.events.emit('mapz-nav', dir);
   }
 
   private addWallAt(x: number, y: number, kind: TileKind): void {
@@ -435,8 +445,10 @@ export class GameScene extends Phaser.Scene {
 
   private openMapzPanel(): void {
     const land = landForRoom(ROOMS, this.save.roomId);
-    const text = formatMapzPanel(ROOMS, this.save, land);
-    this.game.events.emit('mapz-toggle', text);
+    this.game.events.emit('mapz-toggle', {
+      save: this.save,
+      land,
+    });
   }
 
   private onForjingOrShoesKey = (): void => {
@@ -1598,7 +1610,7 @@ export class GameScene extends Phaser.Scene {
       if (this.inventoryOpen) {
         this.game.events.emit('inventory-toggle', this.save);
       } else if (this.mapzOpen) {
-        this.game.events.emit('mapz-toggle', '');
+        this.game.events.emit('mapz-toggle');
       } else if (this.forjingOpen) {
         this.game.events.emit('forjing-toggle', '');
       } else {
