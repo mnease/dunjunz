@@ -1,5 +1,13 @@
 import type Phaser from 'phaser';
 import { COLORS, TILE } from '../config';
+import {
+  AMULET_LOOKS,
+  ARMOR_LOOKS,
+  playerTextureKey,
+  type AmuletLook,
+  type ArmorLook,
+  type AppearanceSpec,
+} from './appearance';
 
 function canvasTex(
   scene: Phaser.Scene,
@@ -20,6 +28,141 @@ function canvasTex(
 
 function hex(n: number): string {
   return `#${n.toString(16).padStart(6, '0')}`;
+}
+
+/** Draw hero at 16x16 with optional armor / amulet / sword. */
+function drawPlayerLook(
+  ctx: CanvasRenderingContext2D,
+  spec: AppearanceSpec,
+): void {
+  // Legs
+  ctx.fillStyle = '#3d2b1f';
+  ctx.fillRect(5, 13, 2, 2);
+  ctx.fillRect(9, 13, 2, 2);
+
+  // Torso base (tunic)
+  let body = '#2d6cdf';
+  if (spec.armor === 'leather_armor') body = '#8b5a2b';
+  if (spec.armor === 'reinforced_leather') body = '#5c4030';
+  ctx.fillStyle = body;
+  ctx.fillRect(4, 6, 8, 7);
+
+  // Armor plate / straps
+  if (spec.armor === 'leather_armor') {
+    ctx.fillStyle = '#a06830';
+    ctx.fillRect(5, 7, 6, 2);
+    ctx.fillStyle = '#5a3d1a';
+    ctx.fillRect(4, 10, 8, 1);
+  }
+  if (spec.armor === 'reinforced_leather') {
+    ctx.fillStyle = '#8a7a60';
+    ctx.fillRect(5, 7, 6, 3);
+    ctx.fillStyle = hex(COLORS.gold);
+    ctx.fillRect(7, 8, 2, 2);
+    ctx.fillStyle = '#3a2a18';
+    ctx.fillRect(4, 11, 8, 1);
+  }
+
+  // Head + hair
+  ctx.fillStyle = '#f0c8a4';
+  ctx.fillRect(5, 2, 6, 5);
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(6, 3, 1, 1);
+  ctx.fillRect(9, 3, 1, 1);
+  ctx.fillStyle = '#c9a227';
+  ctx.fillRect(4, 1, 8, 2);
+
+  // Amulet / necklace
+  if (spec.amulet === 'gold_trinket') {
+    ctx.fillStyle = hex(COLORS.gold);
+    ctx.fillRect(7, 6, 2, 1);
+    ctx.fillRect(7, 7, 2, 2);
+  }
+  if (spec.amulet === 'shiny_bauble') {
+    ctx.fillStyle = hex(COLORS.pink);
+    ctx.fillRect(7, 6, 2, 1);
+    ctx.fillRect(6, 7, 4, 2);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(7, 7, 1, 1);
+  }
+
+  // Sword on hip
+  if (spec.sword) {
+    ctx.fillStyle = '#dfe6f0';
+    ctx.fillRect(12, 8, 2, 5);
+    ctx.fillStyle = '#c9a227';
+    ctx.fillRect(11, 12, 4, 1);
+  }
+}
+
+function drawItemIcon(
+  ctx: CanvasRenderingContext2D,
+  itemId: string,
+): void {
+  // Slot background
+  ctx.fillStyle = '#1a1528';
+  ctx.fillRect(0, 0, 24, 24);
+  ctx.strokeStyle = '#5c4d7a';
+  ctx.strokeRect(0.5, 0.5, 23, 23);
+
+  if (itemId === 'empty') {
+    ctx.fillStyle = '#2a2438';
+    ctx.fillRect(8, 8, 8, 8);
+    return;
+  }
+  if (itemId === 'potion') {
+    ctx.fillStyle = hex(COLORS.pink);
+    ctx.fillRect(9, 10, 6, 8);
+    ctx.fillStyle = '#ddd';
+    ctx.fillRect(10, 6, 4, 4);
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(11, 4, 2, 3);
+    return;
+  }
+  if (itemId === 'leather_armor') {
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(6, 7, 12, 12);
+    ctx.fillStyle = '#a06830';
+    ctx.fillRect(8, 9, 8, 4);
+    return;
+  }
+  if (itemId === 'reinforced_leather') {
+    ctx.fillStyle = '#5c4030';
+    ctx.fillRect(6, 7, 12, 12);
+    ctx.fillStyle = '#8a7a60';
+    ctx.fillRect(8, 9, 8, 5);
+    ctx.fillStyle = hex(COLORS.gold);
+    ctx.fillRect(11, 11, 2, 2);
+    return;
+  }
+  if (itemId === 'gold_trinket') {
+    ctx.fillStyle = hex(COLORS.gold);
+    ctx.beginPath();
+    ctx.arc(12, 12, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff3a0';
+    ctx.fillRect(10, 10, 2, 2);
+    return;
+  }
+  if (itemId === 'shiny_bauble') {
+    ctx.fillStyle = hex(COLORS.pink);
+    ctx.beginPath();
+    ctx.arc(12, 12, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(9, 9, 3, 3);
+    return;
+  }
+  if (itemId === 'tinker_oil') {
+    ctx.fillStyle = '#4a90a4';
+    ctx.fillRect(8, 8, 8, 10);
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(10, 5, 4, 4);
+    return;
+  }
+  // Fallback
+  ctx.fillStyle = '#7dffb3';
+  ctx.fillRect(8, 8, 8, 8);
 }
 
 export function generateTextures(scene: Phaser.Scene): void {
@@ -112,19 +255,44 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(7, 7, 2, 2);
   });
 
+  // Default player + every gear combination for world avatar / paper doll
   canvasTex(scene, 'player', TILE, TILE, (ctx) => {
-    ctx.fillStyle = '#2d6cdf';
-    ctx.fillRect(4, 6, 8, 7);
-    ctx.fillStyle = '#f0c8a4';
-    ctx.fillRect(5, 2, 6, 5);
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(6, 3, 1, 1);
-    ctx.fillRect(9, 3, 1, 1);
-    ctx.fillStyle = '#c9a227';
-    ctx.fillRect(4, 1, 8, 2);
-    ctx.fillStyle = '#3d2b1f';
-    ctx.fillRect(5, 13, 2, 2);
-    ctx.fillRect(9, 13, 2, 2);
+    drawPlayerLook(ctx, { armor: 'none', amulet: 'none', sword: false });
+  });
+  for (const armor of ARMOR_LOOKS) {
+    for (const amulet of AMULET_LOOKS) {
+      for (const sword of [false, true]) {
+        const spec = { armor: armor as ArmorLook, amulet: amulet as AmuletLook, sword };
+        canvasTex(scene, playerTextureKey(spec), TILE, TILE, (ctx) => {
+          drawPlayerLook(ctx, spec);
+        });
+      }
+    }
+  }
+
+  // Inventory item icons (24×24)
+  const iconIds = [
+    'empty',
+    'potion',
+    'leather_armor',
+    'reinforced_leather',
+    'gold_trinket',
+    'shiny_bauble',
+    'tinker_oil',
+  ];
+  for (const id of iconIds) {
+    canvasTex(scene, `icon_${id}`, 24, 24, (ctx) => drawItemIcon(ctx, id));
+  }
+
+  // Slot frame chrome
+  canvasTex(scene, 'slot_frame', 40, 40, (ctx) => {
+    ctx.fillStyle = '#12161f';
+    ctx.fillRect(0, 0, 40, 40);
+    ctx.strokeStyle = '#7dffb3';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, 38, 38);
+    ctx.strokeStyle = '#ffc857';
+    ctx.strokeRect(4, 4, 32, 32);
   });
 
   canvasTex(scene, 'sword-swing', 20, 20, (ctx) => {

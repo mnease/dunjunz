@@ -25,6 +25,7 @@ import {
   attemptFeaturedPurchase,
   shopCatalogLines,
 } from '../systems/shop';
+import { playerTextureKeyFromSave } from '../systems/appearance';
 import {
   autoEquipEmptySlots,
   cycleAmuletEquip,
@@ -218,6 +219,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setDepth(10);
     // Body size in source pixels (texture is 16x16); Phaser scales with the sprite
     this.player.setBodySize(10, 12, true);
+    this.refreshPlayerAppearance();
 
     this.swordHit = this.physics.add.image(-999, -999, 'sword-swing');
     this.swordHit.setScale(SCALE);
@@ -395,6 +397,7 @@ export class GameScene extends Phaser.Scene {
     }
     writeSave(this.save);
     this.emitHud();
+    this.refreshPlayerAppearance();
     if (showDialog) {
       this.game.events.emit('dialog-show', [
         'YOU GOT THE SWORD OF',
@@ -618,9 +621,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   private emitHud(): void {
+    this.refreshPlayerAppearance();
     this.game.events.emit('hud-update', this.save, this.room.title);
     if (this.inventoryOpen) {
       this.game.events.emit('inventory-refresh', this.save);
+    }
+  }
+
+  /** Swap player texture so armor / amulet / sword show on the avatar. */
+  private refreshPlayerAppearance(): void {
+    if (!this.player) return;
+    const key = playerTextureKeyFromSave(this.save);
+    if (this.textures.exists(key)) {
+      this.player.setTexture(key);
+    } else if (this.textures.exists('player')) {
+      this.player.setTexture('player');
     }
   }
 

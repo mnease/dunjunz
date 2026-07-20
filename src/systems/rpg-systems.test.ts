@@ -27,6 +27,11 @@ import {
   unequipSlot,
   useInventoryItem,
 } from './inventory';
+import {
+  appearanceFromSave,
+  playerTextureKey,
+  playerTextureKeyFromSave,
+} from './appearance';
 import { defaultSave } from './save';
 
 describe('progression (XP / levels)', () => {
@@ -284,5 +289,21 @@ describe('equip armor and amulets', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.save.equippedAmulet).toBeTruthy();
+  });
+});
+
+describe('appearance keys', () => {
+  it('playerTextureKey reflects equipped armor amulet and sword', () => {
+    const save = {
+      ...defaultSave(),
+      hasSword: true,
+      equippedArmor: 'leather_armor',
+      equippedAmulet: 'gold_trinket',
+      inventory: { leather_armor: 1, gold_trinket: 1 },
+    };
+    const key = playerTextureKeyFromSave(save);
+    expect(key).toBe('player_leather_armor_gold_trinket_s');
+    const bare = playerTextureKey(appearanceFromSave(defaultSave()));
+    expect(bare).toBe('player_none_none_n');
   });
 });
