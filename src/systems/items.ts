@@ -34,6 +34,34 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     kind: 'consumable',
     stackable: true,
   },
+  ore_iron: {
+    id: 'ore_iron',
+    name: 'IRON ORE',
+    blurb: 'Forjing material.',
+    kind: 'consumable',
+    stackable: true,
+  },
+  ore_spark: {
+    id: 'ore_spark',
+    name: 'SPARK ORE',
+    blurb: 'Magic forjing dust.',
+    kind: 'consumable',
+    stackable: true,
+  },
+  wood_shard: {
+    id: 'wood_shard',
+    name: 'WOOD SHARD',
+    blurb: 'From the woodz.',
+    kind: 'consumable',
+    stackable: true,
+  },
+  sand_crystal: {
+    id: 'sand_crystal',
+    name: 'SAND CRYSTAL',
+    blurb: 'Dezertz glass.',
+    kind: 'consumable',
+    stackable: true,
+  },
   mild_sword: {
     id: 'mild_sword',
     name: 'SWORD OF MILD ENTHUSIASM',
@@ -41,6 +69,33 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     kind: 'gear',
     slot: 'weapon',
     baseAtk: 1,
+    look: 'sword',
+  },
+  iron_blade: {
+    id: 'iron_blade',
+    name: 'IRON BLADE',
+    blurb: 'Forjed weapon. Solid.',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 2,
+    look: 'sword',
+  },
+  sand_saber: {
+    id: 'sand_saber',
+    name: 'SAND SABER',
+    blurb: 'Dezertz steel.',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 3,
+    look: 'sword',
+  },
+  dunjun_cleaver: {
+    id: 'dunjun_cleaver',
+    name: 'DUNJUN CLEAVER',
+    blurb: 'Legendary dunjun loot.',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 4,
     look: 'sword',
   },
   leather_helmet: {
@@ -140,6 +195,11 @@ export function displayItemName(inst: ItemInstance): string {
   const t = getTemplate(inst.templateId);
   const bits = [t.name];
   if (inst.enhancement > 0) bits.push(`+${inst.enhancement}`);
+  if (inst.attrBonuses) {
+    for (const [k, v] of Object.entries(inst.attrBonuses)) {
+      if (v) bits.push(`+${v}${k.toUpperCase()}`);
+    }
+  }
   if (inst.rarity !== 'common') bits.push(`(${rarityLabel(inst.rarity)})`);
   return bits.join(' ');
 }

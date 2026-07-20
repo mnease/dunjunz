@@ -136,13 +136,40 @@ function drawItemIcon(
     ctx.fillRect(11, 4, 2, 3);
     return;
   }
-  if (itemId === 'mild_sword') {
-    ctx.fillStyle = '#dfe6f0';
+  if (
+    itemId === 'mild_sword' ||
+    itemId === 'iron_blade' ||
+    itemId === 'sand_saber' ||
+    itemId === 'dunjun_cleaver'
+  ) {
+    ctx.fillStyle =
+      itemId === 'dunjun_cleaver'
+        ? '#ff6b9d'
+        : itemId === 'sand_saber'
+          ? '#e8c070'
+          : itemId === 'iron_blade'
+            ? '#a0b0c0'
+            : '#dfe6f0';
     ctx.fillRect(11, 4, 2, 14);
     ctx.fillStyle = '#c9a227';
     ctx.fillRect(8, 14, 8, 2);
     ctx.fillStyle = '#8b5a2b';
     ctx.fillRect(11, 16, 2, 4);
+    return;
+  }
+  if (
+    itemId === 'ore_iron' ||
+    itemId === 'ore_spark' ||
+    itemId === 'wood_shard' ||
+    itemId === 'sand_crystal'
+  ) {
+    if (itemId === 'ore_iron') ctx.fillStyle = '#8a9098';
+    else if (itemId === 'ore_spark') ctx.fillStyle = '#7dffb3';
+    else if (itemId === 'wood_shard') ctx.fillStyle = '#8b5a2b';
+    else ctx.fillStyle = '#e8c070';
+    ctx.fillRect(7, 7, 10, 10);
+    ctx.fillStyle = '#fff3a0';
+    ctx.fillRect(9, 9, 3, 3);
     return;
   }
   if (
@@ -337,6 +364,9 @@ export function generateTextures(scene: Phaser.Scene): void {
     'empty',
     'potion',
     'mild_sword',
+    'iron_blade',
+    'sand_saber',
+    'dunjun_cleaver',
     'leather_armor',
     'reinforced_leather',
     'leather_helmet',
@@ -347,6 +377,10 @@ export function generateTextures(scene: Phaser.Scene): void {
     'shiny_bauble',
     'dungeon_key',
     'tinker_oil',
+    'ore_iron',
+    'ore_spark',
+    'wood_shard',
+    'sand_crystal',
   ];
   for (const id of iconIds) {
     canvasTex(scene, `icon_${id}`, 24, 24, (ctx) => drawItemIcon(ctx, id));
@@ -511,6 +545,74 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(2, 4, 12, 4);
     ctx.fillStyle = hex(COLORS.gold);
     ctx.fillRect(7, 7, 2, 3);
+  });
+
+  // Mapz scroll
+  canvasTex(scene, 'mapz', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#d4c4a0';
+    ctx.fillRect(2, 3, 12, 11);
+    ctx.fillStyle = '#8b6914';
+    ctx.fillRect(2, 2, 12, 2);
+    ctx.fillRect(2, 13, 12, 2);
+    ctx.fillStyle = '#2a6a4a';
+    ctx.fillRect(4, 5, 8, 1);
+    ctx.fillRect(4, 8, 6, 1);
+    ctx.fillRect(4, 11, 7, 1);
+  });
+
+  // Forje anvil + glow
+  canvasTex(scene, 'forje', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#3a3a48';
+    ctx.fillRect(3, 8, 10, 5);
+    ctx.fillStyle = '#5a5a68';
+    ctx.fillRect(2, 6, 12, 3);
+    ctx.fillStyle = '#ff8a4c';
+    ctx.fillRect(6, 3, 4, 3);
+    ctx.fillStyle = hex(COLORS.gold);
+    ctx.fillRect(7, 4, 2, 1);
+  });
+
+  // Princesz Prizella
+  canvasTex(scene, 'princess', TILE, TILE, (ctx) => {
+    ctx.fillStyle = hex(COLORS.pink);
+    ctx.fillRect(4, 7, 8, 7);
+    ctx.fillStyle = '#f0c8a4';
+    ctx.fillRect(5, 3, 6, 5);
+    ctx.fillStyle = hex(COLORS.gold);
+    ctx.fillRect(4, 1, 8, 3);
+    ctx.fillRect(7, 0, 2, 2);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(6, 5, 1, 1);
+    ctx.fillRect(9, 5, 1, 1);
+  });
+
+  // Woodz wolf
+  canvasTex(scene, 'wolf', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#6a6a78';
+    ctx.fillRect(3, 7, 10, 6);
+    ctx.fillRect(2, 5, 6, 4);
+    ctx.fillStyle = '#4a4a58';
+    ctx.fillRect(1, 3, 3, 3);
+    ctx.fillRect(6, 3, 3, 3);
+    ctx.fillStyle = '#ff3344';
+    ctx.fillRect(3, 6, 1, 1);
+    ctx.fillRect(6, 6, 1, 1);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(12, 9, 3, 2);
+  });
+
+  // Dezertz cactus
+  canvasTex(scene, 'cactus', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#3d8b5a';
+    ctx.fillRect(6, 3, 4, 11);
+    ctx.fillRect(3, 5, 3, 4);
+    ctx.fillRect(10, 7, 3, 4);
+    ctx.fillStyle = '#2a6a40';
+    ctx.fillRect(7, 4, 1, 2);
+    ctx.fillRect(9, 8, 1, 2);
+    ctx.fillStyle = '#f0e8c0';
+    ctx.fillRect(5, 2, 1, 1);
+    ctx.fillRect(10, 4, 1, 1);
   });
 
   canvasTex(scene, 'particle', 4, 4, (ctx) => {

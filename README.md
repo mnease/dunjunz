@@ -26,43 +26,52 @@ npm run preview
 | --- | --- |
 | Arrow keys / WASD | Move |
 | Space / Z | Attack (after you have the sword) |
-| E | Talk / read / open chest |
+| E | Talk / read / open chest / mapz / forje / princesz |
 | B | Buy featured item from nearby merchant |
 | I | Open / close inventory + character sheet |
+| M | Open / close **mapz** view (current land; needs discovered mapz) |
+| F | Open **forjing** when standing near a forje (inventory open: shoes slot) |
 | U | Use a healing potion from the bag |
 | W H C L F G N K | *(inventory open)* Cycle equip slots |
 | 1–5 | *(inventory open)* Spend STR DEX VIT INT LCK |
+| 1–6 | *(forjing open)* Enhance / imbue / craft recipes |
 | Enter / Space | Advance dialog (does not re-open) |
-| Esc | Close inventory, or pause |
+| Esc | Close inventory / mapz / forjing, or pause |
 | M (while paused) | Return to title |
 | R (on title) | New game (clears save) |
 
-Progress is stored in `localStorage` (`dunjunz-save-v1`).
+Progress is stored in `localStorage` (`dunjunz-save-v1`). Save **v5** adds mapz, visited rooms, princesz quest, land clears.
 
-## RPG systems (v0.4)
+## Quest (v0.5)
 
-- **XP curve** — formula `6 + 4L + 0.5L²` per level band; harder as you climb; **no level-10 cap** (levels continue)
+1. **Meadow** — old man, starter sword, surface mapz
+2. **Dunjunz** (stairs in meadow) — beat the Dunjun Master for **great loot** (Dunjun Cleaver + mapz of woodz/dezertz)
+3. **Woodz** (trail north) — wolves, Wolf Lord, forje, wood shardz
+4. **Dezertz** (trail south) — cacti, forje, Sand Wraith, **Princesz Prizella**
+
+Intentional spellings: Dunjunz, woodz, dezertz, mapz, forjing, Princesz Prizella.
+
+## RPG systems (v0.5)
+
+- **XP curve** — formula `6 + 4L + 0.5L²` per level band; harder as you climb; **no level-10 cap**
 - **Attributes** — STR DEX VIT INT LCK; **+2 points per level**; spend in inventory with **1–5**
 - **8 equip slots** — weapon, helmet, breastplate, greaves, shoes, gloves, amulet, key
-- **Rarity + enhancement** — common→legendary; gear rolls on chest open (LCK helps)
+- **Rarity + enhancement** — common→legendary; forjing enhancement 0–3
+- **Forjing** — craft weapons, +enhancement, imbue +STR/+DEX/+VIT on weapons with ores/shardz
+- **Mapz** — discoverable per land; fog-of-war for visited rooms
 - **Key item** — shows on paper-doll + bag; must equip to open locked doors
 - **Avatar** — layered look for breastplate, helmet, amulet, hip weapon, belt key
 - Pure modules under `src/systems/` with `npm test`
 
-## Vertical slice (v0.1+)
+## Content
 
 - Title screen + continue / new game
-- Overworld meadow with the obligatory old man and starter sword
-- Multi-room dungeon:
-  - Entrance skeletons
-  - The apologetic gelatinous cube
-  - “Speak friend and enter” key door
-  - USS Plot Hole (redshirts + captain’s log)
-  - Hall of Bad Ideas
-  - Boss: the Dungeon Master
-- Chests + tinkerer merchants on the trail and near the throne
-- Hearts, key, combat, lava hazard, malfunctioning transporter pads
-- CRT chrome UI, pixel-art textures generated at runtime (no external sprite pack required)
+- Surface meadow + trope trail
+- Dunjunz multi-floor (B1–B2): cube, speak-friend key, redshirts, Dunjun Master
+- Woodz + Wolf Lord + forje
+- Dezertz + Sand Wraith + Princesz Prizella
+- Chests, tinkerer merchants, hearts, lava, transporter pads
+- CRT chrome UI, procedural pixel textures (no external sprite pack)
 
 ## Stack
 

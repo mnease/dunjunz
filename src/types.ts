@@ -25,7 +25,12 @@ export type EntityKind =
   | 'heart'
   | 'sword'
   | 'sign'
-  | 'chest';
+  | 'chest'
+  | 'mapz'
+  | 'forje'
+  | 'princess'
+  | 'cactus'
+  | 'wolf';
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
@@ -56,7 +61,12 @@ export interface ItemInstance {
   rarity: Rarity;
   /** 0–3 flat enhancement on primary stat. */
   enhancement: number;
+  /** Magical stat enhancers from forjing (e.g. +2 STR). */
+  attrBonuses?: Partial<Attributes>;
 }
+
+/** Player-facing land ids (intentional misspellingz). */
+export type LandId = 'surface' | 'dunjunz' | 'woodz' | 'dezertz';
 
 export interface EquippedMap {
   weapon: string | null;
@@ -81,6 +91,8 @@ export interface EntityDef {
   loot?: 'key' | 'heart' | 'none';
   chestTable?: string;
   shopId?: string;
+  /** Which mapz this pickup discovers. */
+  mapzId?: LandId;
 }
 
 export interface RoomDef {
@@ -98,6 +110,8 @@ export interface RoomDef {
   /** Map grid coords within this floor (for consistency / debugging). */
   mapX?: number;
   mapY?: number;
+  /** Land for mapz grouping (surface / dunjunz / woodz / dezertz). */
+  land?: LandId;
   /** Room reached by walking onto stairs-down tiles (S). */
   stairsDown?: string;
   /** Room reached by walking onto stairs-up tiles (U). */
@@ -106,11 +120,11 @@ export interface RoomDef {
 }
 
 /**
- * Save v4 — multi-slot gear, stacks, attributes, formula XP.
- * loadSave migrates ≤3.
+ * Save v5 — multi-land quest, mapz, forjing.
+ * loadSave migrates ≤4.
  */
 export interface SaveData {
-  version: 4;
+  version: 5;
   roomId: string;
   hp: number;
   maxHp: number;
@@ -125,7 +139,7 @@ export interface SaveData {
   xp: number;
   level: number;
   coins: number;
-  /** Stackable consumables. */
+  /** Stackable consumables + forjing materials. */
   stacks: Record<string, number>;
   /** Unique gear + key instances. */
   bag: ItemInstance[];
@@ -136,4 +150,12 @@ export interface SaveData {
   attrPoints: number;
   /** Derived total DEF. */
   armor: number;
+  /** Mapz the player has found (enables mapz view for that land). */
+  discoveredMapz: LandId[];
+  /** Rooms visited (for mapz fog of war). */
+  visitedRooms: string[];
+  /** Quest: Princess Prizella saved. */
+  princessSaved: boolean;
+  /** Land bosses cleared (dunjunz, woodz, dezertz). */
+  landsCleared: LandId[];
 }

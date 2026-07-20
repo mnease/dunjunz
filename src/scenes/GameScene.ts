@@ -43,12 +43,31 @@ import {
   syncDerivedStats,
   useInventoryItem,
 } from '../systems/inventory';
+import {
+  discoverMapz,
+  formatMapzPanel,
+  landForRoom,
+  markRoomVisited,
+} from '../systems/mapz';
+import {
+  formatForjingPanel,
+  forjeCraft,
+  forjeEnhanceWeapon,
+  forjeImbueWeapon,
+} from '../systems/forjing';
+import {
+  questHint,
+  rewardDezertzClear,
+  rewardDunjunzClear,
+  rewardWoodzClear,
+} from '../systems/quest';
 import { loadSave, writeSave } from '../systems/save';
 import type {
   AttrId,
   EntityDef,
   EntityKind,
   EquipSlot,
+  LandId,
   RoomDef,
   SaveData,
   TileKind,
@@ -67,6 +86,7 @@ interface Actor {
   interactive: boolean;
   chestTable?: string;
   shopId?: string;
+  mapzId?: LandId;
 }
 
 const SOLID: TileKind[] = ['wall', 'water', 'void', 'locked'];
@@ -114,6 +134,11 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   sword: 'sword-item',
   sign: 'sign',
   chest: 'chest',
+  mapz: 'mapz',
+  forje: 'forje',
+  princess: 'princess',
+  cactus: 'cactus',
+  wolf: 'wolf',
 };
 
 export class GameScene extends Phaser.Scene {
@@ -149,6 +174,8 @@ export class GameScene extends Phaser.Scene {
   /** Blocks re-open / attack for a beat after dialog closes (same key must not re-trigger). */
   private dialogCloseCooldown = 0;
   private inventoryOpen = false;
+  private mapzOpen = false;
+  private forjingOpen = false;
   private paused = false;
   private transitionLock = false;
   private roomOriginX = 0;
@@ -166,6 +193,8 @@ export class GameScene extends Phaser.Scene {
     this.dialogLocked = false;
     this.dialogCloseCooldown = 0;
     this.inventoryOpen = false;
+    this.mapzOpen = false;
+    this.forjingOpen = false;
     this.paused = false;
     this.attacking = false;
     this.invuln = 0;
@@ -201,6 +230,8 @@ export class GameScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.U,
       Phaser.Input.Keyboard.KeyCodes.N,
       Phaser.Input.Keyboard.KeyCodes.W,
+      Phaser.Input.Keyboard.KeyCodes.M,
+      Phaser.Input.Keyboard.KeyCodes.F,
     ]);
     this.cursors = kb.createCursorKeys();
     this.keys = {
@@ -235,15 +266,17 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-H', () => this.cycleEquip('helmet'));
     kb.on('keydown-C', () => this.cycleEquip('breastplate'));
     kb.on('keydown-L', () => this.cycleEquip('greaves'));
-    kb.on('keydown-F', () => this.cycleEquip('shoes'));
+    kb.on('keydown-F', this.onForjingOrShoesKey, this);
     kb.on('keydown-G', () => this.cycleEquip('gloves'));
     kb.on('keydown-N', () => this.cycleEquip('amulet'));
     kb.on('keydown-K', () => this.cycleEquip('key'));
-    kb.on('keydown-ONE', () => this.spendAttr('str'));
-    kb.on('keydown-TWO', () => this.spendAttr('dex'));
-    kb.on('keydown-THREE', () => this.spendAttr('vit'));
-    kb.on('keydown-FOUR', () => this.spendAttr('int'));
-    kb.on('keydown-FIVE', () => this.spendAttr('lck'));
+    kb.on('keydown-M', this.onMapzKey, this);
+    kb.on('keydown-ONE', () => this.onDigitKey(1));
+    kb.on('keydown-TWO', () => this.onDigitKey(2));
+    kb.on('keydown-THREE', () => this.onDigitKey(3));
+    kb.on('keydown-FOUR', () => this.onDigitKey(4));
+    kb.on('keydown-FIVE', () => this.onDigitKey(5));
+    kb.on('keydown-SIX', () => this.onDigitKey(6));
 
     this.player = this.physics.add.sprite(0, 0, 'player');
     this.player.setScale(SCALE);
@@ -266,9 +299,13 @@ export class GameScene extends Phaser.Scene {
 
     this.game.events.on('dialog-state', this.onDialogState, this);
     this.game.events.on('inventory-state', this.onInventoryState, this);
+    this.game.events.on('mapz-state', this.onMapzState, this);
+    this.game.events.on('forjing-state', this.onForjingState, this);
     this.events.once('shutdown', () => {
       this.game.events.off('dialog-state', this.onDialogState, this);
       this.game.events.off('inventory-state', this.onInventoryState, this);
+      this.game.events.off('mapz-state', this.onMapzState, this);
+      this.game.events.off('forjing-state', this.onForjingState, this);
       kb.off('keydown-SPACE', this.onAttackKey, this);
       kb.off('keydown-Z', this.onAttackKey, this);
       kb.off('keydown-E', this.onInteractKey, this);
@@ -276,6 +313,8 @@ export class GameScene extends Phaser.Scene {
       kb.off('keydown-I', this.onInventoryKey, this);
       kb.off('keydown-U', this.onUseItemKey, this);
       kb.off('keydown-W', this.onWeaponEquipKey, this);
+      kb.off('keydown-F', this.onForjingOrShoesKey, this);
+      kb.off('keydown-M', this.onMapzKey, this);
       writeSave(this.save);
     });
 
@@ -302,6 +341,10 @@ export class GameScene extends Phaser.Scene {
     wall.refreshBody();
   }
 
+  private panelOpen(): boolean {
+    return this.inventoryOpen || this.mapzOpen || this.forjingOpen;
+  }
+
   private onDialogState = (open: boolean): void => {
     this.dialogLocked = open;
     if (!open) {
@@ -320,11 +363,25 @@ export class GameScene extends Phaser.Scene {
     }
   };
 
+  private onMapzState = (open: boolean): void => {
+    this.mapzOpen = open;
+    if (open && this.player.body) {
+      (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    }
+  };
+
+  private onForjingState = (open: boolean): void => {
+    this.forjingOpen = open;
+    if (open && this.player.body) {
+      (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    }
+  };
+
   private onAttackKey = (): void => {
     // Space advances dialog when open (UI scene); do not swing mid-dialog
     if (
       this.dialogLocked ||
-      this.inventoryOpen ||
+      this.panelOpen() ||
       this.paused ||
       this.dialogCloseCooldown > 0
     ) {
@@ -337,7 +394,7 @@ export class GameScene extends Phaser.Scene {
     // E opens talk. Enter never opens (UI only advances with Enter).
     if (
       this.dialogLocked ||
-      this.inventoryOpen ||
+      this.panelOpen() ||
       this.paused ||
       this.dialogCloseCooldown > 0
     ) {
@@ -349,7 +406,7 @@ export class GameScene extends Phaser.Scene {
   private onBuyKey = (): void => {
     if (
       this.dialogLocked ||
-      this.inventoryOpen ||
+      this.panelOpen() ||
       this.paused ||
       this.dialogCloseCooldown > 0
     ) {
@@ -359,9 +416,99 @@ export class GameScene extends Phaser.Scene {
   };
 
   private onInventoryKey = (): void => {
-    if (this.dialogLocked || this.paused) return;
+    if (this.dialogLocked || this.paused || this.mapzOpen || this.forjingOpen) {
+      return;
+    }
     this.game.events.emit('inventory-toggle', this.save);
   };
+
+  private onMapzKey = (): void => {
+    if (this.paused) return; // pause uses M for title (handled in update)
+    if (this.dialogLocked || this.inventoryOpen || this.forjingOpen) return;
+    const land = landForRoom(ROOMS, this.save.roomId);
+    const text = formatMapzPanel(ROOMS, this.save, land);
+    this.game.events.emit('mapz-toggle', text);
+  };
+
+  private onForjingOrShoesKey = (): void => {
+    if (this.inventoryOpen) {
+      this.cycleEquip('shoes');
+      return;
+    }
+    if (this.dialogLocked || this.paused || this.mapzOpen) return;
+    if (this.forjingOpen) {
+      this.game.events.emit('forjing-toggle', formatForjingPanel(this.save));
+      return;
+    }
+    // Must be near a forje
+    const forge = this.findNearbyKind('forje');
+    if (!forge) {
+      this.game.events.emit('toast', 'NO FORJE NEARBY');
+      return;
+    }
+    this.game.events.emit('forjing-toggle', formatForjingPanel(this.save));
+  };
+
+  private onDigitKey(n: number): void {
+    if (this.forjingOpen && !this.dialogLocked && !this.paused) {
+      this.runForjingAction(n);
+      return;
+    }
+    if (this.inventoryOpen) {
+      const map: Record<number, AttrId> = {
+        1: 'str',
+        2: 'dex',
+        3: 'vit',
+        4: 'int',
+        5: 'lck',
+      };
+      const attr = map[n];
+      if (attr) this.spendAttr(attr);
+    }
+  }
+
+  private runForjingAction(n: number): void {
+    let result;
+    if (n === 1) result = forjeEnhanceWeapon(this.save);
+    else if (n === 2) result = forjeImbueWeapon(this.save, 'str');
+    else if (n === 3) result = forjeImbueWeapon(this.save, 'dex');
+    else if (n === 4) result = forjeImbueWeapon(this.save, 'vit');
+    else if (n === 5) result = forjeCraft(this.save, 'craft_iron_blade');
+    else if (n === 6) result = forjeCraft(this.save, 'craft_sand_saber');
+    else return;
+
+    if (!result.ok) {
+      this.game.events.emit('toast', result.reason);
+      return;
+    }
+    this.save = result.save;
+    writeSave(this.save);
+    this.emitHud();
+    this.refreshPlayerAppearance();
+    this.game.events.emit('toast', result.message);
+    this.game.events.emit('forjing-refresh', formatForjingPanel(this.save));
+    this.game.events.emit('inventory-refresh', this.save);
+  }
+
+  private findNearbyKind(kind: EntityKind): Actor | null {
+    const max = this.interactReach();
+    let best: Actor | null = null;
+    let bestDist = max;
+    for (const a of this.actors) {
+      if (!a.alive || a.kind !== kind || !a.sprite?.active) continue;
+      const dist = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        a.sprite.x,
+        a.sprite.y,
+      );
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = a;
+      }
+    }
+    return best;
+  }
 
   private onUseItemKey = (): void => {
     if (this.dialogLocked || this.paused) return;
@@ -492,6 +639,7 @@ export class GameScene extends Phaser.Scene {
     this.clearRoomObjects();
     this.room = room;
     this.save.roomId = resolved;
+    this.save = markRoomVisited(this.save, resolved);
     this.tileGrid = this.parseTiles(room);
 
     for (let y = 0; y < VIEW_TILES_H; y++) {
@@ -630,17 +778,32 @@ export class GameScene extends Phaser.Scene {
     sprite.setImmovable(true);
     // Generous pickup / talk hitboxes (tile is 16px, scaled by SCALE in display)
     if (
-      ['key', 'heart', 'sword', 'npc', 'merchant', 'sign', 'chest'].includes(
-        def.kind,
-      )
+      [
+        'key',
+        'heart',
+        'sword',
+        'npc',
+        'merchant',
+        'sign',
+        'chest',
+        'mapz',
+        'forje',
+        'princess',
+      ].includes(def.kind)
     ) {
       sprite.setSize(14, 14);
       sprite.setOffset(1, 1);
     }
 
-    const hostile = ['slime', 'skeleton', 'redshirt', 'cube', 'boss'].includes(
-      def.kind,
-    );
+    const hostile = [
+      'slime',
+      'skeleton',
+      'redshirt',
+      'cube',
+      'boss',
+      'wolf',
+      'cactus',
+    ].includes(def.kind);
     const interactive = [
       'npc',
       'merchant',
@@ -650,11 +813,16 @@ export class GameScene extends Phaser.Scene {
       'heart',
       'sword',
       'cube',
+      'mapz',
+      'forje',
+      'princess',
     ].includes(def.kind);
 
     let hp = def.hp ?? 1;
     if (def.kind === 'boss') hp = def.hp ?? 12;
     if (def.kind === 'redshirt') hp = 1;
+    if (def.kind === 'wolf') hp = def.hp ?? 4;
+    if (def.kind === 'cactus') hp = def.hp ?? 5;
 
     const actor: Actor = {
       sprite,
@@ -669,6 +837,7 @@ export class GameScene extends Phaser.Scene {
       interactive: interactive || !!def.dialog || !!def.shopId,
       chestTable: def.chestTable,
       shopId: def.shopId,
+      mapzId: def.mapzId,
     };
 
     if (hostile) {
@@ -678,7 +847,12 @@ export class GameScene extends Phaser.Scene {
       this.physics.add.overlap(this.swordHit, sprite, () =>
         this.hitEnemy(actor),
       );
-    } else if (def.kind === 'key' || def.kind === 'heart' || def.kind === 'sword') {
+    } else if (
+      def.kind === 'key' ||
+      def.kind === 'heart' ||
+      def.kind === 'sword' ||
+      def.kind === 'mapz'
+    ) {
       this.physics.add.overlap(this.player, sprite, () =>
         this.collectItem(actor),
       );
@@ -815,24 +989,27 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('toast', `+${xpGain} XP`);
     }
 
-    if (actor.kind === 'boss') {
-      this.save.bossDefeated = true;
-      this.game.events.emit('dialog-show', [
-        'THE DUNGEON MASTER FALLS!',
-        'HE MUTTERS: "NEXT TIME...',
-        "I'LL BRING A TPK...",
-        'A CHEST APPEARS. GO ON.',
-      ]);
-      const chestDef = this.room.entities?.find((e) => e.id === 'boss-chest');
-      if (
-        chestDef &&
-        !this.save.collected.includes(chestDef.id ?? '') &&
-        !this.actors.some((a) => a.id === 'boss-chest' && a.alive)
-      ) {
-        this.spawnEntity(chestDef);
-      }
+    if (actor.kind === 'boss' || actor.id === 'dungeon-master') {
+      this.applyBossReward(actor);
     } else if (actor.kind === 'cube') {
       this.game.events.emit('toast', 'THE CUBE APOLOGIZES ONE LAST TIME');
+    } else if (actor.kind === 'wolf') {
+      // chance of wood shard
+      if (Math.random() < 0.4) {
+        this.save.stacks = {
+          ...this.save.stacks,
+          wood_shard: (this.save.stacks.wood_shard ?? 0) + 1,
+        };
+        this.game.events.emit('toast', '+1 WOOD SHARD');
+      }
+    } else if (actor.kind === 'cactus') {
+      if (Math.random() < 0.4) {
+        this.save.stacks = {
+          ...this.save.stacks,
+          sand_crystal: (this.save.stacks.sand_crystal ?? 0) + 1,
+        };
+        this.game.events.emit('toast', '+1 SAND CRYSTAL');
+      }
     }
 
     // Death particles
@@ -852,6 +1029,54 @@ export class GameScene extends Phaser.Scene {
     actor.sprite.destroy();
     writeSave(this.save);
     this.emitHud();
+  }
+
+  private applyBossReward(actor: Actor): void {
+    if (actor.id === 'dungeon-master' || this.room.id === 'b2_boss') {
+      if (!this.save.landsCleared.includes('dunjunz')) {
+        const r = rewardDunjunzClear(this.save);
+        this.save = r.save;
+        this.game.events.emit('dialog-show', r.dialog);
+      } else {
+        this.save.bossDefeated = true;
+        this.game.events.emit('dialog-show', [
+          'THE DUNJUN MASTER FALLS... AGAIN?',
+          'A CHEST MAY STILL HOLD LOOT.',
+        ]);
+      }
+      const chestDef = this.room.entities?.find((e) => e.id === 'boss-chest');
+      if (
+        chestDef &&
+        !this.save.collected.includes(chestDef.id ?? '') &&
+        !this.actors.some((a) => a.id === 'boss-chest' && a.alive)
+      ) {
+        this.spawnEntity(chestDef);
+      }
+      return;
+    }
+    if (actor.id === 'wolf-lord') {
+      if (!this.save.landsCleared.includes('woodz')) {
+        const r = rewardWoodzClear(this.save);
+        this.save = r.save;
+        this.game.events.emit('dialog-show', r.dialog);
+      } else {
+        this.game.events.emit('toast', 'WOLF LORD DOWN');
+      }
+      return;
+    }
+    if (actor.id === 'sand-wraith') {
+      if (!this.save.landsCleared.includes('dezertz')) {
+        const r = rewardDezertzClear(this.save);
+        this.save = r.save;
+        this.game.events.emit('dialog-show', r.dialog);
+      } else {
+        this.game.events.emit('toast', 'SAND WRAITH DOWN');
+      }
+      return;
+    }
+    // Generic boss fallback
+    this.save.bossDefeated = true;
+    this.game.events.emit('dialog-show', ['A BOSS FALLS!', 'NICE WORK.']);
   }
 
   private collectItem(actor: Actor): void {
@@ -882,6 +1107,14 @@ export class GameScene extends Phaser.Scene {
       this.save = syncDerivedStats(this.save);
       this.save.hp = this.save.maxHp;
       this.game.events.emit('toast', 'VIT UP! MAX HP UP!');
+    } else if (actor.kind === 'mapz') {
+      const land = actor.mapzId ?? landForRoom(ROOMS, this.save.roomId);
+      this.save = discoverMapz(this.save, land);
+      const lines = actor.dialog?.length
+        ? actor.dialog
+        : [`MAPZ ACQUIRED: ${land.toUpperCase()}!`, 'PRESS M TO VIEW.'];
+      this.game.events.emit('dialog-show', lines);
+      this.game.events.emit('toast', `MAPZ: ${land.toUpperCase()}`);
     }
 
     actor.sprite.destroy();
@@ -895,7 +1128,13 @@ export class GameScene extends Phaser.Scene {
     let bestDist = max;
     for (const a of this.actors) {
       if (!a.alive || !a.interactive) continue;
-      if (['slime', 'skeleton', 'redshirt', 'boss'].includes(a.kind)) continue;
+      if (
+        ['slime', 'skeleton', 'redshirt', 'boss', 'wolf', 'cactus'].includes(
+          a.kind,
+        )
+      ) {
+        continue;
+      }
       if (!a.sprite?.active) continue;
       const dist = Phaser.Math.Distance.Between(
         this.player.x,
@@ -912,20 +1151,60 @@ export class GameScene extends Phaser.Scene {
   }
 
   private tryInteract(): void {
-    if (this.dialogLocked || this.paused) return;
+    if (this.dialogLocked || this.paused || this.panelOpen()) return;
     const best = this.findInteractable();
     if (!best) {
       this.game.events.emit('toast', 'NOTHING HERE - GET CLOSER');
       return;
     }
 
-    if (best.kind === 'key' || best.kind === 'heart' || best.kind === 'sword') {
+    if (
+      best.kind === 'key' ||
+      best.kind === 'heart' ||
+      best.kind === 'sword' ||
+      best.kind === 'mapz'
+    ) {
       this.collectItem(best);
       return;
     }
 
     if (best.kind === 'chest') {
       this.openTreasureChest(best);
+      return;
+    }
+
+    if (best.kind === 'forje') {
+      const lines = best.dialog?.length
+        ? best.dialog
+        : ['A FORJE.', 'PRESS F TO FORJE GEAR.'];
+      this.game.events.emit('dialog-show', lines);
+      return;
+    }
+
+    if (best.kind === 'princess' || best.id === 'prizella') {
+      if (this.save.princessSaved || this.save.landsCleared.includes('dezertz')) {
+        this.game.events.emit('dialog-show', [
+          'PRIZELLA: THANKS AGAIN.',
+          'NOW GO FORJE SOMETHING COOL.',
+          ...questHint(this.save),
+        ]);
+      } else if (this.save.killed.includes('sand-wraith')) {
+        this.save = {
+          ...this.save,
+          princessSaved: true,
+          flags: { ...this.save.flags, princess_saved: true },
+        };
+        writeSave(this.save);
+        this.game.events.emit('dialog-show', [
+          'PRIZELLA: YOU DID IT!',
+          'I AM FREE. MOSTLY.',
+          'QUEST COMPLETE... FOR NOW.',
+        ]);
+      } else {
+        this.game.events.emit('dialog-show', best.dialog ?? [
+          'PRIZELLA: DEFEAT THE WRAITH FIRST!',
+        ]);
+      }
       return;
     }
 
@@ -947,6 +1226,15 @@ export class GameScene extends Phaser.Scene {
           '',
           'SWORD OF MILD ENTHUSIASM:',
           'ACQUIRED. SPACE / Z TO SWING.',
+        ]);
+        return;
+      }
+      // Old man post-quest hints
+      if (best.id === 'old-man') {
+        this.game.events.emit('dialog-show', [
+          ...best.dialog,
+          '',
+          ...questHint(this.save),
         ]);
         return;
       }
@@ -1025,7 +1313,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private tryAttack(): void {
-    if (this.attacking || this.dialogLocked || this.paused) return;
+    if (this.attacking || this.dialogLocked || this.paused || this.panelOpen()) {
+      return;
+    }
 
     if (!hasWeaponEquipped(this.save)) {
       this.game.events.emit(
@@ -1223,10 +1513,16 @@ export class GameScene extends Phaser.Scene {
       a.hurtCooldown = Math.max(0, a.hurtCooldown - delta);
       a.aiTimer -= delta;
 
-      const hostile = ['slime', 'skeleton', 'redshirt', 'cube', 'boss'].includes(
-        a.kind,
-      );
-      if (!hostile || this.dialogLocked || this.paused) {
+      const hostile = [
+        'slime',
+        'skeleton',
+        'redshirt',
+        'cube',
+        'boss',
+        'wolf',
+        'cactus',
+      ].includes(a.kind);
+      if (!hostile || this.dialogLocked || this.paused || this.panelOpen()) {
         if (a.sprite.body) {
           (a.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
         }
@@ -1236,7 +1532,17 @@ export class GameScene extends Phaser.Scene {
       if (a.aiTimer <= 0) {
         a.aiTimer = Phaser.Math.Between(400, 900);
         const speed =
-          a.kind === 'boss' ? 70 : a.kind === 'skeleton' ? 55 : a.kind === 'redshirt' ? 80 : 40;
+          a.kind === 'boss'
+            ? 70
+            : a.kind === 'wolf'
+              ? 65
+              : a.kind === 'cactus'
+                ? 30
+                : a.kind === 'skeleton'
+                  ? 55
+                  : a.kind === 'redshirt'
+                    ? 80
+                    : 40;
         const angle = Phaser.Math.Angle.Between(
           a.sprite.x,
           a.sprite.y,
@@ -1267,10 +1573,14 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     if (!this.player?.body) return;
 
-    // Pause / inventory close
+    // Pause / panel close
     if (Phaser.Input.Keyboard.JustDown(this.keys.esc)) {
       if (this.inventoryOpen) {
         this.game.events.emit('inventory-toggle', this.save);
+      } else if (this.mapzOpen) {
+        this.game.events.emit('mapz-toggle', '');
+      } else if (this.forjingOpen) {
+        this.game.events.emit('forjing-toggle', '');
       } else {
         this.paused = !this.paused;
         this.game.events.emit('pause-ui', this.paused);
@@ -1293,7 +1603,7 @@ export class GameScene extends Phaser.Scene {
     this.padCooldown = Math.max(0, this.padCooldown - delta);
     this.dialogCloseCooldown = Math.max(0, this.dialogCloseCooldown - delta);
 
-    if (this.dialogLocked || this.inventoryOpen) {
+    if (this.dialogLocked || this.panelOpen()) {
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
       // Enemies still move while inventory is open so the world is not frozen unfairly
       this.updateEnemies(delta);

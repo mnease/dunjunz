@@ -48,15 +48,20 @@ export function spendAttrPoint(save: SaveData, attr: AttrId): SpendResult {
   };
 }
 
-/** Player melee damage including weapon + STR. */
+/** Player melee damage including weapon + STR + forjing imbues. */
 export function computePlayerDamage(save: SaveData): number {
   let weaponAtk = 0;
+  let imbueStr = 0;
   const wUid = save.equipped.weapon;
   if (wUid) {
     const inst = findInBag(save, wUid);
-    if (inst) weaponAtk = instanceAtk(inst);
+    if (inst) {
+      weaponAtk = instanceAtk(inst);
+      imbueStr = inst.attrBonuses?.str ?? 0;
+    }
   }
-  const strBonus = Math.floor(Math.max(0, save.attrs.str - 1) / 2);
+  const totalStr = save.attrs.str + imbueStr;
+  const strBonus = Math.floor(Math.max(0, totalStr - 1) / 2);
   return Math.max(1, 1 + weaponAtk + strBonus);
 }
 

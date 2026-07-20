@@ -42,9 +42,9 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const blurb = [
-      'A RETRO DUNGEON CRAWLER',
-      'STUFFED WITH TROPES FROM',
-      'GAMES, D&D, TREK & BEYOND.',
+      'SAVE PRINCESZ PRIZELLA!',
+      'DUNJUNZ · WOODZ · DEZERTZ',
+      'MAPZ · FORJING · LOOTZ',
       '',
       'PARODY. HOMAGE. CHAOS.',
     ].join('\n');
@@ -61,7 +61,11 @@ export class TitleScene extends Phaser.Scene {
 
     const save = loadSave();
     const hasProgress =
-      save.hasSword || save.roomId !== 'overworld' || save.bossDefeated;
+      save.hasSword ||
+      save.roomId !== 'overworld' ||
+      save.bossDefeated ||
+      save.princessSaved ||
+      (save.landsCleared?.length ?? 0) > 0;
 
     const prompt = this.add
       .text(
@@ -87,7 +91,7 @@ export class TitleScene extends Phaser.Scene {
     });
 
     this.add
-      .text(GAME_W / 2, 520, 'NEASEMEDIA  ·  V0.1 VERTICAL SLICE', {
+      .text(GAME_W / 2, 520, 'NEASEMEDIA  ·  V0.5 MULTI-LAND QUEST', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#6a738a',

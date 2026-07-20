@@ -23,6 +23,13 @@ export {
   computePotionHeal,
 } from './attributes';
 
+function weaponAttrBonus(save: SaveData, attr: 'str' | 'dex' | 'vit' | 'int' | 'lck'): number {
+  const uid = save.equipped.weapon;
+  if (!uid) return 0;
+  const inst = findInBag(save, uid);
+  return inst?.attrBonuses?.[attr] ?? 0;
+}
+
 export function computeArmor(save: SaveData): number {
   let def = 0;
   for (const slot of DEF_SLOTS) {
@@ -31,7 +38,8 @@ export function computeArmor(save: SaveData): number {
     const inst = findInBag(save, uid);
     if (inst) def += instanceDef(inst);
   }
-  def += Math.floor(Math.max(0, save.attrs.dex - 1) / 4);
+  const dex = save.attrs.dex + weaponAttrBonus(save, 'dex');
+  def += Math.floor(Math.max(0, dex - 1) / 4);
   return def;
 }
 
@@ -48,7 +56,8 @@ export function hasKeyEquipped(save: SaveData): boolean {
 }
 
 export function syncDerivedStats(save: SaveData): SaveData {
-  const maxHp = recomputeMaxHp(save.attrs);
+  const vit = save.attrs.vit + weaponAttrBonus(save, 'vit');
+  const maxHp = recomputeMaxHp({ ...save.attrs, vit });
   return {
     ...save,
     maxHp,
@@ -237,21 +246,27 @@ export function grantMildSword(save: SaveData): SaveData {
 }
 
 /**
- * Migrate any save-like blob to v4 shape (also normalizes v4).
+ * Migrate any save-like blob to v5 shape (also normalizes v4/v5).
  */
 export function migrateEquipment(save: SaveData & Record<string, unknown>): SaveData {
-  // Already v4-ish with bag
+  // Already bag+equip shape
   if (Array.isArray(save.bag) && save.equipped && typeof save.equipped === 'object') {
     const equipped = { ...emptyEquipped(), ...save.equipped };
     let next: SaveData = {
       ...save,
-      version: 4,
+      version: 5,
       stacks: save.stacks ?? {},
       bag: save.bag,
       nextItemUid: save.nextItemUid ?? save.bag.length + 1,
       equipped,
       attrs: save.attrs ?? { str: 1, dex: 1, vit: 1, int: 1, lck: 1 },
       attrPoints: save.attrPoints ?? 0,
+      discoveredMapz: save.discoveredMapz?.length
+        ? save.discoveredMapz
+        : (['surface'] as SaveData['discoveredMapz']),
+      visitedRooms: save.visitedRooms ?? [],
+      princessSaved: save.princessSaved ?? false,
+      landsCleared: save.landsCleared ?? [],
     };
     return autoEquipEmptySlots(syncDerivedStats(next));
   }
@@ -267,7 +282,7 @@ export function migrateEquipment(save: SaveData & Record<string, unknown>): Save
   };
 
   let next: SaveData = {
-    version: 4,
+    version: 5,
     roomId: legacy.roomId,
     hp: legacy.hp,
     maxHp: legacy.maxHp ?? 6,
@@ -287,6 +302,10 @@ export function migrateEquipment(save: SaveData & Record<string, unknown>): Save
     attrs: { str: 1, dex: 1, vit: 1, int: 1, lck: 1 },
     attrPoints: 0,
     armor: 0,
+    discoveredMapz: ['surface'],
+    visitedRooms: [],
+    princessSaved: false,
+    landsCleared: legacy.bossDefeated ? ['dunjunz'] : [],
   };
 
   const inv = legacy.inventory ?? {};

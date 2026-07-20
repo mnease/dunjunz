@@ -27,6 +27,8 @@ export const ENEMY_XP: Record<string, number> = {
   skeleton: 5,
   redshirt: 2,
   cube: 8,
+  wolf: 6,
+  cactus: 7,
   boss: 40,
 };
 

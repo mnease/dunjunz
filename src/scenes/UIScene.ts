@@ -9,6 +9,13 @@ import { ALL_EQUIP_SLOTS, displayItemName, findInBag } from '../systems/items';
 import { xpProgressInLevel } from '../systems/progression';
 import type { EquipSlot, SaveData } from '../types';
 
+const PANEL_STYLE = {
+  fontFamily: '"Press Start 2P", monospace',
+  fontSize: '10px',
+  color: '#f4f0ff',
+  lineSpacing: 8,
+} as const;
+
 const SLOT_KEYS: Record<EquipSlot, string> = {
   weapon: 'W',
   helmet: 'H',
@@ -49,9 +56,16 @@ export class UIScene extends Phaser.Scene {
   private invSlotLabels: Partial<Record<EquipSlot, Phaser.GameObjects.Text>> = {};
 
   private inventoryOpen = false;
+  private mapzOpen = false;
+  private forjingOpen = false;
   private lastSave: SaveData | null = null;
   private bound = false;
   private chromeBuilt = false;
+
+  private mapzBg: Phaser.GameObjects.Rectangle | null = null;
+  private mapzText: Phaser.GameObjects.Text | null = null;
+  private forjingBg: Phaser.GameObjects.Rectangle | null = null;
+  private forjingText: Phaser.GameObjects.Text | null = null;
 
   constructor() {
     super({ key: 'UI', active: false });
@@ -60,6 +74,8 @@ export class UIScene extends Phaser.Scene {
   create(): void {
     this.resetDialogVisuals();
     this.inventoryOpen = false;
+    this.mapzOpen = false;
+    this.forjingOpen = false;
     if (!this.chromeBuilt || !this.dialogBg?.active) {
       this.buildChrome();
       this.chromeBuilt = true;
@@ -69,6 +85,8 @@ export class UIScene extends Phaser.Scene {
       this.pauseText?.setVisible(false);
       this.toastText?.setAlpha(0);
       this.setInventoryVisible(false);
+      this.setMapzVisible(false, '');
+      this.setForjingVisible(false, '');
     }
     this.bindGameEvents();
   }
@@ -117,6 +135,8 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0);
 
     this.buildInventoryPanel();
+    this.buildMapzPanel();
+    this.buildForjingPanel();
 
     this.pauseText = this.add
       .text(GAME_W / 2, 300, 'PAUSED\n\nESC RESUME  ·  M TITLE', {
@@ -144,6 +164,48 @@ export class UIScene extends Phaser.Scene {
       .setAlpha(0)
       .setDepth(125)
       .setScrollFactor(0);
+  }
+
+  private buildMapzPanel(): void {
+    const d = 140;
+    this.mapzBg = this.add
+      .rectangle(GAME_W / 2, GAME_H / 2 + 8, GAME_W - 48, GAME_H - 100, 0x0a0c10, 0.96)
+      .setStrokeStyle(3, COLORS.green)
+      .setScrollFactor(0)
+      .setDepth(d)
+      .setVisible(false);
+    this.mapzText = this.add
+      .text(GAME_W / 2, GAME_H / 2, '', {
+        ...PANEL_STYLE,
+        fontSize: '11px',
+        color: '#7dffb3',
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+  }
+
+  private buildForjingPanel(): void {
+    const d = 140;
+    this.forjingBg = this.add
+      .rectangle(GAME_W / 2, GAME_H / 2 + 8, GAME_W - 48, GAME_H - 100, 0x0a0c10, 0.96)
+      .setStrokeStyle(3, COLORS.gold)
+      .setScrollFactor(0)
+      .setDepth(d)
+      .setVisible(false);
+    this.forjingText = this.add
+      .text(GAME_W / 2, GAME_H / 2, '', {
+        ...PANEL_STYLE,
+        fontSize: '10px',
+        color: '#ffc857',
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
   }
 
   private buildInventoryPanel(): void {
@@ -302,6 +364,9 @@ export class UIScene extends Phaser.Scene {
     this.game.events.off('ui-reset', this.onUiReset, this);
     this.game.events.off('inventory-toggle', this.onInventoryToggle, this);
     this.game.events.off('inventory-refresh', this.onInventoryRefresh, this);
+    this.game.events.off('mapz-toggle', this.onMapzToggle, this);
+    this.game.events.off('forjing-toggle', this.onForjingToggle, this);
+    this.game.events.off('forjing-refresh', this.onForjingRefresh, this);
 
     this.game.events.on('hud-update', this.refreshHud, this);
     this.game.events.on('dialog-show', this.showDialog, this);
@@ -310,6 +375,9 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('ui-reset', this.onUiReset, this);
     this.game.events.on('inventory-toggle', this.onInventoryToggle, this);
     this.game.events.on('inventory-refresh', this.onInventoryRefresh, this);
+    this.game.events.on('mapz-toggle', this.onMapzToggle, this);
+    this.game.events.on('forjing-toggle', this.onForjingToggle, this);
+    this.game.events.on('forjing-refresh', this.onForjingRefresh, this);
 
     if (!this.bound) {
       this.bound = true;
@@ -325,6 +393,9 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('ui-reset', this.onUiReset, this);
       this.game.events.off('inventory-toggle', this.onInventoryToggle, this);
       this.game.events.off('inventory-refresh', this.onInventoryRefresh, this);
+      this.game.events.off('mapz-toggle', this.onMapzToggle, this);
+      this.game.events.off('forjing-toggle', this.onForjingToggle, this);
+      this.game.events.off('forjing-refresh', this.onForjingRefresh, this);
       this.input.keyboard?.off('keydown-ENTER', this.onEnterKey, this);
       this.input.keyboard?.off('keydown-SPACE', this.onSpaceKey, this);
       this.bound = false;
@@ -335,10 +406,14 @@ export class UIScene extends Phaser.Scene {
   private onUiReset = (): void => {
     this.resetDialogVisuals();
     this.setInventoryVisible(false);
+    this.setMapzVisible(false, '');
+    this.setForjingVisible(false, '');
     this.pauseText?.setVisible(false);
     this.toastText?.setAlpha(0);
     this.game.events.emit('dialog-state', false);
     this.game.events.emit('inventory-state', false);
+    this.game.events.emit('mapz-state', false);
+    this.game.events.emit('forjing-state', false);
   };
 
   private resetDialogVisuals(): void {
@@ -350,7 +425,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private onInventoryToggle = (save: SaveData): void => {
-    if (this.dialogOpen) return;
+    if (this.dialogOpen || this.mapzOpen || this.forjingOpen) return;
     this.lastSave = save;
     this.setInventoryVisible(!this.inventoryOpen);
   };
@@ -359,6 +434,52 @@ export class UIScene extends Phaser.Scene {
     this.lastSave = save;
     if (this.inventoryOpen) this.renderInventory(save);
   };
+
+  private onMapzToggle = (text: string): void => {
+    if (this.dialogOpen || this.inventoryOpen || this.forjingOpen) {
+      if (this.mapzOpen) this.setMapzVisible(false, '');
+      return;
+    }
+    if (this.mapzOpen) {
+      this.setMapzVisible(false, '');
+      return;
+    }
+    this.setMapzVisible(true, text || 'MAPZ');
+  };
+
+  private onForjingToggle = (text: string): void => {
+    if (this.dialogOpen || this.inventoryOpen || this.mapzOpen) {
+      if (this.forjingOpen) this.setForjingVisible(false, '');
+      return;
+    }
+    if (this.forjingOpen) {
+      this.setForjingVisible(false, '');
+      return;
+    }
+    this.setForjingVisible(true, text || 'FORJING');
+  };
+
+  private onForjingRefresh = (text: string): void => {
+    if (this.forjingOpen && this.forjingText) {
+      this.forjingText.setText(text);
+    }
+  };
+
+  private setMapzVisible(open: boolean, text: string): void {
+    this.mapzOpen = open;
+    this.mapzBg?.setVisible(open);
+    this.mapzText?.setVisible(open);
+    if (open && this.mapzText) this.mapzText.setText(text);
+    this.game.events.emit('mapz-state', open);
+  }
+
+  private setForjingVisible(open: boolean, text: string): void {
+    this.forjingOpen = open;
+    this.forjingBg?.setVisible(open);
+    this.forjingText?.setVisible(open);
+    if (open && this.forjingText) this.forjingText.setText(text);
+    this.game.events.emit('forjing-state', open);
+  }
 
   private renderInventory(save: SaveData): void {
     const look = playerTextureKeyFromSave(save);
@@ -456,7 +577,12 @@ export class UIScene extends Phaser.Scene {
     this.itemsText?.setText(
       `${xpPart}  ${save.coins}c${gear ? '  ' + gear : ''}`,
     );
-    this.roomText?.setText(roomTitle + '  [I]');
+    const questTag = save.princessSaved
+      ? '  ★'
+      : save.landsCleared.includes('dunjunz')
+        ? '  Q'
+        : '';
+    this.roomText?.setText(roomTitle + '  [I/M]' + questTag);
     if (this.inventoryOpen) this.renderInventory(save);
   };
 
@@ -464,6 +590,8 @@ export class UIScene extends Phaser.Scene {
     if (!lines?.length) return;
     if (!this.dialogBg?.active || !this.dialogText?.active) return;
     if (this.inventoryOpen) this.setInventoryVisible(false);
+    if (this.mapzOpen) this.setMapzVisible(false, '');
+    if (this.forjingOpen) this.setForjingVisible(false, '');
     this.dialogLines = lines.filter(
       (l) => l !== undefined && l !== null && String(l).trim() !== '',
     );
@@ -514,6 +642,8 @@ export class UIScene extends Phaser.Scene {
 
   private setPaused = (paused: boolean): void => {
     if (paused && this.inventoryOpen) this.setInventoryVisible(false);
+    if (paused && this.mapzOpen) this.setMapzVisible(false, '');
+    if (paused && this.forjingOpen) this.setForjingVisible(false, '');
     this.pauseText?.setVisible(paused);
   };
 }

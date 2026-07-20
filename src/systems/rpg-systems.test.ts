@@ -24,9 +24,28 @@ import {
 import { spendAttrPoint, computePlayerDamage } from './attributes';
 import { appearanceFromSave, playerTextureKeyFromSave } from './appearance';
 import { effectivePrimary } from './rarity';
-import { defaultSave } from './save';
+import { defaultSave, loadSave } from './save';
 import { mintItem } from './items';
 import { entryFromOpposite, spawnInsideEntryEdge } from './map-spawn';
+import {
+  discoverMapz,
+  formatMapzPanel,
+  hasMapz,
+  markRoomVisited,
+} from './mapz';
+import {
+  forjeCraft,
+  forjeEnhanceWeapon,
+  forjeImbueWeapon,
+} from './forjing';
+import {
+  questHint,
+  rewardDezertzClear,
+  rewardDunjunzClear,
+  rewardWoodzClear,
+} from './quest';
+import { ROOMS } from '../data/world';
+import { grantMildSword } from './inventory';
 
 describe('XP formula scaling', () => {
   it('band costs increase with level', () => {
@@ -180,7 +199,7 @@ describe('migrate v3', () => {
       bag: undefined,
     };
     const m = migrateEquipment(raw as never);
-    expect(m.version).toBe(4);
+    expect(m.version).toBe(5);
     expect(m.stacks.potion).toBe(2);
     expect(m.bag.some((b) => b.templateId === 'mild_sword')).toBe(true);
     expect(m.bag.some((b) => b.templateId === 'dungeon_key')).toBe(true);
@@ -285,5 +304,173 @@ describe('door entry spawn placement', () => {
     const s = spawnInsideEntryEdge(ow, 'east');
     expect(s.tx).toBe(2);
     expect([1, 2]).toContain(s.ty);
+  });
+});
+
+describe('mapz discovery + fog of war', () => {
+  it('discoverMapz is idempotent and unlocks land', () => {
+    let save = defaultSave();
+    expect(hasMapz(save, 'surface')).toBe(true);
+    expect(hasMapz(save, 'woodz')).toBe(false);
+    save = discoverMapz(save, 'woodz');
+    expect(hasMapz(save, 'woodz')).toBe(true);
+    const again = discoverMapz(save, 'woodz');
+    expect(again.discoveredMapz.filter((l) => l === 'woodz')).toHaveLength(1);
+  });
+
+  it('formatMapzPanel denies unknown mapz', () => {
+    const save = defaultSave();
+    const text = formatMapzPanel(ROOMS, save, 'dezertz');
+    expect(text).toContain('NO');
+    expect(text).toContain('MAPZ');
+  });
+
+  it('formatMapzPanel shows @ for current room when mapz known', () => {
+    let save = defaultSave();
+    save = discoverMapz(save, 'surface');
+    save = markRoomVisited(save, 'overworld');
+    save.roomId = 'overworld';
+    const text = formatMapzPanel(ROOMS, save, 'surface');
+    expect(text).toContain('SURFACE');
+    expect(text).toContain('@');
+  });
+});
+
+describe('forjing craft enhance imbue', () => {
+  it('enhance weapon spends mats and +1 enhancement', () => {
+    let save = grantMildSword(defaultSave());
+    save.coins = 50;
+    save.stacks = { ore_iron: 2, ore_spark: 2 };
+    const r = forjeEnhanceWeapon(save);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const w = r.save.bag.find((b) => b.uid === r.save.equipped.weapon);
+    expect(w?.enhancement).toBe(1);
+    expect(r.save.stacks.ore_iron ?? 0).toBe(1);
+  });
+
+  it('imbue adds attrBonuses.str', () => {
+    let save = grantMildSword(defaultSave());
+    save.coins = 50;
+    save.stacks = { ore_spark: 3, sand_crystal: 2 };
+    const r = forjeImbueWeapon(save, 'str');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const w = r.save.bag.find((b) => b.uid === r.save.equipped.weapon);
+    expect(w?.attrBonuses?.str).toBe(1);
+    expect(computePlayerDamage(r.save)).toBeGreaterThanOrEqual(
+      computePlayerDamage(save),
+    );
+  });
+
+  it('craft iron blade from recipe', () => {
+    let save = defaultSave();
+    save.coins = 30;
+    save.stacks = { ore_iron: 2, wood_shard: 1 };
+    const r = forjeCraft(save, 'craft_iron_blade');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.bag.some((b) => b.templateId === 'iron_blade')).toBe(true);
+    expect(r.save.equipped.weapon).toBeTruthy();
+  });
+
+  it('enhance fails without materials', () => {
+    const save = grantMildSword(defaultSave());
+    const r = forjeEnhanceWeapon(save);
+    expect(r.ok).toBe(false);
+  });
+});
+
+describe('princess quest land clears', () => {
+  it('rewardDunjunzClear mints cleaver and mapz', () => {
+    const r = rewardDunjunzClear(defaultSave());
+    expect(r.save.landsCleared).toContain('dunjunz');
+    expect(r.save.bossDefeated).toBe(true);
+    expect(r.save.discoveredMapz).toContain('woodz');
+    expect(r.save.discoveredMapz).toContain('dezertz');
+    expect(r.save.bag.some((b) => b.templateId === 'dunjun_cleaver')).toBe(
+      true,
+    );
+    expect(r.dialog.some((l) => l.includes('PRIZELLA'))).toBe(true);
+  });
+
+  it('rewardDezertzClear sets princessSaved', () => {
+    const r = rewardDezertzClear(defaultSave());
+    expect(r.save.princessSaved).toBe(true);
+    expect(r.save.landsCleared).toContain('dezertz');
+  });
+
+  it('questHint advances with landsCleared', () => {
+    let save = defaultSave();
+    expect(questHint(save)[0]).toContain('QUEST');
+    save = rewardDunjunzClear(save).save;
+    expect(questHint(save).join(' ')).toMatch(/WOODZ|DEZERTZ/i);
+    save = rewardWoodzClear(save).save;
+    expect(questHint(save).join(' ')).toMatch(/DEZERTZ/i);
+    save = rewardDezertzClear(save).save;
+    expect(questHint(save).join(' ')).toMatch(/FORJE|SAVED/i);
+  });
+
+  it('defaultSave is v5 with mapz surface seed', () => {
+    const s = defaultSave();
+    expect(s.version).toBe(5);
+    expect(s.discoveredMapz).toContain('surface');
+    expect(s.visitedRooms).toEqual([]);
+    expect(s.princessSaved).toBe(false);
+    expect(s.landsCleared).toEqual([]);
+  });
+
+  it('loadSave without storage returns default v5', () => {
+    const store: Record<string, string> = {};
+    // minimal localStorage shim for node vitest
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (globalThis as any).localStorage = {
+      getItem: (k: string) => store[k] ?? null,
+      setItem: (k: string, v: string) => {
+        store[k] = v;
+      },
+      removeItem: (k: string) => {
+        delete store[k];
+      },
+    };
+    const loaded = loadSave();
+    expect(loaded.version).toBe(5);
+    expect(loaded.discoveredMapz).toContain('surface');
+
+    store['dunjunz-save-v1'] = JSON.stringify({
+      version: 4,
+      roomId: 'overworld',
+      hp: 6,
+      maxHp: 6,
+      hasSword: true,
+      hasKey: false,
+      bossDefeated: true,
+      flags: {},
+      killed: [],
+      collected: [],
+      xp: 0,
+      level: 1,
+      coins: 10,
+      stacks: {},
+      bag: [],
+      nextItemUid: 1,
+      equipped: {
+        weapon: null,
+        helmet: null,
+        breastplate: null,
+        greaves: null,
+        shoes: null,
+        gloves: null,
+        amulet: null,
+        key: null,
+      },
+      attrs: { str: 1, dex: 1, vit: 1, int: 1, lck: 1 },
+      attrPoints: 0,
+      armor: 0,
+    });
+    const migrated = loadSave();
+    expect(migrated.version).toBe(5);
+    expect(migrated.landsCleared).toContain('dunjunz');
+    expect(migrated.princessSaved).toBe(false);
   });
 });

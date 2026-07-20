@@ -75,13 +75,13 @@ const TABLES: Record<string, (rng: Rng) => LootDrop[]> = {
     return drops;
   },
   boss: (_rng) => [
-    { kind: 'coins', label: '40 COINS', coins: 40 },
+    { kind: 'coins', label: '80 COINS', coins: 80 },
     {
       kind: 'potion',
-      label: 'HEALING POTION x2',
+      label: 'HEALING POTION x3',
       stackId: 'potion',
-      stackCount: 2,
-      heal: 6,
+      stackCount: 3,
+      heal: 8,
     },
     {
       kind: 'gear',
@@ -89,9 +89,21 @@ const TABLES: Record<string, (rng: Rng) => LootDrop[]> = {
       templateId: 'reinforced_leather',
     },
     {
+      kind: 'gear',
+      label: 'DUNJUN CLEAVER SHARDZ',
+      templateId: 'dunjun_cleaver',
+    },
+    {
       kind: 'treasure',
-      label: 'GOLD TRINKET',
-      templateId: 'gold_trinket',
+      label: 'SPARK ORE x3',
+      stackId: 'ore_spark',
+      stackCount: 3,
+    },
+    {
+      kind: 'treasure',
+      label: 'IRON ORE x2',
+      stackId: 'ore_iron',
+      stackCount: 2,
     },
   ],
   test_fixed: (_rng) => [
