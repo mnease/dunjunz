@@ -25,7 +25,10 @@ import {
   attemptFeaturedPurchase,
   shopCatalogLines,
 } from '../systems/shop';
-import { playerTextureKeyFromSave } from '../systems/appearance';
+import {
+  appearanceFromSave,
+  playerTextureKey,
+} from '../systems/appearance';
 import {
   autoEquipEmptySlots,
   cycleAmuletEquip,
@@ -660,10 +663,17 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** Swap player texture so armor / amulet / sword show on the avatar. */
+  /**
+   * Swap player texture so armor / amulet / sword show on the avatar.
+   * While swinging, hip sword is hidden (it's in the hand as sword-swing).
+   */
   private refreshPlayerAppearance(): void {
     if (!this.player) return;
-    const key = playerTextureKeyFromSave(this.save);
+    const spec = appearanceFromSave(this.save);
+    if (this.attacking) {
+      spec.sword = false;
+    }
+    const key = playerTextureKey(spec);
     if (this.textures.exists(key)) {
       this.player.setTexture(key);
     } else if (this.textures.exists('player')) {
@@ -998,6 +1008,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.attacking = true;
+    // Hip sheathe vanishes while the blade is out in front
+    this.refreshPlayerAppearance();
+
     const offset = 36;
     let x = this.player.x;
     let y = this.player.y;
@@ -1032,6 +1045,8 @@ export class GameScene extends Phaser.Scene {
       body.enable = false;
       this.swordHit.setPosition(-999, -999);
       this.attacking = false;
+      // Sword returns to hip when swing ends
+      this.refreshPlayerAppearance();
     });
   }
 
