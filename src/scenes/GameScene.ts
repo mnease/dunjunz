@@ -36,6 +36,7 @@ import {
   ATTR_IDS,
   spendAttrPoint,
 } from '../systems/attributes';
+import { resolveEnemyHp } from '../systems/enemies';
 import {
   computePlayerDamage,
   cycleSlotEquip,
@@ -826,25 +827,6 @@ export class GameScene extends Phaser.Scene {
     const sprite = this.physics.add.sprite(pos.x, pos.y, tex);
     sprite.setScale(SCALE);
     sprite.setDepth(5);
-    sprite.setImmovable(true);
-    // Generous pickup / talk hitboxes (tile is 16px, scaled by SCALE in display)
-    if (
-      [
-        'key',
-        'heart',
-        'sword',
-        'npc',
-        'merchant',
-        'sign',
-        'chest',
-        'mapz',
-        'forje',
-        'princess',
-      ].includes(def.kind)
-    ) {
-      sprite.setSize(14, 14);
-      sprite.setOffset(1, 1);
-    }
 
     const hostile = [
       'slime',
@@ -869,11 +851,45 @@ export class GameScene extends Phaser.Scene {
       'princess',
     ].includes(def.kind);
 
-    let hp = def.hp ?? 1;
-    if (def.kind === 'boss') hp = def.hp ?? 12;
-    if (def.kind === 'redshirt') hp = 1;
-    if (def.kind === 'wolf') hp = def.hp ?? 4;
-    if (def.kind === 'cactus') hp = def.hp ?? 5;
+    // Pickups / talkers: immovable, fat talk hitbox
+    // Hostiles: collidable with walls, smaller body so they don't clip tiles
+    if (hostile) {
+      sprite.setImmovable(false);
+      sprite.setCollideWorldBounds(true);
+      const body = sprite.body as Phaser.Physics.Arcade.Body;
+      // Cube is bigger — larger body + bounce off walls
+      if (def.kind === 'cube' || def.kind === 'boss') {
+        sprite.setSize(12, 12);
+        sprite.setOffset(2, 2);
+      } else {
+        sprite.setSize(10, 10);
+        sprite.setOffset(3, 3);
+      }
+      body.setBounce(0, 0);
+      body.setMaxVelocity(120, 120);
+      this.physics.add.collider(sprite, this.walls);
+    } else {
+      sprite.setImmovable(true);
+      if (
+        [
+          'key',
+          'heart',
+          'sword',
+          'npc',
+          'merchant',
+          'sign',
+          'chest',
+          'mapz',
+          'forje',
+          'princess',
+        ].includes(def.kind)
+      ) {
+        sprite.setSize(14, 14);
+        sprite.setOffset(1, 1);
+      }
+    }
+
+    const hp = resolveEnemyHp(def.kind, def.hp);
 
     const actor: Actor = {
       sprite,
@@ -996,16 +1012,31 @@ export class GameScene extends Phaser.Scene {
     if (!actor.alive || actor.hurtCooldown > 0 || !this.attacking) return;
     if (!hasWeaponEquipped(this.save)) return;
 
-    actor.hurtCooldown = 250;
-    actor.hp -= computePlayerDamage(this.save);
+    actor.hurtCooldown = 280;
+    const dmg = computePlayerDamage(this.save);
+    actor.hp -= dmg;
     actor.sprite.setTint(0xffffff);
     this.time.delayedCall(80, () => {
       if (actor.alive) actor.sprite.clearTint();
     });
 
-    // Redshirts die dramatically
-    if (actor.kind === 'redshirt') {
-      actor.hp = 0;
+    // Knockback away from player (blocked by wall colliders)
+    const angle = Phaser.Math.Angle.Between(
+      this.player.x,
+      this.player.y,
+      actor.sprite.x,
+      actor.sprite.y,
+    );
+    const body = actor.sprite.body as Phaser.Physics.Arcade.Body;
+    const knock = actor.kind === 'cube' || actor.kind === 'boss' ? 80 : 140;
+    body.setVelocity(Math.cos(angle) * knock, Math.sin(angle) * knock);
+
+    if (actor.hp > 0) {
+      this.game.events.emit(
+        'toast',
+        `${actor.kind.toUpperCase()} ${actor.hp}/${actor.maxHp}`,
+      );
+    } else if (actor.kind === 'redshirt') {
       this.game.events.emit('toast', 'ENSIGN DOWN!');
     }
 
@@ -1616,6 +1647,9 @@ export class GameScene extends Phaser.Scene {
         continue;
       }
 
+      // Safety: if clipped into solid, shove back toward room center
+      this.unstickFromWall(a);
+
       if (a.aiTimer <= 0) {
         a.aiTimer = Phaser.Math.Between(400, 900);
         const speed =
@@ -1629,32 +1663,109 @@ export class GameScene extends Phaser.Scene {
                   ? 55
                   : a.kind === 'redshirt'
                     ? 80
-                    : 40;
-        const angle = Phaser.Math.Angle.Between(
-          a.sprite.x,
-          a.sprite.y,
-          this.player.x,
-          this.player.y,
-        );
-        // Cubes wobble slowly; redshirts panic randomly sometimes
+                    : a.kind === 'cube'
+                      ? 28
+                      : 40;
+        // Prefer cardinal moves so wall colliders behave cleanly
+        const dx = this.player.x - a.sprite.x;
+        const dy = this.player.y - a.sprite.y;
+        let vx = 0;
+        let vy = 0;
         if (a.kind === 'redshirt' && Math.random() < 0.35) {
-          (a.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(
-            Phaser.Math.Between(-speed, speed),
-            Phaser.Math.Between(-speed, speed),
-          );
-        } else if (a.kind === 'cube') {
-          (a.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(
-            Math.cos(angle) * 25,
-            Math.sin(angle) * 25,
-          );
+          vx = Phaser.Math.Between(-speed, speed);
+          vy = Phaser.Math.Between(-speed, speed);
+        } else if (Math.abs(dx) > Math.abs(dy)) {
+          vx = Math.sign(dx) * speed;
+          // slight vertical so they can track around corners
+          if (Math.abs(dy) > 8) vy = Math.sign(dy) * (speed * 0.35);
         } else {
-          (a.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(
-            Math.cos(angle) * speed,
-            Math.sin(angle) * speed,
-          );
+          vy = Math.sign(dy) * speed;
+          if (Math.abs(dx) > 8) vx = Math.sign(dx) * (speed * 0.35);
         }
+        // Don't charge into an immediately solid tile
+        const next = this.enemyDesiredVelocity(a, vx, vy, speed);
+        (a.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(
+          next.vx,
+          next.vy,
+        );
       }
     }
+  }
+
+  /** Zero velocity component that would enter a solid tile. */
+  private enemyDesiredVelocity(
+    a: Actor,
+    vx: number,
+    vy: number,
+    speed: number,
+  ): { vx: number; vy: number } {
+    const probe = TILE * SCALE * 0.55;
+    let outX = vx;
+    let outY = vy;
+    if (vx !== 0) {
+      const tx = Math.floor(
+        (a.sprite.x + Math.sign(vx) * probe - this.roomOriginX) /
+          (TILE * SCALE),
+      );
+      const ty = Math.floor(
+        (a.sprite.y - this.roomOriginY) / (TILE * SCALE),
+      );
+      if (this.isSolidTile(tx, ty)) outX = 0;
+    }
+    if (vy !== 0) {
+      const tx = Math.floor(
+        (a.sprite.x - this.roomOriginX) / (TILE * SCALE),
+      );
+      const ty = Math.floor(
+        (a.sprite.y + Math.sign(vy) * probe - this.roomOriginY) /
+          (TILE * SCALE),
+      );
+      if (this.isSolidTile(tx, ty)) outY = 0;
+    }
+    // If fully blocked, try sliding along the other axis toward player
+    if (outX === 0 && outY === 0) {
+      const dx = this.player.x - a.sprite.x;
+      const dy = this.player.y - a.sprite.y;
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        const tx = Math.floor(
+          (a.sprite.x + Math.sign(dx) * probe - this.roomOriginX) /
+            (TILE * SCALE),
+        );
+        const ty = Math.floor(
+          (a.sprite.y - this.roomOriginY) / (TILE * SCALE),
+        );
+        if (!this.isSolidTile(tx, ty)) outX = Math.sign(dx) * speed;
+      } else {
+        const tx = Math.floor(
+          (a.sprite.x - this.roomOriginX) / (TILE * SCALE),
+        );
+        const ty = Math.floor(
+          (a.sprite.y + Math.sign(dy) * probe - this.roomOriginY) /
+            (TILE * SCALE),
+        );
+        if (!this.isSolidTile(tx, ty)) outY = Math.sign(dy) * speed;
+      }
+    }
+    return { vx: outX, vy: outY };
+  }
+
+  private isSolidTile(tx: number, ty: number): boolean {
+    if (ty < 0 || ty >= VIEW_TILES_H || tx < 0 || tx >= VIEW_TILES_W) {
+      return true;
+    }
+    return SOLID.includes(this.tileGrid[ty][tx]);
+  }
+
+  private unstickFromWall(a: Actor): void {
+    const { tx, ty } = this.worldToTile(a.sprite.x, a.sprite.y);
+    if (!this.isSolidTile(tx, ty)) return;
+    // Nudge toward room center (walkable floors cluster mid-map)
+    const cx = this.roomOriginX + (VIEW_TILES_W / 2) * TILE * SCALE;
+    const cy = this.roomOriginY + (VIEW_TILES_H / 2) * TILE * SCALE;
+    const ang = Phaser.Math.Angle.Between(a.sprite.x, a.sprite.y, cx, cy);
+    a.sprite.x += Math.cos(ang) * 6;
+    a.sprite.y += Math.sin(ang) * 6;
+    (a.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
   }
 
   update(_time: number, delta: number): void {

@@ -15,6 +15,7 @@ import {
   shopGridDims,
   shopIndexFromDir,
 } from './shop';
+import { resolveEnemyHp, ENEMY_BASE_HP } from './enemies';
 import {
   cycleSlotEquip,
   grantKey,
@@ -101,6 +102,26 @@ describe('loot multi-type', () => {
     expect(next.coins).toBeGreaterThan(0);
     expect(next.stacks.potion ?? 0).toBeGreaterThan(0);
     expect(next.bag.length).toBeGreaterThan(0);
+  });
+});
+
+describe('enemy HP tiers', () => {
+  it('cube has more HP than slime and skeleton', () => {
+    expect(ENEMY_BASE_HP.cube).toBeGreaterThan(ENEMY_BASE_HP.skeleton);
+    expect(ENEMY_BASE_HP.skeleton).toBeGreaterThan(ENEMY_BASE_HP.slime);
+    expect(ENEMY_BASE_HP.slime).toBeGreaterThan(ENEMY_BASE_HP.redshirt);
+  });
+
+  it('resolveEnemyHp prefers explicit def over base', () => {
+    expect(resolveEnemyHp('cube', 99)).toBe(99);
+    expect(resolveEnemyHp('cube')).toBe(ENEMY_BASE_HP.cube);
+  });
+
+  it('mild sword (~2 dmg) cannot one-shot a slime', () => {
+    // computePlayerDamage mild + str1 = 1+1+0 = 2
+    const mildDmg = 2;
+    expect(ENEMY_BASE_HP.slime).toBeGreaterThan(mildDmg);
+    expect(ENEMY_BASE_HP.cube).toBeGreaterThan(mildDmg * 5);
   });
 });
 
