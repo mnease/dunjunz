@@ -173,15 +173,19 @@ export class UIScene extends Phaser.Scene {
     this.dialogText?.setVisible(false);
   }
 
-  private onEnterKey = (): void => {
-    if (this.dialogOpen) this.advanceDialog();
+  private onEnterKey = (event: KeyboardEvent): void => {
+    if (!this.dialogOpen) return;
+    // Stop other scene handlers on this same key from treating it as "talk"
+    event.preventDefault();
+    event.stopPropagation();
+    this.advanceDialog();
   };
 
   private onSpaceKey = (event: KeyboardEvent): void => {
-    if (this.dialogOpen) {
-      event.preventDefault();
-      this.advanceDialog();
-    }
+    if (!this.dialogOpen) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.advanceDialog();
   };
 
   private refreshHud = (save: SaveData, roomTitle: string): void => {
@@ -215,7 +219,11 @@ export class UIScene extends Phaser.Scene {
       console.warn('[DUNJUNZ] dialog-show before UI ready', lines);
       return;
     }
-    this.dialogLines = lines.filter((l) => l !== undefined && l !== null);
+    // Drop empty lines so multi-line scripts don't feel like a stuck loop
+    this.dialogLines = lines.filter(
+      (l) => l !== undefined && l !== null && String(l).trim() !== '',
+    );
+    if (!this.dialogLines.length) return;
     this.dialogIndex = 0;
     this.dialogOpen = true;
     this.dialogBg.setVisible(true);

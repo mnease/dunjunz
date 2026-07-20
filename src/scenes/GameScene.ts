@@ -114,6 +114,8 @@ export class GameScene extends Phaser.Scene {
   private attacking = false;
   private invuln = 0;
   private dialogLocked = false;
+  /** Blocks re-open / attack for a beat after dialog closes (same key must not re-trigger). */
+  private dialogCloseCooldown = 0;
   private paused = false;
   private transitionLock = false;
   private roomOriginX = 0;
@@ -129,6 +131,7 @@ export class GameScene extends Phaser.Scene {
     // Phaser reuses the same Scene instance — always reset runtime state on enter.
     // Leftover dialogLocked/paused from a prior run freezes movement entirely.
     this.dialogLocked = false;
+    this.dialogCloseCooldown = 0;
     this.paused = false;
     this.attacking = false;
     this.invuln = 0;
@@ -177,10 +180,11 @@ export class GameScene extends Phaser.Scene {
     };
 
     // Event-based attack / interact / shop buy
+    // NOTE: Enter is advance-only (UIScene). Opening talk is E so the last
+    // Enter that closes a sign cannot immediately re-open it.
     kb.on('keydown-SPACE', this.onAttackKey, this);
     kb.on('keydown-Z', this.onAttackKey, this);
     kb.on('keydown-E', this.onInteractKey, this);
-    kb.on('keydown-ENTER', this.onInteractKey, this);
     kb.on('keydown-B', this.onBuyKey, this);
 
     this.player = this.physics.add.sprite(0, 0, 'player');
@@ -207,7 +211,6 @@ export class GameScene extends Phaser.Scene {
       kb.off('keydown-SPACE', this.onAttackKey, this);
       kb.off('keydown-Z', this.onAttackKey, this);
       kb.off('keydown-E', this.onInteractKey, this);
-      kb.off('keydown-ENTER', this.onInteractKey, this);
       kb.off('keydown-B', this.onBuyKey, this);
       writeSave(this.save);
     });
@@ -237,25 +240,29 @@ export class GameScene extends Phaser.Scene {
 
   private onDialogState = (open: boolean): void => {
     this.dialogLocked = open;
-    if (!open && this.player.body) {
-      (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    if (!open) {
+      // Same physical keypress that closed dialog must not re-open or attack
+      this.dialogCloseCooldown = 280;
+      if (this.player.body) {
+        (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      }
     }
   };
 
   private onAttackKey = (): void => {
     // Space advances dialog when open (UI scene); do not swing mid-dialog
-    if (this.dialogLocked || this.paused) return;
+    if (this.dialogLocked || this.paused || this.dialogCloseCooldown > 0) return;
     this.tryAttack();
   };
 
   private onInteractKey = (): void => {
-    // When dialog is open, UI handles Enter/Space to advance — don't re-open
-    if (this.dialogLocked || this.paused) return;
+    // E opens talk. Enter never opens (UI only advances with Enter).
+    if (this.dialogLocked || this.paused || this.dialogCloseCooldown > 0) return;
     this.tryInteract();
   };
 
   private onBuyKey = (): void => {
-    if (this.dialogLocked || this.paused) return;
+    if (this.dialogLocked || this.paused || this.dialogCloseCooldown > 0) return;
     this.tryBuyFromNearbyMerchant();
   };
 
@@ -1064,6 +1071,7 @@ export class GameScene extends Phaser.Scene {
 
     this.invuln = Math.max(0, this.invuln - delta);
     this.padCooldown = Math.max(0, this.padCooldown - delta);
+    this.dialogCloseCooldown = Math.max(0, this.dialogCloseCooldown - delta);
 
     if (this.dialogLocked) {
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);

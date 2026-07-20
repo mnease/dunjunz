@@ -26,9 +26,9 @@ npm run preview
 | --- | --- |
 | Arrow keys / WASD | Move |
 | Space / Z | Attack (after you have the sword) |
-| E / Enter | Talk / read / open chest |
+| E | Talk / read / open chest |
 | B | Buy featured item from nearby merchant |
-| Enter / Space | Advance dialog |
+| Enter / Space | Advance dialog (does not re-open) |
 | Esc | Pause |
 | M (while paused) | Return to title |
 | R (on title) | New game (clears save) |
