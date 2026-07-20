@@ -687,6 +687,18 @@ export class GameScene extends Phaser.Scene {
     return grid;
   }
 
+  /**
+   * Locked doors are baked as L in room data. After the friend-key opens them,
+   * flag door-unlocked must convert L→door on every reload (death, room re-entry).
+   * Without this, death + reload re-locks the door while the key is already gone.
+   */
+  private applyPersistentDoorUnlocks(grid: TileKind[][]): TileKind[][] {
+    if (!this.save.flags['door-unlocked']) return grid;
+    return grid.map((row) =>
+      row.map((cell) => (cell === 'locked' ? 'door' : cell)),
+    );
+  }
+
   private clearRoomObjects(): void {
     this.walls.clear(true, true);
     for (const a of this.actors) {
@@ -709,7 +721,7 @@ export class GameScene extends Phaser.Scene {
     this.room = room;
     this.save.roomId = resolved;
     this.save = markRoomVisited(this.save, resolved);
-    this.tileGrid = this.parseTiles(room);
+    this.tileGrid = this.applyPersistentDoorUnlocks(this.parseTiles(room));
 
     for (let y = 0; y < VIEW_TILES_H; y++) {
       for (let x = 0; x < VIEW_TILES_W; x++) {
