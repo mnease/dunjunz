@@ -28,7 +28,6 @@ export class UIScene extends Phaser.Scene {
   private toastText: Phaser.GameObjects.Text | null = null;
 
   // Inventory graphic layout
-  private invRoot: Phaser.GameObjects.Container | null = null;
   private invBg: Phaser.GameObjects.Rectangle | null = null;
   private invTitle: Phaser.GameObjects.Text | null = null;
   private invStats: Phaser.GameObjects.Text | null = null;
@@ -278,30 +277,14 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(depth + 2);
 
-    // Group visibility via root flag on each
-    this.invRoot = this.add.container(0, 0);
-    // Container unused for scrollFactor children already set — we just track list
     this.setInventoryVisible(false);
   }
 
-  private inventoryObjects(): Phaser.GameObjects.GameObject[] {
-    return [
-      this.invBg,
-      this.invTitle,
-      this.invAvatarPlate,
-      this.invAvatar,
-      this.invYouLabel,
-      this.invArmorSlot,
-      this.invArmorIcon,
-      this.invArmorLabel,
-      this.invAmuletSlot,
-      this.invAmuletIcon,
-      this.invAmuletLabel,
-      this.invStats,
-      this.invBagText,
-      this.invHelp,
-      this.invSlotHints,
-    ].filter(Boolean) as Phaser.GameObjects.GameObject[];
+  private setInvPieceVisible(
+    obj: { setVisible: (v: boolean) => unknown } | null,
+    open: boolean,
+  ): void {
+    obj?.setVisible(open);
   }
 
   private bindGameEvents(): void {
@@ -361,7 +344,6 @@ export class UIScene extends Phaser.Scene {
       this.invAmuletLabel = null;
       this.invSlotHints = null;
       this.invYouLabel = null;
-      this.invRoot = null;
     });
   }
 
@@ -395,11 +377,21 @@ export class UIScene extends Phaser.Scene {
 
   private setInventoryVisible(open: boolean): void {
     this.inventoryOpen = open;
-    for (const obj of this.inventoryObjects()) {
-      if ('setVisible' in obj) {
-        (obj as Phaser.GameObjects.Components.Visible).setVisible(open);
-      }
-    }
+    this.setInvPieceVisible(this.invBg, open);
+    this.setInvPieceVisible(this.invTitle, open);
+    this.setInvPieceVisible(this.invAvatarPlate, open);
+    this.setInvPieceVisible(this.invAvatar, open);
+    this.setInvPieceVisible(this.invYouLabel, open);
+    this.setInvPieceVisible(this.invArmorSlot, open);
+    this.setInvPieceVisible(this.invArmorIcon, open);
+    this.setInvPieceVisible(this.invArmorLabel, open);
+    this.setInvPieceVisible(this.invAmuletSlot, open);
+    this.setInvPieceVisible(this.invAmuletIcon, open);
+    this.setInvPieceVisible(this.invAmuletLabel, open);
+    this.setInvPieceVisible(this.invStats, open);
+    this.setInvPieceVisible(this.invBagText, open);
+    this.setInvPieceVisible(this.invHelp, open);
+    this.setInvPieceVisible(this.invSlotHints, open);
     if (open && this.lastSave) this.renderInventory(this.lastSave);
     this.game.events.emit('inventory-state', open);
   }
