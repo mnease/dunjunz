@@ -11,7 +11,7 @@ import {
   VIEW_TILES_H,
   VIEW_TILES_W,
 } from '../config';
-import { ROOMS } from '../data/world';
+import { ROOMS, resolveRoomId } from '../data/world';
 import {
   enemyXpReward,
   grantXp,
@@ -78,6 +78,7 @@ const CHAR_TO_TILE: Record<string, TileKind> = {
   D: 'door',
   L: 'locked',
   S: 'stairs',
+  U: 'stairs_up',
   '=': 'lava',
   P: 'pad',
   ' ': 'void',
@@ -93,6 +94,7 @@ const TEX: Record<TileKind, string> = {
   door: 'tile-door',
   locked: 'tile-locked',
   stairs: 'tile-stairs',
+  stairs_up: 'tile-stairs-up',
   entrance: 'tile-stairs',
   lava: 'tile-lava',
   pad: 'tile-pad',
@@ -481,13 +483,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private loadRoom(roomId: string, fromSave: boolean, entryFrom?: string): void {
-    const room = ROOMS[roomId];
+    const resolved = resolveRoomId(roomId);
+    const room = ROOMS[resolved];
     if (!room) return;
 
     this.transitionLock = false;
     this.clearRoomObjects();
     this.room = room;
-    this.save.roomId = roomId;
+    this.save.roomId = resolved;
     this.tileGrid = this.parseTiles(room);
 
     for (let y = 0; y < VIEW_TILES_H; y++) {
@@ -531,7 +534,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Ensure boss chest appears after victory if not collected
-    if (roomId === 'boss' && this.save.bossDefeated) {
+    if (resolved === 'b2_boss' && this.save.bossDefeated) {
       const chestDef = room.entities?.find((e) => e.id === 'boss-chest');
       if (chestDef && !this.save.collected.includes(chestDef.id ?? '')) {
         const exists = this.actors.some((a) => a.id === 'boss-chest');
@@ -542,7 +545,7 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
     writeSave(this.save);
 
-    if (roomId === 'boss' && !this.save.bossDefeated && !this.bossIntroShown) {
+    if (resolved === 'b2_boss' && !this.save.bossDefeated && !this.bossIntroShown) {
       this.bossIntroShown = true;
       const boss = this.actors.find((a) => a.kind === 'boss');
       if (boss?.dialog) {
@@ -553,33 +556,48 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private findTile(
+    kind: TileKind,
+  ): { tx: number; ty: number } | null {
+    for (let y = 0; y < VIEW_TILES_H; y++) {
+      for (let x = 0; x < VIEW_TILES_W; x++) {
+        if (this.tileGrid[y][x] === kind) return { tx: x, ty: y };
+      }
+    }
+    return null;
+  }
+
   private findSpawn(
     entryFrom?: string,
     fromSave?: boolean,
   ): { tx: number; ty: number } {
-    // Entering dungeon from overworld stairs
-    if (this.room.id === 'dungeon_1' && entryFrom === 'overworld') {
-      return { tx: 8, ty: 9 };
+    // Came down stairs → stand next to stairs-up (or room center)
+    if (entryFrom === 'stairsDown') {
+      const up = this.findTile('stairs_up');
+      if (up) return { tx: up.tx, ty: Math.min(VIEW_TILES_H - 2, up.ty + 2) };
+      return { tx: 8, ty: 8 };
     }
-    if (this.room.id === 'overworld' && entryFrom === 'dungeon_1') {
-      return { tx: 7, ty: 6 };
+    // Came up stairs → stand next to stairs-down
+    if (entryFrom === 'stairsUp') {
+      const down = this.findTile('stairs');
+      if (down) return { tx: down.tx, ty: Math.max(1, down.ty - 2) };
+      return { tx: 8, ty: 4 };
     }
 
-    // Directional transitions
+    // Cardinal: appear just inside the opposite edge
     if (entryFrom === 'north') return { tx: 8, ty: 9 };
     if (entryFrom === 'south') return { tx: 8, ty: 1 };
     if (entryFrom === 'east') return { tx: 1, ty: 5 };
     if (entryFrom === 'west') return { tx: 14, ty: 5 };
 
-    // Default spawn mid-room or near stairs
+    // Default / continue: meadow center or nearest stairs / mid
     if (fromSave || !entryFrom) {
       if (this.room.id === 'overworld') return { tx: 8, ty: 4 };
-      for (let y = 0; y < VIEW_TILES_H; y++) {
-        for (let x = 0; x < VIEW_TILES_W; x++) {
-          if (this.tileGrid[y][x] === 'stairs') return { tx: x, ty: y };
-        }
-      }
-      return { tx: 8, ty: 8 };
+      const up = this.findTile('stairs_up');
+      if (up) return { tx: up.tx, ty: Math.min(VIEW_TILES_H - 2, up.ty + 1) };
+      const down = this.findTile('stairs');
+      if (down) return { tx: down.tx, ty: Math.max(1, down.ty - 1) };
+      return { tx: 8, ty: 5 };
     }
     return { tx: 8, ty: 5 };
   }
@@ -1136,9 +1154,18 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    if (tile === 'stairs' && this.room.id === 'overworld' && !this.transitionLock) {
-      this.transitionLock = true;
-      this.loadRoom('dungeon_1', false, 'overworld');
+    // Stairs down (S) and stairs up (U) — different dungeon floors
+    if (!this.transitionLock) {
+      if (tile === 'stairs' && this.room.stairsDown) {
+        this.transitionLock = true;
+        this.loadRoom(this.room.stairsDown, false, 'stairsDown');
+        return;
+      }
+      if (tile === 'stairs_up' && this.room.stairsUp) {
+        this.transitionLock = true;
+        this.loadRoom(this.room.stairsUp, false, 'stairsUp');
+        return;
+      }
     }
 
     void delta;
@@ -1148,7 +1175,7 @@ export class GameScene extends Phaser.Scene {
     if (this.transitionLock || this.dialogLocked) return;
     const { tx, ty } = this.worldToTile(this.player.x, this.player.y);
 
-    // Edge transitions on door tiles or map edge
+    // Cardinal doors: left → west room, right → east, top → north, bottom → south
     if (ty <= 0 && this.room.north) {
       this.transitionLock = true;
       this.loadRoom(this.room.north, false, 'south');
@@ -1156,12 +1183,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (ty >= VIEW_TILES_H - 1 && this.room.south) {
       this.transitionLock = true;
-      // Special: dungeon south to overworld
-      if (this.room.south === 'overworld') {
-        this.loadRoom('overworld', false, 'dungeon_1');
-      } else {
-        this.loadRoom(this.room.south, false, 'north');
-      }
+      this.loadRoom(this.room.south, false, 'north');
       return;
     }
     if (tx <= 0 && this.room.west) {

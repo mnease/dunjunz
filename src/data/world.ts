@@ -1,22 +1,48 @@
 import type { RoomDef } from '../types';
 
 /**
- * Tile legend (one char per cell):
+ * Tile legend (16×11 rooms, NES Zelda-style):
  *  . floor   # wall   g grass   d dirt   ~ water
- *  D open door   L locked door   S stairs/entrance
+ *  D open door   L locked door
+ *  S stairs DOWN   U stairs UP
  *  = lava    P transporter pad
  *
- * Rooms are 16x11 (classic NES Zelda viewport).
+ * MAP CONTRACT
+ * ------------
+ * - north/south/east/west links are bidirectional and match edge doors.
+ * - Left edge doors only exist when `west` is set (same for all sides).
+ * - Stairs: S uses stairsDown, U uses stairsUp (different dungeon floors).
+ *
+ * SURFACE (floor 0)
+ *   (0,0) overworld --E-- (1,0) overworld_east
+ *           | S down
+ *
+ * B1 (floor -1)
+ *              (0,3) b1_descent  S down to B2
+ *                 |
+ *              (0,2) b1_hall
+ *                 |
+ *   (-1,1) b1_trek --E-- (0,1) b1_gate
+ *                          |
+ *              (0,0) b1_entrance --E-- (1,0) b1_cube
+ *                 | U up to overworld
+ *
+ * B2 (floor -2)
+ *              (0,1) b2_boss
+ *                 |
+ *              (0,0) b2_foyer  U up to B1
  */
 
 export const ROOMS: Record<string, RoomDef> = {
+  // ─── SURFACE ─────────────────────────────────────────────
   overworld: {
     id: 'overworld',
-    title: 'THE MEADOW OF LOW STAKES',
-    north: undefined,
-    south: undefined,
+    title: 'MEADOW · SURFACE',
+    floor: 0,
+    mapX: 0,
+    mapY: 0,
     east: 'overworld_east',
-    west: undefined,
+    stairsDown: 'b1_entrance',
     tiles: [
       '################',
       '#gggggggggggggg#',
@@ -40,8 +66,7 @@ export const ROOMS: Record<string, RoomDef> = {
           "IT'S DANGEROUS TO GO ALONE!",
           'TAKE THIS... USER AGREEMENT.',
           '(AND A SWORD. OBVIOUSLY.)',
-          'ALSO: THE DUNJUNZ HUNGER.',
-          'TRY NOT TO DIE FUNNILY.',
+          'STAIRS LEAD DOWN. EAST IS A TRAIL.',
           'SPACE OR Z TO SWING. E TO TALK.',
         ],
       },
@@ -57,19 +82,21 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 11,
         y: 2,
         dialog: [
-          'WELCOME TO DUNJUNZ.',
-          'TROPES AHEAD. PARODY MODE ON.',
-          'NO ACTUAL RINGS, WARPS, OR',
-          'FEDERATION LIABILITY.',
+          'MAP: EAST = TROPE TRAIL',
+          'STAIRS = DUNJUN B1',
+          'DOORS MATCH THE COMPASS.',
+          'LEFT DOOR = WEST ROOM, ETC.',
         ],
       },
     ],
-    onEnter: 'overworld',
   },
 
   overworld_east: {
     id: 'overworld_east',
-    title: 'TROPE TRAIL',
+    title: 'TROPE TRAIL · SURFACE',
+    floor: 0,
+    mapX: 1,
+    mapY: 0,
     west: 'overworld',
     tiles: [
       '################',
@@ -79,7 +106,7 @@ export const ROOMS: Record<string, RoomDef> = {
       '#g..#......#..#',
       '....#..~~..#..#',
       '#g..#......#..#',
-      '#g..###DD###..#',
+      '#g..###..###..#',
       '#g............#',
       '#ggggggggggggg#',
       '################',
@@ -93,9 +120,8 @@ export const ROOMS: Record<string, RoomDef> = {
         dialog: [
           'I SING OF AGES PAST...',
           'AND COPYRIGHT-SAFE PARODY.',
-          'SOUTH OF THE MEADOW IS...',
-          'WAIT. THERE IS NO SOUTH.',
-          'LEVEL DESIGN IS HARD.',
+          'WEST RETURNS TO THE MEADOW.',
+          'THE MAP FINALLY MAKES SENSE.',
         ],
       },
       {
@@ -119,10 +145,9 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 7,
         shopId: 'tinkerer',
         dialog: [
-          'TINKERER: RARE WARES! FAIR-ISH PRICES!',
-          'I FOLLOW THE TROPE TRAIL.',
+          'TINKERER: RARE WARES!',
           'PRESS B WHILE NEAR ME TO BUY.',
-          'POTION 15c · OIL 20c · ARMOR 35c',
+          'WEST IS THE MEADOW STAIRS.',
         ],
       },
       {
@@ -135,24 +160,28 @@ export const ROOMS: Record<string, RoomDef> = {
     ],
   },
 
-  dungeon_1: {
-    id: 'dungeon_1',
-    title: 'DUNJUN ENTRANCE',
-    north: 'dungeon_2',
-    south: 'overworld',
-    east: 'dungeon_side',
+  // ─── B1 ──────────────────────────────────────────────────
+  b1_entrance: {
+    id: 'b1_entrance',
+    title: 'DUNJUN ENTRANCE · B1',
+    floor: -1,
+    mapX: 0,
+    mapY: 0,
+    north: 'b1_gate',
+    east: 'b1_cube',
+    stairsUp: 'overworld',
     tiles: [
       '########DD######',
       '#..............#',
       '#..####..####..#',
       '#..#........#..#',
       '#..#........#...',
-      '#......DD......#',
+      '#......UU......#',
       '#..#........#...',
       '#..#........#..#',
       '#..####..####..#',
       '#..............#',
-      '########DD######',
+      '################',
     ],
     entities: [
       {
@@ -161,47 +190,50 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 3,
         y: 9,
         dialog: [
-          'HOUSE RULES:',
-          '1. NO SPLITTING THE PARTY',
-          '2. CHECK FOR MIMICS',
-          '3. THE CUBE IS SORRY',
+          'B1 ENTRANCE',
+          'U = STAIRS UP (SURFACE)',
+          'N = DEEPER HALLS',
+          'E = THE SORRY CUBE',
         ],
       },
       {
         kind: 'skeleton',
         id: 'ent-skel-1',
         x: 4,
-        y: 4,
+        y: 3,
         hp: 3,
       },
       {
         kind: 'skeleton',
         id: 'ent-skel-2',
         x: 11,
-        y: 4,
+        y: 3,
         hp: 3,
       },
       {
         kind: 'chest',
         id: 'entrance-chest',
         x: 8,
-        y: 2,
+        y: 8,
         chestTable: 'dungeon',
       },
     ],
   },
 
-  dungeon_side: {
-    id: 'dungeon_side',
-    title: 'THE SORRY CUBE',
-    west: 'dungeon_1',
+  b1_cube: {
+    id: 'b1_cube',
+    title: 'THE SORRY CUBE · B1',
+    floor: -1,
+    mapX: 1,
+    mapY: 0,
+    west: 'b1_entrance',
     tiles: [
       '################',
       '#..............#',
       '#..............#',
       '#....######....#',
       '#....#....#....#',
-      '.....#....#.....',
+      '.....#....#....#',
       '#....#....#....#',
       '#....######....#',
       '#..............#',
@@ -219,8 +251,7 @@ export const ROOMS: Record<string, RoomDef> = {
           '*WOBBLE*',
           'OH NO. DID I DISSOLVE YOUR',
           'BOOTS AGAIN? I AM SO SORRY.',
-          'PLEASE ACCEPT THIS APOLOGY',
-          'AND ALSO SOME ACID DAMAGE.',
+          'WEST LEADS BACK TO THE ENTRANCE.',
         ],
       },
       {
@@ -239,12 +270,15 @@ export const ROOMS: Record<string, RoomDef> = {
     ],
   },
 
-  dungeon_2: {
-    id: 'dungeon_2',
-    title: 'SPEAK, FRIEND',
-    north: 'dungeon_3',
-    south: 'dungeon_1',
-    west: 'trek_room',
+  b1_gate: {
+    id: 'b1_gate',
+    title: 'SPEAK, FRIEND · B1',
+    floor: -1,
+    mapX: 0,
+    mapY: 1,
+    north: 'b1_hall',
+    south: 'b1_entrance',
+    west: 'b1_trek',
     tiles: [
       '########LL######',
       '#..............#',
@@ -265,11 +299,11 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 5,
         y: 2,
         dialog: [
-          'THE NORTH DOOR DEMANDS:',
+          'NORTH DOOR IS LOCKED.',
           '"SPEAK FRIEND AND ENTER."',
-          'HINT: THE PASSWORD IS',
-          'LITERALLY THE WORD FRIEND.',
-          'FANTASY IS SUBTLE SOMETIMES.',
+          'HINT: THE PASSWORD IS FRIEND.',
+          'WEST: USS PLOT HOLE.',
+          'SOUTH: ENTRANCE / STAIRS UP.',
         ],
       },
       {
@@ -285,24 +319,26 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 5,
         dialog: [
           'WEST: ENGINEERING / BRIDGE',
-          'UNIFORM POLICY: RED SHIRTS',
-          'HAVE... SHORT CAREERS.',
+          'RED SHIRTS: SHORT CAREERS.',
         ],
       },
     ],
   },
 
-  trek_room: {
-    id: 'trek_room',
-    title: 'USS PLOT HOLE',
-    east: 'dungeon_2',
+  b1_trek: {
+    id: 'b1_trek',
+    title: 'USS PLOT HOLE · B1',
+    floor: -1,
+    mapX: -1,
+    mapY: 1,
+    east: 'b1_gate',
     tiles: [
       '################',
       '#..............#',
       '#..PP......PP..#',
       '#..............#',
       '#..............#',
-      '......####......',
+      '#.....####......',
       '#..............#',
       '#..PP......PP..#',
       '#..............#',
@@ -337,11 +373,10 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 8,
         y: 5,
         dialog: [
-          'CAPTAIN\'S LOG: STARDATE ???',
+          "CAPTAIN'S LOG: STARDATE ???",
           'WE BEAMED INTO A DUNGEON.',
-          'SENSORS DETECT... TROPES.',
-          'ENSIGNS: PLEASE STOP DYING.',
-          'THAT IS AN ORDER.',
+          'EAST RETURNS TO THE GATE.',
+          'ENSIGNS: STOP DYING.',
         ],
       },
       {
@@ -353,11 +388,14 @@ export const ROOMS: Record<string, RoomDef> = {
     ],
   },
 
-  dungeon_3: {
-    id: 'dungeon_3',
-    title: 'HALL OF BAD IDEAS',
-    north: 'boss',
-    south: 'dungeon_2',
+  b1_hall: {
+    id: 'b1_hall',
+    title: 'HALL OF BAD IDEAS · B1',
+    floor: -1,
+    mapX: 0,
+    mapY: 2,
+    north: 'b1_descent',
+    south: 'b1_gate',
     tiles: [
       '########DD######',
       '#..............#',
@@ -395,23 +433,119 @@ export const ROOMS: Record<string, RoomDef> = {
       },
       {
         kind: 'sign',
-        id: 'boss-warning',
+        id: 'descent-warning',
         x: 8,
         y: 8,
         dialog: [
-          'NORTH: THE FINAL BOSS',
-          '(WORKING TITLE)',
-          'HE HAS READ THE MANUAL.',
-          'YOU HAVE NOT. GOOD LUCK.',
+          'NORTH: STAIRS TO B2',
+          'THE DUNJUN GOES DEEPER.',
+          'SOUTH: BACK TO THE GATE.',
         ],
       },
     ],
   },
 
-  boss: {
-    id: 'boss',
-    title: 'THRONE OF META',
-    south: 'dungeon_3',
+  b1_descent: {
+    id: 'b1_descent',
+    title: 'DESCENT · B1',
+    floor: -1,
+    mapX: 0,
+    mapY: 3,
+    south: 'b1_hall',
+    stairsDown: 'b2_foyer',
+    tiles: [
+      '################',
+      '#..............#',
+      '#..............#',
+      '#....#SSSS#....#',
+      '#....#....#....#',
+      '#....#....#....#',
+      '#....######....#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '########DD######',
+    ],
+    entities: [
+      {
+        kind: 'sign',
+        id: 'b1-descent-sign',
+        x: 3,
+        y: 8,
+        dialog: [
+          'STAIRS DOWN: B2',
+          'THE THRONE AWAITS BELOW.',
+          'SOUTH: HALL OF BAD IDEAS.',
+        ],
+      },
+      {
+        kind: 'skeleton',
+        id: 'descent-skel',
+        x: 11,
+        y: 7,
+        hp: 4,
+      },
+    ],
+  },
+
+  // ─── B2 ──────────────────────────────────────────────────
+  b2_foyer: {
+    id: 'b2_foyer',
+    title: 'LOWER FOYER · B2',
+    floor: -2,
+    mapX: 0,
+    mapY: 0,
+    north: 'b2_boss',
+    stairsUp: 'b1_descent',
+    tiles: [
+      '########DD######',
+      '#..............#',
+      '#..............#',
+      '#....#UUUU#....#',
+      '#....#....#....#',
+      '#....#....#....#',
+      '#....######....#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '################',
+    ],
+    entities: [
+      {
+        kind: 'sign',
+        id: 'b2-foyer-sign',
+        x: 12,
+        y: 8,
+        dialog: [
+          'B2: THE LOWER DEPTHS',
+          'U = STAIRS UP TO B1',
+          'N = THRONE OF META',
+        ],
+      },
+      {
+        kind: 'slime',
+        id: 'b2-slime-1',
+        x: 4,
+        y: 8,
+        hp: 3,
+      },
+      {
+        kind: 'slime',
+        id: 'b2-slime-2',
+        x: 11,
+        y: 8,
+        hp: 3,
+      },
+    ],
+  },
+
+  b2_boss: {
+    id: 'b2_boss',
+    title: 'THRONE OF META · B2',
+    floor: -2,
+    mapX: 0,
+    mapY: 1,
+    south: 'b2_foyer',
     tiles: [
       '################',
       '#..............#',
@@ -434,6 +568,7 @@ export const ROOMS: Record<string, RoomDef> = {
         hp: 12,
         dialog: [
           'I AM THE DUNGEON MASTER!',
+          'YOU FOUND THE LOWER LEVEL.',
           'ROLL FOR INITIATIVE...',
           'NAT 1. AWKWARD.',
           'FINE. FIGHT ME ANYWAY!',
@@ -448,8 +583,7 @@ export const ROOMS: Record<string, RoomDef> = {
         dialog: [
           'THE CHEST DISGORGES LOOT.',
           'THE REAL TREASURE WAS THE',
-          'TROPES WE ROASTED ALONG',
-          'THE WAY. (ALSO THE LOOT.)',
+          'CONSISTENT MAP LAYOUT.',
           'THANKS FOR PLAYING DUNJUNZ!',
         ],
       },
@@ -461,12 +595,33 @@ export const ROOMS: Record<string, RoomDef> = {
         shopId: 'tinkerer',
         dialog: [
           'TINKERER: YOU BEAT THE DM?',
-          'I ACCEPT COINS AND BRAGGING.',
-          'PRESS B TO BUY MY TOP POTION.',
+          'SOUTH THEN U TO CLIMB OUT.',
+          'PRESS B TO BUY.',
         ],
       },
     ],
   },
 };
 
+/** Old room ids → new map ids (save migration). */
+export const ROOM_ALIASES: Record<string, string> = {
+  dungeon_1: 'b1_entrance',
+  dungeon_side: 'b1_cube',
+  dungeon_2: 'b1_gate',
+  trek_room: 'b1_trek',
+  dungeon_3: 'b1_hall',
+  boss: 'b2_boss',
+};
+
+export function resolveRoomId(id: string): string {
+  return ROOM_ALIASES[id] ?? id;
+}
+
 export const START_ROOM = 'overworld';
+
+/** Human-readable floor label for HUD. */
+export function floorLabel(floor: number | undefined): string {
+  if (floor === undefined || floor === 0) return 'SURFACE';
+  if (floor < 0) return `B${Math.abs(floor)}`;
+  return `F${floor}`;
+}

@@ -268,12 +268,27 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   canvasTex(scene, 'tile-stairs', TILE, TILE, (ctx) => {
-    ctx.fillStyle = '#3a3150';
+    // Stairs DOWN — darker, steps receding
+    ctx.fillStyle = '#2a2038';
     ctx.fillRect(0, 0, TILE, TILE);
-    ctx.fillStyle = '#7a6a9a';
+    ctx.fillStyle = '#6a5a8a';
     for (let i = 0; i < 4; i++) {
       ctx.fillRect(2, 2 + i * 3, 12 - i * 2, 2);
     }
+    ctx.fillStyle = '#ff6b9d';
+    ctx.fillRect(7, 1, 2, 2);
+  });
+
+  canvasTex(scene, 'tile-stairs-up', TILE, TILE, (ctx) => {
+    // Stairs UP — lighter, steps rising
+    ctx.fillStyle = '#3a4060';
+    ctx.fillRect(0, 0, TILE, TILE);
+    ctx.fillStyle = '#9ab0d0';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(2 + i, 12 - i * 3, 12 - i * 2, 2);
+    }
+    ctx.fillStyle = '#7dffb3';
+    ctx.fillRect(7, 1, 2, 2);
   });
 
   canvasTex(scene, 'tile-pad', TILE, TILE, (ctx) => {

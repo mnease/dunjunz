@@ -8,6 +8,7 @@ export type TileKind =
   | 'door'
   | 'locked'
   | 'stairs'
+  | 'stairs_up'
   | 'entrance'
   | 'lava'
   | 'pad';
@@ -87,10 +88,20 @@ export interface RoomDef {
   title: string;
   tiles: string[];
   entities?: EntityDef[];
+  /** Cardinal links — must match door openings on room edges. */
   north?: string;
   south?: string;
   east?: string;
   west?: string;
+  /** Floor depth: 0 = surface, -1 = B1, -2 = B2, … */
+  floor?: number;
+  /** Map grid coords within this floor (for consistency / debugging). */
+  mapX?: number;
+  mapY?: number;
+  /** Room reached by walking onto stairs-down tiles (S). */
+  stairsDown?: string;
+  /** Room reached by walking onto stairs-up tiles (U). */
+  stairsUp?: string;
   onEnter?: string;
 }
 
