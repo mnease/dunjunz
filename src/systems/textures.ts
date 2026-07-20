@@ -187,12 +187,26 @@ function drawItemIcon(
     itemId === 'leather_helmet' ||
     itemId === 'leather_greaves' ||
     itemId === 'leather_shoes' ||
+    itemId === 'sorry_boots' ||
     itemId === 'leather_gloves'
   ) {
-    ctx.fillStyle = '#8b5a2b';
+    ctx.fillStyle = itemId === 'sorry_boots' ? '#5ad4a0' : '#8b5a2b';
     ctx.fillRect(6, 7, 12, 12);
-    ctx.fillStyle = '#a06830';
+    ctx.fillStyle = itemId === 'sorry_boots' ? '#7dffb3' : '#a06830';
     ctx.fillRect(8, 9, 8, 4);
+    if (itemId === 'sorry_boots') {
+      ctx.fillStyle = hex(COLORS.pink);
+      ctx.fillRect(10, 12, 4, 2);
+    }
+    return;
+  }
+  if (itemId === 'cube_core') {
+    ctx.fillStyle = 'rgba(90, 220, 180, 0.9)';
+    ctx.fillRect(5, 5, 14, 14);
+    ctx.strokeStyle = '#2a8f70';
+    ctx.strokeRect(5, 5, 14, 14);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(7, 7, 5, 5);
     return;
   }
   if (itemId === 'reinforced_leather') {
@@ -429,9 +443,11 @@ export function generateTextures(scene: Phaser.Scene): void {
     'leather_helmet',
     'leather_greaves',
     'leather_shoes',
+    'sorry_boots',
     'leather_gloves',
     'gold_trinket',
     'shiny_bauble',
+    'cube_core',
     'wood_shield',
     'iron_shield',
     'tower_shield',

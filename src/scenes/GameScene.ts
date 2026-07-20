@@ -39,6 +39,7 @@ import {
 } from '../systems/attributes';
 import { resolveEnemyHp } from '../systems/enemies';
 import {
+  autoEquipEmptySlots,
   computePlayerDamage,
   cycleSlotEquip,
   grantKey,
@@ -47,6 +48,7 @@ import {
   syncDerivedStats,
   useInventoryItem,
 } from '../systems/inventory';
+import { mintItem } from '../systems/items';
 import {
   discoverMapz,
   landForRoom,
@@ -91,6 +93,8 @@ interface Actor {
   chestTable?: string;
   shopId?: string;
   mapzId?: LandId;
+  /** Cube stays peaceful until the player hits it. */
+  aggressive?: boolean;
 }
 
 const SOLID: TileKind[] = ['wall', 'water', 'void', 'locked'];
@@ -623,9 +627,9 @@ export class GameScene extends Phaser.Scene {
     this.game.events.emit('toast', `+1 ${attr.toUpperCase()}`);
   }
 
-  /** Reach in world pixels (~1.75 tiles at SCALE 3). Adjacent NPCs must be hittable. */
+  /** Reach in world pixels (~2.4 tiles) so roomy NPCs like the cube are talkable. */
   private interactReach(): number {
-    return TILE * SCALE * 1.75;
+    return TILE * SCALE * 2.4;
   }
 
   /** Grant starter sword (old man gift or ground pickup) into weapon slot. */
@@ -918,6 +922,8 @@ export class GameScene extends Phaser.Scene {
       chestTable: def.chestTable,
       shopId: def.shopId,
       mapzId: def.mapzId,
+      // Cube is peaceful until struck
+      aggressive: def.kind === 'cube' ? false : true,
     };
 
     if (hostile) {
@@ -969,7 +975,8 @@ export class GameScene extends Phaser.Scene {
 
   private hurtPlayer(from: Actor): void {
     if (!from.alive || this.invuln > 0 || this.dialogLocked || this.paused) return;
-    // Cube dialog is E-to-talk only — auto-dialog on touch locked combat
+    // Peaceful cube (not yet hit) does not damage — walk up and press E
+    if (from.kind === 'cube' && !from.aggressive) return;
 
     // Base hit is 2 hearts; armor reduces damage (min 1) so gear matters
     const baseDmg = 2;
@@ -1021,6 +1028,12 @@ export class GameScene extends Phaser.Scene {
   private hitEnemy(actor: Actor): void {
     if (!actor.alive || actor.hurtCooldown > 0 || !this.attacking) return;
     if (!hasWeaponEquipped(this.save)) return;
+
+    // Provoking the cube makes it fight back
+    if (actor.kind === 'cube' && !actor.aggressive) {
+      actor.aggressive = true;
+      this.game.events.emit('toast', 'THE CUBE IS HURT... AND MAD');
+    }
 
     actor.hurtCooldown = 280;
     const dmg = computePlayerDamage(this.save);
@@ -1082,23 +1095,26 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Creep loot (coins mostly; sometimes gear / mats). Bosses use quest rewards too.
-    const drops = rollEnemyLoot(
-      actor.kind,
-      Math.random,
-      this.save.attrs.lck,
-    );
-    if (drops.length) {
-      this.save = applyLootToSave(this.save, drops);
-      const summary = lootSummary(drops).slice(0, 3).join(', ');
-      this.time.delayedCall(200, () => {
-        this.game.events.emit('toast', `LOOT: ${summary}`);
-      });
+    // Cube kill: unique core instead of (or in addition to) generic drops
+    if (actor.kind === 'cube' || actor.id === 'gel-cube') {
+      this.rewardCubeKill();
+    } else {
+      const drops = rollEnemyLoot(
+        actor.kind,
+        Math.random,
+        this.save.attrs.lck,
+      );
+      if (drops.length) {
+        this.save = applyLootToSave(this.save, drops);
+        const summary = lootSummary(drops).slice(0, 3).join(', ');
+        this.time.delayedCall(200, () => {
+          this.game.events.emit('toast', `LOOT: ${summary}`);
+        });
+      }
     }
 
     if (actor.kind === 'boss' || actor.id === 'dungeon-master') {
       this.applyBossReward(actor);
-    } else if (actor.kind === 'cube') {
-      this.game.events.emit('toast', 'THE CUBE APOLOGIZES ONE LAST TIME');
     }
 
     // Death particles
@@ -1118,6 +1134,84 @@ export class GameScene extends Phaser.Scene {
     actor.sprite.destroy();
     writeSave(this.save);
     this.emitHud();
+  }
+
+  /** Talk path: boots of apology (once). Cube stays until killed. */
+  private talkToCube(cube: Actor): void {
+    if (!cube.alive) {
+      this.game.events.emit('toast', 'ONLY A PUDDLE REMAINS');
+      return;
+    }
+    if (cube.aggressive) {
+      this.game.events.emit('dialog-show', [
+        '*ANGRY WOBBLE*',
+        'YOU HIT ME FIRST!',
+        'NO GIFTS FOR MEAN HEROES!',
+      ]);
+      return;
+    }
+
+    const already = !!this.save.flags['cube_forgiven'];
+    if (already) {
+      this.game.events.emit('dialog-show', [
+        '*FRIENDLY WOBBLE*',
+        'YOU ALREADY HAVE MY APOLOGY BOOTS.',
+        'PLEASE DO NOT HIT ME.',
+        'WEST LEADS BACK TO THE ENTRANCE.',
+      ]);
+      return;
+    }
+
+    // Gift boots — exclusive talk reward
+    let next = mintItem(this.save, 'sorry_boots', 'uncommon', 0).save;
+    next = autoEquipEmptySlots(next);
+    next = syncDerivedStats(next);
+    next = {
+      ...next,
+      flags: { ...next.flags, cube_forgiven: true },
+    };
+    this.save = next;
+    writeSave(this.save);
+    this.emitHud();
+    this.game.events.emit('dialog-show', [
+      ...(cube.dialog ?? ['*WOBBLE* I AM SORRY.']),
+      '',
+      'YOU GOT: BOOTS OF APOLOGY!',
+      '(SHOES SLOT · +DEF · WON\'T DISSOLVE)',
+      'KILLING THE CUBE YIELDS A DIFFERENT PRIZE.',
+    ]);
+    this.game.events.emit('toast', 'BOOTS OF APOLOGY!');
+  }
+
+  /** Kill path: gelatinous core amulet + some coins (not the boots). */
+  private rewardCubeKill(): void {
+    const drops = rollEnemyLoot('cube', Math.random, this.save.attrs.lck);
+    // Guarantee the unique kill reward if not already owned
+    const hasCore = this.save.bag.some((b) => b.templateId === 'cube_core');
+    if (!hasCore) {
+      drops.push({
+        kind: 'gear',
+        label: 'GELATINOUS CORE',
+        templateId: 'cube_core',
+      });
+    }
+    // Extra coins for the execution
+    drops.push({ kind: 'coins', label: '15 COINS', coins: 15 });
+    this.save = applyLootToSave(this.save, drops);
+    this.save = {
+      ...this.save,
+      flags: { ...this.save.flags, cube_slain: true },
+    };
+    const summary = lootSummary(drops).slice(0, 4).join(', ');
+    this.game.events.emit('dialog-show', [
+      'THE CUBE COLLAPSES INTO A PUDDLE.',
+      'NO MORE APOLOGIES.',
+      `LOOT: ${summary}`,
+      this.save.flags['cube_forgiven']
+        ? 'AT LEAST YOU TOOK THE BOOTS FIRST.'
+        : 'IT NEVER GOT TO SAY SORRY.',
+    ]);
+    this.game.events.emit('toast', `CUBE LOOT: ${summary}`);
   }
 
   private applyBossReward(actor: Actor): void {
@@ -1278,6 +1372,11 @@ export class GameScene extends Phaser.Scene {
         ? best.dialog
         : ['A FORJE.', 'PRESS F TO FORJE GEAR.'];
       this.game.events.emit('dialog-show', lines);
+      return;
+    }
+
+    if (best.kind === 'cube' || best.id === 'gel-cube') {
+      this.talkToCube(best);
       return;
     }
 
@@ -1679,6 +1778,14 @@ export class GameScene extends Phaser.Scene {
 
       // Safety: if clipped into solid, shove back toward room center
       this.unstickFromWall(a);
+
+      // Peaceful cube idles until provoked
+      if (a.kind === 'cube' && !a.aggressive) {
+        if (a.sprite.body) {
+          (a.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+        }
+        continue;
+      }
 
       if (a.aiTimer <= 0) {
         a.aiTimer = Phaser.Math.Between(400, 900);
