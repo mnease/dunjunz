@@ -110,9 +110,9 @@ export class TitleScene extends Phaser.Scene {
 
   private startGame(fresh: boolean): void {
     if (fresh) clearSave();
-    // Ensure parallel UI cannot carry dialog lock into the next run
-    if (this.scene.isActive('UI') || this.scene.isSleeping('UI')) {
-      this.scene.stop('UI');
+    // Soft-reset UI if still running — do not stop/relaunch (listener race)
+    if (this.scene.isActive('UI')) {
+      this.game.events.emit('ui-reset');
     }
     this.scene.start('Game');
   }

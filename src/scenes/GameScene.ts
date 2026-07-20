@@ -91,6 +91,7 @@ export class GameScene extends Phaser.Scene {
     esc: Phaser.Input.Keyboard.Key;
     e: Phaser.Input.Keyboard.Key;
     m: Phaser.Input.Keyboard.Key;
+    enter: Phaser.Input.Keyboard.Key;
   };
   private facing: 'up' | 'down' | 'left' | 'right' = 'down';
   private attacking = false;
@@ -140,6 +141,7 @@ export class GameScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.SPACE,
       Phaser.Input.Keyboard.KeyCodes.Z,
       Phaser.Input.Keyboard.KeyCodes.E,
+      Phaser.Input.Keyboard.KeyCodes.ENTER,
     ]);
     this.cursors = kb.createCursorKeys();
     this.keys = {
@@ -152,12 +154,14 @@ export class GameScene extends Phaser.Scene {
       esc: kb.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
       e: kb.addKey(Phaser.Input.Keyboard.KeyCodes.E),
       m: kb.addKey(Phaser.Input.Keyboard.KeyCodes.M),
+      enter: kb.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER),
     };
 
-    // Event-based attack / interact
+    // Event-based attack / interact (Enter talks when dialog closed; advances when open via UI)
     kb.on('keydown-SPACE', this.onAttackKey, this);
     kb.on('keydown-Z', this.onAttackKey, this);
     kb.on('keydown-E', this.onInteractKey, this);
+    kb.on('keydown-ENTER', this.onInteractKey, this);
 
     this.player = this.physics.add.sprite(0, 0, 'player');
     this.player.setScale(SCALE);
@@ -183,14 +187,17 @@ export class GameScene extends Phaser.Scene {
       kb.off('keydown-SPACE', this.onAttackKey, this);
       kb.off('keydown-Z', this.onAttackKey, this);
       kb.off('keydown-E', this.onInteractKey, this);
+      kb.off('keydown-ENTER', this.onInteractKey, this);
       writeSave(this.save);
     });
 
-    // Always hard-reset UI so a leftover dialog box cannot soft-lock input
-    if (this.scene.isActive('UI') || this.scene.isSleeping('UI')) {
-      this.scene.stop('UI');
+    // Soft-reset UI only — stop+relaunch races strip dialog-show listeners
+    if (!this.scene.isActive('UI')) {
+      this.scene.launch('UI');
+    } else {
+      this.game.events.emit('ui-reset');
     }
-    this.scene.launch('UI');
+    this.dialogLocked = false;
     this.game.events.emit('dialog-state', false);
     this.game.events.emit('pause-ui', false);
 
@@ -221,9 +228,15 @@ export class GameScene extends Phaser.Scene {
   };
 
   private onInteractKey = (): void => {
+    // When dialog is open, UI handles Enter/Space to advance — don't re-open
     if (this.dialogLocked || this.paused) return;
     this.tryInteract();
   };
+
+  /** Reach in world pixels (~1.75 tiles at SCALE 3). Adjacent NPCs must be hittable. */
+  private interactReach(): number {
+    return TILE * SCALE * 1.75;
+  }
 
   /** Grant starter sword (old man gift or ground pickup). */
   private grantSword(showDialog = true): void {
@@ -589,12 +602,14 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
   }
 
-  private findInteractable(reach = 40): Actor | null {
+  private findInteractable(reach?: number): Actor | null {
+    const max = reach ?? this.interactReach();
     let best: Actor | null = null;
-    let bestDist = reach;
+    let bestDist = max;
     for (const a of this.actors) {
       if (!a.alive || !a.interactive) continue;
       if (['slime', 'skeleton', 'redshirt', 'boss'].includes(a.kind)) continue;
+      if (!a.sprite?.active) continue;
       const dist = Phaser.Math.Distance.Between(
         this.player.x,
         this.player.y,
@@ -611,8 +626,11 @@ export class GameScene extends Phaser.Scene {
 
   private tryInteract(): void {
     if (this.dialogLocked || this.paused) return;
-    const best = this.findInteractable(40);
-    if (!best) return;
+    const best = this.findInteractable();
+    if (!best) {
+      this.game.events.emit('toast', 'NOTHING HERE - GET CLOSER');
+      return;
+    }
 
     if (best.kind === 'key' || best.kind === 'heart' || best.kind === 'sword') {
       this.collectItem(best);
@@ -620,7 +638,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (best.kind === 'chest') {
-      this.save.collected.push(best.id);
+      if (!this.save.collected.includes(best.id)) {
+        this.save.collected.push(best.id);
+      }
       writeSave(this.save);
       this.game.events.emit(
         'dialog-show',
@@ -629,7 +649,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    if (best.dialog) {
+    if (best.dialog?.length) {
       // Classic Zelda: talking to the old man hands you the sword
       if (best.id === 'old-man' && !this.save.hasSword) {
         this.grantSword(false);
@@ -642,7 +662,10 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       this.game.events.emit('dialog-show', best.dialog);
+      return;
     }
+
+    this.game.events.emit('toast', 'THEY HAVE NOTHING TO SAY');
   }
 
   private tryAttack(): void {
@@ -881,7 +904,8 @@ export class GameScene extends Phaser.Scene {
     if (this.paused) {
       if (Phaser.Input.Keyboard.JustDown(this.keys.m)) {
         writeSave(this.save);
-        this.scene.stop('UI');
+        // Soft-reset UI — do not stop (listener/chrome race kills dialog)
+        this.game.events.emit('ui-reset');
         this.scene.start('Title');
       }
       return;
@@ -926,14 +950,12 @@ export class GameScene extends Phaser.Scene {
     this.player.setAlpha(this.invuln > 0 && Math.floor(_time / 80) % 2 === 0 ? 0.4 : 1);
 
     // Attack / interact also handled via keydown events; JustDown as backup
+    // Attack backup via JustDown; interact is event-only (avoids double-fire)
     if (
       Phaser.Input.Keyboard.JustDown(this.keys.space) ||
       Phaser.Input.Keyboard.JustDown(this.keys.z)
     ) {
       this.tryAttack();
-    }
-    if (Phaser.Input.Keyboard.JustDown(this.keys.e)) {
-      this.tryInteract();
     }
 
     this.tryUnlockNearPlayer();
