@@ -121,18 +121,39 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.walls = this.physics.add.staticGroup();
-    this.cursors = this.input.keyboard!.createCursorKeys();
+    const kb = this.input.keyboard!;
+    // Capture game keys so Space doesn't scroll the page / get eaten by the browser
+    kb.addCapture([
+      Phaser.Input.Keyboard.KeyCodes.SPACE,
+      Phaser.Input.Keyboard.KeyCodes.Z,
+      Phaser.Input.Keyboard.KeyCodes.E,
+      Phaser.Input.Keyboard.KeyCodes.ESC,
+      Phaser.Input.Keyboard.KeyCodes.UP,
+      Phaser.Input.Keyboard.KeyCodes.DOWN,
+      Phaser.Input.Keyboard.KeyCodes.LEFT,
+      Phaser.Input.Keyboard.KeyCodes.RIGHT,
+      Phaser.Input.Keyboard.KeyCodes.W,
+      Phaser.Input.Keyboard.KeyCodes.A,
+      Phaser.Input.Keyboard.KeyCodes.S,
+      Phaser.Input.Keyboard.KeyCodes.D,
+    ]);
+    this.cursors = kb.createCursorKeys();
     this.keys = {
-      w: this.input.keyboard!.addKey('W'),
-      a: this.input.keyboard!.addKey('A'),
-      s: this.input.keyboard!.addKey('S'),
-      d: this.input.keyboard!.addKey('D'),
-      z: this.input.keyboard!.addKey('Z'),
-      space: this.input.keyboard!.addKey('SPACE'),
-      esc: this.input.keyboard!.addKey('ESC'),
-      e: this.input.keyboard!.addKey('E'),
-      m: this.input.keyboard!.addKey('M'),
+      w: kb.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+      a: kb.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+      s: kb.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+      d: kb.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+      z: kb.addKey(Phaser.Input.Keyboard.KeyCodes.Z),
+      space: kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
+      esc: kb.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
+      e: kb.addKey(Phaser.Input.Keyboard.KeyCodes.E),
+      m: kb.addKey(Phaser.Input.Keyboard.KeyCodes.M),
     };
+
+    // Event-based attack (more reliable than JustDown alone across parallel UI scene)
+    kb.on('keydown-SPACE', this.onAttackKey, this);
+    kb.on('keydown-Z', this.onAttackKey, this);
+    kb.on('keydown-E', this.onInteractKey, this);
 
     this.player = this.physics.add.sprite(0, 0, 'player');
     this.player.setScale(SCALE);
@@ -142,16 +163,22 @@ export class GameScene extends Phaser.Scene {
     this.player.setOffset(3, 4);
 
     this.swordHit = this.physics.add.image(-999, -999, 'sword-swing');
-    this.swordHit.setScale(SCALE * 0.85);
+    this.swordHit.setScale(SCALE);
+    this.swordHit.setDepth(15);
     this.swordHit.setVisible(false);
-    this.swordHit.body!.enable = false;
-    (this.swordHit.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
+    this.swordHit.setActive(false);
+    const swordBody = this.swordHit.body as Phaser.Physics.Arcade.Body;
+    swordBody.setAllowGravity(false);
+    swordBody.enable = false;
 
     this.physics.add.collider(this.player, this.walls);
 
     this.game.events.on('dialog-state', this.onDialogState, this);
     this.events.on('shutdown', () => {
       this.game.events.off('dialog-state', this.onDialogState, this);
+      kb.off('keydown-SPACE', this.onAttackKey, this);
+      kb.off('keydown-Z', this.onAttackKey, this);
+      kb.off('keydown-E', this.onInteractKey, this);
       writeSave(this.save);
     });
 
@@ -169,6 +196,44 @@ export class GameScene extends Phaser.Scene {
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     }
   };
+
+  private onAttackKey = (): void => {
+    // Space advances dialog when open (UI scene); do not swing mid-dialog
+    if (this.dialogLocked || this.paused) return;
+    this.tryAttack();
+  };
+
+  private onInteractKey = (): void => {
+    if (this.dialogLocked || this.paused) return;
+    this.tryInteract();
+  };
+
+  /** Grant starter sword (old man gift or ground pickup). */
+  private grantSword(showDialog = true): void {
+    if (this.save.hasSword) return;
+    this.save.hasSword = true;
+    if (!this.save.collected.includes('starter-sword')) {
+      this.save.collected.push('starter-sword');
+    }
+    // Remove ground sword if still present
+    const ground = this.actors.find((a) => a.id === 'starter-sword' && a.alive);
+    if (ground) {
+      ground.alive = false;
+      ground.sprite.destroy();
+    }
+    writeSave(this.save);
+    this.emitHud();
+    if (showDialog) {
+      this.game.events.emit('dialog-show', [
+        'YOU GOT THE SWORD OF',
+        'MILD ENTHUSIASM!',
+        'PRESS SPACE OR Z TO SWING.',
+        'TRY NOT TO HIT THE FURNITURE.',
+      ]);
+    } else {
+      this.game.events.emit('toast', 'SWORD EQUIPPED!');
+    }
+  }
 
   private tileToWorld(tx: number, ty: number): { x: number; y: number } {
     return {
@@ -320,6 +385,11 @@ export class GameScene extends Phaser.Scene {
     sprite.setScale(SCALE);
     sprite.setDepth(5);
     sprite.setImmovable(true);
+    // Generous pickup / talk hitboxes (tile is 16px, scaled by SCALE in display)
+    if (['key', 'heart', 'sword', 'npc', 'sign', 'chest'].includes(def.kind)) {
+      sprite.setSize(14, 14);
+      sprite.setOffset(1, 1);
+    }
 
     const hostile = ['slime', 'skeleton', 'redshirt', 'cube', 'boss'].includes(
       def.kind,
@@ -478,16 +548,14 @@ export class GameScene extends Phaser.Scene {
   private collectItem(actor: Actor): void {
     if (!actor.alive) return;
     actor.alive = false;
-    this.save.collected.push(actor.id);
+    if (!this.save.collected.includes(actor.id)) {
+      this.save.collected.push(actor.id);
+    }
 
     if (actor.kind === 'sword') {
-      this.save.hasSword = true;
-      this.game.events.emit('dialog-show', [
-        'YOU GOT THE SWORD OF',
-        'MILD ENTHUSIASM!',
-        'PRESS SPACE OR Z TO SWING.',
-        'TRY NOT TO HIT THE FURNITURE.',
-      ]);
+      actor.sprite.destroy();
+      this.grantSword(true);
+      return;
     } else if (actor.kind === 'key') {
       this.save.hasKey = true;
       this.game.events.emit('toast', 'GOT KEY: "FRIEND"');
@@ -548,25 +616,31 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (best.dialog) {
+      // Classic Zelda: talking to the old man hands you the sword
+      if (best.id === 'old-man' && !this.save.hasSword) {
+        this.grantSword(false);
+        this.game.events.emit('dialog-show', [
+          ...best.dialog,
+          '',
+          'SWORD OF MILD ENTHUSIASM:',
+          'ACQUIRED. SPACE / Z TO SWING.',
+        ]);
+        return;
+      }
       this.game.events.emit('dialog-show', best.dialog);
     }
   }
 
   private tryAttack(): void {
-    if (
-      this.attacking ||
-      this.dialogLocked ||
-      this.paused ||
-      !this.save.hasSword
-    ) {
-      if (!this.save.hasSword && !this.dialogLocked) {
-        this.game.events.emit('toast', 'NO SWORD YET — TALK TO THE OLD MAN');
-      }
+    if (this.attacking || this.dialogLocked || this.paused) return;
+
+    if (!this.save.hasSword) {
+      this.game.events.emit('toast', 'NO SWORD YET — TALK TO THE OLD MAN');
       return;
     }
 
     this.attacking = true;
-    const offset = 28;
+    const offset = 36;
     let x = this.player.x;
     let y = this.player.y;
     let angle = 0;
@@ -587,12 +661,17 @@ export class GameScene extends Phaser.Scene {
     this.swordHit.setPosition(x, y);
     this.swordHit.setAngle(angle);
     this.swordHit.setVisible(true);
-    this.swordHit.body!.enable = true;
-    (this.swordHit.body as Phaser.Physics.Arcade.Body).updateFromGameObject();
-
-    this.time.delayedCall(140, () => {
+    this.swordHit.setActive(true);
+    this.swordHit.setDepth(15);
+    const body = this.swordHit.body as Phaser.Physics.Arcade.Body;
+    body.enable = true;
+    body.reset(x, y);
+    body.setSize(18, 18);
+    // Keep attacking flag true long enough for overlap callbacks
+    this.time.delayedCall(180, () => {
       this.swordHit.setVisible(false);
-      this.swordHit.body!.enable = false;
+      this.swordHit.setActive(false);
+      body.enable = false;
       this.swordHit.setPosition(-999, -999);
       this.attacking = false;
     });
@@ -837,40 +916,20 @@ export class GameScene extends Phaser.Scene {
     // Blink while invuln
     this.player.setAlpha(this.invuln > 0 && Math.floor(_time / 80) % 2 === 0 ? 0.4 : 1);
 
+    // Attack / interact also handled via keydown events; JustDown as backup
     if (
       Phaser.Input.Keyboard.JustDown(this.keys.space) ||
       Phaser.Input.Keyboard.JustDown(this.keys.z)
     ) {
-      // Prefer talk when facing a nearby NPC; otherwise attack
-      const nearTalk = this.findInteractable(36);
-      if (
-        nearTalk &&
-        (nearTalk.kind === 'npc' ||
-          nearTalk.kind === 'sign' ||
-          nearTalk.kind === 'chest' ||
-          nearTalk.kind === 'cube')
-      ) {
-        this.tryInteract();
-      } else {
-        this.tryAttack();
-      }
+      this.tryAttack();
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys.e)) {
       this.tryInteract();
     }
 
-    // Proximity interact for NPC when pressing up against them — also Z opens talk if not swinging needed
-    // Unlock doors when adjacent with key
     this.tryUnlockNearPlayer();
-
-    // Auto talk: when close to NPC and press Enter — Enter advances dialog; use E
     this.checkHazards(delta);
     this.checkRoomExit();
     this.updateEnemies(delta);
-
-    // Auto-pickup interactables when overlapping already handled
-    // Idle interact: if player near sign/npc and presses nothing — skip
-
-    // If player walks into NPC, soft prompt via toast once
   }
 }

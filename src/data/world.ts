@@ -39,8 +39,10 @@ export const ROOMS: Record<string, RoomDef> = {
         dialog: [
           "IT'S DANGEROUS TO GO ALONE!",
           'TAKE THIS... USER AGREEMENT.',
+          '(AND A SWORD. OBVIOUSLY.)',
           'ALSO: THE DUNJUNZ HUNGER.',
           'TRY NOT TO DIE FUNNILY.',
+          'SPACE OR Z TO SWING. E TO TALK.',
         ],
       },
       {

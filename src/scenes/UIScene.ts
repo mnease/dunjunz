@@ -93,8 +93,12 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('pause-ui', this.setPaused, this);
 
     this.input.keyboard?.on('keydown-ENTER', () => this.advanceDialog());
-    this.input.keyboard?.on('keydown-SPACE', () => {
-      if (this.dialogOpen) this.advanceDialog();
+    // Space advances dialog only while open; attack is handled in GameScene when closed
+    this.input.keyboard?.on('keydown-SPACE', (event: KeyboardEvent) => {
+      if (this.dialogOpen) {
+        event.preventDefault();
+        this.advanceDialog();
+      }
     });
 
     this.events.on('shutdown', () => {
