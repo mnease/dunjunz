@@ -115,9 +115,7 @@ export function attemptPurchase(
     inventory[item.itemId] = (inventory[item.itemId] ?? 0) + 1;
   }
 
-  let armor = state.armor;
-  if (item.armorBonus) armor += item.armorBonus;
-
+  // DEF no longer applied at purchase — equip armor/amulet from inventory
   let hp = state.hp;
   if (item.heal) hp = Math.min(state.maxHp, hp + item.heal);
 
@@ -127,7 +125,7 @@ export function attemptPurchase(
     state: {
       coins: state.coins - item.price,
       inventory,
-      armor,
+      armor: state.armor,
       hp,
       maxHp: state.maxHp,
     },

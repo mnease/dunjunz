@@ -18,7 +18,15 @@ import {
   openChest,
 } from './loot';
 import { attemptFeaturedPurchase, attemptPurchase, SHOPS } from './shop';
-import { listInventory, useInventoryItem } from './inventory';
+import {
+  computeArmor,
+  cycleAmuletEquip,
+  cycleArmorEquip,
+  equipItem,
+  listInventory,
+  unequipSlot,
+  useInventoryItem,
+} from './inventory';
 import { defaultSave } from './save';
 
 describe('progression (XP / levels)', () => {
@@ -67,18 +75,21 @@ describe('loot (multi-type chests)', () => {
     );
     expect(state.coins).toBeGreaterThan(0);
     expect(state.inventory.potion).toBeGreaterThan(0);
-    expect(state.armor).toBeGreaterThan(0);
+    expect(state.inventory.leather_armor).toBeGreaterThan(0);
     expect(
       (state.inventory.gold_trinket ?? 0) + (state.inventory.shiny_bauble ?? 0),
     ).toBeGreaterThan(0);
   });
 
-  it('applyLootToSave mutates save-shaped state via shipped helper', () => {
+  it('applyLootToSave auto-equips gear and sets DEF via shipped helper', () => {
     const save = defaultSave();
     const drops = openChest('boss', () => 0.5);
     const next = applyLootToSave(save, drops);
     expect(next.coins).toBeGreaterThan(save.coins);
     expect(Object.keys(next.inventory).length).toBeGreaterThan(0);
+    expect(next.equippedArmor).toBeTruthy();
+    expect(next.armor).toBe(computeArmor(next));
+    expect(next.armor).toBeGreaterThan(0);
     const summary = lootSummary(drops);
     expect(summary.length).toBe(drops.length);
   });
@@ -139,20 +150,26 @@ describe('shop (merchant purchase)', () => {
 });
 
 describe('save defaults include RPG fields', () => {
-  it('defaultSave exposes xp, level, coins, inventory, armor', () => {
+  it('defaultSave exposes xp, level, coins, inventory, equip slots', () => {
     const s = defaultSave();
-    expect(s.version).toBe(2);
+    expect(s.version).toBe(3);
     expect(s.xp).toBe(0);
     expect(s.level).toBe(1);
     expect(s.coins).toBe(0);
     expect(s.inventory).toEqual({});
     expect(s.armor).toBe(0);
+    expect(s.equippedArmor).toBeNull();
+    expect(s.equippedAmulet).toBeNull();
   });
 });
 
 describe('inventory panel helpers', () => {
   it('listInventory only includes positive counts', () => {
-    const lines = listInventory({ potion: 2, gold_trinket: 0, shiny_bauble: 1 });
+    const save = {
+      ...defaultSave(),
+      inventory: { potion: 2, gold_trinket: 0, shiny_bauble: 1 },
+    };
+    const lines = listInventory(save);
     expect(lines.map((l) => l.id)).toEqual(['potion', 'shiny_bauble']);
     expect(lines[0].count).toBe(2);
   });
@@ -176,5 +193,96 @@ describe('inventory panel helpers', () => {
     const result = useInventoryItem(save, 'potion');
     expect(result.ok).toBe(false);
     expect(save.inventory).toEqual({});
+  });
+});
+
+describe('equip armor and amulets', () => {
+  it('equipItem sets armor slot and DEF from catalog', () => {
+    const save = {
+      ...defaultSave(),
+      inventory: { leather_armor: 1 },
+    };
+    const result = equipItem(save, 'leather_armor');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.save.equippedArmor).toBe('leather_armor');
+    expect(result.save.armor).toBe(1);
+    expect(computeArmor(result.save)).toBe(1);
+  });
+
+  it('unequip clears DEF', () => {
+    let save = {
+      ...defaultSave(),
+      inventory: { leather_armor: 1 },
+    };
+    const eq = equipItem(save, 'leather_armor');
+    expect(eq.ok).toBe(true);
+    if (!eq.ok) return;
+    const uq = unequipSlot(eq.save, 'armor');
+    expect(uq.ok).toBe(true);
+    if (!uq.ok) return;
+    expect(uq.save.equippedArmor).toBeNull();
+    expect(uq.save.armor).toBe(0);
+  });
+
+  it('amulet gold_trinket adds DEF when equipped', () => {
+    const save = {
+      ...defaultSave(),
+      inventory: { gold_trinket: 1, leather_armor: 1 },
+    };
+    let r = equipItem(save, 'leather_armor');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    r = equipItem(r.save, 'gold_trinket');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.armor).toBe(2); // 1 armor + 1 amulet
+  });
+
+  it('cycleArmorEquip walks pieces then unequips', () => {
+    const save = {
+      ...defaultSave(),
+      inventory: { leather_armor: 1, reinforced_leather: 1 },
+    };
+    let r = cycleArmorEquip(save);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.equippedArmor).toBe('leather_armor');
+    r = cycleArmorEquip(r.save);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.equippedArmor).toBe('reinforced_leather');
+    r = cycleArmorEquip(r.save);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.equippedArmor).toBeNull();
+  });
+
+  it('shiny_bauble amulet boosts potion heal', () => {
+    let save = {
+      ...defaultSave(),
+      hp: 1,
+      maxHp: 20,
+      inventory: { potion: 1, shiny_bauble: 1 },
+    };
+    const eq = equipItem(save, 'shiny_bauble');
+    expect(eq.ok).toBe(true);
+    if (!eq.ok) return;
+    const used = useInventoryItem(eq.save, 'potion');
+    expect(used.ok).toBe(true);
+    if (!used.ok) return;
+    // base 4 + bauble 2 = 6
+    expect(used.save.hp).toBe(1 + 6);
+  });
+
+  it('cycleAmuletEquip works on bag amulets', () => {
+    const save = {
+      ...defaultSave(),
+      inventory: { gold_trinket: 1, shiny_bauble: 1 },
+    };
+    const r = cycleAmuletEquip(save);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.equippedAmulet).toBeTruthy();
   });
 });

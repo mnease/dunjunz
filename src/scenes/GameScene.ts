@@ -25,7 +25,12 @@ import {
   attemptFeaturedPurchase,
   shopCatalogLines,
 } from '../systems/shop';
-import { useInventoryItem } from '../systems/inventory';
+import {
+  autoEquipEmptySlots,
+  cycleAmuletEquip,
+  cycleArmorEquip,
+  useInventoryItem,
+} from '../systems/inventory';
 import { loadSave, writeSave } from '../systems/save';
 import type { EntityDef, EntityKind, RoomDef, SaveData, TileKind } from '../types';
 
@@ -113,6 +118,7 @@ export class GameScene extends Phaser.Scene {
     i: Phaser.Input.Keyboard.Key;
     u: Phaser.Input.Keyboard.Key;
     one: Phaser.Input.Keyboard.Key;
+    n: Phaser.Input.Keyboard.Key;
   };
   private facing: 'up' | 'down' | 'left' | 'right' = 'down';
   private attacking = false;
@@ -171,6 +177,7 @@ export class GameScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.B,
       Phaser.Input.Keyboard.KeyCodes.I,
       Phaser.Input.Keyboard.KeyCodes.U,
+      Phaser.Input.Keyboard.KeyCodes.N,
     ]);
     this.cursors = kb.createCursorKeys();
     this.keys = {
@@ -188,11 +195,13 @@ export class GameScene extends Phaser.Scene {
       i: kb.addKey(Phaser.Input.Keyboard.KeyCodes.I),
       u: kb.addKey(Phaser.Input.Keyboard.KeyCodes.U),
       one: kb.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
+      n: kb.addKey(Phaser.Input.Keyboard.KeyCodes.N),
     };
 
-    // Event-based attack / interact / shop buy / inventory
+    // Event-based attack / interact / shop buy / inventory / equip
     // NOTE: Enter is advance-only (UIScene). Opening talk is E so the last
     // Enter that closes a sign cannot immediately re-open it.
+    // A = move left when playing; when inventory open, A cycles armor.
     kb.on('keydown-SPACE', this.onAttackKey, this);
     kb.on('keydown-Z', this.onAttackKey, this);
     kb.on('keydown-E', this.onInteractKey, this);
@@ -200,6 +209,8 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-I', this.onInventoryKey, this);
     kb.on('keydown-U', this.onUseItemKey, this);
     kb.on('keydown-ONE', this.onUseItemKey, this);
+    kb.on('keydown-A', this.onArmorEquipKey, this);
+    kb.on('keydown-N', this.onAmuletEquipKey, this);
 
     this.player = this.physics.add.sprite(0, 0, 'player');
     this.player.setScale(SCALE);
@@ -231,6 +242,8 @@ export class GameScene extends Phaser.Scene {
       kb.off('keydown-I', this.onInventoryKey, this);
       kb.off('keydown-U', this.onUseItemKey, this);
       kb.off('keydown-ONE', this.onUseItemKey, this);
+      kb.off('keydown-A', this.onArmorEquipKey, this);
+      kb.off('keydown-N', this.onAmuletEquipKey, this);
       writeSave(this.save);
     });
 
@@ -322,6 +335,35 @@ export class GameScene extends Phaser.Scene {
     if (this.dialogLocked || this.paused) return;
     // Use potion from bag (works with inventory open or closed)
     const result = useInventoryItem(this.save, 'potion');
+    if (!result.ok) {
+      this.game.events.emit('toast', result.reason);
+      return;
+    }
+    this.save = result.save;
+    writeSave(this.save);
+    this.emitHud();
+    this.game.events.emit('inventory-refresh', this.save);
+    this.game.events.emit('toast', result.message);
+  };
+
+  private onArmorEquipKey = (): void => {
+    // Only equip while inventory is open so A still moves left in the world
+    if (!this.inventoryOpen || this.dialogLocked || this.paused) return;
+    const result = cycleArmorEquip(this.save);
+    if (!result.ok) {
+      this.game.events.emit('toast', result.reason);
+      return;
+    }
+    this.save = result.save;
+    writeSave(this.save);
+    this.emitHud();
+    this.game.events.emit('inventory-refresh', this.save);
+    this.game.events.emit('toast', result.message);
+  };
+
+  private onAmuletEquipKey = (): void => {
+    if (!this.inventoryOpen || this.dialogLocked || this.paused) return;
+    const result = cycleAmuletEquip(this.save);
     if (!result.ok) {
       this.game.events.emit('toast', result.reason);
       return;
@@ -881,8 +923,9 @@ export class GameScene extends Phaser.Scene {
 
     this.save.coins = result.state.coins;
     this.save.inventory = result.state.inventory;
-    this.save.armor = result.state.armor;
     this.save.hp = result.state.hp;
+    // Auto-equip empty armor/amulet slots after purchase
+    this.save = autoEquipEmptySlots(this.save);
     writeSave(this.save);
     this.emitHud();
     this.game.events.emit(

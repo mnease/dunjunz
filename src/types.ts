@@ -26,13 +26,16 @@ export type EntityKind =
   | 'sign'
   | 'chest';
 
-/** Inventory item ids used by loot + shop. */
+/** Inventory item ids used by loot + shop + equip. */
 export type ItemId =
   | 'potion'
   | 'leather_armor'
+  | 'reinforced_leather'
   | 'gold_trinket'
   | 'shiny_bauble'
   | 'tinker_oil';
+
+export type EquipSlot = 'armor' | 'amulet';
 
 export type LootKind = 'coins' | 'potion' | 'armor' | 'treasure';
 
@@ -63,11 +66,11 @@ export interface RoomDef {
 }
 
 /**
- * Persistent player state. version 2 adds RPG fields; loadSave merges defaults
- * so older localStorage blobs still load.
+ * Persistent player state.
+ * version 2: RPG fields. version 3: equip slots (still merge-loads v1/v2).
  */
 export interface SaveData {
-  version: 2;
+  version: 3;
   roomId: string;
   hp: number;
   maxHp: number;
@@ -77,14 +80,17 @@ export interface SaveData {
   flags: Record<string, boolean>;
   killed: string[];
   collected: string[];
-  /** Total experience points (never decreases). */
   xp: number;
-  /** Derived primarily from xp; stored for HUD/fast load. */
   level: number;
-  /** Spendable coin balance. */
   coins: number;
-  /** itemId → count. */
   inventory: Record<string, number>;
-  /** Flat damage reduction from armor gear. */
+  /**
+   * Derived DEF used in combat (from equipped armor + amulet).
+   * Recomputed by inventory.syncDerivedStats — do not treat as source of truth.
+   */
   armor: number;
+  /** Equipped armor piece item id, or null. */
+  equippedArmor: string | null;
+  /** Equipped amulet / trinket item id, or null. */
+  equippedAmulet: string | null;
 }

@@ -2,10 +2,11 @@ import { SAVE_KEY } from '../config';
 import type { SaveData } from '../types';
 import { START_ROOM } from '../data/world';
 import { levelFromXp } from './progression';
+import { migrateEquipment, syncDerivedStats } from './inventory';
 
 export function defaultSave(): SaveData {
   return {
-    version: 2,
+    version: 3,
     roomId: START_ROOM,
     hp: 6,
     maxHp: 6,
@@ -20,11 +21,13 @@ export function defaultSave(): SaveData {
     coins: 0,
     inventory: {},
     armor: 0,
+    equippedArmor: null,
+    equippedAmulet: null,
   };
 }
 
 /**
- * Load save, merging defaults so v1 blobs and partial data gain RPG fields
+ * Load save, merging defaults so older blobs gain equip fields
  * without wiping killed/collected/flags progress.
  */
 export function loadSave(): SaveData {
@@ -32,14 +35,13 @@ export function loadSave(): SaveData {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return defaultSave();
     const parsed = JSON.parse(raw) as Partial<SaveData> & { version?: number };
-    // Reject unknown future major versions only; v1/v2 both merge.
-    if (parsed.version != null && parsed.version > 2) return defaultSave();
+    if (parsed.version != null && parsed.version > 3) return defaultSave();
 
     const base = defaultSave();
     const merged: SaveData = {
       ...base,
       ...parsed,
-      version: 2,
+      version: 3,
       flags: { ...base.flags, ...(parsed.flags ?? {}) },
       killed: Array.isArray(parsed.killed) ? parsed.killed : base.killed,
       collected: Array.isArray(parsed.collected)
@@ -54,22 +56,34 @@ export function loadSave(): SaveData {
       xp: typeof parsed.xp === 'number' ? parsed.xp : base.xp,
       coins: typeof parsed.coins === 'number' ? parsed.coins : base.coins,
       armor: typeof parsed.armor === 'number' ? parsed.armor : base.armor,
+      equippedArmor:
+        typeof parsed.equippedArmor === 'string'
+          ? parsed.equippedArmor
+          : parsed.equippedArmor === null
+            ? null
+            : base.equippedArmor,
+      equippedAmulet:
+        typeof parsed.equippedAmulet === 'string'
+          ? parsed.equippedAmulet
+          : parsed.equippedAmulet === null
+            ? null
+            : base.equippedAmulet,
       level: 1,
     };
-    // Reconcile level from xp (source of truth)
     merged.level = levelFromXp(merged.xp);
-    return merged;
+    return migrateEquipment(merged);
   } catch {
     return defaultSave();
   }
 }
 
 export function writeSave(data: SaveData): void {
-  const toStore: SaveData = {
+  // Do not auto-equip on every write (would undo intentional unequip)
+  const toStore = syncDerivedStats({
     ...data,
-    version: 2,
+    version: 3,
     level: levelFromXp(data.xp),
-  };
+  });
   localStorage.setItem(SAVE_KEY, JSON.stringify(toStore));
 }
 

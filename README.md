@@ -30,6 +30,8 @@ npm run preview
 | B | Buy featured item from nearby merchant |
 | I | Open / close inventory |
 | U / 1 | Use a healing potion from the bag |
+| A | *(inventory open)* Cycle / unequip **armor** |
+| N | *(inventory open)* Cycle / unequip **amulet** |
 | Enter / Space | Advance dialog (does not re-open) |
 | Esc | Close inventory, or pause |
 | M (while paused) | Return to title |
