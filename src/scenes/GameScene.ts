@@ -23,8 +23,10 @@ import {
   openChest,
 } from '../systems/loot';
 import {
-  attemptFeaturedPurchase,
-  shopCatalogLines,
+  attemptPurchase,
+  getShop,
+  shopIndexFromDir,
+  shopGridDims,
 } from '../systems/shop';
 import {
   appearanceFromSave,
@@ -176,6 +178,9 @@ export class GameScene extends Phaser.Scene {
   private inventoryOpen = false;
   private mapzOpen = false;
   private forjingOpen = false;
+  private shopOpen = false;
+  private shopId: string | null = null;
+  private shopSelected = 0;
   private paused = false;
   private transitionLock = false;
   private roomOriginX = 0;
@@ -195,6 +200,9 @@ export class GameScene extends Phaser.Scene {
     this.inventoryOpen = false;
     this.mapzOpen = false;
     this.forjingOpen = false;
+    this.shopOpen = false;
+    this.shopId = null;
+    this.shopSelected = 0;
     this.paused = false;
     this.attacking = false;
     this.invuln = 0;
@@ -307,11 +315,15 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on('inventory-state', this.onInventoryState, this);
     this.game.events.on('mapz-state', this.onMapzState, this);
     this.game.events.on('forjing-state', this.onForjingState, this);
+    this.game.events.on('shop-state', this.onShopState, this);
+    this.game.events.on('shop-cursor', this.onShopCursor, this);
     this.events.once('shutdown', () => {
       this.game.events.off('dialog-state', this.onDialogState, this);
       this.game.events.off('inventory-state', this.onInventoryState, this);
       this.game.events.off('mapz-state', this.onMapzState, this);
       this.game.events.off('forjing-state', this.onForjingState, this);
+      this.game.events.off('shop-state', this.onShopState, this);
+      this.game.events.off('shop-cursor', this.onShopCursor, this);
       kb.off('keydown-SPACE', this.onAttackKey, this);
       kb.off('keydown-Z', this.onAttackKey, this);
       kb.off('keydown-E', this.onInteractKey, this);
@@ -356,7 +368,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private panelOpen(): boolean {
-    return this.inventoryOpen || this.mapzOpen || this.forjingOpen;
+    return (
+      this.inventoryOpen ||
+      this.mapzOpen ||
+      this.forjingOpen ||
+      this.shopOpen
+    );
   }
 
   private onDialogState = (open: boolean): void => {
@@ -391,6 +408,20 @@ export class GameScene extends Phaser.Scene {
     }
   };
 
+  private onShopState = (open: boolean): void => {
+    this.shopOpen = open;
+    if (!open) {
+      this.shopId = null;
+    }
+    if (open && this.player.body) {
+      (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    }
+  };
+
+  private onShopCursor = (index: number): void => {
+    this.shopSelected = index;
+  };
+
   private onAttackKey = (): void => {
     // Space advances dialog when open (UI scene); do not swing mid-dialog
     if (
@@ -418,15 +449,14 @@ export class GameScene extends Phaser.Scene {
   };
 
   private onBuyKey = (): void => {
-    if (
-      this.dialogLocked ||
-      this.panelOpen() ||
-      this.paused ||
-      this.dialogCloseCooldown > 0
-    ) {
+    if (this.paused || this.dialogCloseCooldown > 0) return;
+    if (this.shopOpen) {
+      this.buySelectedShopItem();
       return;
     }
-    this.tryBuyFromNearbyMerchant();
+    if (this.dialogLocked || this.panelOpen()) return;
+    // Open shop if near merchant (B is shortcut)
+    this.openShopIfNearMerchant();
   };
 
   private onInventoryKey = (): void => {
@@ -438,7 +468,7 @@ export class GameScene extends Phaser.Scene {
 
   private onMapzKey = (): void => {
     if (this.paused) return; // pause uses M for title (handled in update)
-    if (this.inventoryOpen || this.forjingOpen) return;
+    if (this.inventoryOpen || this.forjingOpen || this.shopOpen) return;
     // Allow open even while dialog is up (pickup says PRESS M)
     this.openMapzPanel();
   };
@@ -1241,11 +1271,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (best.kind === 'merchant' || best.shopId) {
-      const shopId = best.shopId ?? 'tinkerer';
-      const lines = best.dialog?.length
-        ? [...best.dialog, ...shopCatalogLines(shopId).slice(-4)]
-        : shopCatalogLines(shopId);
-      this.game.events.emit('dialog-show', lines);
+      this.openShop(best.shopId ?? 'tinkerer');
       return;
     }
 
@@ -1301,7 +1327,7 @@ export class GameScene extends Phaser.Scene {
     this.game.events.emit('dialog-show', lines);
   }
 
-  private tryBuyFromNearbyMerchant(): void {
+  private openShopIfNearMerchant(): void {
     const merchant = this.findInteractable();
     if (
       !merchant ||
@@ -1310,26 +1336,44 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('toast', 'NO MERCHANT NEARBY');
       return;
     }
-    const shopId = merchant.shopId ?? 'tinkerer';
-    const result = attemptFeaturedPurchase(this.save, shopId);
+    this.openShop(merchant.shopId ?? 'tinkerer');
+  }
 
+  private openShop(shopId: string): void {
+    if (this.paused || this.inventoryOpen || this.mapzOpen || this.forjingOpen) {
+      return;
+    }
+    const shop = getShop(shopId);
+    if (!shop) {
+      this.game.events.emit('toast', 'SHOP CLOSED');
+      return;
+    }
+    this.shopId = shopId;
+    this.shopSelected = 0;
+    this.game.events.emit('shop-toggle', {
+      save: this.save,
+      shopId,
+      selectedIndex: 0,
+    });
+  }
+
+  private buySelectedShopItem(): void {
+    if (!this.shopId) return;
+    const shop = getShop(this.shopId);
+    const item = shop?.stock[this.shopSelected];
+    if (!item) return;
+    const result = attemptPurchase(this.save, this.shopId, item.id);
     if (!result.ok) {
       if (result.reason === 'insufficient_funds') {
         this.game.events.emit(
           'toast',
-          `NEED MORE COINS (${this.save.coins}c)`,
+          `NEED ${item.price}c (have ${this.save.coins}c)`,
         );
-        this.game.events.emit('dialog-show', [
-          'TINKERER: COME BACK WHEN',
-          'YOUR PURSE JINGLES LOUDER.',
-          `YOU HAVE ${this.save.coins} COINS.`,
-        ]);
       } else {
         this.game.events.emit('toast', 'CANNOT BUY THAT');
       }
       return;
     }
-
     this.save = result.save;
     writeSave(this.save);
     this.emitHud();
@@ -1337,11 +1381,22 @@ export class GameScene extends Phaser.Scene {
       'toast',
       `BOUGHT ${result.item.name} (-${result.item.price}c)`,
     );
-    this.game.events.emit('dialog-show', [
-      `PURCHASED: ${result.item.name}`,
-      result.item.description,
-      `COINS LEFT: ${this.save.coins}`,
-    ]);
+    this.game.events.emit('shop-refresh', this.save);
+    this.game.events.emit('inventory-refresh', this.save);
+  }
+
+  private navShop(dir: 'up' | 'down' | 'left' | 'right'): void {
+    if (!this.shopOpen || !this.shopId) return;
+    const shop = getShop(this.shopId);
+    if (!shop?.stock.length) return;
+    const { cols } = shopGridDims(shop.stock.length, 4);
+    this.shopSelected = shopIndexFromDir(
+      this.shopSelected,
+      shop.stock.length,
+      cols,
+      dir,
+    );
+    this.game.events.emit('shop-select', this.shopSelected);
   }
 
   private tryAttack(): void {
@@ -1613,6 +1668,8 @@ export class GameScene extends Phaser.Scene {
         this.game.events.emit('mapz-toggle');
       } else if (this.forjingOpen) {
         this.game.events.emit('forjing-toggle', '');
+      } else if (this.shopOpen) {
+        this.game.events.emit('shop-toggle');
       } else {
         this.paused = !this.paused;
         this.game.events.emit('pause-ui', this.paused);
@@ -1637,6 +1694,25 @@ export class GameScene extends Phaser.Scene {
 
     if (this.dialogLocked || this.panelOpen()) {
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      // Shop grid navigation while open
+      if (this.shopOpen) {
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.keys.a)) {
+          this.navShop('left');
+        } else if (Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.keys.d)) {
+          this.navShop('right');
+        } else if (Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.keys.w)) {
+          this.navShop('up');
+        } else if (Phaser.Input.Keyboard.JustDown(this.cursors.down) || Phaser.Input.Keyboard.JustDown(this.keys.s)) {
+          this.navShop('down');
+        }
+        // E closes shop (same as talk key when already in shop)
+        if (Phaser.Input.Keyboard.JustDown(this.keys.e)) {
+          this.game.events.emit('shop-toggle');
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.enter)) {
+          this.buySelectedShopItem();
+        }
+      }
       // Enemies still move while inventory is open so the world is not frozen unfairly
       this.updateEnemies(delta);
       return;

@@ -160,8 +160,8 @@ export const ROOMS: Record<string, RoomDef> = {
         shopId: 'tinkerer',
         dialog: [
           'TINKERER: RARE WARES!',
-          'PRESS B WHILE NEAR ME TO BUY.',
-          'WEST IS THE MEADOW STAIRS.',
+          'PRESS E TO OPEN THE SHOP GRID.',
+          'ARROWS SELECT · ENTER/B BUY.',
         ],
       },
       {
@@ -627,7 +627,7 @@ export const ROOMS: Record<string, RoomDef> = {
         dialog: [
           'TINKERER: SHE WAS NEVER HERE.',
           'TRY THE DEZERTZ TOWER.',
-          'PRESS B TO BUY.',
+          'PRESS E FOR THE SHOP GRID.',
         ],
       },
     ],

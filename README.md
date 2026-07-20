@@ -27,7 +27,10 @@ npm run preview
 | Arrow keys / WASD | Move |
 | Space / Z | Attack (after you have the sword) |
 | E | Talk / read / open chest / mapz / forje / princesz |
-| B | Buy featured item from nearby merchant |
+| E (near tinkerer) | Open graphic shop grid |
+| Arrows / WASD | *(shop open)* Move selection |
+| Enter / B | *(shop open)* Buy selected item |
+| B (near merchant) | Open shop (same as E) |
 | I | Open / close inventory + character sheet |
 | M / Tab | Open / close **graphic mapz** (current land; needs discovered mapz) |
 | `[` `]` | *(mapz open)* Switch floor (e.g. B1 / B2 in Dunjunz) |

@@ -9,7 +9,12 @@ import {
   xpToReachLevel,
 } from './progression';
 import { applyLootToSave, openChest, mulberry32 } from './loot';
-import { attemptPurchase, SHOPS } from './shop';
+import {
+  attemptPurchase,
+  SHOPS,
+  shopGridDims,
+  shopIndexFromDir,
+} from './shop';
 import {
   cycleSlotEquip,
   grantKey,
@@ -119,6 +124,30 @@ describe('shop purchase', () => {
     expect(r.ok).toBe(false);
     if (r.ok) return;
     expect(r.save.coins).toBe(0);
+  });
+
+  it('tinkerer has a multi-item stock grid', () => {
+    expect(SHOPS.tinkerer.stock.length).toBeGreaterThanOrEqual(8);
+    const dims = shopGridDims(SHOPS.tinkerer.stock.length, 4);
+    expect(dims.cols).toBe(4);
+    expect(dims.rows).toBeGreaterThanOrEqual(2);
+  });
+
+  it('shopIndexFromDir wraps within grid', () => {
+    expect(shopIndexFromDir(0, 12, 4, 'left')).toBe(3);
+    expect(shopIndexFromDir(0, 12, 4, 'right')).toBe(1);
+    expect(shopIndexFromDir(0, 12, 4, 'down')).toBe(4);
+  });
+
+  it('potion pack grants stackCount 3', () => {
+    let save = defaultSave();
+    save.coins = 100;
+    const pack = SHOPS.tinkerer.stock.find((s) => s.id === 'buy_potion_3');
+    expect(pack).toBeTruthy();
+    const r = attemptPurchase(save, 'tinkerer', pack!.id);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.stacks.potion).toBe(3);
   });
 });
 

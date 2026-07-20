@@ -13,11 +13,21 @@ import {
   type MapzOpenPayload,
   type MapzViewModel,
 } from '../systems/mapz';
+import {
+  canAfford,
+  getShop,
+  shopGridDims,
+  shopIconTexture,
+  type ShopOpenPayload,
+} from '../systems/shop';
 import { xpProgressInLevel } from '../systems/progression';
 import type { EquipSlot, LandId, SaveData } from '../types';
 
 const MAPZ_CELL = 56;
 const MAPZ_GAP = 14;
+const SHOP_COLS = 4;
+const SHOP_CELL = 72;
+const SHOP_GAP = 16;
 
 const PANEL_STYLE = {
   fontFamily: '"Press Start 2P", monospace',
@@ -68,6 +78,7 @@ export class UIScene extends Phaser.Scene {
   private inventoryOpen = false;
   private mapzOpen = false;
   private forjingOpen = false;
+  private shopOpen = false;
   private lastSave: SaveData | null = null;
   private bound = false;
   private chromeBuilt = false;
@@ -84,6 +95,16 @@ export class UIScene extends Phaser.Scene {
   private forjingBg: Phaser.GameObjects.Rectangle | null = null;
   private forjingText: Phaser.GameObjects.Text | null = null;
 
+  private shopBg: Phaser.GameObjects.Rectangle | null = null;
+  private shopTitle: Phaser.GameObjects.Text | null = null;
+  private shopCoins: Phaser.GameObjects.Text | null = null;
+  private shopDetail: Phaser.GameObjects.Text | null = null;
+  private shopHelp: Phaser.GameObjects.Text | null = null;
+  private shopLayer: Phaser.GameObjects.Container | null = null;
+  private shopPieces: Phaser.GameObjects.GameObject[] = [];
+  private shopPayload: ShopOpenPayload | null = null;
+  private shopSelected = 0;
+
   constructor() {
     super({ key: 'UI', active: false });
   }
@@ -93,6 +114,7 @@ export class UIScene extends Phaser.Scene {
     this.inventoryOpen = false;
     this.mapzOpen = false;
     this.forjingOpen = false;
+    this.shopOpen = false;
     if (!this.chromeBuilt || !this.dialogBg?.active) {
       this.buildChrome();
       this.chromeBuilt = true;
@@ -105,6 +127,8 @@ export class UIScene extends Phaser.Scene {
       this.ensureMapzChrome();
       this.closeMapzPanel();
       this.setForjingVisible(false, '');
+      this.ensureShopChrome();
+      this.closeShopPanel();
     }
     this.bindGameEvents();
   }
@@ -155,6 +179,7 @@ export class UIScene extends Phaser.Scene {
     this.buildInventoryPanel();
     this.buildMapzPanel();
     this.buildForjingPanel();
+    this.buildShopPanel();
 
     this.pauseText = this.add
       .text(GAME_W / 2, 300, 'PAUSED\n\nESC RESUME  ·  M TITLE', {
@@ -288,6 +313,89 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(d + 1)
       .setVisible(false);
+  }
+
+  private buildShopPanel(): void {
+    const d = 210;
+    this.clearShopPieces();
+    this.shopBg?.destroy();
+    this.shopTitle?.destroy();
+    this.shopCoins?.destroy();
+    this.shopDetail?.destroy();
+    this.shopHelp?.destroy();
+    this.shopLayer?.destroy();
+
+    this.shopBg = this.add
+      .rectangle(GAME_W / 2, GAME_H / 2 + 8, GAME_W - 24, GAME_H - 56, 0x0a0c10, 0.98)
+      .setStrokeStyle(4, COLORS.gold)
+      .setScrollFactor(0)
+      .setDepth(d)
+      .setVisible(false);
+
+    this.shopTitle = this.add
+      .text(GAME_W / 2, HUD_H + 16, 'TINKERER SHOP', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '13px',
+        color: '#ffc857',
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+
+    this.shopCoins = this.add
+      .text(GAME_W / 2, HUD_H + 40, '', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '10px',
+        color: '#7dffb3',
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+
+    this.shopLayer = this.add.container(0, 0).setDepth(d + 2).setScrollFactor(0);
+    this.shopLayer.setVisible(false);
+
+    this.shopDetail = this.add
+      .text(40, GAME_H - 110, '', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '9px',
+        color: '#f4f0ff',
+        lineSpacing: 7,
+        wordWrap: { width: GAME_W - 80 },
+      })
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+
+    this.shopHelp = this.add
+      .text(
+        GAME_W / 2,
+        GAME_H - 28,
+        'ARROWS SELECT  ·  ENTER / B BUY  ·  ESC / E CLOSE',
+        {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '7px',
+          color: '#ffc857',
+        },
+      )
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+  }
+
+  private ensureShopChrome(): void {
+    if (!this.shopBg?.active || !this.shopLayer?.active) {
+      this.buildShopPanel();
+    }
+  }
+
+  private clearShopPieces(): void {
+    for (const p of this.shopPieces) p.destroy();
+    this.shopPieces = [];
+    this.shopLayer?.removeAll(true);
   }
 
   private buildInventoryPanel(): void {
@@ -450,6 +558,9 @@ export class UIScene extends Phaser.Scene {
     this.game.events.off('mapz-nav', this.onMapzNav, this);
     this.game.events.off('forjing-toggle', this.onForjingToggle, this);
     this.game.events.off('forjing-refresh', this.onForjingRefresh, this);
+    this.game.events.off('shop-toggle', this.onShopToggle, this);
+    this.game.events.off('shop-select', this.onShopSelect, this);
+    this.game.events.off('shop-refresh', this.onShopRefresh, this);
 
     this.game.events.on('hud-update', this.refreshHud, this);
     this.game.events.on('dialog-show', this.showDialog, this);
@@ -462,6 +573,9 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('mapz-nav', this.onMapzNav, this);
     this.game.events.on('forjing-toggle', this.onForjingToggle, this);
     this.game.events.on('forjing-refresh', this.onForjingRefresh, this);
+    this.game.events.on('shop-toggle', this.onShopToggle, this);
+    this.game.events.on('shop-select', this.onShopSelect, this);
+    this.game.events.on('shop-refresh', this.onShopRefresh, this);
 
     if (!this.bound) {
       this.bound = true;
@@ -481,6 +595,9 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('mapz-nav', this.onMapzNav, this);
       this.game.events.off('forjing-toggle', this.onForjingToggle, this);
       this.game.events.off('forjing-refresh', this.onForjingRefresh, this);
+      this.game.events.off('shop-toggle', this.onShopToggle, this);
+      this.game.events.off('shop-select', this.onShopSelect, this);
+      this.game.events.off('shop-refresh', this.onShopRefresh, this);
       this.input.keyboard?.off('keydown-ENTER', this.onEnterKey, this);
       this.input.keyboard?.off('keydown-SPACE', this.onSpaceKey, this);
       this.bound = false;
@@ -493,12 +610,14 @@ export class UIScene extends Phaser.Scene {
     this.setInventoryVisible(false);
     this.closeMapzPanel();
     this.setForjingVisible(false, '');
+    this.closeShopPanel();
     this.pauseText?.setVisible(false);
     this.toastText?.setAlpha(0);
     this.game.events.emit('dialog-state', false);
     this.game.events.emit('inventory-state', false);
     this.game.events.emit('mapz-state', false);
     this.game.events.emit('forjing-state', false);
+    this.game.events.emit('shop-state', false);
   };
 
   private resetDialogVisuals(): void {
@@ -510,7 +629,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   private onInventoryToggle = (save: SaveData): void => {
-    if (this.dialogOpen || this.mapzOpen || this.forjingOpen) return;
+    if (this.dialogOpen || this.mapzOpen || this.forjingOpen || this.shopOpen) {
+      return;
+    }
     this.lastSave = save;
     this.setInventoryVisible(!this.inventoryOpen);
   };
@@ -527,8 +648,8 @@ export class UIScene extends Phaser.Scene {
       this.closeMapzPanel();
       return;
     }
-    // Opening blocked only by inventory / forjing (dialog ok after pickup)
-    if (this.inventoryOpen || this.forjingOpen) return;
+    // Opening blocked only by inventory / forjing / shop
+    if (this.inventoryOpen || this.forjingOpen || this.shopOpen) return;
     if (this.dialogOpen) {
       this.resetDialogVisuals();
       this.game.events.emit('dialog-state', false);
@@ -810,7 +931,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private onForjingToggle = (text: string): void => {
-    if (this.dialogOpen || this.inventoryOpen || this.mapzOpen) {
+    if (this.dialogOpen || this.inventoryOpen || this.mapzOpen || this.shopOpen) {
       if (this.forjingOpen) this.setForjingVisible(false, '');
       return;
     }
@@ -826,6 +947,150 @@ export class UIScene extends Phaser.Scene {
       this.forjingText.setText(text);
     }
   };
+
+  private onShopToggle = (payload?: ShopOpenPayload | null): void => {
+    this.ensureShopChrome();
+    if (this.shopOpen) {
+      this.closeShopPanel();
+      return;
+    }
+    if (this.inventoryOpen || this.mapzOpen || this.forjingOpen) return;
+    if (!payload) return;
+    if (this.dialogOpen) {
+      this.resetDialogVisuals();
+      this.game.events.emit('dialog-state', false);
+    }
+    this.shopPayload = payload;
+    this.lastSave = payload.save;
+    this.shopSelected = payload.selectedIndex ?? 0;
+    this.openShopGraphic();
+  };
+
+  private onShopSelect = (index: number): void => {
+    if (!this.shopOpen || !this.shopPayload) return;
+    const shop = getShop(this.shopPayload.shopId);
+    if (!shop?.stock.length) return;
+    this.shopSelected = Math.max(0, Math.min(index, shop.stock.length - 1));
+    this.renderShopGrid();
+  };
+
+  private onShopRefresh = (save: SaveData): void => {
+    if (!this.shopOpen || !this.shopPayload) return;
+    this.shopPayload = { ...this.shopPayload, save };
+    this.lastSave = save;
+    this.renderShopGrid();
+  };
+
+  private openShopGraphic(): void {
+    if (!this.shopPayload) return;
+    this.ensureShopChrome();
+    this.shopOpen = true;
+    this.shopBg?.setVisible(true).setDepth(210);
+    this.shopTitle?.setVisible(true).setDepth(211);
+    this.shopCoins?.setVisible(true).setDepth(211);
+    this.shopDetail?.setVisible(true).setDepth(211);
+    this.shopHelp?.setVisible(true).setDepth(211);
+    this.shopLayer?.setVisible(true).setDepth(212);
+    this.renderShopGrid();
+    this.game.events.emit('shop-state', true);
+  }
+
+  private closeShopPanel(): void {
+    this.shopOpen = false;
+    this.clearShopPieces();
+    this.shopBg?.setVisible(false);
+    this.shopTitle?.setVisible(false);
+    this.shopCoins?.setVisible(false);
+    this.shopDetail?.setVisible(false);
+    this.shopHelp?.setVisible(false);
+    this.shopLayer?.setVisible(false);
+    this.game.events.emit('shop-state', false);
+  }
+
+  private renderShopGrid(): void {
+    if (!this.shopPayload || !this.shopLayer) return;
+    this.clearShopPieces();
+    const shop = getShop(this.shopPayload.shopId);
+    const save = this.shopPayload.save;
+    if (!shop) {
+      this.shopDetail?.setText('NO SHOP HERE.');
+      return;
+    }
+
+    this.shopTitle?.setText(shop.name);
+    this.shopCoins?.setText(`YOUR COINS: ${save.coins}c`);
+
+    const stock = shop.stock;
+    const { cols } = shopGridDims(stock.length, SHOP_COLS);
+    const rows = Math.ceil(stock.length / cols);
+    const gridW = cols * SHOP_CELL + (cols - 1) * SHOP_GAP;
+    const gridH = rows * SHOP_CELL + (rows - 1) * SHOP_GAP;
+    const originX = GAME_W / 2 - gridW / 2 + SHOP_CELL / 2;
+    const originY = HUD_H + 78 + SHOP_CELL / 2;
+    void gridH;
+
+    stock.forEach((item, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = originX + col * (SHOP_CELL + SHOP_GAP);
+      const y = originY + row * (SHOP_CELL + SHOP_GAP);
+      const selected = i === this.shopSelected;
+      const afford = canAfford(save, item);
+
+      const frame = this.add
+        .rectangle(x, y, SHOP_CELL, SHOP_CELL, 0x12161f, 1)
+        .setStrokeStyle(
+          selected ? 3 : 2,
+          selected ? COLORS.gold : afford ? COLORS.green : 0x5a4030,
+        )
+        .setScrollFactor(0)
+        .setInteractive({ useHandCursor: true });
+      frame.on('pointerdown', () => {
+        this.shopSelected = i;
+        this.renderShopGrid();
+        this.game.events.emit('shop-cursor', i);
+      });
+      this.shopLayer!.add(frame);
+      this.shopPieces.push(frame);
+
+      const iconKey = shopIconTexture(item);
+      const tex = this.textures.exists(iconKey) ? iconKey : 'icon_empty';
+      const icon = this.add
+        .image(x, y - 8, tex)
+        .setScale(1.6)
+        .setScrollFactor(0)
+        .setAlpha(afford ? 1 : 0.45);
+      this.shopLayer!.add(icon);
+      this.shopPieces.push(icon);
+
+      const priceColor = afford ? '#7dffb3' : '#e74c3c';
+      const price = this.add
+        .text(x, y + 22, `${item.price}c`, {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '8px',
+          color: priceColor,
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0);
+      this.shopLayer!.add(price);
+      this.shopPieces.push(price);
+    });
+
+    const sel = stock[this.shopSelected] ?? stock[0];
+    if (sel) {
+      const afford = canAfford(save, sel);
+      this.shopDetail?.setText(
+        [
+          sel.name,
+          sel.description,
+          afford
+            ? `BUY FOR ${sel.price}c  (you have ${save.coins}c)`
+            : `NEED ${sel.price}c  (you have ${save.coins}c)`,
+        ].join('\n'),
+      );
+      this.shopDetail?.setColor(afford ? '#f4f0ff' : '#ff8a8a');
+    }
+  }
 
   private setForjingVisible(open: boolean, text: string): void {
     this.forjingOpen = open;
@@ -948,6 +1213,7 @@ export class UIScene extends Phaser.Scene {
     if (this.inventoryOpen) this.setInventoryVisible(false);
     if (this.mapzOpen) this.closeMapzPanel();
     if (this.forjingOpen) this.setForjingVisible(false, '');
+    if (this.shopOpen) this.closeShopPanel();
     this.dialogLines = lines.filter(
       (l) => l !== undefined && l !== null && String(l).trim() !== '',
     );
@@ -1000,6 +1266,7 @@ export class UIScene extends Phaser.Scene {
     if (paused && this.inventoryOpen) this.setInventoryVisible(false);
     if (paused && this.mapzOpen) this.closeMapzPanel();
     if (paused && this.forjingOpen) this.setForjingVisible(false, '');
+    if (paused && this.shopOpen) this.closeShopPanel();
     this.pauseText?.setVisible(paused);
   };
 }
