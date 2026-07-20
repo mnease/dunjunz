@@ -8,7 +8,12 @@ import {
   xpToAdvanceFrom,
   xpToReachLevel,
 } from './progression';
-import { applyLootToSave, openChest, mulberry32 } from './loot';
+import {
+  applyLootToSave,
+  openChest,
+  mulberry32,
+  rollEnemyLoot,
+} from './loot';
 import {
   attemptPurchase,
   SHOPS,
@@ -17,6 +22,7 @@ import {
 } from './shop';
 import { resolveEnemyHp, ENEMY_BASE_HP } from './enemies';
 import {
+  autoEquipEmptySlots,
   cycleSlotEquip,
   grantKey,
   grantMildSword,
@@ -102,6 +108,38 @@ describe('loot multi-type', () => {
     expect(next.coins).toBeGreaterThan(0);
     expect(next.stacks.potion ?? 0).toBeGreaterThan(0);
     expect(next.bag.length).toBeGreaterThan(0);
+  });
+
+  it('rollEnemyLoot often drops coins', () => {
+    let coinHits = 0;
+    for (let i = 0; i < 40; i++) {
+      const d = rollEnemyLoot('slime', mulberry32(i + 1), 1);
+      if (d.some((x) => x.coins)) coinHits += 1;
+    }
+    expect(coinHits).toBeGreaterThan(20);
+  });
+
+  it('boss loot can include gear', () => {
+    const d = rollEnemyLoot('boss', () => 0.01, 5);
+    // forced low rng → coins + high gear chance path
+    expect(d.length).toBeGreaterThan(0);
+  });
+});
+
+describe('shield and ring slots', () => {
+  it('emptyEquipped has shield and ring', () => {
+    const s = defaultSave();
+    expect(s.equipped.shield).toBeNull();
+    expect(s.equipped.ring).toBeNull();
+  });
+
+  it('minted shield auto-equips empty shield slot', () => {
+    let s = defaultSave();
+    s = mintItem(s, 'wood_shield', 'common', 0).save;
+    s = autoEquipEmptySlots(s);
+    s = syncDerivedStats(s);
+    expect(s.equipped.shield).toBeTruthy();
+    expect(s.armor).toBeGreaterThan(0);
   });
 });
 
@@ -232,7 +270,7 @@ describe('appearance + key on doll', () => {
     expect(key).toContain('_w_');
     expect(key.endsWith('_k')).toBe(true);
     const bare = playerTextureKeyFromSave(defaultSave());
-    expect(bare).toBe('player_none_none_none_n_n');
+    expect(bare).toBe('player_none_none_none_n_n_n');
   });
 });
 

@@ -38,12 +38,14 @@ const PANEL_STYLE = {
 
 const SLOT_KEYS: Record<EquipSlot, string> = {
   weapon: 'W',
+  shield: 'O',
   helmet: 'H',
   breastplate: 'C',
   greaves: 'L',
   shoes: 'F',
   gloves: 'G',
   amulet: 'N',
+  ring: 'R',
   key: 'K',
 };
 
@@ -438,15 +440,15 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(d + 2);
 
-    // 2-column slot grid
+    // 2-column slot grid (10 slots → 5 rows)
     const slots: EquipSlot[] = [...ALL_EQUIP_SLOTS];
     const startX = 280;
-    const startY = 100;
+    const startY = 92;
     const colW = 220;
-    const rowH = 52;
+    const rowH = 42;
     slots.forEach((slot, i) => {
-      const col = i < 4 ? 0 : 1;
-      const row = i % 4;
+      const col = i < 5 ? 0 : 1;
+      const row = i % 5;
       const x = startX + col * colW;
       const y = startY + row * rowH;
       this.invSlotFrames[slot] = this.add
@@ -505,7 +507,7 @@ export class UIScene extends Phaser.Scene {
       .text(
         GAME_W / 2,
         GAME_H - 32,
-        'W H C L F G N K  ·  1-5 ATTR  ·  U POTION  ·  I/ESC',
+        'W O H C L F G N R K  ·  1-5 ATTR  ·  U POTION  ·  I/ESC',
         {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '7px',

@@ -14,6 +14,7 @@ export interface AppearanceSpec {
   helmet: HelmetLook;
   amulet: AmuletLook;
   weapon: boolean;
+  shield: boolean;
   key: boolean;
 }
 
@@ -48,12 +49,13 @@ export function appearanceFromSave(save: SaveData): AppearanceSpec {
     helmet,
     amulet,
     weapon: !!save.equipped.weapon && !!findInBag(save, save.equipped.weapon),
+    shield: !!save.equipped.shield && !!findInBag(save, save.equipped.shield),
     key: !!save.equipped.key && !!findInBag(save, save.equipped.key),
   };
 }
 
 export function playerTextureKey(spec: AppearanceSpec): string {
-  return `player_${spec.breastplate}_${spec.helmet}_${spec.amulet}_${spec.weapon ? 'w' : 'n'}_${spec.key ? 'k' : 'n'}`;
+  return `player_${spec.breastplate}_${spec.helmet}_${spec.amulet}_${spec.weapon ? 'w' : 'n'}_${spec.shield ? 's' : 'n'}_${spec.key ? 'k' : 'n'}`;
 }
 
 export function playerTextureKeyFromSave(save: SaveData): string {

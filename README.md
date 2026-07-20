@@ -37,7 +37,7 @@ npm run preview
 | `,` `.` | *(mapz open)* Cycle discovered lands |
 | F | Open **forjing** when standing near a forje (inventory open: shoes slot) |
 | U | Use a healing potion from the bag |
-| W H C L F G N K | *(inventory open)* Cycle equip slots |
+| W O H C L F G N R K | *(inventory open)* Cycle equip (weapon, shield, armor…, ring, key) |
 | 1–5 | *(inventory open)* Spend STR DEX VIT INT LCK |
 | 1–6 | *(forjing open)* Enhance / imbue / craft recipes |
 | Enter / Space | Advance dialog (does not re-open) |

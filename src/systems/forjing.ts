@@ -42,6 +42,30 @@ export const CRAFT_RECIPES: CraftRecipe[] = [
     coins: 40,
     blurb: 'Dezertz steel. Hisses when swung.',
   },
+  {
+    id: 'craft_wood_shield',
+    name: 'WOOD SHIELD',
+    resultTemplateId: 'wood_shield',
+    cost: { wood_shard: 2, ore_iron: 1 },
+    coins: 15,
+    blurb: 'A plank that means well.',
+  },
+  {
+    id: 'craft_iron_shield',
+    name: 'IRON SHIELD',
+    resultTemplateId: 'iron_shield',
+    cost: { ore_iron: 3, wood_shard: 1 },
+    coins: 30,
+    blurb: 'Proper blocking iron.',
+  },
+  {
+    id: 'craft_copper_ring',
+    name: 'COPPER RING',
+    resultTemplateId: 'copper_ring',
+    cost: { ore_iron: 1, ore_spark: 1 },
+    coins: 18,
+    blurb: 'Finger furniture. +DEF.',
+  },
 ];
 
 export type ForjingResult =
@@ -180,6 +204,9 @@ export function formatForjingPanel(save: SaveData): string {
     '4 IMBUE +VIT',
     '5 CRAFT IRON BLADE (2 iron + 1 wood + 20c)',
     '6 CRAFT SAND SABER (2 sand + 1 spark + 40c)',
+    '7 CRAFT WOOD SHIELD (2 wood + 1 iron + 15c)',
+    '8 CRAFT IRON SHIELD (3 iron + 1 wood + 30c)',
+    '9 CRAFT COPPER RING (1 iron + 1 spark + 18c)',
     '',
     'F CLOSE FORJE',
   ];

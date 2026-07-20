@@ -1,5 +1,5 @@
 /**
- * Chest loot → stacks + bag instances (v4).
+ * Chest + enemy loot → stacks + bag instances.
  */
 
 import type { SaveData } from '../types';
@@ -30,18 +30,34 @@ export interface LootDrop {
   heal?: number;
 }
 
-const GEAR_POOL = [
+const ARMOR_POOL = [
   'leather_helmet',
   'leather_armor',
   'leather_greaves',
   'leather_shoes',
   'leather_gloves',
-  'gold_trinket',
-  'shiny_bauble',
+  'wood_shield',
+  'iron_shield',
 ];
 
+const WEAPON_POOL = ['mild_sword', 'iron_blade'];
+
+const JEWEL_POOL = [
+  'gold_trinket',
+  'shiny_bauble',
+  'copper_ring',
+  'silver_ring',
+  'luck_ring',
+];
+
+const GEAR_POOL = [...ARMOR_POOL, ...WEAPON_POOL, ...JEWEL_POOL];
+
+function pick<T>(rng: Rng, arr: T[]): T {
+  return arr[Math.floor(rng() * arr.length)] ?? arr[0];
+}
+
 function randomGear(rng: Rng): string {
-  return GEAR_POOL[Math.floor(rng() * GEAR_POOL.length)] ?? 'leather_armor';
+  return pick(rng, GEAR_POOL);
 }
 
 const TABLES: Record<string, (rng: Rng) => LootDrop[]> = {
@@ -62,16 +78,26 @@ const TABLES: Record<string, (rng: Rng) => LootDrop[]> = {
       const tid = randomGear(rng);
       drops.push({
         kind: 'gear',
-        label: `GEAR: ${tid.toUpperCase()}`,
+        label: `GEAR: ${tid.toUpperCase().replace(/_/g, ' ')}`,
         templateId: tid,
       });
     }
-    const trinket = rng() < 0.5 ? 'gold_trinket' : 'shiny_bauble';
-    drops.push({
-      kind: 'treasure',
-      label: trinket === 'gold_trinket' ? 'GOLD TRINKET' : 'SHINY BAUBLE',
-      templateId: trinket,
-    });
+    // Chance of shield / ring specifically
+    if (rng() < 0.35) {
+      const tid = rng() < 0.55 ? pick(rng, ['wood_shield', 'iron_shield']) : pick(rng, JEWEL_POOL);
+      drops.push({
+        kind: 'treasure',
+        label: tid.toUpperCase().replace(/_/g, ' '),
+        templateId: tid,
+      });
+    } else {
+      const trinket = rng() < 0.5 ? 'gold_trinket' : 'shiny_bauble';
+      drops.push({
+        kind: 'treasure',
+        label: trinket === 'gold_trinket' ? 'GOLD TRINKET' : 'SHINY BAUBLE',
+        templateId: trinket,
+      });
+    }
     return drops;
   },
   boss: (_rng) => [
@@ -90,8 +116,18 @@ const TABLES: Record<string, (rng: Rng) => LootDrop[]> = {
     },
     {
       kind: 'gear',
-      label: 'DUNJUN CLEAVER SHARDZ',
+      label: 'DUNJUN CLEAVER',
       templateId: 'dunjun_cleaver',
+    },
+    {
+      kind: 'gear',
+      label: 'TOWER SHIELD',
+      templateId: 'tower_shield',
+    },
+    {
+      kind: 'gear',
+      label: 'SILVER RING',
+      templateId: 'silver_ring',
     },
     {
       kind: 'treasure',
@@ -133,6 +169,95 @@ export function openChest(
   rng: Rng = Math.random,
 ): LootDrop[] {
   return (TABLES[tableId] ?? TABLES.dungeon)(rng);
+}
+
+/**
+ * Enemy death drops — mostly coins; sometimes gear (shield/ring/weapon/armor/amulet).
+ * LCK increases chance of non-coin loot slightly.
+ */
+export function rollEnemyLoot(
+  kind: string,
+  rng: Rng = Math.random,
+  lck = 1,
+): LootDrop[] {
+  const drops: LootDrop[] = [];
+  const luck = Math.max(0, lck - 1);
+
+  const coinBase: Record<string, [number, number]> = {
+    redshirt: [1, 3],
+    slime: [2, 6],
+    skeleton: [4, 10],
+    wolf: [5, 12],
+    cactus: [5, 12],
+    cube: [10, 22],
+    boss: [25, 50],
+  };
+  const [lo, hi] = coinBase[kind] ?? [2, 8];
+  // ~80% coin drop
+  if (rng() < 0.82) {
+    const coins = lo + Math.floor(rng() * (hi - lo + 1));
+    drops.push({ kind: 'coins', label: `${coins} COINS`, coins });
+  }
+
+  // Gear chance scales with threat + LCK
+  let gearChance =
+    kind === 'boss'
+      ? 0.55
+      : kind === 'cube'
+        ? 0.28
+        : kind === 'skeleton' || kind === 'wolf' || kind === 'cactus'
+          ? 0.14
+          : kind === 'slime'
+            ? 0.08
+            : 0.05;
+  gearChance = Math.min(0.65, gearChance + luck * 0.02);
+
+  if (rng() < gearChance) {
+    // Weighted: armor/shield > jewels > weapons
+    const roll = rng();
+    let tid: string;
+    if (roll < 0.28) {
+      tid = pick(rng, ['wood_shield', 'iron_shield', 'wood_shield']);
+    } else if (roll < 0.48) {
+      tid = pick(rng, JEWEL_POOL);
+    } else if (roll < 0.68) {
+      tid = pick(rng, ARMOR_POOL.filter((id) => !id.includes('shield')));
+    } else if (roll < 0.85) {
+      tid = pick(rng, WEAPON_POOL);
+    } else {
+      tid = pick(rng, GEAR_POOL);
+    }
+    drops.push({
+      kind: 'gear',
+      label: tid.toUpperCase().replace(/_/g, ' '),
+      templateId: tid,
+    });
+  }
+
+  // Small material chance
+  if (rng() < 0.1 + luck * 0.02) {
+    const mat =
+      kind === 'wolf'
+        ? 'wood_shard'
+        : kind === 'cactus'
+          ? 'sand_crystal'
+          : rng() < 0.5
+            ? 'ore_iron'
+            : 'ore_spark';
+    drops.push({
+      kind: 'treasure',
+      label: mat.toUpperCase().replace(/_/g, ' '),
+      stackId: mat,
+      stackCount: 1,
+    });
+  }
+
+  // Bosses always leave something if somehow empty
+  if (kind === 'boss' && !drops.length) {
+    drops.push({ kind: 'coins', label: '20 COINS', coins: 20 });
+  }
+
+  return drops;
 }
 
 export function applyLootToSave(

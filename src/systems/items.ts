@@ -170,6 +170,60 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     potionHealBonus: 2,
     look: 'bauble',
   },
+  wood_shield: {
+    id: 'wood_shield',
+    name: 'WOOD SHIELD',
+    blurb: 'Shield slot. Blocks regret. [O]',
+    kind: 'gear',
+    slot: 'shield',
+    baseDef: 1,
+    look: 'wood',
+  },
+  iron_shield: {
+    id: 'iron_shield',
+    name: 'IRON SHIELD',
+    blurb: 'Shield slot. Sturdier. [O]',
+    kind: 'gear',
+    slot: 'shield',
+    baseDef: 2,
+    look: 'iron',
+  },
+  tower_shield: {
+    id: 'tower_shield',
+    name: 'TOWER SHIELD',
+    blurb: 'Shield slot. Door with a handle. [O]',
+    kind: 'gear',
+    slot: 'shield',
+    baseDef: 3,
+    look: 'tower',
+  },
+  copper_ring: {
+    id: 'copper_ring',
+    name: 'COPPER RING',
+    blurb: 'Ring slot. +DEF. [R]',
+    kind: 'gear',
+    slot: 'ring',
+    baseDef: 1,
+    look: 'copper',
+  },
+  silver_ring: {
+    id: 'silver_ring',
+    name: 'SILVER RING',
+    blurb: 'Ring slot. Fancy +DEF. [R]',
+    kind: 'gear',
+    slot: 'ring',
+    baseDef: 2,
+    look: 'silver',
+  },
+  luck_ring: {
+    id: 'luck_ring',
+    name: 'RING OF MILD LUCK',
+    blurb: 'Ring slot. Feels lucky. [R]',
+    kind: 'gear',
+    slot: 'ring',
+    baseDef: 1,
+    look: 'luck',
+  },
   dungeon_key: {
     id: 'dungeon_key',
     name: 'KEY: "FRIEND"',
@@ -253,33 +307,39 @@ export function findByTemplate(
 
 export const ALL_EQUIP_SLOTS: EquipSlot[] = [
   'weapon',
+  'shield',
   'helmet',
   'breastplate',
   'greaves',
   'shoes',
   'gloves',
   'amulet',
+  'ring',
   'key',
 ];
 
 export const DEF_SLOTS: EquipSlot[] = [
+  'shield',
   'helmet',
   'breastplate',
   'greaves',
   'shoes',
   'gloves',
   'amulet',
+  'ring',
 ];
 
 export function emptyEquipped(): Record<EquipSlot, string | null> {
   return {
     weapon: null,
+    shield: null,
     helmet: null,
     breastplate: null,
     greaves: null,
     shoes: null,
     gloves: null,
     amulet: null,
+    ring: null,
     key: null,
   };
 }

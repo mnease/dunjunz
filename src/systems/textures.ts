@@ -96,12 +96,22 @@ function drawPlayerLook(
     ctx.fillRect(7, 7, 1, 1);
   }
 
-  // Weapon on hip
+  // Weapon on hip (right)
   if (spec.weapon) {
     ctx.fillStyle = '#dfe6f0';
     ctx.fillRect(12, 8, 2, 5);
     ctx.fillStyle = '#c9a227';
     ctx.fillRect(11, 12, 4, 1);
+  }
+
+  // Shield on left arm
+  if (spec.shield) {
+    ctx.fillStyle = '#8b6914';
+    ctx.fillRect(1, 7, 3, 5);
+    ctx.fillStyle = '#c9a227';
+    ctx.fillRect(1, 8, 3, 1);
+    ctx.fillStyle = '#5a4510';
+    ctx.fillRect(2, 9, 1, 2);
   }
 
   // Key on belt
@@ -219,6 +229,49 @@ function drawItemIcon(
     ctx.fillRect(10, 5, 4, 4);
     return;
   }
+  if (
+    itemId === 'wood_shield' ||
+    itemId === 'iron_shield' ||
+    itemId === 'tower_shield'
+  ) {
+    ctx.fillStyle =
+      itemId === 'tower_shield'
+        ? '#6a7080'
+        : itemId === 'iron_shield'
+          ? '#a0b0c0'
+          : '#8b5a2b';
+    ctx.beginPath();
+    ctx.moveTo(12, 4);
+    ctx.lineTo(18, 8);
+    ctx.lineTo(18, 16);
+    ctx.lineTo(12, 20);
+    ctx.lineTo(6, 16);
+    ctx.lineTo(6, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = hex(COLORS.gold);
+    ctx.fillRect(11, 10, 2, 4);
+    return;
+  }
+  if (
+    itemId === 'copper_ring' ||
+    itemId === 'silver_ring' ||
+    itemId === 'luck_ring'
+  ) {
+    ctx.strokeStyle =
+      itemId === 'silver_ring'
+        ? '#d0d8e0'
+        : itemId === 'luck_ring'
+          ? '#7dffb3'
+          : '#c97b3a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(12, 12, 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = hex(COLORS.gold);
+    ctx.fillRect(10, 5, 4, 3);
+    return;
+  }
   ctx.fillStyle = '#7dffb3';
   ctx.fillRect(8, 8, 8, 8);
 }
@@ -328,12 +381,13 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(7, 7, 2, 2);
   });
 
-  // Default player + layered combos (breastplate × helmet × amulet × weapon × key)
+  // Default player + layered combos (breast × helm × amulet × weapon × shield × key)
   const bare: AppearanceSpec = {
     breastplate: 'none',
     helmet: 'none',
     amulet: 'none',
     weapon: false,
+    shield: false,
     key: false,
   };
   canvasTex(scene, 'player', TILE, TILE, (ctx) => {
@@ -343,17 +397,20 @@ export function generateTextures(scene: Phaser.Scene): void {
     for (const helmet of HELMET_LOOKS) {
       for (const amulet of AMULET_LOOKS) {
         for (const weapon of [false, true]) {
-          for (const key of [false, true]) {
-            const spec: AppearanceSpec = {
-              breastplate: breastplate as BreastLook,
-              helmet: helmet as HelmetLook,
-              amulet: amulet as AmuletLook,
-              weapon,
-              key,
-            };
-            canvasTex(scene, playerTextureKey(spec), TILE, TILE, (ctx) => {
-              drawPlayerLook(ctx, spec);
-            });
+          for (const shield of [false, true]) {
+            for (const key of [false, true]) {
+              const spec: AppearanceSpec = {
+                breastplate: breastplate as BreastLook,
+                helmet: helmet as HelmetLook,
+                amulet: amulet as AmuletLook,
+                weapon,
+                shield,
+                key,
+              };
+              canvasTex(scene, playerTextureKey(spec), TILE, TILE, (ctx) => {
+                drawPlayerLook(ctx, spec);
+              });
+            }
           }
         }
       }
@@ -375,6 +432,12 @@ export function generateTextures(scene: Phaser.Scene): void {
     'leather_gloves',
     'gold_trinket',
     'shiny_bauble',
+    'wood_shield',
+    'iron_shield',
+    'tower_shield',
+    'copper_ring',
+    'silver_ring',
+    'luck_ring',
     'dungeon_key',
     'tinker_oil',
     'ore_iron',

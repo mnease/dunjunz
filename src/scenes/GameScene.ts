@@ -21,6 +21,7 @@ import {
   applyLootToSave,
   lootSummary,
   openChest,
+  rollEnemyLoot,
 } from '../systems/loot';
 import {
   attemptPurchase,
@@ -279,6 +280,8 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-F', this.onForjingOrShoesKey, this);
     kb.on('keydown-G', () => this.cycleEquip('gloves'));
     kb.on('keydown-N', () => this.cycleEquip('amulet'));
+    kb.on('keydown-O', () => this.cycleEquip('shield'));
+    kb.on('keydown-R', () => this.cycleEquip('ring'));
     kb.on('keydown-K', () => this.cycleEquip('key'));
     kb.on('keydown-M', this.onMapzKey, this);
     kb.on('keydown-TAB', this.onMapzKey, this);
@@ -292,6 +295,9 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-FOUR', () => this.onDigitKey(4));
     kb.on('keydown-FIVE', () => this.onDigitKey(5));
     kb.on('keydown-SIX', () => this.onDigitKey(6));
+    kb.on('keydown-SEVEN', () => this.onDigitKey(7));
+    kb.on('keydown-EIGHT', () => this.onDigitKey(8));
+    kb.on('keydown-NINE', () => this.onDigitKey(9));
 
     this.player = this.physics.add.sprite(0, 0, 'player');
     this.player.setScale(SCALE);
@@ -527,6 +533,9 @@ export class GameScene extends Phaser.Scene {
     else if (n === 4) result = forjeImbueWeapon(this.save, 'vit');
     else if (n === 5) result = forjeCraft(this.save, 'craft_iron_blade');
     else if (n === 6) result = forjeCraft(this.save, 'craft_sand_saber');
+    else if (n === 7) result = forjeCraft(this.save, 'craft_wood_shield');
+    else if (n === 8) result = forjeCraft(this.save, 'craft_iron_shield');
+    else if (n === 9) result = forjeCraft(this.save, 'craft_copper_ring');
     else return;
 
     if (!result.ok) {
@@ -1071,27 +1080,24 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('toast', `+${xpGain} XP`);
     }
 
+    // Creep loot (coins mostly; sometimes gear / mats). Bosses use quest rewards too.
+    const drops = rollEnemyLoot(
+      actor.kind,
+      Math.random,
+      this.save.attrs.lck,
+    );
+    if (drops.length) {
+      this.save = applyLootToSave(this.save, drops);
+      const summary = lootSummary(drops).slice(0, 3).join(', ');
+      this.time.delayedCall(200, () => {
+        this.game.events.emit('toast', `LOOT: ${summary}`);
+      });
+    }
+
     if (actor.kind === 'boss' || actor.id === 'dungeon-master') {
       this.applyBossReward(actor);
     } else if (actor.kind === 'cube') {
       this.game.events.emit('toast', 'THE CUBE APOLOGIZES ONE LAST TIME');
-    } else if (actor.kind === 'wolf') {
-      // chance of wood shard
-      if (Math.random() < 0.4) {
-        this.save.stacks = {
-          ...this.save.stacks,
-          wood_shard: (this.save.stacks.wood_shard ?? 0) + 1,
-        };
-        this.game.events.emit('toast', '+1 WOOD SHARD');
-      }
-    } else if (actor.kind === 'cactus') {
-      if (Math.random() < 0.4) {
-        this.save.stacks = {
-          ...this.save.stacks,
-          sand_crystal: (this.save.stacks.sand_crystal ?? 0) + 1,
-        };
-        this.game.events.emit('toast', '+1 SAND CRYSTAL');
-      }
     }
 
     // Death particles

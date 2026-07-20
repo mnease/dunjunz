@@ -36,12 +36,14 @@ export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
 export type EquipSlot =
   | 'weapon'
+  | 'shield'
   | 'helmet'
   | 'breastplate'
   | 'greaves'
   | 'shoes'
   | 'gloves'
   | 'amulet'
+  | 'ring'
   | 'key';
 
 export type AttrId = 'str' | 'dex' | 'vit' | 'int' | 'lck';
@@ -70,12 +72,14 @@ export type LandId = 'surface' | 'dunjunz' | 'woodz' | 'dezertz';
 
 export interface EquippedMap {
   weapon: string | null;
+  shield: string | null;
   helmet: string | null;
   breastplate: string | null;
   greaves: string | null;
   shoes: string | null;
   gloves: string | null;
   amulet: string | null;
+  ring: string | null;
   key: string | null;
 }
 
