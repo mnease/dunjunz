@@ -26,19 +26,49 @@ export type EntityKind =
   | 'sign'
   | 'chest';
 
-/** Inventory item ids used by loot + shop + equip. */
-export type ItemId =
-  | 'potion'
-  | 'mild_sword'
-  | 'leather_armor'
-  | 'reinforced_leather'
-  | 'gold_trinket'
-  | 'shiny_bauble'
-  | 'tinker_oil';
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
-export type EquipSlot = 'weapon' | 'armor' | 'amulet';
+export type EquipSlot =
+  | 'weapon'
+  | 'helmet'
+  | 'breastplate'
+  | 'greaves'
+  | 'shoes'
+  | 'gloves'
+  | 'amulet'
+  | 'key';
 
-export type LootKind = 'coins' | 'potion' | 'armor' | 'treasure';
+export type AttrId = 'str' | 'dex' | 'vit' | 'int' | 'lck';
+
+export interface Attributes {
+  str: number;
+  dex: number;
+  vit: number;
+  int: number;
+  lck: number;
+}
+
+/** Unique gear / key instance in the bag. */
+export interface ItemInstance {
+  uid: string;
+  templateId: string;
+  rarity: Rarity;
+  /** 0–3 flat enhancement on primary stat. */
+  enhancement: number;
+}
+
+export interface EquippedMap {
+  weapon: string | null;
+  helmet: string | null;
+  breastplate: string | null;
+  greaves: string | null;
+  shoes: string | null;
+  gloves: string | null;
+  amulet: string | null;
+  key: string | null;
+}
+
+export type LootKind = 'coins' | 'potion' | 'armor' | 'treasure' | 'weapon' | 'gear';
 
 export interface EntityDef {
   kind: EntityKind;
@@ -48,9 +78,7 @@ export interface EntityDef {
   dialog?: string[];
   hp?: number;
   loot?: 'key' | 'heart' | 'none';
-  /** Chest loot table id (see systems/loot.ts). */
   chestTable?: string;
-  /** Merchant stock id (see systems/shop.ts). */
   shopId?: string;
 }
 
@@ -67,19 +95,17 @@ export interface RoomDef {
 }
 
 /**
- * Persistent player state.
- * version 2: RPG fields. version 3: equip slots (still merge-loads v1/v2).
+ * Save v4 — multi-slot gear, stacks, attributes, formula XP.
+ * loadSave migrates ≤3.
  */
 export interface SaveData {
-  version: 3;
+  version: 4;
   roomId: string;
   hp: number;
   maxHp: number;
-  /**
-   * Derived: true when a weapon is equipped (kept for HUD / old code paths).
-   * Source of truth is equippedWeapon.
-   */
+  /** Derived: weapon equipped. */
   hasSword: boolean;
+  /** Derived: key equipped. */
   hasKey: boolean;
   bossDefeated: boolean;
   flags: Record<string, boolean>;
@@ -88,16 +114,15 @@ export interface SaveData {
   xp: number;
   level: number;
   coins: number;
-  inventory: Record<string, number>;
-  /**
-   * Derived DEF used in combat (from equipped armor + amulet).
-   * Recomputed by inventory.syncDerivedStats — do not treat as source of truth.
-   */
+  /** Stackable consumables. */
+  stacks: Record<string, number>;
+  /** Unique gear + key instances. */
+  bag: ItemInstance[];
+  nextItemUid: number;
+  equipped: EquippedMap;
+  attrs: Attributes;
+  /** Unspent attribute points from level-ups. */
+  attrPoints: number;
+  /** Derived total DEF. */
   armor: number;
-  /** Equipped weapon item id, or null. */
-  equippedWeapon: string | null;
-  /** Equipped armor piece item id, or null. */
-  equippedArmor: string | null;
-  /** Equipped amulet / trinket item id, or null. */
-  equippedAmulet: string | null;
 }

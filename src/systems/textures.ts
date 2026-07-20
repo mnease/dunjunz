@@ -2,11 +2,13 @@ import type Phaser from 'phaser';
 import { COLORS, TILE } from '../config';
 import {
   AMULET_LOOKS,
-  ARMOR_LOOKS,
+  BREAST_LOOKS,
+  HELMET_LOOKS,
   playerTextureKey,
-  type AmuletLook,
-  type ArmorLook,
   type AppearanceSpec,
+  type AmuletLook,
+  type BreastLook,
+  type HelmetLook,
 } from './appearance';
 
 function canvasTex(
@@ -30,31 +32,30 @@ function hex(n: number): string {
   return `#${n.toString(16).padStart(6, '0')}`;
 }
 
-/** Draw hero at 16x16 with optional armor / amulet / sword. */
+/** Draw hero at 16x16 with breastplate / helmet / amulet / weapon / key. */
 function drawPlayerLook(
   ctx: CanvasRenderingContext2D,
   spec: AppearanceSpec,
 ): void {
-  // Legs
+  // Legs / boots
   ctx.fillStyle = '#3d2b1f';
   ctx.fillRect(5, 13, 2, 2);
   ctx.fillRect(9, 13, 2, 2);
 
-  // Torso base (tunic)
+  // Torso
   let body = '#2d6cdf';
-  if (spec.armor === 'leather_armor') body = '#8b5a2b';
-  if (spec.armor === 'reinforced_leather') body = '#5c4030';
+  if (spec.breastplate === 'leather') body = '#8b5a2b';
+  if (spec.breastplate === 'reinforced') body = '#5c4030';
   ctx.fillStyle = body;
   ctx.fillRect(4, 6, 8, 7);
 
-  // Armor plate / straps
-  if (spec.armor === 'leather_armor') {
+  if (spec.breastplate === 'leather') {
     ctx.fillStyle = '#a06830';
     ctx.fillRect(5, 7, 6, 2);
     ctx.fillStyle = '#5a3d1a';
     ctx.fillRect(4, 10, 8, 1);
   }
-  if (spec.armor === 'reinforced_leather') {
+  if (spec.breastplate === 'reinforced') {
     ctx.fillStyle = '#8a7a60';
     ctx.fillRect(5, 7, 6, 3);
     ctx.fillStyle = hex(COLORS.gold);
@@ -63,22 +64,31 @@ function drawPlayerLook(
     ctx.fillRect(4, 11, 8, 1);
   }
 
-  // Head + hair
+  // Head
   ctx.fillStyle = '#f0c8a4';
   ctx.fillRect(5, 2, 6, 5);
   ctx.fillStyle = '#1a1a2e';
   ctx.fillRect(6, 3, 1, 1);
   ctx.fillRect(9, 3, 1, 1);
-  ctx.fillStyle = '#c9a227';
-  ctx.fillRect(4, 1, 8, 2);
 
-  // Amulet / necklace
-  if (spec.amulet === 'gold_trinket') {
+  // Helmet or hair
+  if (spec.helmet === 'leather') {
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(4, 1, 8, 3);
+    ctx.fillRect(3, 3, 2, 2);
+    ctx.fillRect(11, 3, 2, 2);
+  } else {
+    ctx.fillStyle = '#c9a227';
+    ctx.fillRect(4, 1, 8, 2);
+  }
+
+  // Amulet
+  if (spec.amulet === 'gold') {
     ctx.fillStyle = hex(COLORS.gold);
     ctx.fillRect(7, 6, 2, 1);
     ctx.fillRect(7, 7, 2, 2);
   }
-  if (spec.amulet === 'shiny_bauble') {
+  if (spec.amulet === 'bauble') {
     ctx.fillStyle = hex(COLORS.pink);
     ctx.fillRect(7, 6, 2, 1);
     ctx.fillRect(6, 7, 4, 2);
@@ -86,12 +96,19 @@ function drawPlayerLook(
     ctx.fillRect(7, 7, 1, 1);
   }
 
-  // Sword on hip
-  if (spec.sword) {
+  // Weapon on hip
+  if (spec.weapon) {
     ctx.fillStyle = '#dfe6f0';
     ctx.fillRect(12, 8, 2, 5);
     ctx.fillStyle = '#c9a227';
     ctx.fillRect(11, 12, 4, 1);
+  }
+
+  // Key on belt
+  if (spec.key) {
+    ctx.fillStyle = hex(COLORS.gold);
+    ctx.fillRect(3, 10, 2, 3);
+    ctx.fillRect(2, 10, 2, 2);
   }
 }
 
@@ -128,7 +145,13 @@ function drawItemIcon(
     ctx.fillRect(11, 16, 2, 4);
     return;
   }
-  if (itemId === 'leather_armor') {
+  if (
+    itemId === 'leather_armor' ||
+    itemId === 'leather_helmet' ||
+    itemId === 'leather_greaves' ||
+    itemId === 'leather_shoes' ||
+    itemId === 'leather_gloves'
+  ) {
     ctx.fillStyle = '#8b5a2b';
     ctx.fillRect(6, 7, 12, 12);
     ctx.fillStyle = '#a06830';
@@ -144,7 +167,7 @@ function drawItemIcon(
     ctx.fillRect(11, 11, 2, 2);
     return;
   }
-  if (itemId === 'gold_trinket') {
+  if (itemId === 'gold_trinket' || itemId === 'dungeon_key') {
     ctx.fillStyle = hex(COLORS.gold);
     ctx.beginPath();
     ctx.arc(12, 12, 6, 0, Math.PI * 2);
@@ -169,7 +192,6 @@ function drawItemIcon(
     ctx.fillRect(10, 5, 4, 4);
     return;
   }
-  // Fallback
   ctx.fillStyle = '#7dffb3';
   ctx.fillRect(8, 8, 8, 8);
 }
@@ -264,30 +286,51 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(7, 7, 2, 2);
   });
 
-  // Default player + every gear combination for world avatar / paper doll
+  // Default player + layered combos (breastplate × helmet × amulet × weapon × key)
+  const bare: AppearanceSpec = {
+    breastplate: 'none',
+    helmet: 'none',
+    amulet: 'none',
+    weapon: false,
+    key: false,
+  };
   canvasTex(scene, 'player', TILE, TILE, (ctx) => {
-    drawPlayerLook(ctx, { armor: 'none', amulet: 'none', sword: false });
+    drawPlayerLook(ctx, bare);
   });
-  for (const armor of ARMOR_LOOKS) {
-    for (const amulet of AMULET_LOOKS) {
-      for (const sword of [false, true]) {
-        const spec = { armor: armor as ArmorLook, amulet: amulet as AmuletLook, sword };
-        canvasTex(scene, playerTextureKey(spec), TILE, TILE, (ctx) => {
-          drawPlayerLook(ctx, spec);
-        });
+  for (const breastplate of BREAST_LOOKS) {
+    for (const helmet of HELMET_LOOKS) {
+      for (const amulet of AMULET_LOOKS) {
+        for (const weapon of [false, true]) {
+          for (const key of [false, true]) {
+            const spec: AppearanceSpec = {
+              breastplate: breastplate as BreastLook,
+              helmet: helmet as HelmetLook,
+              amulet: amulet as AmuletLook,
+              weapon,
+              key,
+            };
+            canvasTex(scene, playerTextureKey(spec), TILE, TILE, (ctx) => {
+              drawPlayerLook(ctx, spec);
+            });
+          }
+        }
       }
     }
   }
 
-  // Inventory item icons (24×24)
   const iconIds = [
     'empty',
     'potion',
     'mild_sword',
     'leather_armor',
     'reinforced_leather',
+    'leather_helmet',
+    'leather_greaves',
+    'leather_shoes',
+    'leather_gloves',
     'gold_trinket',
     'shiny_bauble',
+    'dungeon_key',
     'tinker_oil',
   ];
   for (const id of iconIds) {

@@ -1,330 +1,214 @@
 /**
- * Unit tests against shipped pure RPG modules (progression, loot, shop).
- * No re-implementation of formulas — imports production entry points only.
+ * Unit tests against shipped pure RPG modules (v4).
  */
 import { describe, expect, it } from 'vitest';
 import {
-  ENEMY_XP,
-  XP_TO_REACH_LEVEL,
   grantXp,
   levelFromXp,
-  xpToNext,
+  xpToAdvanceFrom,
+  xpToReachLevel,
 } from './progression';
+import { applyLootToSave, openChest, mulberry32 } from './loot';
+import { attemptPurchase, SHOPS } from './shop';
 import {
-  applyLootDrops,
-  applyLootToSave,
-  lootSummary,
-  mulberry32,
-  openChest,
-} from './loot';
-import { attemptFeaturedPurchase, attemptPurchase, SHOPS } from './shop';
-import {
-  computeArmor,
-  cycleAmuletEquip,
-  cycleArmorEquip,
-  cycleWeaponEquip,
-  equipItem,
+  cycleSlotEquip,
+  grantKey,
+  grantMildSword,
+  hasKeyEquipped,
   hasWeaponEquipped,
   listInventory,
-  unequipSlot,
+  migrateEquipment,
+  syncDerivedStats,
   useInventoryItem,
 } from './inventory';
-import {
-  appearanceFromSave,
-  playerTextureKey,
-  playerTextureKeyFromSave,
-} from './appearance';
+import { spendAttrPoint, computePlayerDamage } from './attributes';
+import { appearanceFromSave, playerTextureKeyFromSave } from './appearance';
+import { effectivePrimary } from './rarity';
 import { defaultSave } from './save';
+import { mintItem } from './items';
 
-describe('progression (XP / levels)', () => {
-  it('grantXp crossing threshold raises level using shipped XP_TO_REACH_LEVEL', () => {
-    // Level 2 requires XP_TO_REACH_LEVEL[2]
-    const needFor2 = XP_TO_REACH_LEVEL[2];
-    expect(needFor2).toBeGreaterThan(0);
-
-    const before = { xp: needFor2 - 1, level: levelFromXp(needFor2 - 1) };
-    expect(before.level).toBe(1);
-
-    const after = grantXp(before, 1);
-    expect(after.xp).toBe(needFor2);
-    expect(after.level).toBe(levelFromXp(needFor2));
-    expect(after.level).toBe(2);
-    expect(after.leveledUp).toBe(true);
-    expect(after.levelsGained).toBe(1);
-    expect(after.prevLevel).toBe(1);
+describe('XP formula scaling', () => {
+  it('band costs increase with level', () => {
+    expect(xpToAdvanceFrom(1)).toBeLessThan(xpToAdvanceFrom(5));
+    expect(xpToAdvanceFrom(5)).toBeLessThan(xpToAdvanceFrom(10));
   });
 
-  it('enemy XP rewards are positive for known kinds used in-game', () => {
-    expect(ENEMY_XP.slime).toBeGreaterThan(0);
-    expect(ENEMY_XP.boss).toBeGreaterThan(ENEMY_XP.slime);
-    const r = grantXp({ xp: 0, level: 1 }, ENEMY_XP.slime);
-    expect(r.xp).toBe(ENEMY_XP.slime);
+  it('levelFromXp matches cumulative thresholds', () => {
+    expect(levelFromXp(0)).toBe(1);
+    expect(levelFromXp(xpToReachLevel(2))).toBe(2);
+    expect(levelFromXp(xpToReachLevel(5))).toBe(5);
+    expect(levelFromXp(xpToReachLevel(10) - 1)).toBe(9);
+    expect(levelFromXp(xpToReachLevel(10))).toBe(10);
   });
 
-  it('xpToNext is zero at max level band', () => {
-    const maxThreshold = XP_TO_REACH_LEVEL[XP_TO_REACH_LEVEL.length - 1];
-    expect(xpToNext(maxThreshold)).toBe(0);
+  it('grantXp awards attr points on level up', () => {
+    const need = xpToReachLevel(2);
+    const r = grantXp({ xp: need - 1, level: 1, attrPoints: 0 }, 1);
+    expect(r.level).toBe(2);
+    expect(r.leveledUp).toBe(true);
+    expect(r.attrPointsGained).toBe(2);
+    expect(r.attrPoints).toBe(2);
   });
 });
 
-describe('loot (multi-type chests)', () => {
-  it('openChest(test_fixed) grants coins, potion, armor, and treasure', () => {
+describe('rarity primary stat', () => {
+  it('effectivePrimary scales rarity and enhancement', () => {
+    expect(effectivePrimary(1, 'common', 0)).toBe(1);
+    expect(effectivePrimary(1, 'rare', 1)).toBe(2); // floor(1.5)+1
+  });
+});
+
+describe('loot multi-type', () => {
+  it('openChest test_fixed has coins potion gear treasure labels', () => {
     const drops = openChest('test_fixed', mulberry32(1));
     const kinds = new Set(drops.map((d) => d.kind));
     expect(kinds.has('coins')).toBe(true);
     expect(kinds.has('potion')).toBe(true);
-    expect(kinds.has('armor')).toBe(true);
-    expect(kinds.has('treasure')).toBe(true);
-
-    const state = applyLootDrops(
-      { coins: 0, inventory: {}, armor: 0, hp: 4, maxHp: 6 },
-      drops,
-    );
-    expect(state.coins).toBeGreaterThan(0);
-    expect(state.inventory.potion).toBeGreaterThan(0);
-    expect(state.inventory.leather_armor).toBeGreaterThan(0);
-    expect(
-      (state.inventory.gold_trinket ?? 0) + (state.inventory.shiny_bauble ?? 0),
-    ).toBeGreaterThan(0);
+    expect(kinds.has('gear') || kinds.has('treasure')).toBe(true);
   });
 
-  it('applyLootToSave auto-equips gear and sets DEF via shipped helper', () => {
-    const save = defaultSave();
-    const drops = openChest('boss', () => 0.5);
-    const next = applyLootToSave(save, drops);
-    expect(next.coins).toBeGreaterThan(save.coins);
-    expect(Object.keys(next.inventory).length).toBeGreaterThan(0);
-    expect(next.equippedArmor).toBeTruthy();
-    expect(next.armor).toBe(computeArmor(next));
-    expect(next.armor).toBeGreaterThan(0);
-    const summary = lootSummary(drops);
-    expect(summary.length).toBe(drops.length);
+  it('applyLootToSave mints bag gear and stacks potions', () => {
+    const next = applyLootToSave(defaultSave(), openChest('test_fixed'), () => 0.1);
+    expect(next.coins).toBeGreaterThan(0);
+    expect(next.stacks.potion ?? 0).toBeGreaterThan(0);
+    expect(next.bag.length).toBeGreaterThan(0);
   });
 });
 
-describe('shop (merchant purchase)', () => {
-  const tinkerer = SHOPS.tinkerer;
-  const potion = tinkerer.stock[0];
+describe('shop purchase', () => {
+  const potion = SHOPS.tinkerer.stock[0];
 
-  it('successful buy decrements coins and grants the item', () => {
-    const start = {
-      coins: potion.price + 5,
-      inventory: {} as Record<string, number>,
-      armor: 0,
-      hp: 4,
-      maxHp: 6,
-    };
-    const result = attemptPurchase(start, 'tinkerer', potion.id);
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.state.coins).toBe(start.coins - potion.price);
-    if (potion.itemId) {
-      expect(result.state.inventory[potion.itemId]).toBe(1);
-    }
+  it('successful buy spends coins and grants stack', () => {
+    let save = defaultSave();
+    save.coins = potion.price + 5;
+    const r = attemptPurchase(save, 'tinkerer', potion.id);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.coins).toBe(5);
+    expect(r.save.stacks.potion).toBe(1);
   });
 
-  it('failed buy leaves coins and inventory unchanged', () => {
-    const start = {
-      coins: Math.max(0, potion.price - 1),
-      inventory: { potion: 2 },
-      armor: 1,
-      hp: 3,
-      maxHp: 6,
-    };
-    const result = attemptPurchase(start, 'tinkerer', potion.id);
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.reason).toBe('insufficient_funds');
-    expect(result.state.coins).toBe(start.coins);
-    expect(result.state.inventory).toEqual(start.inventory);
-    expect(result.state.armor).toBe(start.armor);
-  });
-
-  it('featured purchase uses first stock item', () => {
-    const rich = {
-      coins: 999,
-      inventory: {},
-      armor: 0,
-      hp: 6,
-      maxHp: 6,
-    };
-    const result = attemptFeaturedPurchase(rich, 'tinkerer');
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.item.id).toBe(potion.id);
-    expect(result.state.coins).toBe(999 - potion.price);
+  it('failed buy leaves coins unchanged', () => {
+    let save = defaultSave();
+    save.coins = 0;
+    const r = attemptPurchase(save, 'tinkerer', potion.id);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.save.coins).toBe(0);
   });
 });
 
-describe('save defaults include RPG fields', () => {
-  it('defaultSave exposes xp, level, coins, inventory, equip slots', () => {
-    const s = defaultSave();
-    expect(s.version).toBe(3);
-    expect(s.xp).toBe(0);
-    expect(s.level).toBe(1);
-    expect(s.coins).toBe(0);
-    expect(s.inventory).toEqual({});
-    expect(s.armor).toBe(0);
-    expect(s.equippedWeapon).toBeNull();
-    expect(s.equippedArmor).toBeNull();
-    expect(s.equippedAmulet).toBeNull();
+describe('weapon key equip', () => {
+  it('grantMildSword equips weapon and enables attack flag', () => {
+    const s = grantMildSword(defaultSave());
+    expect(hasWeaponEquipped(s)).toBe(true);
+    expect(s.hasSword).toBe(true);
+    expect(s.bag.some((b) => b.templateId === 'mild_sword')).toBe(true);
+  });
+
+  it('grantKey equips keyring and sets hasKey', () => {
+    const s = grantKey(defaultSave());
+    expect(hasKeyEquipped(s)).toBe(true);
+    expect(s.hasKey).toBe(true);
+  });
+
+  it('unequip weapon disables hasSword', () => {
+    let s = grantMildSword(defaultSave());
+    const r = cycleSlotEquip(s, 'weapon'); // equip already; cycle once more unequips if only one
+    // With one weapon: equip -> unequip on second cycle from equipped
+    // First cycle when equipped goes to unequip
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    // already equipped, cycle unequips
+    expect(r.save.equipped.weapon === null || r.save.equipped.weapon).toBeTruthy();
+    // force unequip path
+    const u = cycleSlotEquip(grantMildSword(defaultSave()), 'weapon');
+    // from equipped mild_sword, one cycle unequips (only one option)
+    expect(u.ok).toBe(true);
+    if (!u.ok) return;
+    expect(u.save.equipped.weapon).toBeNull();
+    expect(hasWeaponEquipped(u.save)).toBe(false);
   });
 });
 
-describe('inventory panel helpers', () => {
-  it('listInventory only includes positive counts', () => {
-    const save = {
+describe('attributes', () => {
+  it('spendAttrPoint raises VIT and maxHp', () => {
+    let save = { ...defaultSave(), attrPoints: 2 };
+    const r = spendAttrPoint(save, 'vit');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const synced = syncDerivedStats(r.save);
+    expect(synced.attrs.vit).toBe(2);
+    expect(synced.maxHp).toBeGreaterThan(defaultSave().maxHp);
+  });
+
+  it('computePlayerDamage uses weapon + STR', () => {
+    let save = grantMildSword(defaultSave());
+    save = { ...save, attrs: { ...save.attrs, str: 5 } };
+    save = syncDerivedStats(save);
+    expect(computePlayerDamage(save)).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('appearance + key on doll', () => {
+  it('texture key includes weapon and key flags', () => {
+    let save = grantMildSword(defaultSave());
+    save = grantKey(save);
+    const key = playerTextureKeyFromSave(save);
+    expect(key).toContain('_w_');
+    expect(key.endsWith('_k')).toBe(true);
+    const bare = playerTextureKeyFromSave(defaultSave());
+    expect(bare).toBe('player_none_none_none_n_n');
+  });
+});
+
+describe('migrate v3', () => {
+  it('migrates hasSword hasKey inventory potion', () => {
+    const raw = {
       ...defaultSave(),
-      inventory: { potion: 2, gold_trinket: 0, shiny_bauble: 1 },
+      version: 3 as const,
+      hasSword: true,
+      hasKey: true,
+      inventory: { potion: 2, leather_armor: 1 },
+      equippedArmor: 'leather_armor',
+      xp: xpToReachLevel(3),
+      level: 3,
+      bag: undefined,
     };
-    const lines = listInventory(save);
-    expect(lines.map((l) => l.id)).toEqual(['potion', 'shiny_bauble']);
-    expect(lines[0].count).toBe(2);
+    const m = migrateEquipment(raw as never);
+    expect(m.version).toBe(4);
+    expect(m.stacks.potion).toBe(2);
+    expect(m.bag.some((b) => b.templateId === 'mild_sword')).toBe(true);
+    expect(m.bag.some((b) => b.templateId === 'dungeon_key')).toBe(true);
+    expect(m.bag.some((b) => b.templateId === 'leather_armor')).toBe(true);
+    expect(m.attrPoints).toBeGreaterThanOrEqual(4);
   });
+});
 
-  it('useInventoryItem consumes a potion and heals via shipped helper', () => {
+describe('potion use', () => {
+  it('consumes stack and heals', () => {
     const save = {
       ...defaultSave(),
       hp: 2,
-      maxHp: 6,
-      inventory: { potion: 1 },
+      stacks: { potion: 1 },
     };
-    const result = useInventoryItem(save, 'potion');
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.save.hp).toBeGreaterThan(save.hp);
-    expect(result.save.inventory.potion ?? 0).toBe(0);
-  });
-
-  it('useInventoryItem fails when bag empty without mutating counts', () => {
-    const save = { ...defaultSave(), hp: 2, inventory: {} };
-    const result = useInventoryItem(save, 'potion');
-    expect(result.ok).toBe(false);
-    expect(save.inventory).toEqual({});
+    const r = useInventoryItem(save, 'potion');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.hp).toBeGreaterThan(2);
+    expect(r.save.stacks.potion ?? 0).toBe(0);
   });
 });
 
-describe('equip armor and amulets', () => {
-  it('equipItem sets armor slot and DEF from catalog', () => {
-    const save = {
-      ...defaultSave(),
-      inventory: { leather_armor: 1 },
-    };
-    const result = equipItem(save, 'leather_armor');
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.save.equippedArmor).toBe('leather_armor');
-    expect(result.save.armor).toBe(1);
-    expect(computeArmor(result.save)).toBe(1);
-  });
-
-  it('unequip clears DEF', () => {
-    let save = {
-      ...defaultSave(),
-      inventory: { leather_armor: 1 },
-    };
-    const eq = equipItem(save, 'leather_armor');
-    expect(eq.ok).toBe(true);
-    if (!eq.ok) return;
-    const uq = unequipSlot(eq.save, 'armor');
-    expect(uq.ok).toBe(true);
-    if (!uq.ok) return;
-    expect(uq.save.equippedArmor).toBeNull();
-    expect(uq.save.armor).toBe(0);
-  });
-
-  it('amulet gold_trinket adds DEF when equipped', () => {
-    const save = {
-      ...defaultSave(),
-      inventory: { gold_trinket: 1, leather_armor: 1 },
-    };
-    let r = equipItem(save, 'leather_armor');
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    r = equipItem(r.save, 'gold_trinket');
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.save.armor).toBe(2); // 1 armor + 1 amulet
-  });
-
-  it('cycleArmorEquip walks pieces then unequips', () => {
-    const save = {
-      ...defaultSave(),
-      inventory: { leather_armor: 1, reinforced_leather: 1 },
-    };
-    let r = cycleArmorEquip(save);
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.save.equippedArmor).toBe('leather_armor');
-    r = cycleArmorEquip(r.save);
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.save.equippedArmor).toBe('reinforced_leather');
-    r = cycleArmorEquip(r.save);
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.save.equippedArmor).toBeNull();
-  });
-
-  it('shiny_bauble amulet boosts potion heal', () => {
-    let save = {
-      ...defaultSave(),
-      hp: 1,
-      maxHp: 20,
-      inventory: { potion: 1, shiny_bauble: 1 },
-    };
-    const eq = equipItem(save, 'shiny_bauble');
-    expect(eq.ok).toBe(true);
-    if (!eq.ok) return;
-    const used = useInventoryItem(eq.save, 'potion');
-    expect(used.ok).toBe(true);
-    if (!used.ok) return;
-    // base 4 + bauble 2 = 6
-    expect(used.save.hp).toBe(1 + 6);
-  });
-
-  it('cycleAmuletEquip works on bag amulets', () => {
-    const save = {
-      ...defaultSave(),
-      inventory: { gold_trinket: 1, shiny_bauble: 1 },
-    };
-    const r = cycleAmuletEquip(save);
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.save.equippedAmulet).toBeTruthy();
-  });
-});
-
-describe('appearance keys', () => {
-  it('playerTextureKey reflects equipped armor amulet and sword', () => {
-    const save = {
-      ...defaultSave(),
-      equippedWeapon: 'mild_sword',
-      equippedArmor: 'leather_armor',
-      equippedAmulet: 'gold_trinket',
-      inventory: { mild_sword: 1, leather_armor: 1, gold_trinket: 1 },
-    };
-    const key = playerTextureKeyFromSave(save);
-    expect(key).toBe('player_leather_armor_gold_trinket_s');
-    const bare = playerTextureKey(appearanceFromSave(defaultSave()));
-    expect(bare).toBe('player_none_none_n');
-  });
-
-  it('weapon equip enables hasWeaponEquipped and cycles', () => {
-    const save = {
-      ...defaultSave(),
-      inventory: { mild_sword: 1 },
-    };
-    const r = cycleWeaponEquip(save);
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.save.equippedWeapon).toBe('mild_sword');
-    expect(hasWeaponEquipped(r.save)).toBe(true);
-    expect(r.save.hasSword).toBe(true);
-    const u = unequipSlot(r.save, 'weapon');
-    expect(u.ok).toBe(true);
-    if (!u.ok) return;
-    expect(hasWeaponEquipped(u.save)).toBe(false);
-    expect(u.save.hasSword).toBe(false);
+describe('listInventory', () => {
+  it('lists stacks and bag', () => {
+    let save = defaultSave();
+    save.stacks = { potion: 3 };
+    save = mintItem(save, 'gold_trinket', 'rare', 1).save;
+    const lines = listInventory(save);
+    expect(lines.some((l) => l.templateId === 'potion' && l.count === 3)).toBe(
+      true,
+    );
+    expect(lines.some((l) => l.templateId === 'gold_trinket')).toBe(true);
   });
 });

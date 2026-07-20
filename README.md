@@ -28,11 +28,10 @@ npm run preview
 | Space / Z | Attack (after you have the sword) |
 | E | Talk / read / open chest |
 | B | Buy featured item from nearby merchant |
-| I | Open / close inventory |
-| U / 1 | Use a healing potion from the bag |
-| W | *(inventory open)* Cycle / unequip **weapon** (avatar updates) |
-| A | *(inventory open)* Cycle / unequip **armor** (avatar updates) |
-| N | *(inventory open)* Cycle / unequip **amulet** (avatar updates) |
+| I | Open / close inventory + character sheet |
+| U | Use a healing potion from the bag |
+| W H C L F G N K | *(inventory open)* Cycle equip slots |
+| 1–5 | *(inventory open)* Spend STR DEX VIT INT LCK |
 | Enter / Space | Advance dialog (does not re-open) |
 | Esc | Close inventory, or pause |
 | M (while paused) | Return to title |
@@ -40,13 +39,15 @@ npm run preview
 
 Progress is stored in `localStorage` (`dunjunz-save-v1`).
 
-## RPG systems (v0.2)
+## RPG systems (v0.4)
 
-- **XP & levels** — enemies grant XP; HUD shows `LVn into/needXP`
-- **Coins & inventory** — chests and shops feed a coin balance + item bag
-- **Treasure chests** — multi-loot (coins, potion, armor, treasure); one-shot via `collected`
-- **Traveling tinkerer** — talk for catalog, **B** to buy (fails cleanly if broke)
-- Pure logic in `src/systems/{progression,loot,shop}.ts` with `npm test`
+- **XP curve** — formula `6 + 4L + 0.5L²` per level band; harder as you climb
+- **Attributes** — STR DEX VIT INT LCK; **+2 points per level**; spend in inventory with **1–5**
+- **8 equip slots** — weapon, helmet, breastplate, greaves, shoes, gloves, amulet, key
+- **Rarity + enhancement** — common→legendary; gear rolls on chest open (LCK helps)
+- **Key item** — shows on paper-doll + bag; must equip to open locked doors
+- **Avatar** — layered look for breastplate, helmet, amulet, hip weapon, belt key
+- Pure modules under `src/systems/` with `npm test`
 
 ## Vertical slice (v0.1+)
 

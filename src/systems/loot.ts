@@ -1,24 +1,14 @@
 /**
- * Pure chest loot resolution + application to save-like inventory state.
+ * Chest loot → stacks + bag instances (v4).
  */
 
-import type { ItemId, LootKind, SaveData } from '../types';
+import type { SaveData } from '../types';
 import { autoEquipEmptySlots, syncDerivedStats } from './inventory';
-
-export interface LootDrop {
-  kind: LootKind;
-  label: string;
-  coins?: number;
-  itemId?: ItemId;
-  /** Legacy field — gear DEF now comes from equipping items. */
-  armorBonus?: number;
-  /** HP restored when kind is potion (also adds potion item). */
-  heal?: number;
-}
+import { mintItem } from './items';
+import { rollEnhancement, rollRarity } from './rarity';
 
 export type Rng = () => number;
 
-/** Deterministic RNG from a seed (mulberry32). */
 export function mulberry32(seed: number): Rng {
   let a = seed >>> 0;
   return () => {
@@ -30,10 +20,30 @@ export function mulberry32(seed: number): Rng {
   };
 }
 
-/**
- * Loot tables return 2–4 drops. Every table includes at least one path for
- * coins, potion, armor, and treasure across the multi-type set.
- */
+export interface LootDrop {
+  kind: string;
+  label: string;
+  coins?: number;
+  stackId?: string;
+  stackCount?: number;
+  templateId?: string;
+  heal?: number;
+}
+
+const GEAR_POOL = [
+  'leather_helmet',
+  'leather_armor',
+  'leather_greaves',
+  'leather_shoes',
+  'leather_gloves',
+  'gold_trinket',
+  'shiny_bauble',
+];
+
+function randomGear(rng: Rng): string {
+  return GEAR_POOL[Math.floor(rng() * GEAR_POOL.length)] ?? 'leather_armor';
+}
+
 const TABLES: Record<string, (rng: Rng) => LootDrop[]> = {
   dungeon: (rng) => {
     const coins = 5 + Math.floor(rng() * 12);
@@ -44,65 +54,64 @@ const TABLES: Record<string, (rng: Rng) => LootDrop[]> = {
       drops.push({
         kind: 'potion',
         label: 'HEALING POTION',
-        itemId: 'potion',
+        stackId: 'potion',
+        stackCount: 1,
         heal: 4,
       });
     } else {
+      const tid = randomGear(rng);
       drops.push({
-        kind: 'armor',
-        label: 'LEATHER ARMOR (+1 DEF IF EQUIPPED)',
-        itemId: 'leather_armor',
-        armorBonus: 1,
+        kind: 'gear',
+        label: `GEAR: ${tid.toUpperCase()}`,
+        templateId: tid,
       });
     }
-    const trinket: ItemId = rng() < 0.5 ? 'gold_trinket' : 'shiny_bauble';
+    const trinket = rng() < 0.5 ? 'gold_trinket' : 'shiny_bauble';
     drops.push({
       kind: 'treasure',
       label: trinket === 'gold_trinket' ? 'GOLD TRINKET' : 'SHINY BAUBLE',
-      itemId: trinket,
+      templateId: trinket,
     });
     return drops;
   },
-
   boss: (_rng) => [
     { kind: 'coins', label: '40 COINS', coins: 40 },
     {
       kind: 'potion',
       label: 'HEALING POTION x2',
-      itemId: 'potion',
+      stackId: 'potion',
+      stackCount: 2,
       heal: 6,
     },
     {
-      kind: 'armor',
-      label: 'REINFORCED LEATHER (+2 DEF IF EQUIPPED)',
-      itemId: 'reinforced_leather',
-      armorBonus: 2,
+      kind: 'gear',
+      label: 'REINFORCED BREASTPLATE',
+      templateId: 'reinforced_leather',
     },
     {
       kind: 'treasure',
-      label: 'DENTED CROWN (TREASURE)',
-      itemId: 'gold_trinket',
+      label: 'GOLD TRINKET',
+      templateId: 'gold_trinket',
     },
   ],
-
   test_fixed: (_rng) => [
     { kind: 'coins', label: '10 COINS', coins: 10 },
     {
       kind: 'potion',
       label: 'HEALING POTION',
-      itemId: 'potion',
+      stackId: 'potion',
+      stackCount: 1,
       heal: 4,
     },
     {
-      kind: 'armor',
-      label: 'LEATHER ARMOR (+1 DEF IF EQUIPPED)',
-      itemId: 'leather_armor',
-      armorBonus: 1,
+      kind: 'gear',
+      label: 'LEATHER BREASTPLATE',
+      templateId: 'leather_armor',
     },
     {
       kind: 'treasure',
       label: 'GOLD TRINKET',
-      itemId: 'gold_trinket',
+      templateId: 'gold_trinket',
     },
   ],
 };
@@ -111,66 +120,87 @@ export function openChest(
   tableId: string,
   rng: Rng = Math.random,
 ): LootDrop[] {
-  const table = TABLES[tableId] ?? TABLES.dungeon;
-  return table(rng);
+  return (TABLES[tableId] ?? TABLES.dungeon)(rng);
 }
 
-export interface LootableState {
-  coins: number;
-  inventory: Record<string, number>;
-  armor: number;
-  hp: number;
-  maxHp: number;
-}
-
-/**
- * Apply drops to a plain inventory/coins/hp state.
- * Gear items go to inventory only — DEF is applied when equipped.
- */
-export function applyLootDrops(
-  state: LootableState,
+export function applyLootToSave(
+  save: SaveData,
   drops: LootDrop[],
-): LootableState {
-  let coins = state.coins;
-  let hp = state.hp;
-  const maxHp = state.maxHp;
-  const inventory = { ...state.inventory };
+  rng: Rng = Math.random,
+): SaveData {
+  let next: SaveData = {
+    ...save,
+    stacks: { ...save.stacks },
+    bag: [...save.bag],
+  };
+  let coins = next.coins;
+  let hp = next.hp;
 
   for (const d of drops) {
-    if (d.coins && d.coins > 0) coins += d.coins;
-    if (d.heal && d.heal > 0) hp = Math.min(maxHp, hp + d.heal);
-    if (d.itemId) {
-      inventory[d.itemId] = (inventory[d.itemId] ?? 0) + 1;
+    if (d.coins) coins += d.coins;
+    if (d.heal) hp = Math.min(next.maxHp, hp + d.heal);
+    if (d.stackId) {
+      const n = d.stackCount ?? 1;
+      next.stacks[d.stackId] = (next.stacks[d.stackId] ?? 0) + n;
+    }
+    if (d.templateId) {
+      const rarity = rollRarity(rng, next.attrs.lck);
+      const enhancement = rollEnhancement(rng, rarity);
+      const m = mintItem(next, d.templateId, rarity, enhancement);
+      next = m.save;
     }
   }
 
-  // armor field unchanged here; equip layer recomputes
-  return { coins, inventory, armor: state.armor, hp, maxHp };
-}
-
-/** Apply loot to full save, auto-equip empty slots, sync DEF. */
-export function applyLootToSave(save: SaveData, drops: LootDrop[]): SaveData {
-  const next = applyLootDrops(
-    {
-      coins: save.coins,
-      inventory: save.inventory,
-      armor: save.armor,
-      hp: save.hp,
-      maxHp: save.maxHp,
-    },
-    drops,
-  );
-  let merged: SaveData = {
-    ...save,
-    coins: next.coins,
-    inventory: next.inventory,
-    hp: next.hp,
-    maxHp: next.maxHp,
+  next = {
+    ...next,
+    coins,
+    hp,
   };
-  merged = autoEquipEmptySlots(merged);
-  return syncDerivedStats(merged);
+  next = autoEquipEmptySlots(next);
+  return syncDerivedStats(next);
 }
 
 export function lootSummary(drops: LootDrop[]): string[] {
   return drops.map((d) => d.label);
+}
+
+// Back-compat for tests that still call applyLootDrops shape
+export function applyLootDrops(
+  state: {
+    coins: number;
+    inventory?: Record<string, number>;
+    stacks?: Record<string, number>;
+    armor: number;
+    hp: number;
+    maxHp: number;
+  },
+  drops: LootDrop[],
+): {
+  coins: number;
+  stacks: Record<string, number>;
+  bagTemplates: string[];
+  armor: number;
+  hp: number;
+  maxHp: number;
+} {
+  let coins = state.coins;
+  let hp = state.hp;
+  const stacks = { ...(state.stacks ?? {}) };
+  const bagTemplates: string[] = [];
+  for (const d of drops) {
+    if (d.coins) coins += d.coins;
+    if (d.heal) hp = Math.min(state.maxHp, hp + d.heal);
+    if (d.stackId) {
+      stacks[d.stackId] = (stacks[d.stackId] ?? 0) + (d.stackCount ?? 1);
+    }
+    if (d.templateId) bagTemplates.push(d.templateId);
+  }
+  return {
+    coins,
+    stacks,
+    bagTemplates,
+    armor: state.armor,
+    hp,
+    maxHp: state.maxHp,
+  };
 }

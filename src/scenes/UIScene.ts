@@ -4,16 +4,24 @@ import {
   itemIconKey,
   playerTextureKeyFromSave,
 } from '../systems/appearance';
-import {
-  formatInventoryPanel,
-  getItemInfo,
-  listInventory,
-} from '../systems/inventory';
+import { listInventory } from '../systems/inventory';
+import { ALL_EQUIP_SLOTS, displayItemName, findInBag } from '../systems/items';
 import { xpProgressInLevel } from '../systems/progression';
-import type { SaveData } from '../types';
+import type { EquipSlot, SaveData } from '../types';
+
+const SLOT_KEYS: Record<EquipSlot, string> = {
+  weapon: 'W',
+  helmet: 'H',
+  breastplate: 'C',
+  greaves: 'L',
+  shoes: 'F',
+  gloves: 'G',
+  amulet: 'N',
+  key: 'K',
+};
 
 /**
- * HUD + dialog + graphic inventory overlay. Runs parallel to Game.
+ * HUD + dialog + multi-slot inventory paper-doll.
  */
 export class UIScene extends Phaser.Scene {
   private heartsText: Phaser.GameObjects.Text | null = null;
@@ -27,25 +35,18 @@ export class UIScene extends Phaser.Scene {
   private pauseText: Phaser.GameObjects.Text | null = null;
   private toastText: Phaser.GameObjects.Text | null = null;
 
-  // Inventory graphic layout
   private invBg: Phaser.GameObjects.Rectangle | null = null;
   private invTitle: Phaser.GameObjects.Text | null = null;
-  private invStats: Phaser.GameObjects.Text | null = null;
-  private invBagText: Phaser.GameObjects.Text | null = null;
-  private invHelp: Phaser.GameObjects.Text | null = null;
   private invAvatar: Phaser.GameObjects.Image | null = null;
   private invAvatarPlate: Phaser.GameObjects.Rectangle | null = null;
-  private invWeaponSlot: Phaser.GameObjects.Image | null = null;
-  private invArmorSlot: Phaser.GameObjects.Image | null = null;
-  private invAmuletSlot: Phaser.GameObjects.Image | null = null;
-  private invWeaponIcon: Phaser.GameObjects.Image | null = null;
-  private invArmorIcon: Phaser.GameObjects.Image | null = null;
-  private invAmuletIcon: Phaser.GameObjects.Image | null = null;
-  private invWeaponLabel: Phaser.GameObjects.Text | null = null;
-  private invArmorLabel: Phaser.GameObjects.Text | null = null;
-  private invAmuletLabel: Phaser.GameObjects.Text | null = null;
-  private invSlotHints: Phaser.GameObjects.Text | null = null;
   private invYouLabel: Phaser.GameObjects.Text | null = null;
+  private invStats: Phaser.GameObjects.Text | null = null;
+  private invAttrs: Phaser.GameObjects.Text | null = null;
+  private invBagText: Phaser.GameObjects.Text | null = null;
+  private invHelp: Phaser.GameObjects.Text | null = null;
+  private invSlotFrames: Partial<Record<EquipSlot, Phaser.GameObjects.Image>> = {};
+  private invSlotIcons: Partial<Record<EquipSlot, Phaser.GameObjects.Image>> = {};
+  private invSlotLabels: Partial<Record<EquipSlot, Phaser.GameObjects.Text>> = {};
 
   private inventoryOpen = false;
   private lastSave: SaveData | null = null;
@@ -59,7 +60,6 @@ export class UIScene extends Phaser.Scene {
   create(): void {
     this.resetDialogVisuals();
     this.inventoryOpen = false;
-
     if (!this.chromeBuilt || !this.dialogBg?.active) {
       this.buildChrome();
       this.chromeBuilt = true;
@@ -70,7 +70,6 @@ export class UIScene extends Phaser.Scene {
       this.toastText?.setAlpha(0);
       this.setInventoryVisible(false);
     }
-
     this.bindGameEvents();
   }
 
@@ -85,13 +84,11 @@ export class UIScene extends Phaser.Scene {
       fontSize: '12px',
       color: '#ff6b9d',
     });
-
-    this.itemsText = this.add.text(220, 16, '', {
+    this.itemsText = this.add.text(200, 16, '', {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: '10px',
+      fontSize: '9px',
       color: '#ffc857',
     });
-
     this.roomText = this.add
       .text(GAME_W - 16, 16, '', {
         fontFamily: '"Press Start 2P", monospace',
@@ -107,7 +104,6 @@ export class UIScene extends Phaser.Scene {
       .setVisible(false)
       .setDepth(100)
       .setScrollFactor(0);
-
     this.dialogText = this.add
       .text(48, 440, '', {
         fontFamily: '"Press Start 2P", monospace',
@@ -151,163 +147,151 @@ export class UIScene extends Phaser.Scene {
   }
 
   private buildInventoryPanel(): void {
-    const depth = 120;
+    const d = 120;
     this.invBg = this.add
-      .rectangle(GAME_W / 2, GAME_H / 2 + 8, GAME_W - 36, GAME_H - 72, 0x0a0c10, 0.96)
+      .rectangle(GAME_W / 2, GAME_H / 2 + 8, GAME_W - 32, GAME_H - 68, 0x0a0c10, 0.96)
       .setStrokeStyle(3, COLORS.gold)
       .setScrollFactor(0)
-      .setDepth(depth);
+      .setDepth(d);
 
     this.invTitle = this.add
-      .text(GAME_W / 2, 56, 'INVENTORY', {
+      .text(GAME_W / 2, 52, 'INVENTORY / CHARACTER', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '14px',
+        fontSize: '12px',
         color: '#7dffb3',
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(depth + 1);
+      .setDepth(d + 1);
 
-    // Left: avatar stage
     this.invAvatarPlate = this.add
-      .rectangle(160, 220, 180, 220, 0x12161f, 1)
+      .rectangle(130, 200, 160, 200, 0x12161f, 1)
       .setStrokeStyle(2, COLORS.green)
       .setScrollFactor(0)
-      .setDepth(depth + 1);
+      .setDepth(d + 1);
 
     this.invAvatar = this.add
-      .image(160, 210, 'player')
-      .setScale(SCALE * 3.2)
+      .image(130, 190, 'player')
+      .setScale(SCALE * 3)
       .setScrollFactor(0)
-      .setDepth(depth + 2);
+      .setDepth(d + 2);
 
     this.invYouLabel = this.add
-      .text(160, 320, 'YOU', {
+      .text(130, 300, 'YOU', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#8b93a7',
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(depth + 2);
+      .setDepth(d + 2);
 
-    // Right: equip slots (weapon / armor / amulet)
-    const slotX = 420;
-    this.invWeaponSlot = this.add
-      .image(slotX, 130, 'slot_frame')
-      .setScale(1.5)
-      .setScrollFactor(0)
-      .setDepth(depth + 1);
-    this.invWeaponIcon = this.add
-      .image(slotX, 130, 'icon_empty')
-      .setScale(1.7)
-      .setScrollFactor(0)
-      .setDepth(depth + 2);
-    this.invWeaponLabel = this.add
-      .text(slotX + 48, 118, 'WEAPON [W]\n(empty)', {
-        fontFamily: '"Press Start 2P", monospace',
-        fontSize: '8px',
-        color: '#dfe6f0',
-        lineSpacing: 6,
-      })
-      .setScrollFactor(0)
-      .setDepth(depth + 2);
+    // 2-column slot grid
+    const slots: EquipSlot[] = [...ALL_EQUIP_SLOTS];
+    const startX = 280;
+    const startY = 100;
+    const colW = 220;
+    const rowH = 52;
+    slots.forEach((slot, i) => {
+      const col = i < 4 ? 0 : 1;
+      const row = i % 4;
+      const x = startX + col * colW;
+      const y = startY + row * rowH;
+      this.invSlotFrames[slot] = this.add
+        .image(x, y, 'slot_frame')
+        .setScale(1.15)
+        .setScrollFactor(0)
+        .setDepth(d + 1);
+      this.invSlotIcons[slot] = this.add
+        .image(x, y, 'icon_empty')
+        .setScale(1.35)
+        .setScrollFactor(0)
+        .setDepth(d + 2);
+      this.invSlotLabels[slot] = this.add
+        .text(x + 36, y - 12, `${slot.toUpperCase()} [${SLOT_KEYS[slot]}]\n(empty)`, {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '7px',
+          color: '#c5cde0',
+          lineSpacing: 5,
+        })
+        .setScrollFactor(0)
+        .setDepth(d + 2);
+    });
 
-    this.invArmorSlot = this.add
-      .image(slotX, 210, 'slot_frame')
-      .setScale(1.5)
-      .setScrollFactor(0)
-      .setDepth(depth + 1);
-    this.invArmorIcon = this.add
-      .image(slotX, 210, 'icon_empty')
-      .setScale(1.7)
-      .setScrollFactor(0)
-      .setDepth(depth + 2);
-    this.invArmorLabel = this.add
-      .text(slotX + 48, 198, 'ARMOR [A]\n(empty)', {
+    this.invStats = this.add
+      .text(48, 330, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#ffc857',
         lineSpacing: 6,
       })
       .setScrollFactor(0)
-      .setDepth(depth + 2);
+      .setDepth(d + 2);
 
-    this.invAmuletSlot = this.add
-      .image(slotX, 290, 'slot_frame')
-      .setScale(1.5)
-      .setScrollFactor(0)
-      .setDepth(depth + 1);
-    this.invAmuletIcon = this.add
-      .image(slotX, 290, 'icon_empty')
-      .setScale(1.7)
-      .setScrollFactor(0)
-      .setDepth(depth + 2);
-    this.invAmuletLabel = this.add
-      .text(slotX + 48, 278, 'AMULET [N]\n(empty)', {
+    this.invAttrs = this.add
+      .text(280, 330, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
-        color: '#ff6b9d',
+        color: '#7dffb3',
         lineSpacing: 6,
       })
       .setScrollFactor(0)
-      .setDepth(depth + 2);
-
-    this.invStats = this.add
-      .text(slotX - 40, 340, '', {
-        fontFamily: '"Press Start 2P", monospace',
-        fontSize: '9px',
-        color: '#f4f0ff',
-        lineSpacing: 8,
-      })
-      .setScrollFactor(0)
-      .setDepth(depth + 2);
+      .setDepth(d + 2);
 
     this.invBagText = this.add
-      .text(48, 360, '', {
+      .text(48, 420, '', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '8px',
+        fontSize: '7px',
         color: '#c5cde0',
         wordWrap: { width: GAME_W - 96 },
-        lineSpacing: 6,
+        lineSpacing: 5,
       })
       .setScrollFactor(0)
-      .setDepth(depth + 2);
+      .setDepth(d + 2);
 
     this.invHelp = this.add
       .text(
         GAME_W / 2,
-        GAME_H - 36,
-        'W WEAPON  ·  A ARMOR  ·  N AMULET  ·  U POTION  ·  I/ESC CLOSE',
+        GAME_H - 32,
+        'W H C L F G N K  ·  1-5 ATTR  ·  U POTION  ·  I/ESC',
         {
           fontFamily: '"Press Start 2P", monospace',
-          fontSize: '8px',
+          fontSize: '7px',
           color: '#7dffb3',
         },
       )
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(depth + 2);
-
-    this.invSlotHints = this.add
-      .text(160, 340, '', {
-        fontFamily: '"Press Start 2P", monospace',
-        fontSize: '7px',
-        color: '#8b93a7',
-        align: 'center',
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(depth + 2);
+      .setDepth(d + 2);
 
     this.setInventoryVisible(false);
   }
 
   private setInvPieceVisible(
-    obj: { setVisible: (v: boolean) => unknown } | null,
+    obj: { setVisible: (v: boolean) => unknown } | null | undefined,
     open: boolean,
   ): void {
     obj?.setVisible(open);
+  }
+
+  private setInventoryVisible(open: boolean): void {
+    this.inventoryOpen = open;
+    this.setInvPieceVisible(this.invBg, open);
+    this.setInvPieceVisible(this.invTitle, open);
+    this.setInvPieceVisible(this.invAvatarPlate, open);
+    this.setInvPieceVisible(this.invAvatar, open);
+    this.setInvPieceVisible(this.invYouLabel, open);
+    this.setInvPieceVisible(this.invStats, open);
+    this.setInvPieceVisible(this.invAttrs, open);
+    this.setInvPieceVisible(this.invBagText, open);
+    this.setInvPieceVisible(this.invHelp, open);
+    for (const slot of ALL_EQUIP_SLOTS) {
+      this.setInvPieceVisible(this.invSlotFrames[slot], open);
+      this.setInvPieceVisible(this.invSlotIcons[slot], open);
+      this.setInvPieceVisible(this.invSlotLabels[slot], open);
+    }
+    if (open && this.lastSave) this.renderInventory(this.lastSave);
+    this.game.events.emit('inventory-state', open);
   }
 
   private bindGameEvents(): void {
@@ -345,31 +329,6 @@ export class UIScene extends Phaser.Scene {
       this.input.keyboard?.off('keydown-SPACE', this.onSpaceKey, this);
       this.bound = false;
       this.chromeBuilt = false;
-      this.heartsText = null;
-      this.itemsText = null;
-      this.roomText = null;
-      this.dialogBg = null;
-      this.dialogText = null;
-      this.pauseText = null;
-      this.toastText = null;
-      this.invBg = null;
-      this.invTitle = null;
-      this.invStats = null;
-      this.invBagText = null;
-      this.invHelp = null;
-      this.invAvatar = null;
-      this.invAvatarPlate = null;
-      this.invWeaponSlot = null;
-      this.invArmorSlot = null;
-      this.invAmuletSlot = null;
-      this.invWeaponIcon = null;
-      this.invArmorIcon = null;
-      this.invAmuletIcon = null;
-      this.invWeaponLabel = null;
-      this.invArmorLabel = null;
-      this.invAmuletLabel = null;
-      this.invSlotHints = null;
-      this.invYouLabel = null;
     });
   }
 
@@ -401,106 +360,62 @@ export class UIScene extends Phaser.Scene {
     if (this.inventoryOpen) this.renderInventory(save);
   };
 
-  private setInventoryVisible(open: boolean): void {
-    this.inventoryOpen = open;
-    this.setInvPieceVisible(this.invBg, open);
-    this.setInvPieceVisible(this.invTitle, open);
-    this.setInvPieceVisible(this.invAvatarPlate, open);
-    this.setInvPieceVisible(this.invAvatar, open);
-    this.setInvPieceVisible(this.invYouLabel, open);
-    this.setInvPieceVisible(this.invWeaponSlot, open);
-    this.setInvPieceVisible(this.invWeaponIcon, open);
-    this.setInvPieceVisible(this.invWeaponLabel, open);
-    this.setInvPieceVisible(this.invArmorSlot, open);
-    this.setInvPieceVisible(this.invArmorIcon, open);
-    this.setInvPieceVisible(this.invArmorLabel, open);
-    this.setInvPieceVisible(this.invAmuletSlot, open);
-    this.setInvPieceVisible(this.invAmuletIcon, open);
-    this.setInvPieceVisible(this.invAmuletLabel, open);
-    this.setInvPieceVisible(this.invStats, open);
-    this.setInvPieceVisible(this.invBagText, open);
-    this.setInvPieceVisible(this.invHelp, open);
-    this.setInvPieceVisible(this.invSlotHints, open);
-    if (open && this.lastSave) this.renderInventory(this.lastSave);
-    this.game.events.emit('inventory-state', open);
-  }
-
   private renderInventory(save: SaveData): void {
-    // Paper-doll avatar matches world look
     const look = playerTextureKeyFromSave(save);
     if (this.textures.exists(look) && this.invAvatar) {
       this.invAvatar.setTexture(look);
     }
 
-    // Slot icons
-    const weaponId = save.equippedWeapon;
-    const armorId = save.equippedArmor;
-    const amuletId = save.equippedAmulet;
-    if (this.invWeaponIcon) {
-      const k = itemIconKey(weaponId);
-      this.invWeaponIcon.setTexture(this.textures.exists(k) ? k : 'icon_empty');
-    }
-    if (this.invArmorIcon) {
-      const k = itemIconKey(armorId);
-      this.invArmorIcon.setTexture(this.textures.exists(k) ? k : 'icon_empty');
-    }
-    if (this.invAmuletIcon) {
-      const k = itemIconKey(amuletId);
-      this.invAmuletIcon.setTexture(this.textures.exists(k) ? k : 'icon_empty');
-    }
-
-    if (this.invWeaponLabel) {
-      const name = weaponId ? getItemInfo(weaponId).name : '(empty)';
-      this.invWeaponLabel.setText(`WEAPON [W]\n${name}`);
-    }
-    if (this.invArmorLabel) {
-      const name = armorId ? getItemInfo(armorId).name : '(empty)';
-      this.invArmorLabel.setText(`ARMOR [A]\n${name}`);
-    }
-    if (this.invAmuletLabel) {
-      const name = amuletId ? getItemInfo(amuletId).name : '(empty)';
-      this.invAmuletLabel.setText(`AMULET [N]\n${name}`);
-    }
-
-    if (this.invStats) {
-      this.invStats.setText(
-        [
-          `COINS  ${save.coins}c`,
-          `HP     ${save.hp}/${save.maxHp}`,
-          `DEF    ${save.armor}`,
-          save.equippedWeapon ? 'WEAPON yes' : 'WEAPON no',
-          save.hasKey ? 'KEY    yes' : 'KEY    no',
-        ].join('\n'),
-      );
-    }
-
-    if (this.invSlotHints) {
-      this.invSlotHints.setText(
-        save.armor > 0 ? `LOOKIN' TOUGH (+${save.armor} DEF)` : 'BARELY DRESSED',
-      );
-    }
-
-    // Bag list (text)
-    if (this.invBagText) {
-      const bag = listInventory(save);
-      if (bag.length === 0) {
-        this.invBagText.setText('BAG: (empty)  — open chests / buy from tinkerer');
-      } else {
-        const lines = ['BAG:'];
-        for (const item of bag) {
-          const tags: string[] = [];
-          if (item.equipped) tags.push('WORN');
-          if (item.usable) tags.push('U');
-          if (item.slot === 'weapon') tags.push('W');
-          if (item.slot === 'armor') tags.push('A');
-          if (item.slot === 'amulet') tags.push('N');
-          const tag = tags.length ? ` [${tags.join(' ')}]` : '';
-          lines.push(` ${item.name} x${item.count}${tag}`);
-        }
-        // Keep formatInventoryPanel available for tests; short bag only here
-        void formatInventoryPanel;
-        this.invBagText.setText(lines.join('\n'));
+    for (const slot of ALL_EQUIP_SLOTS) {
+      const uid = save.equipped[slot];
+      const inst = uid ? findInBag(save, uid) : undefined;
+      const icon = this.invSlotIcons[slot];
+      const label = this.invSlotLabels[slot];
+      if (icon) {
+        const tid = inst?.templateId;
+        const k = itemIconKey(tid);
+        icon.setTexture(this.textures.exists(k) ? k : 'icon_empty');
       }
+      if (label) {
+        const name = inst ? displayItemName(inst) : '(empty)';
+        label.setText(
+          `${slot.toUpperCase()} [${SLOT_KEYS[slot]}]\n${name}`,
+        );
+      }
+    }
+
+    this.invStats?.setText(
+      [
+        `COINS  ${save.coins}c`,
+        `HP     ${save.hp}/${save.maxHp}`,
+        `DEF    ${save.armor}`,
+        `WEAPON ${save.hasSword ? 'ready' : 'none'}`,
+        `KEY    ${save.hasKey ? 'ready' : 'none'}`,
+      ].join('\n'),
+    );
+
+    this.invAttrs?.setText(
+      [
+        `ATTR PTS: ${save.attrPoints}`,
+        `1 STR ${save.attrs.str}`,
+        `2 DEX ${save.attrs.dex}`,
+        `3 VIT ${save.attrs.vit}`,
+        `4 INT ${save.attrs.int}`,
+        `5 LCK ${save.attrs.lck}`,
+      ].join('\n'),
+    );
+
+    const bag = listInventory(save);
+    if (!bag.length) {
+      this.invBagText?.setText('BAG: (empty)');
+    } else {
+      const lines = ['BAG:'];
+      for (const b of bag.slice(0, 8)) {
+        const tag = b.equipped ? ' [WORN]' : b.usable ? ' [U]' : '';
+        lines.push(` ${b.name} x${b.count}${tag}`);
+      }
+      if (bag.length > 8) lines.push(` ...+${bag.length - 8} more`);
+      this.invBagText?.setText(lines.join('\n'));
     }
   }
 
@@ -531,31 +446,24 @@ export class UIScene extends Phaser.Scene {
         ? `LV${save.level} ${band.into}/${band.need}XP`
         : `LV${save.level} MAX`;
     const gear = [
-      save.hasSword ? 'SW' : null,
+      save.hasSword ? 'WPN' : null,
       save.hasKey ? 'KEY' : null,
       save.armor > 0 ? `DEF${save.armor}` : null,
-      save.bossDefeated ? 'CROWN' : null,
+      save.attrPoints > 0 ? `PTS${save.attrPoints}` : null,
     ]
       .filter(Boolean)
       .join(' ');
-    const bagCount = Object.values(save.inventory).reduce((a, n) => a + n, 0);
-    const bagHint = bagCount > 0 ? ` BAG${bagCount}` : '';
     this.itemsText?.setText(
-      `${xpPart}  ${save.coins}c${gear ? '  ' + gear : ''}${bagHint}`,
+      `${xpPart}  ${save.coins}c${gear ? '  ' + gear : ''}`,
     );
     this.roomText?.setText(roomTitle + '  [I]');
-
     if (this.inventoryOpen) this.renderInventory(save);
   };
 
   private showDialog = (lines: string[]): void => {
     if (!lines?.length) return;
-    if (!this.dialogBg?.active || !this.dialogText?.active) {
-      console.warn('[DUNJUNZ] dialog-show before UI ready', lines);
-      return;
-    }
+    if (!this.dialogBg?.active || !this.dialogText?.active) return;
     if (this.inventoryOpen) this.setInventoryVisible(false);
-
     this.dialogLines = lines.filter(
       (l) => l !== undefined && l !== null && String(l).trim() !== '',
     );
@@ -564,8 +472,6 @@ export class UIScene extends Phaser.Scene {
     this.dialogOpen = true;
     this.dialogBg.setVisible(true);
     this.dialogText.setVisible(true);
-    this.dialogBg.setDepth(100);
-    this.dialogText.setDepth(101);
     this.renderDialogLine();
     this.game.events.emit('dialog-state', true);
   };
@@ -610,12 +516,4 @@ export class UIScene extends Phaser.Scene {
     if (paused && this.inventoryOpen) this.setInventoryVisible(false);
     this.pauseText?.setVisible(paused);
   };
-
-  isDialogOpen(): boolean {
-    return this.dialogOpen;
-  }
-
-  isInventoryOpen(): boolean {
-    return this.inventoryOpen;
-  }
 }

@@ -30,16 +30,28 @@ import {
   playerTextureKey,
 } from '../systems/appearance';
 import {
-  autoEquipEmptySlots,
-  cycleAmuletEquip,
-  cycleArmorEquip,
-  cycleWeaponEquip,
+  ATTR_IDS,
+  spendAttrPoint,
+} from '../systems/attributes';
+import {
+  computePlayerDamage,
+  cycleSlotEquip,
+  grantKey,
+  grantMildSword,
   hasWeaponEquipped,
   syncDerivedStats,
   useInventoryItem,
 } from '../systems/inventory';
 import { loadSave, writeSave } from '../systems/save';
-import type { EntityDef, EntityKind, RoomDef, SaveData, TileKind } from '../types';
+import type {
+  AttrId,
+  EntityDef,
+  EntityKind,
+  EquipSlot,
+  RoomDef,
+  SaveData,
+  TileKind,
+} from '../types';
 
 interface Actor {
   sprite: Phaser.Physics.Arcade.Sprite;
@@ -216,10 +228,19 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-B', this.onBuyKey, this);
     kb.on('keydown-I', this.onInventoryKey, this);
     kb.on('keydown-U', this.onUseItemKey, this);
-    kb.on('keydown-ONE', this.onUseItemKey, this);
-    kb.on('keydown-A', this.onArmorEquipKey, this);
-    kb.on('keydown-N', this.onAmuletEquipKey, this);
     kb.on('keydown-W', this.onWeaponEquipKey, this);
+    kb.on('keydown-H', () => this.cycleEquip('helmet'));
+    kb.on('keydown-C', () => this.cycleEquip('breastplate'));
+    kb.on('keydown-L', () => this.cycleEquip('greaves'));
+    kb.on('keydown-F', () => this.cycleEquip('shoes'));
+    kb.on('keydown-G', () => this.cycleEquip('gloves'));
+    kb.on('keydown-N', () => this.cycleEquip('amulet'));
+    kb.on('keydown-K', () => this.cycleEquip('key'));
+    kb.on('keydown-ONE', () => this.spendAttr('str'));
+    kb.on('keydown-TWO', () => this.spendAttr('dex'));
+    kb.on('keydown-THREE', () => this.spendAttr('vit'));
+    kb.on('keydown-FOUR', () => this.spendAttr('int'));
+    kb.on('keydown-FIVE', () => this.spendAttr('lck'));
 
     this.player = this.physics.add.sprite(0, 0, 'player');
     this.player.setScale(SCALE);
@@ -251,9 +272,6 @@ export class GameScene extends Phaser.Scene {
       kb.off('keydown-B', this.onBuyKey, this);
       kb.off('keydown-I', this.onInventoryKey, this);
       kb.off('keydown-U', this.onUseItemKey, this);
-      kb.off('keydown-ONE', this.onUseItemKey, this);
-      kb.off('keydown-A', this.onArmorEquipKey, this);
-      kb.off('keydown-N', this.onAmuletEquipKey, this);
       kb.off('keydown-W', this.onWeaponEquipKey, this);
       writeSave(this.save);
     });
@@ -358,24 +376,12 @@ export class GameScene extends Phaser.Scene {
   };
 
   private onWeaponEquipKey = (): void => {
-    // Only while inventory open so W still moves up in the world
-    if (!this.inventoryOpen || this.dialogLocked || this.paused) return;
-    const result = cycleWeaponEquip(this.save);
-    if (!result.ok) {
-      this.game.events.emit('toast', result.reason);
-      return;
-    }
-    this.save = result.save;
-    writeSave(this.save);
-    this.emitHud();
-    this.game.events.emit('inventory-refresh', this.save);
-    this.game.events.emit('toast', result.message);
+    this.cycleEquip('weapon');
   };
 
-  private onArmorEquipKey = (): void => {
-    // Only equip while inventory is open so A still moves left in the world
+  private cycleEquip(slot: EquipSlot): void {
     if (!this.inventoryOpen || this.dialogLocked || this.paused) return;
-    const result = cycleArmorEquip(this.save);
+    const result = cycleSlotEquip(this.save, slot);
     if (!result.ok) {
       this.game.events.emit('toast', result.reason);
       return;
@@ -385,21 +391,22 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
     this.game.events.emit('inventory-refresh', this.save);
     this.game.events.emit('toast', result.message);
-  };
+  }
 
-  private onAmuletEquipKey = (): void => {
+  private spendAttr(attr: AttrId): void {
     if (!this.inventoryOpen || this.dialogLocked || this.paused) return;
-    const result = cycleAmuletEquip(this.save);
+    if (!ATTR_IDS.includes(attr)) return;
+    const result = spendAttrPoint(this.save, attr);
     if (!result.ok) {
       this.game.events.emit('toast', result.reason);
       return;
     }
-    this.save = result.save;
+    this.save = syncDerivedStats(result.save);
     writeSave(this.save);
     this.emitHud();
     this.game.events.emit('inventory-refresh', this.save);
-    this.game.events.emit('toast', result.message);
-  };
+    this.game.events.emit('toast', `+1 ${attr.toUpperCase()}`);
+  }
 
   /** Reach in world pixels (~1.75 tiles at SCALE 3). Adjacent NPCs must be hittable. */
   private interactReach(): number {
@@ -411,19 +418,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.save.collected.includes('starter-sword')) {
       this.save.collected.push('starter-sword');
     }
-    // Add weapon to bag if missing
-    if ((this.save.inventory.mild_sword ?? 0) <= 0) {
-      this.save.inventory = {
-        ...this.save.inventory,
-        mild_sword: 1,
-      };
-    }
-    // Auto-equip if weapon slot empty
-    if (!this.save.equippedWeapon) {
-      this.save.equippedWeapon = 'mild_sword';
-    }
-    this.save = syncDerivedStats(this.save);
-    // Remove ground sword if still present
+    this.save = grantMildSword(this.save);
     const ground = this.actors.find((a) => a.id === 'starter-sword' && a.alive);
     if (ground) {
       ground.alive = false;
@@ -664,14 +659,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Swap player texture so armor / amulet / sword show on the avatar.
+   * Swap player texture so gear shows on the avatar.
    * While swinging, hip sword is hidden (it's in the hand as sword-swing).
    */
   private refreshPlayerAppearance(): void {
     if (!this.player) return;
     const spec = appearanceFromSave(this.save);
     if (this.attacking) {
-      spec.sword = false;
+      spec.weapon = false;
     }
     const key = playerTextureKey(spec);
     if (this.textures.exists(key)) {
@@ -740,7 +735,7 @@ export class GameScene extends Phaser.Scene {
     if (!hasWeaponEquipped(this.save)) return;
 
     actor.hurtCooldown = 250;
-    actor.hp -= 1;
+    actor.hp -= computePlayerDamage(this.save);
     actor.sprite.setTint(0xffffff);
     this.time.delayedCall(80, () => {
       if (actor.alive) actor.sprite.clearTint();
@@ -764,15 +759,20 @@ export class GameScene extends Phaser.Scene {
     // XP + level from pure progression module
     const xpGain = enemyXpReward(actor.kind);
     const prog = grantXp(
-      { xp: this.save.xp, level: this.save.level },
+      {
+        xp: this.save.xp,
+        level: this.save.level,
+        attrPoints: this.save.attrPoints,
+      },
       xpGain,
     );
     this.save.xp = prog.xp;
     this.save.level = prog.level;
+    this.save.attrPoints = prog.attrPoints;
     if (prog.leveledUp) {
       this.game.events.emit(
         'toast',
-        `LEVEL UP! NOW LV ${prog.level} (+${xpGain} XP)`,
+        `LEVEL UP! LV ${prog.level} +${prog.attrPointsGained} ATTR (I TO SPEND)`,
       );
     } else {
       this.game.events.emit('toast', `+${xpGain} XP`);
@@ -829,17 +829,22 @@ export class GameScene extends Phaser.Scene {
       this.grantSword(true);
       return;
     } else if (actor.kind === 'key') {
-      this.save.hasKey = true;
+      this.save = grantKey(this.save);
       this.game.events.emit('toast', 'GOT KEY: "FRIEND"');
       this.game.events.emit('dialog-show', [
         'YOU PICKED UP A KEY LABELED',
         '"FRIEND".',
+        'EQUIPPED ON YOUR KEYRING.',
         'THE DOOR WAS NOT SUBTLE.',
       ]);
     } else if (actor.kind === 'heart') {
-      this.save.maxHp = Math.min(12, this.save.maxHp + 2);
-      this.save.hp = Math.min(this.save.maxHp, this.save.hp + 2);
-      this.game.events.emit('toast', 'MAX HP UP!');
+      this.save.attrs = {
+        ...this.save.attrs,
+        vit: this.save.attrs.vit + 1,
+      };
+      this.save = syncDerivedStats(this.save);
+      this.save.hp = this.save.maxHp;
+      this.game.events.emit('toast', 'VIT UP! MAX HP UP!');
     }
 
     actor.sprite.destroy();
@@ -949,16 +954,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const shopId = merchant.shopId ?? 'tinkerer';
-    const result = attemptFeaturedPurchase(
-      {
-        coins: this.save.coins,
-        inventory: this.save.inventory,
-        armor: this.save.armor,
-        hp: this.save.hp,
-        maxHp: this.save.maxHp,
-      },
-      shopId,
-    );
+    const result = attemptFeaturedPurchase(this.save, shopId);
 
     if (!result.ok) {
       if (result.reason === 'insufficient_funds') {
@@ -974,15 +970,10 @@ export class GameScene extends Phaser.Scene {
       } else {
         this.game.events.emit('toast', 'CANNOT BUY THAT');
       }
-      // Balance and inventory unchanged
       return;
     }
 
-    this.save.coins = result.state.coins;
-    this.save.inventory = result.state.inventory;
-    this.save.hp = result.state.hp;
-    // Auto-equip empty armor/amulet slots after purchase
-    this.save = autoEquipEmptySlots(this.save);
+    this.save = result.save;
     writeSave(this.save);
     this.emitHud();
     this.game.events.emit(
@@ -1051,7 +1042,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private tryUnlockNearPlayer(): void {
-    if (!this.save.hasKey) return;
+    if (!this.save.hasKey) return; // derived from equipped key
     const { tx, ty } = this.worldToTile(this.player.x, this.player.y);
     const dirs = [
       [0, 0],
@@ -1073,7 +1064,13 @@ export class GameScene extends Phaser.Scene {
 
   private unlockDoor(tx: number, ty: number): void {
     this.tileGrid[ty][tx] = 'door';
-    this.save.hasKey = false;
+    // Consume equipped key from bag
+    const keyUid = this.save.equipped.key;
+    if (keyUid) {
+      this.save.bag = this.save.bag.filter((i) => i.uid !== keyUid);
+      this.save.equipped = { ...this.save.equipped, key: null };
+      this.save = syncDerivedStats(this.save);
+    }
     this.save.flags['door-unlocked'] = true;
     this.game.events.emit('toast', 'THE DOOR HEARS "FRIEND"');
     this.game.events.emit('dialog-show', [
