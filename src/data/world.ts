@@ -406,9 +406,10 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 5,
         dialog: [
           "CAPTAIN'S LOG: STARDATE ???",
+          'GOLD SHIRT. COMMAND TRACK.',
           'WE BEAMED INTO A DUNGEON.',
           'EAST RETURNS TO THE GATE.',
-          'ENSIGNS: STOP DYING.',
+          'ENSIGNS IN RED: STOP DYING.',
         ],
       },
       {

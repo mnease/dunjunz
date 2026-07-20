@@ -523,6 +523,37 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(3, 7, 2, 5);
   });
 
+  // Captain — gold command tunic (Kirk energy), not a redshirt
+  canvasTex(scene, 'captain', TILE, TILE, (ctx) => {
+    // black pants / boots
+    ctx.fillStyle = '#1a1a22';
+    ctx.fillRect(5, 12, 2, 3);
+    ctx.fillRect(9, 12, 2, 3);
+    // gold command shirt (TOS command gold)
+    ctx.fillStyle = '#d4a017';
+    ctx.fillRect(4, 6, 8, 7);
+    ctx.fillStyle = '#e8c040';
+    ctx.fillRect(5, 7, 6, 2);
+    // collar
+    ctx.fillStyle = '#1a1a22';
+    ctx.fillRect(5, 6, 6, 1);
+    // head
+    ctx.fillStyle = '#f0c8a4';
+    ctx.fillRect(5, 2, 6, 5);
+    // hair (swoop)
+    ctx.fillStyle = '#3d2b1f';
+    ctx.fillRect(5, 1, 6, 2);
+    ctx.fillRect(4, 2, 1, 2);
+    // eyes
+    ctx.fillStyle = '#111';
+    ctx.fillRect(6, 3, 1, 1);
+    ctx.fillRect(9, 3, 1, 1);
+    // rank braid on sleeve
+    ctx.fillStyle = hex(COLORS.gold);
+    ctx.fillRect(3, 9, 1, 3);
+    ctx.fillRect(12, 9, 1, 3);
+  });
+
   canvasTex(scene, 'cube', 20, 20, (ctx) => {
     ctx.fillStyle = 'rgba(90, 220, 180, 0.75)';
     ctx.fillRect(2, 2, 16, 16);

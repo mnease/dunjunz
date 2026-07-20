@@ -839,7 +839,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnEntity(def: EntityDef): void {
-    const tex = ENTITY_TEX[def.kind] ?? 'npc';
+    // Captain gets gold command tunic (Kirk), not generic purple NPC
+    const tex =
+      def.id === 'captain' && this.textures.exists('captain')
+        ? 'captain'
+        : (ENTITY_TEX[def.kind] ?? 'npc');
     const pos = this.tileToWorld(def.x, def.y);
     const sprite = this.physics.add.sprite(pos.x, pos.y, tex);
     sprite.setScale(SCALE);
