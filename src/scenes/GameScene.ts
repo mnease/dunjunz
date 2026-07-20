@@ -454,15 +454,15 @@ export class GameScene extends Phaser.Scene {
   };
 
   private onInteractKey = (): void => {
-    // E opens talk. Enter never opens (UI only advances with Enter).
-    if (
-      this.dialogLocked ||
-      this.panelOpen() ||
-      this.paused ||
-      this.dialogCloseCooldown > 0
-    ) {
+    // E opens talk / shop. Enter never opens (UI only advances with Enter).
+    if (this.paused || this.dialogCloseCooldown > 0) return;
+    // E also closes shop (do not also handle E in update — that same-frame
+    // double-fire was opening then immediately closing the shop).
+    if (this.shopOpen) {
+      this.game.events.emit('shop-toggle');
       return;
     }
+    if (this.dialogLocked || this.panelOpen()) return;
     this.tryInteract();
   };
 
@@ -1462,7 +1462,27 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (best.kind === 'merchant' || best.shopId) {
-      this.openShop(best.shopId ?? 'tinkerer');
+      const shopId = best.shopId ?? 'tinkerer';
+      // Greeting lines first, then open shop grid
+      const greet =
+        best.dialog?.length
+          ? best.dialog
+          : [
+              'TINKERER: RARE WARES!',
+              'PRESS ENTER TO BROWSE THE SHOP.',
+            ];
+      this.game.events.emit('dialog-show', [
+        ...greet,
+        '',
+        'OPENING SHOP…',
+      ]);
+      // After dialog closes, open shop once
+      const openShopAfter = (open: boolean) => {
+        if (open) return;
+        this.game.events.off('dialog-state', openShopAfter);
+        this.time.delayedCall(60, () => this.openShop(shopId));
+      };
+      this.game.events.on('dialog-state', openShopAfter);
       return;
     }
 
@@ -1534,6 +1554,7 @@ export class GameScene extends Phaser.Scene {
     if (this.paused || this.inventoryOpen || this.mapzOpen || this.forjingOpen) {
       return;
     }
+    if (this.shopOpen) return;
     const shop = getShop(shopId);
     if (!shop) {
       this.game.events.emit('toast', 'SHOP CLOSED');
@@ -1546,6 +1567,7 @@ export class GameScene extends Phaser.Scene {
       shopId,
       selectedIndex: 0,
     });
+    this.game.events.emit('toast', 'TINKERER SHOP');
   }
 
   private buySelectedShopItem(): void {
@@ -2007,10 +2029,7 @@ export class GameScene extends Phaser.Scene {
         } else if (Phaser.Input.Keyboard.JustDown(this.cursors.down) || Phaser.Input.Keyboard.JustDown(this.keys.s)) {
           this.navShop('down');
         }
-        // E closes shop (same as talk key when already in shop)
-        if (Phaser.Input.Keyboard.JustDown(this.keys.e)) {
-          this.game.events.emit('shop-toggle');
-        }
+        // E close is handled only in onInteractKey (not JustDown here)
         if (Phaser.Input.Keyboard.JustDown(this.keys.enter)) {
           this.buySelectedShopItem();
         }

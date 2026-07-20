@@ -986,12 +986,20 @@ export class UIScene extends Phaser.Scene {
 
   private onShopToggle = (payload?: ShopOpenPayload | null): void => {
     this.ensureShopChrome();
-    if (this.shopOpen) {
+    // Close when open and no open-payload (Esc / E close)
+    if (this.shopOpen && !payload?.shopId) {
       this.closeShopPanel();
       return;
     }
+    if (this.shopOpen && payload?.shopId) {
+      // Already open — refresh stock only
+      this.shopPayload = payload;
+      this.lastSave = payload.save;
+      this.renderShopGrid();
+      return;
+    }
     if (this.inventoryOpen || this.mapzOpen || this.forjingOpen) return;
-    if (!payload) return;
+    if (!payload?.shopId) return;
     if (this.dialogOpen) {
       this.resetDialogVisuals();
       this.game.events.emit('dialog-state', false);
