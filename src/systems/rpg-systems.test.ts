@@ -504,6 +504,30 @@ describe('mapz discovery + fog of war', () => {
   });
 });
 
+describe('world tile geometry', () => {
+  it('every room tile row is exactly 16 wide (no silent wall pad)', () => {
+    for (const room of Object.values(ROOMS)) {
+      expect(room.tiles).toHaveLength(11);
+      for (let y = 0; y < room.tiles.length; y++) {
+        expect(
+          room.tiles[y].length,
+          `${room.id} row ${y} is ${room.tiles[y].length}`,
+        ).toBe(16);
+      }
+    }
+  });
+
+  it('meadow east edge is walkable so trail exit works', () => {
+    const meadow = ROOMS.overworld;
+    expect(meadow.east).toBe('overworld_east');
+    // y=4,5,6 were the intended east openings
+    for (const y of [4, 5, 6]) {
+      const ch = meadow.tiles[y][15];
+      expect(ch === '#' || ch === '~' || ch === 'L').toBe(false);
+    }
+  });
+});
+
 describe('forjing craft enhance imbue', () => {
   it('enhance weapon spends mats and +1 enhancement', () => {
     let save = grantMildSword(defaultSave());
