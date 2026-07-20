@@ -28,8 +28,10 @@ npm run preview
 | Space / Z | Attack (after you have the sword) |
 | E | Talk / read / open chest |
 | B | Buy featured item from nearby merchant |
+| I | Open / close inventory |
+| U / 1 | Use a healing potion from the bag |
 | Enter / Space | Advance dialog (does not re-open) |
-| Esc | Pause |
+| Esc | Close inventory, or pause |
 | M (while paused) | Return to title |
 | R (on title) | New game (clears save) |
 

@@ -1,13 +1,13 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_W, HUD_H } from '../config';
+import { COLORS, GAME_W, GAME_H, HUD_H } from '../config';
+import { formatInventoryPanel } from '../systems/inventory';
 import { xpProgressInLevel } from '../systems/progression';
 import type { SaveData } from '../types';
 
 /**
- * HUD + dialog overlay. Runs parallel to Game.
+ * HUD + dialog + inventory overlay. Runs parallel to Game.
  *
  * IMPORTANT: prefer `game.events.emit('ui-reset')` over stop+relaunch.
- * Phaser can fire shutdown after a new create and strip dialog-show listeners.
  */
 export class UIScene extends Phaser.Scene {
   private heartsText: Phaser.GameObjects.Text | null = null;
@@ -20,6 +20,10 @@ export class UIScene extends Phaser.Scene {
   private dialogOpen = false;
   private pauseText: Phaser.GameObjects.Text | null = null;
   private toastText: Phaser.GameObjects.Text | null = null;
+  private invBg: Phaser.GameObjects.Rectangle | null = null;
+  private invText: Phaser.GameObjects.Text | null = null;
+  private inventoryOpen = false;
+  private lastSave: SaveData | null = null;
   private bound = false;
   private chromeBuilt = false;
 
@@ -29,8 +33,8 @@ export class UIScene extends Phaser.Scene {
 
   create(): void {
     this.resetDialogVisuals();
+    this.inventoryOpen = false;
 
-    // Rebuild if never built, or if a real stop destroyed display objects
     if (!this.chromeBuilt || !this.dialogBg?.active) {
       this.buildChrome();
       this.chromeBuilt = true;
@@ -39,6 +43,8 @@ export class UIScene extends Phaser.Scene {
       this.dialogText?.setVisible(false);
       this.pauseText?.setVisible(false);
       this.toastText?.setAlpha(0);
+      this.invBg?.setVisible(false);
+      this.invText?.setVisible(false);
     }
 
     this.bindGameEvents();
@@ -90,6 +96,26 @@ export class UIScene extends Phaser.Scene {
       .setDepth(101)
       .setScrollFactor(0);
 
+    // Full-screen inventory page
+    this.invBg = this.add
+      .rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 40, GAME_H - 80, 0x0a0c10, 0.94)
+      .setStrokeStyle(3, COLORS.gold)
+      .setVisible(false)
+      .setDepth(120)
+      .setScrollFactor(0);
+
+    this.invText = this.add
+      .text(56, 72, '', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '10px',
+        color: '#f4f0ff',
+        wordWrap: { width: GAME_W - 120 },
+        lineSpacing: 8,
+      })
+      .setVisible(false)
+      .setDepth(121)
+      .setScrollFactor(0);
+
     this.pauseText = this.add
       .text(GAME_W / 2, 300, 'PAUSED\n\nESC RESUME  ·  M TITLE', {
         fontFamily: '"Press Start 2P", monospace',
@@ -101,7 +127,7 @@ export class UIScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setVisible(false)
-      .setDepth(110)
+      .setDepth(130)
       .setScrollFactor(0);
 
     this.toastText = this.add
@@ -114,7 +140,7 @@ export class UIScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setAlpha(0)
-      .setDepth(105)
+      .setDepth(125)
       .setScrollFactor(0);
   }
 
@@ -124,12 +150,16 @@ export class UIScene extends Phaser.Scene {
     this.game.events.off('toast', this.showToast, this);
     this.game.events.off('pause-ui', this.setPaused, this);
     this.game.events.off('ui-reset', this.onUiReset, this);
+    this.game.events.off('inventory-toggle', this.onInventoryToggle, this);
+    this.game.events.off('inventory-refresh', this.onInventoryRefresh, this);
 
     this.game.events.on('hud-update', this.refreshHud, this);
     this.game.events.on('dialog-show', this.showDialog, this);
     this.game.events.on('toast', this.showToast, this);
     this.game.events.on('pause-ui', this.setPaused, this);
     this.game.events.on('ui-reset', this.onUiReset, this);
+    this.game.events.on('inventory-toggle', this.onInventoryToggle, this);
+    this.game.events.on('inventory-refresh', this.onInventoryRefresh, this);
 
     if (!this.bound) {
       this.bound = true;
@@ -143,10 +173,11 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('toast', this.showToast, this);
       this.game.events.off('pause-ui', this.setPaused, this);
       this.game.events.off('ui-reset', this.onUiReset, this);
+      this.game.events.off('inventory-toggle', this.onInventoryToggle, this);
+      this.game.events.off('inventory-refresh', this.onInventoryRefresh, this);
       this.input.keyboard?.off('keydown-ENTER', this.onEnterKey, this);
       this.input.keyboard?.off('keydown-SPACE', this.onSpaceKey, this);
       this.bound = false;
-      // Force rebuild if someone truly stops this scene
       this.chromeBuilt = false;
       this.heartsText = null;
       this.itemsText = null;
@@ -155,14 +186,18 @@ export class UIScene extends Phaser.Scene {
       this.dialogText = null;
       this.pauseText = null;
       this.toastText = null;
+      this.invBg = null;
+      this.invText = null;
     });
   }
 
   private onUiReset = (): void => {
     this.resetDialogVisuals();
+    this.setInventoryVisible(false);
     this.pauseText?.setVisible(false);
     this.toastText?.setAlpha(0);
     this.game.events.emit('dialog-state', false);
+    this.game.events.emit('inventory-state', false);
   };
 
   private resetDialogVisuals(): void {
@@ -173,9 +208,34 @@ export class UIScene extends Phaser.Scene {
     this.dialogText?.setVisible(false);
   }
 
+  private onInventoryToggle = (save: SaveData): void => {
+    if (this.dialogOpen) return;
+    this.lastSave = save;
+    this.setInventoryVisible(!this.inventoryOpen);
+  };
+
+  private onInventoryRefresh = (save: SaveData): void => {
+    this.lastSave = save;
+    if (this.inventoryOpen) this.renderInventory(save);
+  };
+
+  private setInventoryVisible(open: boolean): void {
+    this.inventoryOpen = open;
+    if (open && this.lastSave) {
+      this.renderInventory(this.lastSave);
+    }
+    this.invBg?.setVisible(open);
+    this.invText?.setVisible(open);
+    this.game.events.emit('inventory-state', open);
+  }
+
+  private renderInventory(save: SaveData): void {
+    if (!this.invText) return;
+    this.invText.setText(formatInventoryPanel(save));
+  }
+
   private onEnterKey = (event: KeyboardEvent): void => {
     if (!this.dialogOpen) return;
-    // Stop other scene handlers on this same key from treating it as "talk"
     event.preventDefault();
     event.stopPropagation();
     this.advanceDialog();
@@ -189,6 +249,7 @@ export class UIScene extends Phaser.Scene {
   };
 
   private refreshHud = (save: SaveData, roomTitle: string): void => {
+    this.lastSave = save;
     if (!this.heartsText?.active) return;
     const filled = Math.max(0, Math.ceil(save.hp / 2));
     const empty = Math.max(0, Math.ceil(save.maxHp / 2) - filled);
@@ -207,10 +268,14 @@ export class UIScene extends Phaser.Scene {
     ]
       .filter(Boolean)
       .join(' ');
+    const bagCount = Object.values(save.inventory).reduce((a, n) => a + n, 0);
+    const bagHint = bagCount > 0 ? ` BAG${bagCount}` : '';
     this.itemsText?.setText(
-      `${xpPart}  ${save.coins}c${gear ? '  ' + gear : ''}`,
+      `${xpPart}  ${save.coins}c${gear ? '  ' + gear : ''}${bagHint}`,
     );
-    this.roomText?.setText(roomTitle);
+    this.roomText?.setText(roomTitle + '  [I]');
+
+    if (this.inventoryOpen) this.renderInventory(save);
   };
 
   private showDialog = (lines: string[]): void => {
@@ -219,7 +284,9 @@ export class UIScene extends Phaser.Scene {
       console.warn('[DUNJUNZ] dialog-show before UI ready', lines);
       return;
     }
-    // Drop empty lines so multi-line scripts don't feel like a stuck loop
+    // Close inventory if open so dialog is readable
+    if (this.inventoryOpen) this.setInventoryVisible(false);
+
     this.dialogLines = lines.filter(
       (l) => l !== undefined && l !== null && String(l).trim() !== '',
     );
@@ -271,10 +338,15 @@ export class UIScene extends Phaser.Scene {
   };
 
   private setPaused = (paused: boolean): void => {
+    if (paused && this.inventoryOpen) this.setInventoryVisible(false);
     this.pauseText?.setVisible(paused);
   };
 
   isDialogOpen(): boolean {
     return this.dialogOpen;
+  }
+
+  isInventoryOpen(): boolean {
+    return this.inventoryOpen;
   }
 }

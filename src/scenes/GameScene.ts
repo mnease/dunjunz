@@ -25,6 +25,7 @@ import {
   attemptFeaturedPurchase,
   shopCatalogLines,
 } from '../systems/shop';
+import { useInventoryItem } from '../systems/inventory';
 import { loadSave, writeSave } from '../systems/save';
 import type { EntityDef, EntityKind, RoomDef, SaveData, TileKind } from '../types';
 
@@ -109,6 +110,9 @@ export class GameScene extends Phaser.Scene {
     m: Phaser.Input.Keyboard.Key;
     enter: Phaser.Input.Keyboard.Key;
     b: Phaser.Input.Keyboard.Key;
+    i: Phaser.Input.Keyboard.Key;
+    u: Phaser.Input.Keyboard.Key;
+    one: Phaser.Input.Keyboard.Key;
   };
   private facing: 'up' | 'down' | 'left' | 'right' = 'down';
   private attacking = false;
@@ -116,6 +120,7 @@ export class GameScene extends Phaser.Scene {
   private dialogLocked = false;
   /** Blocks re-open / attack for a beat after dialog closes (same key must not re-trigger). */
   private dialogCloseCooldown = 0;
+  private inventoryOpen = false;
   private paused = false;
   private transitionLock = false;
   private roomOriginX = 0;
@@ -132,6 +137,7 @@ export class GameScene extends Phaser.Scene {
     // Leftover dialogLocked/paused from a prior run freezes movement entirely.
     this.dialogLocked = false;
     this.dialogCloseCooldown = 0;
+    this.inventoryOpen = false;
     this.paused = false;
     this.attacking = false;
     this.invuln = 0;
@@ -163,6 +169,8 @@ export class GameScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.E,
       Phaser.Input.Keyboard.KeyCodes.ENTER,
       Phaser.Input.Keyboard.KeyCodes.B,
+      Phaser.Input.Keyboard.KeyCodes.I,
+      Phaser.Input.Keyboard.KeyCodes.U,
     ]);
     this.cursors = kb.createCursorKeys();
     this.keys = {
@@ -177,15 +185,21 @@ export class GameScene extends Phaser.Scene {
       m: kb.addKey(Phaser.Input.Keyboard.KeyCodes.M),
       enter: kb.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER),
       b: kb.addKey(Phaser.Input.Keyboard.KeyCodes.B),
+      i: kb.addKey(Phaser.Input.Keyboard.KeyCodes.I),
+      u: kb.addKey(Phaser.Input.Keyboard.KeyCodes.U),
+      one: kb.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
     };
 
-    // Event-based attack / interact / shop buy
+    // Event-based attack / interact / shop buy / inventory
     // NOTE: Enter is advance-only (UIScene). Opening talk is E so the last
     // Enter that closes a sign cannot immediately re-open it.
     kb.on('keydown-SPACE', this.onAttackKey, this);
     kb.on('keydown-Z', this.onAttackKey, this);
     kb.on('keydown-E', this.onInteractKey, this);
     kb.on('keydown-B', this.onBuyKey, this);
+    kb.on('keydown-I', this.onInventoryKey, this);
+    kb.on('keydown-U', this.onUseItemKey, this);
+    kb.on('keydown-ONE', this.onUseItemKey, this);
 
     this.player = this.physics.add.sprite(0, 0, 'player');
     this.player.setScale(SCALE);
@@ -206,12 +220,17 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.walls);
 
     this.game.events.on('dialog-state', this.onDialogState, this);
+    this.game.events.on('inventory-state', this.onInventoryState, this);
     this.events.once('shutdown', () => {
       this.game.events.off('dialog-state', this.onDialogState, this);
+      this.game.events.off('inventory-state', this.onInventoryState, this);
       kb.off('keydown-SPACE', this.onAttackKey, this);
       kb.off('keydown-Z', this.onAttackKey, this);
       kb.off('keydown-E', this.onInteractKey, this);
       kb.off('keydown-B', this.onBuyKey, this);
+      kb.off('keydown-I', this.onInventoryKey, this);
+      kb.off('keydown-U', this.onUseItemKey, this);
+      kb.off('keydown-ONE', this.onUseItemKey, this);
       writeSave(this.save);
     });
 
@@ -249,21 +268,69 @@ export class GameScene extends Phaser.Scene {
     }
   };
 
+  private onInventoryState = (open: boolean): void => {
+    this.inventoryOpen = open;
+    if (open && this.player.body) {
+      (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    }
+  };
+
   private onAttackKey = (): void => {
     // Space advances dialog when open (UI scene); do not swing mid-dialog
-    if (this.dialogLocked || this.paused || this.dialogCloseCooldown > 0) return;
+    if (
+      this.dialogLocked ||
+      this.inventoryOpen ||
+      this.paused ||
+      this.dialogCloseCooldown > 0
+    ) {
+      return;
+    }
     this.tryAttack();
   };
 
   private onInteractKey = (): void => {
     // E opens talk. Enter never opens (UI only advances with Enter).
-    if (this.dialogLocked || this.paused || this.dialogCloseCooldown > 0) return;
+    if (
+      this.dialogLocked ||
+      this.inventoryOpen ||
+      this.paused ||
+      this.dialogCloseCooldown > 0
+    ) {
+      return;
+    }
     this.tryInteract();
   };
 
   private onBuyKey = (): void => {
-    if (this.dialogLocked || this.paused || this.dialogCloseCooldown > 0) return;
+    if (
+      this.dialogLocked ||
+      this.inventoryOpen ||
+      this.paused ||
+      this.dialogCloseCooldown > 0
+    ) {
+      return;
+    }
     this.tryBuyFromNearbyMerchant();
+  };
+
+  private onInventoryKey = (): void => {
+    if (this.dialogLocked || this.paused) return;
+    this.game.events.emit('inventory-toggle', this.save);
+  };
+
+  private onUseItemKey = (): void => {
+    if (this.dialogLocked || this.paused) return;
+    // Use potion from bag (works with inventory open or closed)
+    const result = useInventoryItem(this.save, 'potion');
+    if (!result.ok) {
+      this.game.events.emit('toast', result.reason);
+      return;
+    }
+    this.save = result.save;
+    writeSave(this.save);
+    this.emitHud();
+    this.game.events.emit('inventory-refresh', this.save);
+    this.game.events.emit('toast', result.message);
   };
 
   /** Reach in world pixels (~1.75 tiles at SCALE 3). Adjacent NPCs must be hittable. */
@@ -510,6 +577,9 @@ export class GameScene extends Phaser.Scene {
 
   private emitHud(): void {
     this.game.events.emit('hud-update', this.save, this.room.title);
+    if (this.inventoryOpen) {
+      this.game.events.emit('inventory-refresh', this.save);
+    }
   }
 
   private hurtPlayer(from: Actor): void {
@@ -1051,12 +1121,16 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     if (!this.player?.body) return;
 
-    // Pause
+    // Pause / inventory close
     if (Phaser.Input.Keyboard.JustDown(this.keys.esc)) {
-      this.paused = !this.paused;
-      this.game.events.emit('pause-ui', this.paused);
-      if (this.paused) {
-        (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      if (this.inventoryOpen) {
+        this.game.events.emit('inventory-toggle', this.save);
+      } else {
+        this.paused = !this.paused;
+        this.game.events.emit('pause-ui', this.paused);
+        if (this.paused) {
+          (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+        }
       }
     }
     if (this.paused) {
@@ -1073,8 +1147,9 @@ export class GameScene extends Phaser.Scene {
     this.padCooldown = Math.max(0, this.padCooldown - delta);
     this.dialogCloseCooldown = Math.max(0, this.dialogCloseCooldown - delta);
 
-    if (this.dialogLocked) {
+    if (this.dialogLocked || this.inventoryOpen) {
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      // Enemies still move while inventory is open so the world is not frozen unfairly
       this.updateEnemies(delta);
       return;
     }

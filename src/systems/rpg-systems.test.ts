@@ -18,6 +18,7 @@ import {
   openChest,
 } from './loot';
 import { attemptFeaturedPurchase, attemptPurchase, SHOPS } from './shop';
+import { listInventory, useInventoryItem } from './inventory';
 import { defaultSave } from './save';
 
 describe('progression (XP / levels)', () => {
@@ -146,5 +147,34 @@ describe('save defaults include RPG fields', () => {
     expect(s.coins).toBe(0);
     expect(s.inventory).toEqual({});
     expect(s.armor).toBe(0);
+  });
+});
+
+describe('inventory panel helpers', () => {
+  it('listInventory only includes positive counts', () => {
+    const lines = listInventory({ potion: 2, gold_trinket: 0, shiny_bauble: 1 });
+    expect(lines.map((l) => l.id)).toEqual(['potion', 'shiny_bauble']);
+    expect(lines[0].count).toBe(2);
+  });
+
+  it('useInventoryItem consumes a potion and heals via shipped helper', () => {
+    const save = {
+      ...defaultSave(),
+      hp: 2,
+      maxHp: 6,
+      inventory: { potion: 1 },
+    };
+    const result = useInventoryItem(save, 'potion');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.save.hp).toBeGreaterThan(save.hp);
+    expect(result.save.inventory.potion ?? 0).toBe(0);
+  });
+
+  it('useInventoryItem fails when bag empty without mutating counts', () => {
+    const save = { ...defaultSave(), hp: 2, inventory: {} };
+    const result = useInventoryItem(save, 'potion');
+    expect(result.ok).toBe(false);
+    expect(save.inventory).toEqual({});
   });
 });
