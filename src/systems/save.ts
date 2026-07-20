@@ -5,6 +5,7 @@ import { defaultAttrs, recomputeMaxHp } from './attributes';
 import { emptyEquipped } from './items';
 import { migrateEquipment, syncDerivedStats } from './inventory';
 import { levelFromXp } from './progression';
+import { reconcileMapzFromCollected } from './mapz';
 
 export function defaultSave(): SaveData {
   const attrs = defaultAttrs();
@@ -110,6 +111,8 @@ export function loadSave(): SaveData {
     if (next.bossDefeated && !next.landsCleared.includes('dunjunz')) {
       next.landsCleared = [...next.landsCleared, 'dunjunz'];
     }
+    // Scroll pickups must unlock mapz even if an older save blanked discoveredMapz
+    next = reconcileMapzFromCollected(next);
     return syncDerivedStats(next);
   } catch {
     return defaultSave();

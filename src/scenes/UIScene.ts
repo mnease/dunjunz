@@ -85,6 +85,7 @@ export class UIScene extends Phaser.Scene {
       this.pauseText?.setVisible(false);
       this.toastText?.setAlpha(0);
       this.setInventoryVisible(false);
+      this.ensureMapzChrome();
       this.setMapzVisible(false, '');
       this.setForjingVisible(false, '');
     }
@@ -167,24 +168,36 @@ export class UIScene extends Phaser.Scene {
   }
 
   private buildMapzPanel(): void {
-    const d = 140;
+    const d = 200;
+    // Destroy stale pieces if chrome is rebuilt
+    this.mapzBg?.destroy();
+    this.mapzText?.destroy();
     this.mapzBg = this.add
-      .rectangle(GAME_W / 2, GAME_H / 2 + 8, GAME_W - 48, GAME_H - 100, 0x0a0c10, 0.96)
-      .setStrokeStyle(3, COLORS.green)
+      .rectangle(GAME_W / 2, GAME_H / 2 + 8, GAME_W - 32, GAME_H - 64, 0x0a0c10, 0.98)
+      .setStrokeStyle(4, COLORS.green)
       .setScrollFactor(0)
       .setDepth(d)
       .setVisible(false);
     this.mapzText = this.add
-      .text(GAME_W / 2, GAME_H / 2, '', {
-        ...PANEL_STYLE,
-        fontSize: '11px',
+      .text(48, HUD_H + 24, '', {
+        fontFamily: 'monospace, "Courier New", "Press Start 2P"',
+        fontSize: '13px',
         color: '#7dffb3',
-        align: 'center',
+        align: 'left',
+        lineSpacing: 6,
+        wordWrap: { width: GAME_W - 96 },
       })
-      .setOrigin(0.5)
+      .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(d + 1)
       .setVisible(false);
+  }
+
+  /** Ensure mapz chrome exists (soft UI reuse can leave null panels). */
+  private ensureMapzChrome(): void {
+    if (!this.mapzBg?.active || !this.mapzText?.active) {
+      this.buildMapzPanel();
+    }
   }
 
   private buildForjingPanel(): void {
@@ -436,13 +449,18 @@ export class UIScene extends Phaser.Scene {
   };
 
   private onMapzToggle = (text: string): void => {
-    if (this.dialogOpen || this.inventoryOpen || this.forjingOpen) {
-      if (this.mapzOpen) this.setMapzVisible(false, '');
-      return;
-    }
+    this.ensureMapzChrome();
+    // Closing always allowed
     if (this.mapzOpen) {
       this.setMapzVisible(false, '');
       return;
+    }
+    // Opening blocked only by inventory / forjing (dialog ok after pickup)
+    if (this.inventoryOpen || this.forjingOpen) return;
+    if (this.dialogOpen) {
+      // Close dialog chrome so mapz is readable
+      this.resetDialogVisuals();
+      this.game.events.emit('dialog-state', false);
     }
     this.setMapzVisible(true, text || 'MAPZ');
   };
@@ -466,10 +484,20 @@ export class UIScene extends Phaser.Scene {
   };
 
   private setMapzVisible(open: boolean, text: string): void {
+    if (open) this.ensureMapzChrome();
     this.mapzOpen = open;
-    this.mapzBg?.setVisible(open);
-    this.mapzText?.setVisible(open);
-    if (open && this.mapzText) this.mapzText.setText(text);
+    if (this.mapzBg) {
+      this.mapzBg.setVisible(open);
+      this.mapzBg.setDepth(200);
+    }
+    if (this.mapzText) {
+      this.mapzText.setVisible(open);
+      this.mapzText.setDepth(201);
+      if (open) {
+        this.mapzText.setText(text || 'MAPZ');
+        this.mapzText.setAlpha(1);
+      }
+    }
     this.game.events.emit('mapz-state', open);
   }
 
@@ -582,7 +610,9 @@ export class UIScene extends Phaser.Scene {
       : save.landsCleared.includes('dunjunz')
         ? '  Q'
         : '';
-    this.roomText?.setText(roomTitle + '  [I/M]' + questTag);
+    const mapzHint =
+      (save.discoveredMapz?.length ?? 0) > 0 ? '  [M MAPZ]' : '';
+    this.roomText?.setText(roomTitle + '  [I]' + mapzHint + questTag);
     if (this.inventoryOpen) this.renderInventory(save);
   };
 

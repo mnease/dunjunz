@@ -48,6 +48,7 @@ import {
   formatMapzPanel,
   landForRoom,
   markRoomVisited,
+  reconcileMapzFromCollected,
 } from '../systems/mapz';
 import {
   formatForjingPanel,
@@ -205,7 +206,7 @@ export class GameScene extends Phaser.Scene {
     this.actors = [];
     this.tileGrid = [];
 
-    this.save = loadSave();
+    this.save = reconcileMapzFromCollected(loadSave());
     this.roomOriginX = (GAME_W - MAP_PIXEL_W) / 2;
     this.roomOriginY = HUD_H + (GAME_H - HUD_H - MAP_PIXEL_H) / 2;
 
@@ -231,6 +232,7 @@ export class GameScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.N,
       Phaser.Input.Keyboard.KeyCodes.W,
       Phaser.Input.Keyboard.KeyCodes.M,
+      Phaser.Input.Keyboard.KeyCodes.TAB,
       Phaser.Input.Keyboard.KeyCodes.F,
     ]);
     this.cursors = kb.createCursorKeys();
@@ -271,6 +273,7 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-N', () => this.cycleEquip('amulet'));
     kb.on('keydown-K', () => this.cycleEquip('key'));
     kb.on('keydown-M', this.onMapzKey, this);
+    kb.on('keydown-TAB', this.onMapzKey, this);
     kb.on('keydown-ONE', () => this.onDigitKey(1));
     kb.on('keydown-TWO', () => this.onDigitKey(2));
     kb.on('keydown-THREE', () => this.onDigitKey(3));
@@ -315,6 +318,7 @@ export class GameScene extends Phaser.Scene {
       kb.off('keydown-W', this.onWeaponEquipKey, this);
       kb.off('keydown-F', this.onForjingOrShoesKey, this);
       kb.off('keydown-M', this.onMapzKey, this);
+      kb.off('keydown-TAB', this.onMapzKey, this);
       writeSave(this.save);
     });
 
@@ -424,11 +428,16 @@ export class GameScene extends Phaser.Scene {
 
   private onMapzKey = (): void => {
     if (this.paused) return; // pause uses M for title (handled in update)
-    if (this.dialogLocked || this.inventoryOpen || this.forjingOpen) return;
+    if (this.inventoryOpen || this.forjingOpen) return;
+    // Allow open even while dialog is up (pickup says PRESS M)
+    this.openMapzPanel();
+  };
+
+  private openMapzPanel(): void {
     const land = landForRoom(ROOMS, this.save.roomId);
     const text = formatMapzPanel(ROOMS, this.save, land);
     this.game.events.emit('mapz-toggle', text);
-  };
+  }
 
   private onForjingOrShoesKey = (): void => {
     if (this.inventoryOpen) {
@@ -1110,11 +1119,22 @@ export class GameScene extends Phaser.Scene {
     } else if (actor.kind === 'mapz') {
       const land = actor.mapzId ?? landForRoom(ROOMS, this.save.roomId);
       this.save = discoverMapz(this.save, land);
+      writeSave(this.save);
+      this.emitHud();
       const lines = actor.dialog?.length
         ? actor.dialog
         : [`MAPZ ACQUIRED: ${land.toUpperCase()}!`, 'PRESS M TO VIEW.'];
       this.game.events.emit('dialog-show', lines);
-      this.game.events.emit('toast', `MAPZ: ${land.toUpperCase()}`);
+      this.game.events.emit('toast', `MAPZ: ${land.toUpperCase()} — PRESS M`);
+      // Auto-open mapz after the pickup dialog is dismissed
+      const openAfterDialog = (open: boolean) => {
+        if (open) return;
+        this.game.events.off('dialog-state', openAfterDialog);
+        this.time.delayedCall(80, () => this.openMapzPanel());
+      };
+      this.game.events.on('dialog-state', openAfterDialog);
+      actor.sprite.destroy();
+      return;
     }
 
     actor.sprite.destroy();

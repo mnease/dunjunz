@@ -32,6 +32,7 @@ import {
   formatMapzPanel,
   hasMapz,
   markRoomVisited,
+  reconcileMapzFromCollected,
 } from './mapz';
 import {
   forjeCraft,
@@ -333,6 +334,16 @@ describe('mapz discovery + fog of war', () => {
     const text = formatMapzPanel(ROOMS, save, 'surface');
     expect(text).toContain('SURFACE');
     expect(text).toContain('@');
+    expect(text).toContain('ROOMS:');
+    expect(text).toContain('MEADOW');
+  });
+
+  it('reconcileMapzFromCollected recovers scroll pickups', () => {
+    let save = defaultSave();
+    save.discoveredMapz = [];
+    save.collected = ['mapz-surface'];
+    save = reconcileMapzFromCollected(save);
+    expect(save.discoveredMapz).toContain('surface');
   });
 });
 

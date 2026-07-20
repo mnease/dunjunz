@@ -92,10 +92,26 @@ export function formatMapzPanel(
   land: LandId,
 ): string {
   if (!hasMapz(save, land)) {
-    return `NO ${LANDS[land].name} YET.\nFIND A MAPZ SCROLL.`;
+    return [
+      `NO ${LANDS[land].name} YET.`,
+      'FIND A MAPZ SCROLL.',
+      '',
+      `YOU HAVE: ${save.discoveredMapz.join(', ') || '(none)'}`,
+      '',
+      'M / TAB  CLOSE',
+    ].join('\n');
   }
   const cells = buildMapzCells(rooms, save, land);
-  if (!cells.length) return `${LANDS[land].name}\n(empty)`;
+  if (!cells.length) {
+    return [
+      LANDS[land].name,
+      LANDS[land].blurb,
+      '',
+      '(no rooms tagged for this land)',
+      '',
+      'M / TAB  CLOSE',
+    ].join('\n');
+  }
 
   const xs = cells.map((c) => c.mapX);
   const ys = cells.map((c) => c.mapY);
@@ -105,22 +121,41 @@ export function formatMapzPanel(
   const maxY = Math.max(...ys);
 
   const byKey = new Map(cells.map((c) => [`${c.mapX},${c.mapY}`, c]));
-  const lines = [LANDS[land].name, LANDS[land].blurb, ''];
+  const lines = [
+    `=== ${LANDS[land].name} ===`,
+    LANDS[land].blurb,
+    '',
+  ];
 
-  // Y high at top (north)
+  // Y high at top (north) — fixed-width cells so the grid is readable
   for (let y = maxY; y >= minY; y--) {
     let row = '';
     for (let x = minX; x <= maxX; x++) {
       const c = byKey.get(`${x},${y}`);
-      if (!c) row += '  ';
-      else if (c.current) row += '@ ';
-      else if (c.visited) row += 'O ';
-      else row += '? ';
+      if (!c) row += ' . ';
+      else if (c.current) row += '[@]';
+      else if (c.visited) row += '[O]';
+      else row += '[?]';
     }
-    lines.push(row.trimEnd());
+    lines.push(row);
   }
-  lines.push('', '@ YOU  O VISITED  ? UNKNOWN');
-  lines.push('M CLOSE MAPZ');
+
+  lines.push('');
+  lines.push('[@] YOU   [O] VISITED   [?] UNKNOWN');
+  lines.push('');
+  lines.push('ROOMS:');
+  const sorted = [...cells].sort((a, b) => b.mapY - a.mapY || a.mapX - b.mapX);
+  for (const c of sorted) {
+    const mark = c.current ? '@' : c.visited ? 'O' : '?';
+    lines.push(` ${mark} ${c.title}`);
+  }
+  lines.push('');
+  const others = save.discoveredMapz.filter((l) => l !== land);
+  if (others.length) {
+    lines.push(`OTHER MAPZ: ${others.join(', ').toUpperCase()}`);
+    lines.push('(go there, then press M)');
+  }
+  lines.push('M / TAB / ESC  CLOSE');
   return lines.join('\n');
 }
 
@@ -129,4 +164,24 @@ export function landForRoom(
   roomId: string,
 ): LandId {
   return rooms[roomId]?.land ?? 'surface';
+}
+
+/** Recover mapz discovery from collected scroll entity ids. */
+export function reconcileMapzFromCollected(save: SaveData): SaveData {
+  const fromScroll: Partial<Record<string, LandId>> = {
+    'mapz-surface': 'surface',
+    'mapz-dunjunz': 'dunjunz',
+    'mapz-woodz': 'woodz',
+    'mapz-dezertz': 'dezertz',
+  };
+  let next = save;
+  for (const id of save.collected) {
+    const land = fromScroll[id];
+    if (land) next = discoverMapz(next, land);
+  }
+  // Surface is always known once you leave the title (starter land)
+  if (!next.discoveredMapz.includes('surface')) {
+    next = discoverMapz(next, 'surface');
+  }
+  return next;
 }
