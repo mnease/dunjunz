@@ -307,14 +307,18 @@ export class GameScene extends Phaser.Scene {
     this.player.setBodySize(10, 12, true);
     this.refreshPlayerAppearance();
 
+    // Keep sword GO + body ALWAYS active. Disabling the body between swings
+    // breaks Arcade overlap vs some enemies (notably oversized cube/boss frames).
     this.swordHit = this.physics.add.image(-999, -999, 'sword-swing');
     this.swordHit.setScale(SCALE);
     this.swordHit.setDepth(15);
     this.swordHit.setVisible(false);
-    this.swordHit.setActive(false);
+    this.swordHit.setActive(true);
     const swordBody = this.swordHit.body as Phaser.Physics.Arcade.Body;
     swordBody.setAllowGravity(false);
-    swordBody.enable = false;
+    swordBody.enable = true;
+    swordBody.setSize(20, 20);
+    swordBody.moves = false;
 
     this.physics.add.collider(this.player, this.walls);
 
@@ -861,21 +865,21 @@ export class GameScene extends Phaser.Scene {
     ].includes(def.kind);
 
     // Pickups / talkers: immovable, fat talk hitbox
-    // Hostiles: collidable with walls, smaller body so they don't clip tiles
+    // Hostiles: collidable with walls; hitbox from frame size (cube is 20px, not 16)
     if (hostile) {
       sprite.setImmovable(false);
       sprite.setCollideWorldBounds(true);
       const body = sprite.body as Phaser.Physics.Arcade.Body;
-      // Cube is bigger — larger body + bounce off walls
-      if (def.kind === 'cube' || def.kind === 'boss') {
-        sprite.setSize(12, 12);
-        sprite.setOffset(2, 2);
-      } else {
-        sprite.setSize(10, 10);
-        sprite.setOffset(3, 3);
-      }
+      const fw = sprite.frame.width;
+      const fh = sprite.frame.height;
+      // Generous combat hitbox so sword/player overlap works on large sprites
+      const bw = Math.max(10, Math.floor(fw * 0.85));
+      const bh = Math.max(10, Math.floor(fh * 0.85));
+      body.setSize(bw, bh);
+      body.setOffset((fw - bw) / 2, (fh - bh) / 2);
       body.setBounce(0, 0);
       body.setMaxVelocity(120, 120);
+      body.enable = true;
       this.physics.add.collider(sprite, this.walls);
     } else {
       sprite.setImmovable(true);
@@ -965,10 +969,7 @@ export class GameScene extends Phaser.Scene {
 
   private hurtPlayer(from: Actor): void {
     if (!from.alive || this.invuln > 0 || this.dialogLocked || this.paused) return;
-    if (from.kind === 'cube' && from.dialog && !this.save.flags['cube-talked']) {
-      this.save.flags['cube-talked'] = true;
-      this.game.events.emit('dialog-show', from.dialog);
-    }
+    // Cube dialog is E-to-talk only — auto-dialog on touch locked combat
 
     // Base hit is 2 hearts; armor reduces damage (min 1) so gear matters
     const baseDmg = 2;
@@ -1478,14 +1479,37 @@ export class GameScene extends Phaser.Scene {
     this.swordHit.setDepth(15);
     const body = this.swordHit.body as Phaser.Physics.Arcade.Body;
     body.enable = true;
+    body.moves = false;
+    // Larger than sprite so overlaps vs big creeps (cube 20px frame) register
+    body.setSize(28, 28);
     body.reset(x, y);
-    body.setSize(18, 18);
+
+    // Immediate range check — reliable vs oversized frames if overlap misses a frame
+    const reach = TILE * SCALE * 1.35;
+    for (const a of this.actors) {
+      if (!a.alive) continue;
+      if (
+        !['slime', 'skeleton', 'redshirt', 'cube', 'boss', 'wolf', 'cactus'].includes(
+          a.kind,
+        )
+      ) {
+        continue;
+      }
+      const dist = Phaser.Math.Distance.Between(
+        x,
+        y,
+        a.sprite.x,
+        a.sprite.y,
+      );
+      if (dist <= reach) this.hitEnemy(a);
+    }
+
     // Keep attacking flag true long enough for overlap callbacks
-    this.time.delayedCall(180, () => {
+    this.time.delayedCall(220, () => {
       this.swordHit.setVisible(false);
-      this.swordHit.setActive(false);
-      body.enable = false;
       this.swordHit.setPosition(-999, -999);
+      body.reset(-999, -999);
+      // Leave body enabled so next swing overlaps rebind cleanly
       this.attacking = false;
       // Sword returns to hip when swing ends
       this.refreshPlayerAppearance();
