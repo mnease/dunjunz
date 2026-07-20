@@ -26,15 +26,24 @@ npm run preview
 | --- | --- |
 | Arrow keys / WASD | Move |
 | Space / Z | Attack (after you have the sword) |
-| E | Talk / read / interact |
-| Enter | Advance dialog |
+| E / Enter | Talk / read / open chest |
+| B | Buy featured item from nearby merchant |
+| Enter / Space | Advance dialog |
 | Esc | Pause |
 | M (while paused) | Return to title |
 | R (on title) | New game (clears save) |
 
 Progress is stored in `localStorage` (`dunjunz-save-v1`).
 
-## Vertical slice (v0.1)
+## RPG systems (v0.2)
+
+- **XP & levels** — enemies grant XP; HUD shows `LVn into/needXP`
+- **Coins & inventory** — chests and shops feed a coin balance + item bag
+- **Treasure chests** — multi-loot (coins, potion, armor, treasure); one-shot via `collected`
+- **Traveling tinkerer** — talk for catalog, **B** to buy (fails cleanly if broke)
+- Pure logic in `src/systems/{progression,loot,shop}.ts` with `npm test`
+
+## Vertical slice (v0.1+)
 
 - Title screen + continue / new game
 - Overworld meadow with the obligatory old man and starter sword
@@ -45,6 +54,7 @@ Progress is stored in `localStorage` (`dunjunz-save-v1`).
   - USS Plot Hole (redshirts + captain’s log)
   - Hall of Bad Ideas
   - Boss: the Dungeon Master
+- Chests + tinkerer merchants on the trail and near the throne
 - Hearts, key, combat, lava hazard, malfunctioning transporter pads
 - CRT chrome UI, pixel-art textures generated at runtime (no external sprite pack required)
 

@@ -213,6 +213,24 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(9, 4, 1, 1);
   });
 
+  // Traveling tinkerer / merchant (pack + hat)
+  canvasTex(scene, 'merchant', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(3, 7, 10, 7);
+    ctx.fillStyle = '#c9a227';
+    ctx.fillRect(2, 6, 12, 3);
+    ctx.fillStyle = '#e8c4a0';
+    ctx.fillRect(5, 2, 6, 5);
+    ctx.fillStyle = '#5c3d1a';
+    ctx.fillRect(4, 1, 8, 2);
+    ctx.fillRect(7, 0, 2, 2);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(6, 4, 1, 1);
+    ctx.fillRect(9, 4, 1, 1);
+    ctx.fillStyle = hex(COLORS.gold);
+    ctx.fillRect(12, 9, 2, 2);
+  });
+
   canvasTex(scene, 'key', TILE, TILE, (ctx) => {
     ctx.fillStyle = hex(COLORS.gold);
     ctx.beginPath();

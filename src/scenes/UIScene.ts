@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { COLORS, GAME_W, HUD_H } from '../config';
+import { xpProgressInLevel } from '../systems/progression';
 import type { SaveData } from '../types';
 
 /**
@@ -188,14 +189,23 @@ export class UIScene extends Phaser.Scene {
     const filled = Math.max(0, Math.ceil(save.hp / 2));
     const empty = Math.max(0, Math.ceil(save.maxHp / 2) - filled);
     this.heartsText.setText(`${'♥'.repeat(filled)}${'♡'.repeat(empty)}`);
-    const items = [
-      save.hasSword ? 'SWORD' : null,
+
+    const band = xpProgressInLevel(save.xp);
+    const xpPart =
+      band.need > 0
+        ? `LV${save.level} ${band.into}/${band.need}XP`
+        : `LV${save.level} MAX`;
+    const gear = [
+      save.hasSword ? 'SW' : null,
       save.hasKey ? 'KEY' : null,
+      save.armor > 0 ? `DEF${save.armor}` : null,
       save.bossDefeated ? 'CROWN' : null,
     ]
       .filter(Boolean)
-      .join('  ·  ');
-    this.itemsText?.setText(items || 'NO LOOT YET');
+      .join(' ');
+    this.itemsText?.setText(
+      `${xpPart}  ${save.coins}c${gear ? '  ' + gear : ''}`,
+    );
     this.roomText?.setText(roomTitle);
   };
 

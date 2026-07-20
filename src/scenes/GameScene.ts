@@ -12,6 +12,19 @@ import {
   VIEW_TILES_W,
 } from '../config';
 import { ROOMS } from '../data/world';
+import {
+  enemyXpReward,
+  grantXp,
+} from '../systems/progression';
+import {
+  applyLootToSave,
+  lootSummary,
+  openChest,
+} from '../systems/loot';
+import {
+  attemptFeaturedPurchase,
+  shopCatalogLines,
+} from '../systems/shop';
 import { loadSave, writeSave } from '../systems/save';
 import type { EntityDef, EntityKind, RoomDef, SaveData, TileKind } from '../types';
 
@@ -26,6 +39,8 @@ interface Actor {
   aiTimer: number;
   alive: boolean;
   interactive: boolean;
+  chestTable?: string;
+  shopId?: string;
 }
 
 const SOLID: TileKind[] = ['wall', 'water', 'void', 'locked'];
@@ -65,6 +80,7 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   cube: 'cube',
   boss: 'boss',
   npc: 'npc',
+  merchant: 'merchant',
   key: 'key',
   heart: 'heart',
   sword: 'sword-item',
@@ -92,6 +108,7 @@ export class GameScene extends Phaser.Scene {
     e: Phaser.Input.Keyboard.Key;
     m: Phaser.Input.Keyboard.Key;
     enter: Phaser.Input.Keyboard.Key;
+    b: Phaser.Input.Keyboard.Key;
   };
   private facing: 'up' | 'down' | 'left' | 'right' = 'down';
   private attacking = false;
@@ -142,6 +159,7 @@ export class GameScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.Z,
       Phaser.Input.Keyboard.KeyCodes.E,
       Phaser.Input.Keyboard.KeyCodes.ENTER,
+      Phaser.Input.Keyboard.KeyCodes.B,
     ]);
     this.cursors = kb.createCursorKeys();
     this.keys = {
@@ -155,13 +173,15 @@ export class GameScene extends Phaser.Scene {
       e: kb.addKey(Phaser.Input.Keyboard.KeyCodes.E),
       m: kb.addKey(Phaser.Input.Keyboard.KeyCodes.M),
       enter: kb.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER),
+      b: kb.addKey(Phaser.Input.Keyboard.KeyCodes.B),
     };
 
-    // Event-based attack / interact (Enter talks when dialog closed; advances when open via UI)
+    // Event-based attack / interact / shop buy
     kb.on('keydown-SPACE', this.onAttackKey, this);
     kb.on('keydown-Z', this.onAttackKey, this);
     kb.on('keydown-E', this.onInteractKey, this);
     kb.on('keydown-ENTER', this.onInteractKey, this);
+    kb.on('keydown-B', this.onBuyKey, this);
 
     this.player = this.physics.add.sprite(0, 0, 'player');
     this.player.setScale(SCALE);
@@ -188,6 +208,7 @@ export class GameScene extends Phaser.Scene {
       kb.off('keydown-Z', this.onAttackKey, this);
       kb.off('keydown-E', this.onInteractKey, this);
       kb.off('keydown-ENTER', this.onInteractKey, this);
+      kb.off('keydown-B', this.onBuyKey, this);
       writeSave(this.save);
     });
 
@@ -231,6 +252,11 @@ export class GameScene extends Phaser.Scene {
     // When dialog is open, UI handles Enter/Space to advance — don't re-open
     if (this.dialogLocked || this.paused) return;
     this.tryInteract();
+  };
+
+  private onBuyKey = (): void => {
+    if (this.dialogLocked || this.paused) return;
+    this.tryBuyFromNearbyMerchant();
   };
 
   /** Reach in world pixels (~1.75 tiles at SCALE 3). Adjacent NPCs must be hittable. */
@@ -344,18 +370,22 @@ export class GameScene extends Phaser.Scene {
     for (const def of room.entities ?? []) {
       if (def.id && this.save.killed.includes(def.id)) continue;
       if (def.id && this.save.collected.includes(def.id)) continue;
-      if (def.kind === 'chest' && !this.save.bossDefeated) {
-        // Chest only after boss
+      // Boss chest waits until the DM is defeated
+      if (
+        def.kind === 'chest' &&
+        def.id === 'boss-chest' &&
+        !this.save.bossDefeated
+      ) {
         continue;
       }
       this.spawnEntity(def);
     }
 
-    // Special: if boss defeated and chest not collected, spawn chest
+    // Ensure boss chest appears after victory if not collected
     if (roomId === 'boss' && this.save.bossDefeated) {
-      const chestDef = room.entities?.find((e) => e.kind === 'chest');
+      const chestDef = room.entities?.find((e) => e.id === 'boss-chest');
       if (chestDef && !this.save.collected.includes(chestDef.id ?? '')) {
-        const exists = this.actors.some((a) => a.kind === 'chest');
+        const exists = this.actors.some((a) => a.id === 'boss-chest');
         if (!exists) this.spawnEntity(chestDef);
       }
     }
@@ -406,14 +436,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnEntity(def: EntityDef): void {
-    const tex = ENTITY_TEX[def.kind];
+    const tex = ENTITY_TEX[def.kind] ?? 'npc';
     const pos = this.tileToWorld(def.x, def.y);
     const sprite = this.physics.add.sprite(pos.x, pos.y, tex);
     sprite.setScale(SCALE);
     sprite.setDepth(5);
     sprite.setImmovable(true);
     // Generous pickup / talk hitboxes (tile is 16px, scaled by SCALE in display)
-    if (['key', 'heart', 'sword', 'npc', 'sign', 'chest'].includes(def.kind)) {
+    if (
+      ['key', 'heart', 'sword', 'npc', 'merchant', 'sign', 'chest'].includes(
+        def.kind,
+      )
+    ) {
       sprite.setSize(14, 14);
       sprite.setOffset(1, 1);
     }
@@ -421,9 +455,16 @@ export class GameScene extends Phaser.Scene {
     const hostile = ['slime', 'skeleton', 'redshirt', 'cube', 'boss'].includes(
       def.kind,
     );
-    const interactive = ['npc', 'sign', 'chest', 'key', 'heart', 'sword', 'cube'].includes(
-      def.kind,
-    );
+    const interactive = [
+      'npc',
+      'merchant',
+      'sign',
+      'chest',
+      'key',
+      'heart',
+      'sword',
+      'cube',
+    ].includes(def.kind);
 
     let hp = def.hp ?? 1;
     if (def.kind === 'boss') hp = def.hp ?? 12;
@@ -439,7 +480,9 @@ export class GameScene extends Phaser.Scene {
       hurtCooldown: 0,
       aiTimer: 0,
       alive: true,
-      interactive: interactive || !!def.dialog,
+      interactive: interactive || !!def.dialog || !!def.shopId,
+      chestTable: def.chestTable,
+      shopId: def.shopId,
     };
 
     if (hostile) {
@@ -469,7 +512,10 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('dialog-show', from.dialog);
     }
 
-    this.save.hp = Math.max(0, this.save.hp - 1);
+    // Base hit is 2 hearts; armor reduces damage (min 1) so gear matters
+    const baseDmg = 2;
+    const dmg = Math.max(1, baseDmg - this.save.armor);
+    this.save.hp = Math.max(0, this.save.hp - dmg);
     this.invuln = 900;
     this.emitHud();
     writeSave(this.save);
@@ -539,16 +585,39 @@ export class GameScene extends Phaser.Scene {
     actor.alive = false;
     this.save.killed.push(actor.id);
 
+    // XP + level from pure progression module
+    const xpGain = enemyXpReward(actor.kind);
+    const prog = grantXp(
+      { xp: this.save.xp, level: this.save.level },
+      xpGain,
+    );
+    this.save.xp = prog.xp;
+    this.save.level = prog.level;
+    if (prog.leveledUp) {
+      this.game.events.emit(
+        'toast',
+        `LEVEL UP! NOW LV ${prog.level} (+${xpGain} XP)`,
+      );
+    } else {
+      this.game.events.emit('toast', `+${xpGain} XP`);
+    }
+
     if (actor.kind === 'boss') {
       this.save.bossDefeated = true;
       this.game.events.emit('dialog-show', [
         'THE DUNGEON MASTER FALLS!',
         'HE MUTTERS: "NEXT TIME...',
-        'I\'LL BRING A TPK..."',
+        "I'LL BRING A TPK...",
         'A CHEST APPEARS. GO ON.',
       ]);
-      const chestDef = this.room.entities?.find((e) => e.kind === 'chest');
-      if (chestDef) this.spawnEntity(chestDef);
+      const chestDef = this.room.entities?.find((e) => e.id === 'boss-chest');
+      if (
+        chestDef &&
+        !this.save.collected.includes(chestDef.id ?? '') &&
+        !this.actors.some((a) => a.id === 'boss-chest' && a.alive)
+      ) {
+        this.spawnEntity(chestDef);
+      }
     } else if (actor.kind === 'cube') {
       this.game.events.emit('toast', 'THE CUBE APOLOGIZES ONE LAST TIME');
     }
@@ -638,14 +707,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (best.kind === 'chest') {
-      if (!this.save.collected.includes(best.id)) {
-        this.save.collected.push(best.id);
-      }
-      writeSave(this.save);
-      this.game.events.emit(
-        'dialog-show',
-        best.dialog ?? ['EMPTY CHEST. RUDE.'],
-      );
+      this.openTreasureChest(best);
+      return;
+    }
+
+    if (best.kind === 'merchant' || best.shopId) {
+      const shopId = best.shopId ?? 'tinkerer';
+      const lines = best.dialog?.length
+        ? [...best.dialog, ...shopCatalogLines(shopId).slice(-4)]
+        : shopCatalogLines(shopId);
+      this.game.events.emit('dialog-show', lines);
       return;
     }
 
@@ -666,6 +737,86 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.game.events.emit('toast', 'THEY HAVE NOTHING TO SAY');
+  }
+
+  private openTreasureChest(actor: Actor): void {
+    if (!actor.alive) return;
+    if (this.save.collected.includes(actor.id)) {
+      this.game.events.emit('dialog-show', ['ALREADY LOOTED. DUSTY.']);
+      return;
+    }
+
+    const table = actor.chestTable ?? 'dungeon';
+    const drops = openChest(table);
+    this.save = applyLootToSave(this.save, drops);
+    this.save.collected.push(actor.id);
+    actor.alive = false;
+    actor.sprite.destroy();
+
+    const lines = [
+      'CHEST OPENED!',
+      ...lootSummary(drops).map((l) => `+ ${l}`),
+      ...(actor.dialog ?? []),
+    ];
+    writeSave(this.save);
+    this.emitHud();
+    this.game.events.emit('dialog-show', lines);
+  }
+
+  private tryBuyFromNearbyMerchant(): void {
+    const merchant = this.findInteractable();
+    if (
+      !merchant ||
+      (merchant.kind !== 'merchant' && !merchant.shopId)
+    ) {
+      this.game.events.emit('toast', 'NO MERCHANT NEARBY');
+      return;
+    }
+    const shopId = merchant.shopId ?? 'tinkerer';
+    const result = attemptFeaturedPurchase(
+      {
+        coins: this.save.coins,
+        inventory: this.save.inventory,
+        armor: this.save.armor,
+        hp: this.save.hp,
+        maxHp: this.save.maxHp,
+      },
+      shopId,
+    );
+
+    if (!result.ok) {
+      if (result.reason === 'insufficient_funds') {
+        this.game.events.emit(
+          'toast',
+          `NEED MORE COINS (${this.save.coins}c)`,
+        );
+        this.game.events.emit('dialog-show', [
+          'TINKERER: COME BACK WHEN',
+          'YOUR PURSE JINGLES LOUDER.',
+          `YOU HAVE ${this.save.coins} COINS.`,
+        ]);
+      } else {
+        this.game.events.emit('toast', 'CANNOT BUY THAT');
+      }
+      // Balance and inventory unchanged
+      return;
+    }
+
+    this.save.coins = result.state.coins;
+    this.save.inventory = result.state.inventory;
+    this.save.armor = result.state.armor;
+    this.save.hp = result.state.hp;
+    writeSave(this.save);
+    this.emitHud();
+    this.game.events.emit(
+      'toast',
+      `BOUGHT ${result.item.name} (-${result.item.price}c)`,
+    );
+    this.game.events.emit('dialog-show', [
+      `PURCHASED: ${result.item.name}`,
+      result.item.description,
+      `COINS LEFT: ${this.save.coins}`,
+    ]);
   }
 
   private tryAttack(): void {
