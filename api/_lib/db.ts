@@ -3,39 +3,60 @@ import { neon, type NeonQueryFunction } from '@neondatabase/serverless';
 let sql: NeonQueryFunction<false, false> | null = null;
 
 /**
- * Vercel Neon integration often injects POSTGRES_URL / POSTGRES_PRISMA_URL
- * rather than DATABASE_URL. Prefer pooled URLs for serverless.
+ * Connection string from env.
+ * Vercel Neon *Storage* integration prefixes vars with the store name, e.g.
+ *   dunjunz_POSTGRES_URL, dunjunz_DATABASE_URL
+ * Classic names also supported: DATABASE_URL, POSTGRES_URL, …
  */
+const DB_URL_KEYS = [
+  'DATABASE_URL',
+  'POSTGRES_URL',
+  'POSTGRES_PRISMA_URL',
+  'DATABASE_URL_UNPOOLED',
+  'POSTGRES_URL_NON_POOLING',
+  'POSTGRES_URL_NO_SSL',
+  'NEON_DATABASE_URL',
+  // Vercel marketplace / Storage “dunjunz” Neon integration
+  'dunjunz_DATABASE_URL',
+  'dunjunz_POSTGRES_URL',
+  'dunjunz_POSTGRES_PRISMA_URL',
+  'dunjunz_DATABASE_URL_UNPOOLED',
+  'dunjunz_POSTGRES_URL_NON_POOLING',
+  'dunjunz_POSTGRES_URL_NO_SSL',
+] as const;
+
 export function resolveDatabaseUrl(): string | null {
-  const candidates = [
-    process.env.DATABASE_URL,
-    process.env.POSTGRES_URL,
-    process.env.POSTGRES_PRISMA_URL,
-    process.env.DATABASE_URL_UNPOOLED,
-    process.env.POSTGRES_URL_NON_POOLING,
-    process.env.POSTGRES_URL_NO_SSL,
-    process.env.NEON_DATABASE_URL,
-  ];
-  for (const c of candidates) {
-    const v = c?.trim();
+  for (const k of DB_URL_KEYS) {
+    const v = process.env[k]?.trim();
     if (v) return v;
+  }
+  // Last resort: any env ending in POSTGRES_URL / DATABASE_URL with a value
+  for (const [k, v] of Object.entries(process.env)) {
+    if (
+      v?.trim() &&
+      (/_POSTGRES_URL$/i.test(k) ||
+        /_DATABASE_URL$/i.test(k) ||
+        k === 'POSTGRES_URL' ||
+        k === 'DATABASE_URL')
+    ) {
+      return v.trim();
+    }
   }
   return null;
 }
 
-/** Which env key provided the URL (for /api/health — no secrets). */
+/** Which env key provided the URL (for /api/health — not the secret). */
 export function resolveDatabaseUrlSource(): string | null {
-  const keys = [
-    'DATABASE_URL',
-    'POSTGRES_URL',
-    'POSTGRES_PRISMA_URL',
-    'DATABASE_URL_UNPOOLED',
-    'POSTGRES_URL_NON_POOLING',
-    'POSTGRES_URL_NO_SSL',
-    'NEON_DATABASE_URL',
-  ] as const;
-  for (const k of keys) {
+  for (const k of DB_URL_KEYS) {
     if (process.env[k]?.trim()) return k;
+  }
+  for (const [k, v] of Object.entries(process.env)) {
+    if (
+      v?.trim() &&
+      (/POSTGRES_URL/i.test(k) || /DATABASE_URL/i.test(k))
+    ) {
+      return k;
+    }
   }
   return null;
 }

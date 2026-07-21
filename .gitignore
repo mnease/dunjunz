@@ -10,3 +10,5 @@ dist
 # Dunjunz isolated Hive Mind token (use config.toml.example)
 .grok/config.toml
 .grok/secrets.env
+.env.vercel
+.env.local
