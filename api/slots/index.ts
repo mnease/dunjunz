@@ -66,7 +66,7 @@ export default async function handler(
         summary_land = ${sum.land},
         is_empty = false,
         save_version = ${typeof data.version === 'number' ? data.version : 5},
-        data = ${JSON.stringify(data)}::jsonb,
+        data = ${sql.json(data as never)},
         updated_at = now()
       WHERE user_id = ${auth.userId} AND slot_index = ${slotIndex}
     `;

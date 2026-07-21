@@ -44,8 +44,7 @@ export default async function handler(
     }
     const name = String(body.name || 'Imported').slice(0, 40);
     const sum = summarizeSave(body.data);
-    const blob = JSON.stringify(body.data);
-    if (blob.length > 256_000) {
+    if (JSON.stringify(body.data).length > 256_000) {
       res.status(413).json({ ok: false, error: 'Save too large.' });
       return;
     }
@@ -58,7 +57,7 @@ export default async function handler(
         summary_land = ${sum.land},
         is_empty = false,
         save_version = ${typeof body.data.version === 'number' ? body.data.version : 5},
-        data = ${blob}::jsonb,
+        data = ${sql.json(body.data as never)},
         updated_at = now()
       WHERE user_id = ${auth.userId} AND slot_index = ${slotIndex}
     `;

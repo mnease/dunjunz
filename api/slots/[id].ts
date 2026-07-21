@@ -82,8 +82,7 @@ export default async function handler(
         res.status(400).json({ ok: false, error: 'data required.' });
         return;
       }
-      const blob = JSON.stringify(body.data);
-      if (blob.length > 256_000) {
+      if (JSON.stringify(body.data).length > 256_000) {
         res.status(413).json({ ok: false, error: 'Save too large.' });
         return;
       }
@@ -126,7 +125,7 @@ export default async function handler(
             summary_land = ${sum.land},
             is_empty = false,
             save_version = ${ver},
-            data = ${blob}::jsonb,
+            data = ${sql.json(body.data as never)},
             updated_at = now()
           WHERE id = ${id} AND user_id = ${auth.userId}
         `;
@@ -138,7 +137,7 @@ export default async function handler(
             summary_land = ${sum.land},
             is_empty = false,
             save_version = ${ver},
-            data = ${blob}::jsonb,
+            data = ${sql.json(body.data as never)},
             updated_at = now()
           WHERE id = ${id} AND user_id = ${auth.userId}
         `;
@@ -162,7 +161,7 @@ export default async function handler(
         summary_level = 1,
         summary_room = 'overworld',
         summary_land = 'surface',
-        data = '{}'::jsonb,
+        data = ${sql.json({} as never)},
         updated_at = now()
       WHERE id = ${id} AND user_id = ${auth.userId}
     `;

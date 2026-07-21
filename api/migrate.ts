@@ -1,15 +1,14 @@
 /**
- * One-time schema bootstrap for Neon.
- *
- * POST /api/migrate
- *   Body: { "secret": "<MIGRATE_SECRET>" }
- *   Or if MIGRATE_ALLOW_OPEN=1: { "secret": "bootstrap-dunjunz" }
- *
- * Creates auth/slots tables. Safe to re-run (IF NOT EXISTS).
+ * One-time schema bootstrap.
+ * POST /api/migrate  { "secret": "bootstrap-dunjunz" } when MIGRATE_ALLOW_OPEN=1
+ * or { "secret": "<MIGRATE_SECRET>" }
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { neon } from '@neondatabase/serverless';
-import { resolveDatabaseUrl, resolveDatabaseUrlSource } from './_lib/db';
+import {
+  dbConfigured,
+  getSql,
+  resolveDatabaseUrlSource,
+} from './_lib/db';
 
 export default async function handler(
   req: VercelRequest,
@@ -34,23 +33,21 @@ export default async function handler(
       res.status(401).json({
         ok: false,
         error: 'unauthorized',
-        hint: 'Set MIGRATE_SECRET (or MIGRATE_ALLOW_OPEN=1) then POST the secret.',
+        hint: 'POST { "secret": "bootstrap-dunjunz" } with MIGRATE_ALLOW_OPEN=1',
       });
       return;
     }
 
-    const url = resolveDatabaseUrl();
-    if (!url) {
+    if (!dbConfigured()) {
       res.status(503).json({
         ok: false,
         error: 'no database url',
         source: resolveDatabaseUrlSource(),
-        hint: 'Expect dunjunz_POSTGRES_URL from Vercel Neon Storage',
       });
       return;
     }
 
-    const sql = neon(url);
+    const sql = getSql();
     const steps: string[] = [];
 
     await sql`CREATE EXTENSION IF NOT EXISTS pgcrypto`;
@@ -153,7 +150,7 @@ export default async function handler(
       ok: true,
       databaseUrlSource: resolveDatabaseUrlSource(),
       steps,
-      usersCount: (u[0] as { c: number }).c,
+      usersCount: u[0]?.c ?? 0,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

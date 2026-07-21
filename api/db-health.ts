@@ -1,31 +1,31 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { neon } from '@neondatabase/serverless';
-import { resolveDatabaseUrl, resolveDatabaseUrlSource } from './_lib/db';
+import {
+  dbConfigured,
+  getSql,
+  resolveDatabaseUrlSource,
+} from './_lib/db';
 
-/** Probe Neon connectivity + users table. */
 export default async function handler(
   _req: VercelRequest,
   res: VercelResponse,
 ): Promise<void> {
   try {
-    const url = resolveDatabaseUrl();
-    const source = resolveDatabaseUrlSource();
-    if (!url) {
+    if (!dbConfigured()) {
       res.status(503).json({
         ok: false,
-        error: 'DATABASE_URL / POSTGRES_URL missing',
-        hint: 'Vercel Neon storage usually sets POSTGRES_URL — redeploy after linking.',
+        error: 'No POSTGRES/DATABASE URL in env',
+        hint: 'Vercel Neon Storage should set dunjunz_POSTGRES_URL',
       });
       return;
     }
-    const sql = neon(url);
+    const sql = getSql();
     const one = await sql`SELECT 1 AS n`;
     let usersTable = false;
     let usersDetail = '';
     try {
       const u = await sql`SELECT COUNT(*)::int AS c FROM users`;
       usersTable = true;
-      usersDetail = `count=${(u[0] as { c: number }).c}`;
+      usersDetail = `count=${u[0]?.c ?? 0}`;
     } catch (e) {
       usersDetail = e instanceof Error ? e.message : String(e);
     }
@@ -34,12 +34,17 @@ export default async function handler(
       select1: one,
       usersTable,
       usersDetail,
-      databaseUrlSource: source,
+      databaseUrlSource: resolveDatabaseUrlSource(),
       node: process.version,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[db-health]', msg);
-    res.status(500).json({ ok: false, error: msg, node: process.version });
+    res.status(500).json({
+      ok: false,
+      error: msg,
+      source: resolveDatabaseUrlSource(),
+      node: process.version,
+    });
   }
 }
