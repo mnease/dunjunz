@@ -18,6 +18,8 @@ export const BOSS_ROOM_META: Record<
   string,
   { land: LandId; killId: string }
 > = {
+  /** Deep throne (B8); alias b2_boss kept for older portal checks */
+  b8_boss: { land: 'dunjunz', killId: 'dungeon-master' },
   b2_boss: { land: 'dunjunz', killId: 'dungeon-master' },
   woodz_deep: { land: 'woodz', killId: 'wolf-lord' },
   dezertz_tower: { land: 'dezertz', killId: 'sand-wraith' },
@@ -36,6 +38,7 @@ export const BOSS_ROOMS: ReadonlySet<string> = new Set(
  */
 const PORTAL_TILE: Record<string, { x: number; y: number }> = {
   // West of center aisle — south door spawns at ~ (8,9)
+  b8_boss: { x: 3, y: 7 },
   b2_boss: { x: 3, y: 7 },
   woodz_deep: { x: 3, y: 7 },
   // Near north door out to Dezertz Edge (entry is often south)
@@ -84,7 +87,12 @@ export function shouldSpawnBossExitPortal(
   if (save.landsCleared.includes(effectiveLand)) return true;
   // Dezertz rescue flag (talk path / older saves)
   if (roomId === 'dezertz_tower' && save.princessSaved) return true;
-  if (roomId === 'b2_boss' && save.bossDefeated) return true;
+  if (
+    (roomId === 'b8_boss' || roomId === 'b2_boss') &&
+    save.bossDefeated
+  ) {
+    return true;
+  }
   return false;
 }
 

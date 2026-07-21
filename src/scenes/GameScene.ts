@@ -1298,7 +1298,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Ensure boss chest appears after victory if not collected
-    if (resolved === 'b2_boss' && this.save.bossDefeated) {
+    if (
+      (resolved === 'b8_boss' || resolved === 'b2_boss') &&
+      this.save.bossDefeated
+    ) {
       const chestDef = room.entities?.find((e) => e.id === 'boss-chest');
       if (chestDef && !this.save.collected.includes(chestDef.id ?? '')) {
         const exists = this.actors.some((a) => a.id === 'boss-chest');
@@ -1322,7 +1325,11 @@ export class GameScene extends Phaser.Scene {
     this.syncCompanion();
     this.flushAchievements();
 
-    if (resolved === 'b2_boss' && !this.save.bossDefeated && !this.bossIntroShown) {
+    if (
+      (resolved === 'b8_boss' || resolved === 'b2_boss') &&
+      !this.save.bossDefeated &&
+      !this.bossIntroShown
+    ) {
       this.bossIntroShown = true;
       const boss = this.actors.find((a) => a.kind === 'boss');
       if (boss?.dialog) {
@@ -2461,7 +2468,11 @@ export class GameScene extends Phaser.Scene {
       }
       return;
     }
-    if (actor.id === 'dungeon-master' || this.room.id === 'b2_boss') {
+    if (
+      actor.id === 'dungeon-master' ||
+      this.room.id === 'b8_boss' ||
+      this.room.id === 'b2_boss'
+    ) {
       if (isHardRunActive(this.save, 'dunjunz')) {
         if (!this.save.flags['hard_king_loot']) {
           const r = rewardHardKing(this.save);

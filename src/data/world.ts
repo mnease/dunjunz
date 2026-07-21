@@ -1,4 +1,5 @@
 import type { RoomDef } from '../types';
+import { buildAllDeepRooms } from './world-deep';
 
 /**
  * Tile legend (authored 16×11 rooms, NES Zelda-style):
@@ -33,10 +34,9 @@ import type { RoomDef } from '../types';
  *              (0,0) b1_entrance --E-- (1,0) b1_cube
  *                 | U up to overworld
  *
- * B2 (floor -2)
- *              (0,1) b2_boss
- *                 |
- *              (0,0) b2_foyer  U up to B1
+ * B2…B7 (generated in world-deep.ts) — 4 rooms each, stairs chain
+ * B8 (floor -8) — throne of meta (dungeon-master)
+ * Woodz / Dezertz / Sewerz also gain B1–B3 / B2–B4 deep wings (4× levels).
  */
 
 export const ROOMS: Record<string, RoomDef> = {
@@ -487,7 +487,7 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 8,
         y: 8,
         dialog: [
-          'NORTH: STAIRS TO B2',
+          'NORTH: STAIRS TO B2–B8',
           'THE DUNJUN GOES DEEPER. ON PURPOSE.',
           'SOUTH: BACK TO THE GATE. NO SHAME.',
         ],
@@ -525,8 +525,8 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 3,
         y: 8,
         dialog: [
-          'STAIRS DOWN: B2',
-          'THE THRONE AWAITS BELOW.',
+          'STAIRS DOWN: B2…B8',
+          'EIGHT FLOORS. THE THRONE IS AT THE BOTTOM.',
           'SOUTH: HALL OF BAD IDEAS.',
         ],
       },
@@ -539,132 +539,7 @@ export const ROOMS: Record<string, RoomDef> = {
     ],
   },
 
-  // ─── B2 ──────────────────────────────────────────────────
-  b2_foyer: {
-    id: 'b2_foyer',
-    title: 'LOWER FOYER · B2',
-    land: 'dunjunz',
-    floor: -2,
-    mapX: 0,
-    mapY: 0,
-    north: 'b2_boss',
-    stairsUp: 'b1_descent',
-    // Open stairs-up in the middle of the floor (was a sealed UUUU pit)
-    tiles: [
-      '########D#######',
-      '#..............#',
-      '#..............#',
-      '#......U.......#',
-      '#..............#',
-      '#..............#',
-      '#..............#',
-      '#..............#',
-      '#..............#',
-      '#..............#',
-      '################',
-    ],
-    entities: [
-      {
-        kind: 'sign',
-        id: 'b2-foyer-sign',
-        x: 12,
-        y: 8,
-        dialog: [
-          'B2: THE LOWER DEPTHS. VERY LOWER.',
-          'U = STAIRS UP (FRESH AIR OPTIONAL)',
-          'N = THRONE OF META. BRING SNACKS.',
-        ],
-      },
-      {
-        kind: 'slime',
-        id: 'b2-slime-1',
-        x: 4,
-        y: 8,
-      },
-      {
-        kind: 'slime',
-        id: 'b2-slime-2',
-        x: 11,
-        y: 8,
-      },
-    ],
-  },
-
-  b2_boss: {
-    id: 'b2_boss',
-    title: 'THRONE OF META · B2',
-    land: 'dunjunz',
-    floor: -2,
-    mapX: 0,
-    mapY: 1,
-    south: 'b2_foyer',
-    tiles: [
-      '################',
-      '#..............#',
-      '#..##......##..#',
-      '#..............#',
-      '#..............#',
-      '#......==......#',
-      '#..............#',
-      '#..............#',
-      '#..##......##..#',
-      '#..............#',
-      '########D#######',
-    ],
-    entities: [
-      {
-        kind: 'boss',
-        id: 'dungeon-master',
-        x: 8,
-        y: 3,
-        hp: 52,
-        dialog: [
-          'I AM THE DUNGEON MASTER!',
-          'PRIZELLA? YEAH I SHIPPED HER',
-          'TO THE DEZERTZ. HA. HA. ...HA.',
-          'ROLL FOR INITIATIVE—',
-          'NAT 1. AWKWARD.',
-          'OKAY FINE. FIGHT!',
-        ],
-      },
-      {
-        kind: 'chest',
-        id: 'boss-chest',
-        x: 8,
-        y: 5,
-        chestTable: 'boss',
-        dialog: [
-          'LEGENDARY DUNJUN LOOT. SHINY.',
-          'MAPZ OF THE WIDE WEIRD WORLD...',
-          'PRIZELLA\'S IN THE DEZERTZ. GO GET HER.',
-        ],
-      },
-      {
-        kind: 'mapz',
-        id: 'mapz-dunjunz',
-        x: 12,
-        y: 3,
-        mapzId: 'dunjunz',
-        dialog: [
-          'DUNJUNZ MAPZ! IT\'S ALL HALLWAYS.',
-          'PRESS M. GET LOST ON PURPOSE.',
-        ],
-      },
-      {
-        kind: 'merchant',
-        id: 'tinkerer-boss',
-        x: 3,
-        y: 8,
-        shopId: 'tinkerer',
-        dialog: [
-          'TINKERER: YEAH SHE WAS NEVER HERE.',
-          'I\'D KNOW. I SELL TO EVERYONE.',
-          'TRY THE DEZERTZ TOWER. HOT. SANDY.',
-          'E FOR THE SHOP. BUY STUFF. LIVE A LITTLE.',
-        ],
-      },
-    ],
-  },
+  // B2–B8: generated in world-deep.ts (4× floor depth). Merged below.
 
   // ─── WOODZ ───────────────────────────────────────────────
   /** Forest approach between trail and deeper woodz. */
@@ -934,11 +809,12 @@ export const ROOMS: Record<string, RoomDef> = {
     mapX: 1,
     mapY: 3,
     south: 'woodz_edge',
+    stairsDown: 'woodz_b1_foyer',
     tiles: [
       '################',
       '#gg..........gg#',
       '#g....####....g#',
-      '#g...#....#...g#',
+      '#g...#..S.#...g#',
       '#g...#....#...g#',
       '#g............g#',
       '#g...#....#...g#',
@@ -1233,11 +1109,12 @@ export const ROOMS: Record<string, RoomDef> = {
     mapY: -3,
     // Edge is north of the tower — door must open north (was sealed wall + dead-end south D).
     north: 'dezertz_edge',
+    stairsDown: 'dezertz_b1_foyer',
     tiles: [
       '########D#######',
       '#dd..........dd#',
       '#d....####....d#',
-      '#d...#....#...d#',
+      '#d...#..S.#...d#',
       '#d...#....#...d#',
       '#d............d#',
       '#d...#....#...d#',
@@ -1562,12 +1439,12 @@ export const ROOMS: Record<string, RoomDef> = {
     mapY: 0,
     west: 'sewerz_mouth',
     north: 'sewerz_fork',
-    east: 'sewerz_boss',
+    stairsDown: 'sewerz_b2_foyer',
     tiles: [
       '########D#######',
       '#..............#',
       '#.####....####.#',
-      '#.#..........#.#',
+      '#.#....S.....#.#',
       '#.#..~~~~~~..#.#',
       '....#......#....',
       '#.#..~~~~~~..#.#',
@@ -1648,51 +1525,11 @@ export const ROOMS: Record<string, RoomDef> = {
     ],
   },
 
-  sewerz_boss: {
-    id: 'sewerz_boss',
-    title: 'HONK CHAMBER · SEWERZ',
-    land: 'sewerz',
-    floor: -1,
-    mapX: 6,
-    mapY: 0,
-    west: 'sewerz_hall',
-    tiles: [
-      '################',
-      '#..............#',
-      '#..##......##..#',
-      '#..............#',
-      '#..............#',
-      '......~~~~......',
-      '#..............#',
-      '#..............#',
-      '#..##......##..#',
-      '#..............#',
-      '################',
-    ],
-    entities: [
-      {
-        kind: 'boss',
-        id: 'royal-goose',
-        x: 8,
-        y: 3,
-        hp: 72,
-        dialog: [
-          'ROYAL GOOSE: HONK.',
-          'HONK HONK. (THAT WAS A THREAT.)',
-          'THE TAX SCROLLS ARE MINE.',
-          'FACE THE BILL. LITERALLY.',
-        ],
-      },
-      {
-        kind: 'chest',
-        id: 'sewer-boss-chest',
-        x: 8,
-        y: 7,
-        chestTable: 'boss',
-      },
-    ],
-  },
+  // sewerz_boss + B2–B4: generated in world-deep.ts
 };
+
+// Merge deep wings (4× floor counts per dunjun land)
+Object.assign(ROOMS, buildAllDeepRooms());
 
 /** Old room ids → new map ids (save migration). */
 export const ROOM_ALIASES: Record<string, string> = {
@@ -1701,7 +1538,9 @@ export const ROOM_ALIASES: Record<string, string> = {
   dungeon_2: 'b1_gate',
   trek_room: 'b1_trek',
   dungeon_3: 'b1_hall',
-  boss: 'b2_boss',
+  /** Old shallow throne → deep B8 throne */
+  boss: 'b8_boss',
+  b2_boss: 'b8_boss',
 };
 
 export function resolveRoomId(id: string): string {

@@ -785,6 +785,32 @@ describe('mapz discovery + fog of war', () => {
   });
 });
 
+describe('deep dungeons 4× floors', () => {
+  it('dunjunz has 8 basement floors ending in B8 throne', async () => {
+    const { floorsForLand } = await import('./mapz');
+    const floors = floorsForLand(ROOMS, 'dunjunz');
+    expect(floors).toContain(-1);
+    expect(floors).toContain(-8);
+    expect(floors.length).toBeGreaterThanOrEqual(8);
+    expect(ROOMS.b8_boss?.floor).toBe(-8);
+    expect(ROOMS.b1_descent?.stairsDown).toBe('b2_foyer');
+    expect(ROOMS.b7_descent?.stairsDown).toBe('b8_foyer');
+    expect(ROOMS.b8_boss?.entities?.some((e) => e.id === 'dungeon-master')).toBe(
+      true,
+    );
+  });
+
+  it('woodz, dezertz, sewerz each have multi-floor deep wings', async () => {
+    const { floorsForLand } = await import('./mapz');
+    expect(floorsForLand(ROOMS, 'woodz').length).toBeGreaterThanOrEqual(4);
+    expect(floorsForLand(ROOMS, 'dezertz').length).toBeGreaterThanOrEqual(4);
+    expect(floorsForLand(ROOMS, 'sewerz').length).toBeGreaterThanOrEqual(4);
+    expect(ROOMS.woodz_deep?.stairsDown).toBe('woodz_b1_foyer');
+    expect(ROOMS.dezertz_tower?.stairsDown).toBe('dezertz_b1_foyer');
+    expect(ROOMS.sewerz_boss?.floor).toBe(-4);
+  });
+});
+
 describe('world tile geometry', () => {
   it('every authored room tile row is exactly 16 wide (no silent wall pad)', () => {
     for (const room of Object.values(ROOMS)) {
@@ -947,7 +973,8 @@ describe('boss exit portals', () => {
       shouldSpawnBossExitPortal,
       isBossRoom,
     } = await import('./portal');
-    expect(isBossRoom('b2_boss')).toBe(true);
+    expect(isBossRoom('b8_boss')).toBe(true);
+    expect(isBossRoom('b2_boss')).toBe(true); // alias
     expect(isBossRoom('woodz_deep')).toBe(true);
     expect(isBossRoom('dezertz_tower')).toBe(true);
     expect(isBossRoom('b1_entrance')).toBe(false);
@@ -956,15 +983,15 @@ describe('boss exit portals', () => {
     expect(dungeonEntranceForLand('dezertz')).toBe('dezertz_edge');
     expect(dungeonEntranceForLand('surface')).toBeNull();
 
-    const def = bossExitPortalDef('b2_boss', 'dunjunz');
+    const def = bossExitPortalDef('b8_boss', 'dunjunz');
     expect(def?.kind).toBe('portal');
     expect(def?.portalTarget).toBe('b1_entrance');
     expect(def?.id).toBe('exit-portal-dunjunz');
 
     let save = defaultSave();
-    expect(shouldSpawnBossExitPortal(save, 'b2_boss', 'dunjunz')).toBe(false);
+    expect(shouldSpawnBossExitPortal(save, 'b8_boss', 'dunjunz')).toBe(false);
     save = rewardDunjunzClear(save).save;
-    expect(shouldSpawnBossExitPortal(save, 'b2_boss', 'dunjunz')).toBe(true);
+    expect(shouldSpawnBossExitPortal(save, 'b8_boss', 'dunjunz')).toBe(true);
     expect(shouldSpawnBossExitPortal(save, 'b1_entrance', 'dunjunz')).toBe(
       false,
     );
@@ -975,9 +1002,9 @@ describe('boss exit portals', () => {
       hardRunLand: 'dunjunz' as const,
       hardKilled: [] as string[],
     };
-    expect(shouldSpawnBossExitPortal(hard, 'b2_boss', 'dunjunz')).toBe(false);
+    expect(shouldSpawnBossExitPortal(hard, 'b8_boss', 'dunjunz')).toBe(false);
     hard.hardKilled = ['dungeon-master'];
-    expect(shouldSpawnBossExitPortal(hard, 'b2_boss', 'dunjunz')).toBe(true);
+    expect(shouldSpawnBossExitPortal(hard, 'b8_boss', 'dunjunz')).toBe(true);
 
     // Kill flag alone is enough (even without landsCleared)
     const killedOnly = defaultSave();
@@ -1224,8 +1251,9 @@ describe('champion quests + kingdom', () => {
     expect(ROOMS.kingdom_gate?.west).toBe('overworld_east');
     expect(ROOMS.kingdom_courtyard?.north).toBe('kingdom_throne');
     expect(ROOMS.kingdom_courtyard?.east).toBe('sewerz_mouth');
-    expect(ROOMS.sewerz_boss?.west).toBe('sewerz_hall');
+    expect(ROOMS.sewerz_boss?.south).toBe('sewerz_b4_foyer');
     expect(ROOMS.sewerz_mouth?.land).toBe('sewerz');
+    expect(ROOMS.sewerz_hall?.stairsDown).toBe('sewerz_b2_foyer');
     expect(ROOMS.kingdom_throne?.land).toBe('kingdomz');
   });
 
