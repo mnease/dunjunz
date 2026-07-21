@@ -11,8 +11,12 @@
   },
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
+      "source": "/play",
+      "destination": "/play/index.html"
+    },
+    {
+      "source": "/play/",
+      "destination": "/play/index.html"
     }
   ]
 }

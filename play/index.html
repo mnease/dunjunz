@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="DUNJUNZ — a humorous retro dungeon crawler. It's dangerous to go alone; take this user agreement."
+    />
+    <meta name="theme-color" content="#0a0c10" />
+    <title>DUNJUNZ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <a class="skip-link" href="#game-container">Skip to game</a>
+
+    <div id="shell">
+      <!-- Top menubar: brand + primary shell actions (not centered-only) -->
+      <header class="topbar" role="banner">
+        <div class="topbar-brand">
+          <a class="logo" href="/" aria-label="DUNJUNZ home — leave game">
+            <span class="logo-mark">DUNJUNZ</span>
+          </a>
+          <p class="tagline">An epic of questionable questing</p>
+        </div>
+        <nav class="topbar-nav" aria-label="Site">
+          <span id="auth-status" class="auth-status" role="status">Local play</span>
+          <button type="button" id="journal-open" class="nav-btn">
+            Journal
+            <kbd class="nav-kbd">J</kbd>
+          </button>
+          <button type="button" id="settings-open" class="nav-btn nav-btn-ghost">
+            Settings
+          </button>
+          <button type="button" id="auth-open" class="nav-btn nav-btn-ghost">
+            Account
+          </button>
+          <button type="button" id="feedback-open" class="nav-btn nav-btn-primary">
+            Feedback
+          </button>
+          <a class="nav-btn nav-btn-ghost nav-link" href="/">About</a>
+        </nav>
+      </header>
+
+      <main class="main" id="main">
+        <div id="game-frame">
+          <div id="game-container" tabindex="-1"></div>
+          <div class="crt-overlay" aria-hidden="true"></div>
+        </div>
+
+        <aside class="controls-panel" aria-labelledby="controls-heading">
+          <h2 id="controls-heading" class="panel-heading">Controls</h2>
+          <ul class="help-list">
+            <li><kbd>Arrows</kbd> / <kbd>WASD</kbd> move</li>
+            <li><kbd>Space</kbd> / <kbd>Z</kbd> attack</li>
+            <li><kbd>E</kbd> talk · <kbd>B</kbd> buy · <kbd>I</kbd> inventory</li>
+            <li><kbd>J</kbd> journal · <kbd>M</kbd> mapz · <kbd>Y</kbd> buddy gear</li>
+            <li>
+              <kbd>W</kbd> <kbd>O</kbd> <kbd>H</kbd> <kbd>C</kbd> <kbd>L</kbd>
+              <kbd>F</kbd> <kbd>G</kbd> <kbd>N</kbd> <kbd>R</kbd> <kbd>K</kbd>
+              equip
+            </li>
+            <li><kbd>1</kbd>–<kbd>5</kbd> attrs · <kbd>U</kbd> potion</li>
+          </ul>
+        </aside>
+      </main>
+
+      <footer class="site-footer" role="contentinfo">
+        <div class="footer-grid">
+          <p class="copyright">
+            © 2026 NeaseMedia. All rights reserved.
+            <span class="copyright-sub"
+              >DUNJUNZ is an original work by NeaseMedia.</span
+            >
+          </p>
+          <p class="footer-note">
+            Hard-refresh after deploy if the journal or settings look stale.
+          </p>
+        </div>
+      </footer>
+    </div>
+
+    <div
+      id="journal-modal"
+      class="feedback-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="journal-title"
+      aria-hidden="true"
+    >
+      <div class="feedback-panel journal-panel">
+        <header class="feedback-header">
+          <h2 id="journal-title">Journal</h2>
+          <button
+            type="button"
+            class="feedback-x"
+            data-journal-close
+            aria-label="Close journal"
+          >
+            ×
+          </button>
+        </header>
+        <p class="feedback-blurb">
+          Quests, progress, and brags. The bard is taking notes. Press
+          <strong>J</strong> anytime.
+        </p>
+        <div class="journal-tabs" role="tablist" aria-label="Journal sections">
+          <button
+            type="button"
+            id="journal-tab-quests"
+            class="journal-tab is-active"
+            role="tab"
+            aria-selected="true"
+            aria-controls="journal-body"
+          >
+            Quests
+          </button>
+          <button
+            type="button"
+            id="journal-tab-brags"
+            class="journal-tab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="journal-body"
+          >
+            Brags
+          </button>
+        </div>
+        <p id="journal-summary" class="journal-summary" aria-live="polite"></p>
+        <div
+          id="journal-body"
+          class="journal-body"
+          role="tabpanel"
+          tabindex="0"
+        ></div>
+        <div class="feedback-actions">
+          <button type="button" class="btn primary" data-journal-close>
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="settings-modal"
+      class="feedback-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-title"
+      aria-hidden="true"
+    >
+      <div class="feedback-panel settings-panel">
+        <header class="feedback-header">
+          <h2 id="settings-title">Game settings</h2>
+          <button
+            type="button"
+            class="feedback-x"
+            data-settings-close
+            aria-label="Close settings"
+          >
+            ×
+          </button>
+        </header>
+        <p class="feedback-blurb">
+          Audio is procedural retro synth (no downloads). Saved in this
+          browser.
+        </p>
+        <form id="settings-form" class="settings-form">
+          <label class="settings-check">
+            <input id="set-muted" type="checkbox" />
+            Mute all sound
+          </label>
+          <label class="settings-check">
+            <input id="set-music-enabled" type="checkbox" />
+            Music on
+          </label>
+          <label class="settings-row">
+            <span
+              >Music volume
+              <strong id="set-music-vol-label">35%</strong></span
+            >
+            <input
+              id="set-music-vol"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="35"
+            />
+          </label>
+          <label class="settings-check">
+            <input id="set-sfx-enabled" type="checkbox" />
+            Sound effects on
+          </label>
+          <label class="settings-row">
+            <span
+              >SFX volume <strong id="set-sfx-vol-label">55%</strong></span
+            >
+            <input
+              id="set-sfx-vol"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="55"
+            />
+          </label>
+          <label class="settings-check">
+            <input id="set-reduce-motion" type="checkbox" />
+            Reduce motion (less camera shake)
+          </label>
+          <div class="feedback-actions settings-actions">
+            <button type="button" id="settings-test-sfx" class="btn ghost">
+              Test SFX
+            </button>
+            <button type="button" class="btn primary" data-settings-close>
+              Done
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div
+      id="auth-modal"
+      class="feedback-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="auth-title"
+      aria-hidden="true"
+    >
+      <div class="feedback-panel auth-panel">
+        <header class="feedback-header">
+          <h2 id="auth-title">Account / cloud saves</h2>
+          <button
+            type="button"
+            class="feedback-x"
+            data-auth-close
+            aria-label="Close account"
+          >
+            ×
+          </button>
+        </header>
+        <p class="feedback-blurb">
+          Play free as <strong>local</strong> (no email). Optional
+          <strong>guest</strong> (email + device) or
+          <strong>magic link</strong> account for 3 cloud slots.
+        </p>
+        <form id="auth-guest-form" class="shell-form">
+          <label>
+            Guest (email required)
+            <input
+              name="email"
+              type="email"
+              required
+              maxlength="200"
+              placeholder="you@example.com"
+              autocomplete="email"
+            />
+          </label>
+          <button type="submit" class="btn primary">Continue as guest</button>
+        </form>
+        <form id="auth-magic-form" class="shell-form auth-magic">
+          <label>
+            Magic link sign-in
+            <input
+              name="email"
+              type="email"
+              required
+              maxlength="200"
+              placeholder="you@example.com"
+              autocomplete="email"
+            />
+          </label>
+          <button type="submit" class="btn primary">Email me a link</button>
+        </form>
+        <div class="feedback-actions auth-extra">
+          <button type="button" id="auth-import-local" class="btn ghost">
+            Import local save → cloud
+          </button>
+          <button type="button" id="auth-logout" class="btn ghost">
+            Sign out
+          </button>
+          <button type="button" class="btn ghost" data-auth-close>
+            Close
+          </button>
+        </div>
+        <p id="auth-msg" class="feedback-status" data-kind="idle"></p>
+      </div>
+    </div>
+
+    <div
+      id="feedback-modal"
+      class="feedback-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="feedback-title"
+      aria-hidden="true"
+    >
+      <div class="feedback-panel">
+        <header class="feedback-header">
+          <h2 id="feedback-title">Send feedback</h2>
+          <button
+            type="button"
+            class="feedback-x"
+            data-feedback-close
+            aria-label="Close feedback"
+          >
+            ×
+          </button>
+        </header>
+        <p class="feedback-blurb">
+          Bugs, ideas, or vibes — goes to
+          <strong>support@neasemedia.com</strong>.
+        </p>
+        <form id="feedback-form" class="shell-form" novalidate>
+          <label class="hp" aria-hidden="true">
+            Website
+            <input type="text" name="website" tabindex="-1" autocomplete="off" />
+          </label>
+          <label>
+            Name
+            <input
+              id="feedback-name"
+              name="name"
+              type="text"
+              maxlength="120"
+              required
+              autocomplete="name"
+            />
+          </label>
+          <label>
+            Email
+            <input
+              id="feedback-email"
+              name="email"
+              type="email"
+              maxlength="200"
+              required
+              autocomplete="email"
+            />
+          </label>
+          <label>
+            Message
+            <textarea
+              id="feedback-message"
+              name="message"
+              rows="5"
+              maxlength="4000"
+              required
+              placeholder="What broke? What was cool? What should exist?"
+            ></textarea>
+          </label>
+          <p id="feedback-status" class="feedback-status" data-kind="idle"></p>
+          <div class="feedback-actions">
+            <button type="button" class="btn ghost" data-feedback-close>
+              Cancel
+            </button>
+            <button type="submit" id="feedback-submit" class="btn primary">
+              Send
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

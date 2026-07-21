@@ -4,12 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DUNJUNZ — An epic of questionable questing</title>
     <meta
       name="description"
-      content="DUNJUNZ — a humorous retro dungeon crawler. It's dangerous to go alone; take this user agreement."
+      content="Free browser dungeon crawler. Save Princesz Prizella, find your Best Bud, forje loot, and ignore the user agreement in the woodz."
     />
+    <meta property="og:title" content="DUNJUNZ" />
+    <meta
+      property="og:description"
+      content="An epic of questionable questing. Free in the browser."
+    />
+    <meta property="og:url" content="https://dunjunz.com/" />
+    <meta property="og:type" content="website" />
     <meta name="theme-color" content="#0a0c10" />
-    <title>DUNJUNZ</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -17,11 +24,10 @@
       rel="stylesheet"
     />
   </head>
-  <body>
-    <a class="skip-link" href="#game-container">Skip to game</a>
+  <body class="landing-body">
+    <a class="skip-link" href="#main">Skip to content</a>
 
-    <div id="shell">
-      <!-- Top menubar: brand + primary shell actions (not centered-only) -->
+    <div id="shell" class="landing-shell">
       <header class="topbar" role="banner">
         <div class="topbar-brand">
           <a class="logo" href="/" aria-label="DUNJUNZ home">
@@ -29,346 +35,223 @@
           </a>
           <p class="tagline">An epic of questionable questing</p>
         </div>
-        <nav class="topbar-nav" aria-label="Site">
-          <span id="auth-status" class="auth-status" role="status">Local play</span>
-          <button type="button" id="journal-open" class="nav-btn">
-            Journal
-            <kbd class="nav-kbd">J</kbd>
-          </button>
-          <button type="button" id="settings-open" class="nav-btn nav-btn-ghost">
-            Settings
-          </button>
-          <button type="button" id="auth-open" class="nav-btn nav-btn-ghost">
-            Account
-          </button>
-          <button type="button" id="feedback-open" class="nav-btn nav-btn-primary">
-            Feedback
-          </button>
+        <nav class="topbar-nav" aria-label="Landing">
+          <a class="nav-btn nav-btn-primary nav-link" href="/play">Play free</a>
+          <a class="nav-btn nav-btn-ghost nav-link" href="#how">How to play</a>
+          <a class="nav-btn nav-btn-ghost nav-link" href="#support">Support</a>
+          <a
+            class="nav-btn nav-btn-ghost nav-link"
+            href="mailto:support@neasemedia.com"
+            >Contact</a
+          >
         </nav>
       </header>
 
-      <main class="main" id="main">
-        <div id="game-frame">
-          <div id="game-container" tabindex="-1"></div>
-          <div class="crt-overlay" aria-hidden="true"></div>
-        </div>
+      <main id="main" class="landing-main">
+        <section class="landing-hero" id="top" aria-labelledby="hero-title">
+          <p class="landing-kicker">Free browser crawler · No install</p>
+          <h1 id="hero-title" class="landing-h1">DUNJUNZ</h1>
+          <p class="landing-lede">
+            A free, humorous retro dungeon crawler for your browser. Save
+            Princesz Prizella, recruit a Best Bud who actually fights, forje
+            questionable loot, and mapz three kinds of bad ideas: Dunjunz,
+            woodz, and dezertz.
+          </p>
+          <div class="cta-row">
+            <a class="nav-btn nav-btn-primary nav-link cta-lg" href="/play"
+              >Play the game</a
+            >
+            <a class="nav-btn nav-btn-ghost nav-link cta-lg" href="#how"
+              >How it works</a
+            >
+          </div>
+          <p class="landing-micro">
+            No lootboxes. Local save works without an account. Optional cloud
+            slots if you want them.
+          </p>
+        </section>
 
-        <aside class="controls-panel" aria-labelledby="controls-heading">
-          <h2 id="controls-heading" class="panel-heading">Controls</h2>
-          <ul class="help-list">
-            <li><kbd>Arrows</kbd> / <kbd>WASD</kbd> move</li>
-            <li><kbd>Space</kbd> / <kbd>Z</kbd> attack</li>
-            <li><kbd>E</kbd> talk · <kbd>B</kbd> buy · <kbd>I</kbd> inventory</li>
-            <li><kbd>J</kbd> journal · <kbd>M</kbd> mapz · <kbd>Y</kbd> buddy gear</li>
-            <li>
-              <kbd>W</kbd> <kbd>O</kbd> <kbd>H</kbd> <kbd>C</kbd> <kbd>L</kbd>
-              <kbd>F</kbd> <kbd>G</kbd> <kbd>N</kbd> <kbd>R</kbd> <kbd>K</kbd>
-              equip
-            </li>
-            <li><kbd>1</kbd>–<kbd>5</kbd> attrs · <kbd>U</kbd> potion</li>
-          </ul>
-        </aside>
+        <section class="landing-section" id="what" aria-labelledby="what-title">
+          <h2 id="what-title" class="landing-h2">What even is this</h2>
+          <div class="landing-prose">
+            <p>
+              Dunjunz is a top-down crawler in the spirit of classic Zelda-likes,
+              stuffed with affectionate parody: old-man sword tutorials, redshirt
+              misfortune, door riddles that were never subtle, and a princesz who
+              hands out champion jobs like overdue library books.
+            </p>
+            <p>
+              Built by <strong>NeaseMedia</strong>. Played in the browser.
+              Progress lives in your browser (and optional cloud slots if you
+              want them).
+            </p>
+            <ul class="landing-bullets">
+              <li>Procedural pixel look + CRT shell (respects reduce-motion)</li>
+              <li>RPG bits: attributes, rarity, forjing, mapz fog</li>
+              <li>
+                Best Bud companion combat — stretch, claws, fog, roast, blink,
+                guard (depending on who you roll)
+              </li>
+              <li>Journal for quests + brags (bard-flavored achievements)</li>
+              <li>More lands after rescue: Kingdomz, Sewerz, and more chaos</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="landing-section" id="how" aria-labelledby="how-title">
+          <h2 id="how-title" class="landing-h2">How to play</h2>
+          <div class="landing-prose">
+            <p class="landing-subhead">The short scroll</p>
+            <div class="landing-table-wrap" role="region" aria-label="Controls">
+              <table class="landing-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Keys</th>
+                    <th scope="col">Do the thing</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Arrows / WASD</td>
+                    <td>Move</td>
+                  </tr>
+                  <tr>
+                    <td>Space / Z</td>
+                    <td>Attack (once you have a sword)</td>
+                  </tr>
+                  <tr>
+                    <td>E</td>
+                    <td>Talk, open, stairs, mapz, forje, princesz energy</td>
+                  </tr>
+                  <tr>
+                    <td>I</td>
+                    <td>Inventory + character sheet</td>
+                  </tr>
+                  <tr>
+                    <td>J</td>
+                    <td>Journal (quests + brags)</td>
+                  </tr>
+                  <tr>
+                    <td>Y</td>
+                    <td>Buddy gear mode (in inventory)</td>
+                  </tr>
+                  <tr>
+                    <td>M</td>
+                    <td>Mapz (after you find map scrolls)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              <strong>Quest in one breath:</strong> Meadow sword → Dunjunz boss →
+              woodz &amp; dezertz → rescue Prizella → find your Best Bud → more
+              champion nonsense (sewerz, geese, regret).
+            </p>
+            <p>
+              <strong>Accounts:</strong> Local play needs nothing. Optional
+              guest or magic-link account unlocks <strong>3 cloud save
+              slots</strong> so your Best Bud survives a laptop fire. Almost.
+            </p>
+            <p>
+              <a class="inline-play" href="/play">Ready? Play free →</a>
+            </p>
+          </div>
+        </section>
+
+        <section class="landing-section" id="why" aria-labelledby="why-title">
+          <h2 id="why-title" class="landing-h2">The idea</h2>
+          <div class="landing-prose">
+            <p>
+              Games can be free, funny, and finished enough to enjoy without a
+              battle pass breathing down your neck.
+            </p>
+            <p>
+              Dunjunz is <strong>parody + homage + chaos</strong> — not a clone,
+              not a grind treadmill, not a shopfront wearing a game costume. If
+              something is paywalled later, it will never be power you can only
+              buy. The woodz stay walkable for everyone.
+            </p>
+          </div>
+        </section>
+
+        <section
+          class="landing-section landing-support"
+          id="support"
+          aria-labelledby="support-title"
+        >
+          <h2 id="support-title" class="landing-h2">Keep the candles lit</h2>
+          <div class="landing-prose">
+            <p>
+              Dunjunz is <strong>free</strong>. Tips are optional, never
+              required, and <strong>never buy you a stronger sword</strong>.
+            </p>
+            <p>
+              If the crawler made you laugh, or you want more lands and fewer
+              bugs, you can throw a coin to the bard.
+            </p>
+            <div class="cta-row">
+              <!-- Replace KO-FI_URL when the page is live; mailto works until then -->
+              <a
+                class="nav-btn nav-btn-primary nav-link cta-lg"
+                id="support-kofi"
+                href="https://ko-fi.com/neasemedia"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Tip the bard on Ko-fi</a
+              >
+              <a
+                class="nav-btn nav-btn-ghost nav-link cta-lg"
+                href="mailto:support@neasemedia.com?subject=DUNJUNZ%20support"
+                >Email support@neasemedia.com</a
+              >
+            </div>
+            <p class="landing-subhead">What your tip does</p>
+            <ul class="landing-bullets">
+              <li>Hosting, email, and “why is the goose hitbox like that” nights</li>
+              <li>More lands, jobs, and Best Bud nonsense</li>
+              <li>Keeping the free tier actually free</li>
+            </ul>
+            <p class="landing-subhead">What we will not do</p>
+            <ul class="landing-bullets landing-bullets-muted">
+              <li>Lootboxes, gacha, or surprise cash shops</li>
+              <li>Pay-to-win gear or exclusive combat power</li>
+              <li>Fake countdown timers or “only 3 left” pressure</li>
+              <li>Guilt copy that makes fun feel like a bill</li>
+            </ul>
+            <p class="landing-micro">
+              Free support that helps a lot: play, share, send feedback from the
+              game shell, or open an issue on GitHub.
+            </p>
+          </div>
+        </section>
       </main>
 
       <footer class="site-footer" role="contentinfo">
         <div class="footer-grid">
           <p class="copyright">
-            © 2026 NeaseMedia. All rights reserved.
+            © <span id="year">2026</span> NeaseMedia. All rights reserved.
             <span class="copyright-sub"
               >DUNJUNZ is an original work by NeaseMedia.</span
             >
           </p>
+          <nav class="footer-nav" aria-label="Footer">
+            <a href="/play">Play</a>
+            <a href="#support">Support</a>
+            <a
+              href="https://github.com/mnease/dunjunz"
+              target="_blank"
+              rel="noopener noreferrer"
+              >GitHub</a
+            >
+            <a href="mailto:support@neasemedia.com">Contact</a>
+          </nav>
           <p class="footer-note">
-            Hard-refresh after deploy if the journal or settings look stale.
+            Hard-refresh after deploys if the shell looks haunted.
           </p>
         </div>
       </footer>
     </div>
 
-    <div
-      id="journal-modal"
-      class="feedback-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="journal-title"
-      aria-hidden="true"
-    >
-      <div class="feedback-panel journal-panel">
-        <header class="feedback-header">
-          <h2 id="journal-title">Journal</h2>
-          <button
-            type="button"
-            class="feedback-x"
-            data-journal-close
-            aria-label="Close journal"
-          >
-            ×
-          </button>
-        </header>
-        <p class="feedback-blurb">
-          Quests, progress, and brags. The bard is taking notes. Press
-          <strong>J</strong> anytime.
-        </p>
-        <div class="journal-tabs" role="tablist" aria-label="Journal sections">
-          <button
-            type="button"
-            id="journal-tab-quests"
-            class="journal-tab is-active"
-            role="tab"
-            aria-selected="true"
-            aria-controls="journal-body"
-          >
-            Quests
-          </button>
-          <button
-            type="button"
-            id="journal-tab-brags"
-            class="journal-tab"
-            role="tab"
-            aria-selected="false"
-            aria-controls="journal-body"
-          >
-            Brags
-          </button>
-        </div>
-        <p id="journal-summary" class="journal-summary" aria-live="polite"></p>
-        <div
-          id="journal-body"
-          class="journal-body"
-          role="tabpanel"
-          tabindex="0"
-        ></div>
-        <div class="feedback-actions">
-          <button type="button" class="btn primary" data-journal-close>
-            Done
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div
-      id="settings-modal"
-      class="feedback-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="settings-title"
-      aria-hidden="true"
-    >
-      <div class="feedback-panel settings-panel">
-        <header class="feedback-header">
-          <h2 id="settings-title">Game settings</h2>
-          <button
-            type="button"
-            class="feedback-x"
-            data-settings-close
-            aria-label="Close settings"
-          >
-            ×
-          </button>
-        </header>
-        <p class="feedback-blurb">
-          Audio is procedural retro synth (no downloads). Saved in this
-          browser.
-        </p>
-        <form id="settings-form" class="settings-form">
-          <label class="settings-check">
-            <input id="set-muted" type="checkbox" />
-            Mute all sound
-          </label>
-          <label class="settings-check">
-            <input id="set-music-enabled" type="checkbox" />
-            Music on
-          </label>
-          <label class="settings-row">
-            <span
-              >Music volume
-              <strong id="set-music-vol-label">35%</strong></span
-            >
-            <input
-              id="set-music-vol"
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value="35"
-            />
-          </label>
-          <label class="settings-check">
-            <input id="set-sfx-enabled" type="checkbox" />
-            Sound effects on
-          </label>
-          <label class="settings-row">
-            <span
-              >SFX volume <strong id="set-sfx-vol-label">55%</strong></span
-            >
-            <input
-              id="set-sfx-vol"
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value="55"
-            />
-          </label>
-          <label class="settings-check">
-            <input id="set-reduce-motion" type="checkbox" />
-            Reduce motion (less camera shake)
-          </label>
-          <div class="feedback-actions settings-actions">
-            <button type="button" id="settings-test-sfx" class="btn ghost">
-              Test SFX
-            </button>
-            <button type="button" class="btn primary" data-settings-close>
-              Done
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <div
-      id="auth-modal"
-      class="feedback-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="auth-title"
-      aria-hidden="true"
-    >
-      <div class="feedback-panel auth-panel">
-        <header class="feedback-header">
-          <h2 id="auth-title">Account / cloud saves</h2>
-          <button
-            type="button"
-            class="feedback-x"
-            data-auth-close
-            aria-label="Close account"
-          >
-            ×
-          </button>
-        </header>
-        <p class="feedback-blurb">
-          Play free as <strong>local</strong> (no email). Optional
-          <strong>guest</strong> (email + device) or
-          <strong>magic link</strong> account for 3 cloud slots.
-        </p>
-        <form id="auth-guest-form" class="shell-form">
-          <label>
-            Guest (email required)
-            <input
-              name="email"
-              type="email"
-              required
-              maxlength="200"
-              placeholder="you@example.com"
-              autocomplete="email"
-            />
-          </label>
-          <button type="submit" class="btn primary">Continue as guest</button>
-        </form>
-        <form id="auth-magic-form" class="shell-form auth-magic">
-          <label>
-            Magic link sign-in
-            <input
-              name="email"
-              type="email"
-              required
-              maxlength="200"
-              placeholder="you@example.com"
-              autocomplete="email"
-            />
-          </label>
-          <button type="submit" class="btn primary">Email me a link</button>
-        </form>
-        <div class="feedback-actions auth-extra">
-          <button type="button" id="auth-import-local" class="btn ghost">
-            Import local save → cloud
-          </button>
-          <button type="button" id="auth-logout" class="btn ghost">
-            Sign out
-          </button>
-          <button type="button" class="btn ghost" data-auth-close>
-            Close
-          </button>
-        </div>
-        <p id="auth-msg" class="feedback-status" data-kind="idle"></p>
-      </div>
-    </div>
-
-    <div
-      id="feedback-modal"
-      class="feedback-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="feedback-title"
-      aria-hidden="true"
-    >
-      <div class="feedback-panel">
-        <header class="feedback-header">
-          <h2 id="feedback-title">Send feedback</h2>
-          <button
-            type="button"
-            class="feedback-x"
-            data-feedback-close
-            aria-label="Close feedback"
-          >
-            ×
-          </button>
-        </header>
-        <p class="feedback-blurb">
-          Bugs, ideas, or vibes — goes to
-          <strong>support@neasemedia.com</strong>.
-        </p>
-        <form id="feedback-form" class="shell-form" novalidate>
-          <label class="hp" aria-hidden="true">
-            Website
-            <input type="text" name="website" tabindex="-1" autocomplete="off" />
-          </label>
-          <label>
-            Name
-            <input
-              id="feedback-name"
-              name="name"
-              type="text"
-              maxlength="120"
-              required
-              autocomplete="name"
-            />
-          </label>
-          <label>
-            Email
-            <input
-              id="feedback-email"
-              name="email"
-              type="email"
-              maxlength="200"
-              required
-              autocomplete="email"
-            />
-          </label>
-          <label>
-            Message
-            <textarea
-              id="feedback-message"
-              name="message"
-              rows="5"
-              maxlength="4000"
-              required
-              placeholder="What broke? What was cool? What should exist?"
-            ></textarea>
-          </label>
-          <p id="feedback-status" class="feedback-status" data-kind="idle"></p>
-          <div class="feedback-actions">
-            <button type="button" class="btn ghost" data-feedback-close>
-              Cancel
-            </button>
-            <button type="submit" id="feedback-submit" class="btn primary">
-              Send
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/landing.ts"></script>
   </body>
 </html>

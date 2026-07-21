@@ -5,7 +5,7 @@ All notable changes to **DUNJUNZ** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/).
 
-Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/dunjunz](https://github.com/mnease/dunjunz)
+Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dunjunz.com/play) · Repo: [mnease/dunjunz](https://github.com/mnease/dunjunz)
 
 ---
 
@@ -13,7 +13,8 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 
 ### Added
 
-- **Journal (J / footer)** — quest list with progress (main path, champion jobs, side bits) + **Brags** achievement board (22 unlocks, `NEW BRAG:` toasts). Tone stays bard-weird, not corporate.
+- **Landing page at /** — welcome, what/how/why, support (Ko-fi tip jar); game at **`/play`** (MPA Vite + Vercel rewrites). Live: [dunjunz.com](https://dunjunz.com) · [dunjunz.com/play](https://dunjunz.com/play)
+- **Journal (J / top bar)** — quest list with progress (main path, champion jobs, side bits) + **Brags** achievement board (22 unlocks, `NEW BRAG:` toasts). Tone stays bard-weird, not corporate.
 - **Best Bud XP + gear** — buddies gain XP on kills and level up; inventory **Y** toggles buddy gear mode (shared bag, separate slots; no keyring). Weapon/armor boost strike damage.
 - **Progressive creep threat** — HP / contact damage / XP scale by land tier, floor depth, and world progress (later zones hurt more)
 - **Prizella's Kingdomz** (east of Trope Trail after rescue) — gate, courtyard, throne hub
@@ -58,6 +59,7 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 
 ### Planned
 
+- **Landing at `/` + game at `/play`** — marketing welcome, how-to, philosophy, Ko-fi tip jar; see [`docs/landing-support-v1.md`](./docs/landing-support-v1.md)
 - Secondary champion quests
 - Blacksmith merchant: destroy gear for parts, optimize / craft
 - More lands / champion jobs from Prizella

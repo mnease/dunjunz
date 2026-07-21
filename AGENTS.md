@@ -1,6 +1,6 @@
 # Dunjunz — agent instructions
 
-Retro Zelda-like humorous crawler. Repo: `mnease/dunjunz`. Live: https://dunjunz.vercel.app
+Retro Zelda-like humorous crawler. Repo: `mnease/dunjunz`. Live: https://dunjunz.com (game: https://dunjunz.com/play)
 
 ## Isolated Hive Mind (mandatory)
 

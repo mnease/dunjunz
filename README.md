@@ -4,23 +4,30 @@
 
 A humorous retro top-down dungeon crawler in the spirit of the original *Legend of Zelda*, stuffed with affectionate parody of classic dungeon tropes, D&D table energy, original *Star Trek* away-team misfortune, and fantasy door riddles that were never subtle.
 
-Built for the browser. Hosted under **NeaseMedia** on Vercel.
+Built for the browser. Hosted under **NeaseMedia**.
 
-**Changelog:** see [`CHANGELOG.md`](./CHANGELOG.md) (kept on GitHub with every notable ship).
+- **Landing:** [https://dunjunz.com](https://dunjunz.com)
+- **Play free:** [https://dunjunz.com/play](https://dunjunz.com/play)
+- **Changelog:** [`CHANGELOG.md`](./CHANGELOG.md)
 
-## Play
+## Play (local)
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local URL Vite prints (default `http://localhost:5173`).
+- Landing: `http://localhost:5173/`
+- Game: `http://localhost:5173/play/`
 
 ```bash
 npm run build
 npm run preview
 ```
+
+## Support
+
+Dunjunz is free. Optional tips: [Ko-fi](https://ko-fi.com/neasemedia) (“Tip the bard”). Tips never buy power. Bugs & vibes: support@neasemedia.com.
 
 ## Controls
 
@@ -177,7 +184,7 @@ vercel --prod
 3. Framework preset: **Vite**. Output directory: `dist`.
 4. Deploy.
 
-Production URL will look like `https://dunjunz.vercel.app` (or a custom domain you attach).
+Production: `https://dunjunz.com` (landing) and `https://dunjunz.com/play` (game).
 
 ## Project layout
 
