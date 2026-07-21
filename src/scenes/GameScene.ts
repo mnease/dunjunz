@@ -52,8 +52,6 @@ import {
 import {
   autoEquipEmptySlots,
   computePlayerDamage,
-  cycleSlotEquip,
-  equipUid,
   grantKey,
   grantMildSword,
   hasWeaponEquipped,
@@ -84,12 +82,19 @@ import {
 import {
   BUD_BLOCK_COOLDOWN_MS,
   BUD_HEAL_COOLDOWN_MS,
-  budAttackDamage,
   budCanBlockHit,
   budCombatProfile,
-  budHealAmount,
   isHostileKind,
 } from '../systems/best-bud-combat';
+import {
+  computeBudHealAmount,
+  computeBudStrikeDamage,
+  cycleEquipForTarget,
+  equipForTarget,
+  ensureBudProgress,
+  grantBudXp,
+  type EquipTarget,
+} from '../systems/best-bud-gear';
 import {
   QUEST_SEWERZ_GOOSE,
   prizellaKingdomTalk,
@@ -251,6 +256,8 @@ export class GameScene extends Phaser.Scene {
   private budAttackCd = 0;
   private budHealCd = 0;
   private budBlockCd = 0;
+  /** Inventory equip target: hero gear or buddy gear (toggle Y). */
+  private gearTarget: EquipTarget = 'hero';
 
   constructor() {
     super('Game');
@@ -348,6 +355,7 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-O', () => this.cycleEquip('shield'));
     kb.on('keydown-R', () => this.cycleEquip('ring'));
     kb.on('keydown-K', () => this.cycleEquip('key'));
+    kb.on('keydown-Y', this.onGearTargetToggle, this);
     kb.on('keydown-M', this.onMapzKey, this);
     kb.on('keydown-TAB', this.onMapzKey, this);
     kb.on('keydown-OPEN_BRACKET', () => this.onMapzNav('floor-prev'));
@@ -713,6 +721,25 @@ export class GameScene extends Phaser.Scene {
     this.cycleEquip('weapon');
   };
 
+  private onGearTargetToggle = (): void => {
+    if (!this.inventoryOpen || this.paused) return;
+    if (!isCompanionActive(this.save)) {
+      this.gearTarget = 'hero';
+      this.game.events.emit('toast', 'NO BUDDY TO GEAR UP');
+      this.game.events.emit('gear-target', this.gearTarget);
+      return;
+    }
+    this.gearTarget = this.gearTarget === 'hero' ? 'bud' : 'hero';
+    playSfx('ui_click');
+    const label =
+      this.gearTarget === 'bud'
+        ? 'BUDDY GEAR MODE — EQUIP GOES TO YOUR BUD'
+        : 'HERO GEAR MODE — EQUIP GOES TO YOU';
+    this.game.events.emit('toast', label);
+    this.game.events.emit('gear-target', this.gearTarget);
+    this.game.events.emit('inventory-refresh', this.save);
+  };
+
   /** Click a bag grid cell: equip gear or use consumable. */
   private onBagActivate = (payload: {
     uid?: string;
@@ -741,14 +768,20 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (payload.uid && payload.slot) {
-      const result = equipUid(this.save, payload.uid);
+      const target =
+        this.gearTarget === 'bud' && isCompanionActive(this.save)
+          ? 'bud'
+          : 'hero';
+      const result = equipForTarget(this.save, payload.uid, target);
       if (!result.ok) {
+        playSfx('error');
         this.game.events.emit('toast', result.reason);
         return;
       }
       this.save = result.save;
       writeSave(this.save);
       this.emitHud();
+      playSfx('success');
       this.game.events.emit('inventory-refresh', this.save);
       this.game.events.emit('toast', result.message);
     }
@@ -756,7 +789,15 @@ export class GameScene extends Phaser.Scene {
 
   private cycleEquip(slot: EquipSlot): void {
     if (!this.inventoryOpen || this.dialogLocked || this.paused) return;
-    const result = cycleSlotEquip(this.save, slot);
+    const target =
+      this.gearTarget === 'bud' && isCompanionActive(this.save)
+        ? 'bud'
+        : 'hero';
+    if (target === 'bud' && slot === 'key') {
+      this.game.events.emit('toast', 'BUDDY CAN\'T HOLD KEYS');
+      return;
+    }
+    const result = cycleEquipForTarget(this.save, slot, target);
     if (!result.ok) {
       this.game.events.emit('toast', result.reason);
       return;
@@ -1171,13 +1212,15 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.save = ensureBudProgress(this.save);
+
     // Whisp cozy aura — heal even without creeps nearby
     if (
       profile.style === 'aura' &&
       this.budHealCd <= 0 &&
       this.save.hp < this.save.maxHp
     ) {
-      const heal = budHealAmount(this.save.level);
+      const heal = computeBudHealAmount(this.save);
       this.save.hp = Math.min(this.save.maxHp, this.save.hp + heal);
       this.budHealCd = BUD_HEAL_COOLDOWN_MS;
       writeSave(this.save);
@@ -1237,7 +1280,7 @@ export class GameScene extends Phaser.Scene {
         this.updateCompanionFollow();
         return;
       }
-      const dmg = budAttackDamage(budId, this.save.level);
+      const dmg = computeBudStrikeDamage(this.save);
       this.budStrike(target, dmg, profile.abilityName);
       this.budAttackCd = profile.cooldownMs;
 
@@ -1766,6 +1809,22 @@ export class GameScene extends Phaser.Scene {
       );
     } else {
       this.game.events.emit('toast', `+${xpGain} XP`);
+    }
+
+    // Buddy shares the kill XP and can level up
+    if (isCompanionActive(this.save)) {
+      const budGain = grantBudXp(this.save, xpGain);
+      this.save = budGain.save;
+      if (budGain.leveledUp) {
+        const bud = getBestBud(this.save.bestBudId);
+        playSfx('level_up');
+        this.time.delayedCall(350, () => {
+          this.game.events.emit(
+            'toast',
+            `${bud?.name ?? 'BUD'} LV UP! → ${this.save.budLevel}`,
+          );
+        });
+      }
     }
 
     // Creep loot (coins mostly; sometimes gear / mats). Bosses use quest rewards too.

@@ -13,6 +13,7 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 
 ### Added
 
+- **Best Bud XP + gear** — buddies gain XP on kills and level up; inventory **Y** toggles buddy gear mode (shared bag, separate slots; no keyring). Weapon/armor boost strike damage.
 - **Progressive creep threat** — HP / contact damage / XP scale by land tier, floor depth, and world progress (later zones hurt more)
 - **Prizella's Kingdomz** (east of Trope Trail after rescue) — gate, courtyard, throne hub
 - **Champion quest board** — after Best Bud, throne assigns **Royal Sewerz** (Job #2)

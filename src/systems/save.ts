@@ -7,6 +7,7 @@ import { migrateEquipment, syncDerivedStats } from './inventory';
 import { levelFromXp } from './progression';
 import { reconcileMapzFromCollected } from './mapz';
 import { queueCloudSave } from './cloud-save';
+import { ensureBudProgress } from './best-bud-gear';
 
 export function defaultSave(): SaveData {
   const attrs = defaultAttrs();
@@ -40,6 +41,9 @@ export function defaultSave(): SaveData {
         0 || 1,
     bestBudId: null,
     bestBudStage: 'none',
+    budXp: 0,
+    budLevel: 1,
+    budEquipped: emptyEquipped(),
     activeQuestId: null,
     questsCompleted: [],
   };
@@ -51,6 +55,7 @@ function withV5Fields(s: SaveData): SaveData {
       ? s.runSeed
       : (Math.floor(Math.random() * 0xffffffff) ^ (Date.now() & 0xffffffff)) >>>
           0 || 1;
+  const budXp = typeof s.budXp === 'number' ? Math.max(0, s.budXp) : 0;
   return {
     ...s,
     version: 5,
@@ -63,6 +68,13 @@ function withV5Fields(s: SaveData): SaveData {
     runSeed,
     bestBudId: s.bestBudId ?? null,
     bestBudStage: s.bestBudStage ?? 'none',
+    budXp,
+    budLevel: levelFromXp(budXp),
+    budEquipped: {
+      ...emptyEquipped(),
+      ...(s.budEquipped ?? {}),
+      key: null,
+    },
     activeQuestId: s.activeQuestId ?? null,
     questsCompleted: Array.isArray(s.questsCompleted) ? s.questsCompleted : [],
   };
@@ -127,12 +139,23 @@ export function loadSave(): SaveData {
         typeof parsed.runSeed === 'number' ? parsed.runSeed : base.runSeed,
       bestBudId: (parsed as SaveData).bestBudId ?? null,
       bestBudStage: (parsed as SaveData).bestBudStage ?? 'none',
+      budXp:
+        typeof (parsed as SaveData).budXp === 'number'
+          ? Math.max(0, (parsed as SaveData).budXp)
+          : 0,
+      budLevel: 1,
+      budEquipped: {
+        ...emptyEquipped(),
+        ...((parsed as SaveData).budEquipped ?? {}),
+        key: null,
+      },
       activeQuestId: (parsed as SaveData).activeQuestId ?? null,
       questsCompleted: Array.isArray((parsed as SaveData).questsCompleted)
         ? (parsed as SaveData).questsCompleted!
         : [],
     });
     next.level = levelFromXp(next.xp);
+    next = ensureBudProgress(next);
     // Boss already beaten → ensure dunjunz land flagged
     if (next.bossDefeated && !next.landsCleared.includes('dunjunz')) {
       next.landsCleared = [...next.landsCleared, 'dunjunz'];

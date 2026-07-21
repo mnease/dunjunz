@@ -98,18 +98,19 @@ export function listInventory(save: SaveData): InventoryLine[] {
 
   for (const inst of save.bag) {
     const t = getTemplate(inst.templateId);
-    const equipped = ALL_EQUIP_SLOTS.some(
-      (s) => save.equipped[s] === inst.uid,
+    const onHero = ALL_EQUIP_SLOTS.some((s) => save.equipped[s] === inst.uid);
+    const onBud = ALL_EQUIP_SLOTS.some(
+      (s) => (save.budEquipped?.[s] ?? null) === inst.uid,
     );
     lines.push({
       uid: inst.uid,
       templateId: inst.templateId,
       name: displayItemName(inst),
       count: 1,
-      blurb: t.blurb,
+      blurb: onBud ? `${t.blurb} [BUD]` : t.blurb,
       usable: false,
       slot: t.slot,
-      equipped,
+      equipped: onHero || onBud,
       rarity: inst.rarity,
     });
   }
@@ -274,6 +275,13 @@ export function migrateEquipment(save: SaveData & Record<string, unknown>): Save
               (Date.now() & 0xffffffff)) >>> 0 || 1,
       bestBudId: save.bestBudId ?? null,
       bestBudStage: save.bestBudStage ?? 'none',
+      budXp: typeof save.budXp === 'number' ? save.budXp : 0,
+      budLevel: typeof save.budLevel === 'number' ? save.budLevel : 1,
+      budEquipped: {
+        ...emptyEquipped(),
+        ...(save.budEquipped ?? {}),
+        key: null,
+      },
       activeQuestId: save.activeQuestId ?? null,
       questsCompleted: Array.isArray(save.questsCompleted)
         ? save.questsCompleted
@@ -322,6 +330,9 @@ export function migrateEquipment(save: SaveData & Record<string, unknown>): Save
         0 || 1,
     bestBudId: null,
     bestBudStage: 'none',
+    budXp: 0,
+    budLevel: 1,
+    budEquipped: emptyEquipped(),
     activeQuestId: null,
     questsCompleted: [],
   };

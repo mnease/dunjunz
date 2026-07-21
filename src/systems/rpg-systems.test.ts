@@ -940,6 +940,61 @@ describe('champion quests + kingdom', () => {
   });
 });
 
+describe('best bud gear + XP', () => {
+  it('grants bud XP and levels; gear boosts strike damage', async () => {
+    const {
+      grantBudXp,
+      equipBudUid,
+      computeBudStrikeDamage,
+      ensureBudProgress,
+    } = await import('./best-bud-gear');
+    const { mintItem } = await import('./items');
+    let s = {
+      ...defaultSave(),
+      princessSaved: true,
+      bestBudId: 'gloop' as const,
+      bestBudStage: 'found' as const,
+    };
+    s = ensureBudProgress(s);
+    expect(s.budLevel).toBe(1);
+    const g1 = grantBudXp(s, 50);
+    s = g1.save;
+    expect(s.budXp).toBe(50);
+    expect(s.budLevel).toBeGreaterThanOrEqual(1);
+    if (g1.leveledUp) expect(s.budLevel).toBeGreaterThan(1);
+
+    const minted = mintItem(s, 'iron_blade', 'common', 0);
+    s = minted.save;
+    const uid = minted.instance.uid;
+    const baseDmg = computeBudStrikeDamage(s);
+    const eq = equipBudUid(s, uid);
+    expect(eq.ok).toBe(true);
+    s = eq.save;
+    expect(s.budEquipped.weapon).toBe(uid);
+    expect(computeBudStrikeDamage(s)).toBeGreaterThan(baseDmg);
+  });
+
+  it('hero and bud cannot wear the same uid', async () => {
+    const { equipBudUid, equipHeroUid, ensureBudProgress } = await import(
+      './best-bud-gear'
+    );
+    const { mintItem } = await import('./items');
+    let s = {
+      ...defaultSave(),
+      bestBudId: 'nub' as const,
+      bestBudStage: 'complete' as const,
+    };
+    s = ensureBudProgress(s);
+    const m = mintItem(s, 'leather_armor', 'common', 0);
+    s = m.save;
+    s = equipHeroUid(s, m.instance.uid).save;
+    expect(s.equipped.breastplate).toBe(m.instance.uid);
+    s = equipBudUid(s, m.instance.uid).save;
+    expect(s.budEquipped.breastplate).toBe(m.instance.uid);
+    expect(s.equipped.breastplate).toBeNull();
+  });
+});
+
 describe('best bud combat', () => {
   it('every bud has a combat profile', async () => {
     const { budCombatProfile, budAttackDamage, budCanBlockHit } = await import(

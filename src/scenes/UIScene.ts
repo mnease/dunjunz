@@ -7,6 +7,14 @@ import {
 } from '../systems/appearance';
 import { listInventory } from '../systems/inventory';
 import { ALL_EQUIP_SLOTS, displayItemName, findInBag } from '../systems/items';
+import { getBestBud, isCompanionActive } from '../systems/best-bud';
+import {
+  budArmorDef,
+  budGearSummary,
+  computeBudStrikeDamage,
+  ensureBudProgress,
+  type EquipTarget,
+} from '../systems/best-bud-gear';
 import {
   buildMapzView,
   floorLabel,
@@ -93,6 +101,8 @@ export class UIScene extends Phaser.Scene {
   private forjingOpen = false;
   private shopOpen = false;
   private lastSave: SaveData | null = null;
+  /** Which paper-doll equip keys apply to (Y toggles in GameScene). */
+  private gearTarget: EquipTarget = 'hero';
   private bound = false;
   private chromeBuilt = false;
 
@@ -662,7 +672,7 @@ export class UIScene extends Phaser.Scene {
       .text(
         GAME_W / 2,
         GAME_H - 28,
-        'CLICK BAG CELL · W O H C L F G N R K EQUIP · U USE · I/ESC',
+        'Y BUDDY/HERO · CLICK BAG · W O H C L F G N R K EQUIP · U USE · I/ESC',
         {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '6px',
@@ -720,6 +730,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.off('ui-reset', this.onUiReset, this);
     this.game.events.off('inventory-toggle', this.onInventoryToggle, this);
     this.game.events.off('inventory-refresh', this.onInventoryRefresh, this);
+    this.game.events.off('gear-target', this.onGearTarget, this);
     this.game.events.off('mapz-toggle', this.onMapzToggle, this);
     this.game.events.off('mapz-nav', this.onMapzNav, this);
     this.game.events.off('forjing-toggle', this.onForjingToggle, this);
@@ -736,6 +747,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('ui-reset', this.onUiReset, this);
     this.game.events.on('inventory-toggle', this.onInventoryToggle, this);
     this.game.events.on('inventory-refresh', this.onInventoryRefresh, this);
+    this.game.events.on('gear-target', this.onGearTarget, this);
     this.game.events.on('mapz-toggle', this.onMapzToggle, this);
     this.game.events.on('mapz-nav', this.onMapzNav, this);
     this.game.events.on('forjing-toggle', this.onForjingToggle, this);
@@ -759,6 +771,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('ui-reset', this.onUiReset, this);
       this.game.events.off('inventory-toggle', this.onInventoryToggle, this);
       this.game.events.off('inventory-refresh', this.onInventoryRefresh, this);
+      this.game.events.off('gear-target', this.onGearTarget, this);
       this.game.events.off('mapz-toggle', this.onMapzToggle, this);
       this.game.events.off('mapz-nav', this.onMapzNav, this);
       this.game.events.off('forjing-toggle', this.onForjingToggle, this);
@@ -1686,49 +1699,100 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
+  private onGearTarget = (target: EquipTarget): void => {
+    this.gearTarget = target;
+    if (this.inventoryOpen && this.lastSave) {
+      this.renderInventory(this.lastSave);
+    }
+  };
+
   private renderInventory(save: SaveData): void {
-    const look = playerTextureKeyFromSave(save);
-    if (this.textures.exists(look) && this.invAvatar) {
-      this.invAvatar.setTexture(look);
+    const s = ensureBudProgress(save);
+    const budMode =
+      this.gearTarget === 'bud' && isCompanionActive(s);
+    const look = playerTextureKeyFromSave(s);
+    if (this.invAvatar) {
+      if (budMode && this.textures.exists('best_bud')) {
+        this.invAvatar.setTexture('best_bud');
+        const bud = getBestBud(s.bestBudId);
+        if (bud) this.invAvatar.setTint(bud.tint);
+        else this.invAvatar.clearTint();
+      } else if (this.textures.exists(look)) {
+        this.invAvatar.setTexture(look);
+        this.invAvatar.clearTint();
+      }
     }
 
+    const bud = getBestBud(s.bestBudId);
+    this.invYouLabel?.setText(
+      budMode
+        ? `${bud?.name ?? 'BUD'} · Y`
+        : isCompanionActive(s)
+          ? 'YOU · Y=BUD'
+          : 'YOU',
+    );
+    this.invYouLabel?.setColor(budMode ? '#ffc857' : '#8b93a7');
+    this.invTitle?.setText(
+      budMode ? 'BUDDY GEAR / LEVEL' : 'INVENTORY / CHARACTER',
+    );
+
+    const equipMap = budMode ? s.budEquipped : s.equipped;
     for (const slot of ALL_EQUIP_SLOTS) {
-      const uid = save.equipped[slot];
-      const inst = uid ? findInBag(save, uid) : undefined;
+      const uid = equipMap[slot];
+      const inst = uid ? findInBag(s, uid) : undefined;
       const icon = this.invSlotIcons[slot];
       const label = this.invSlotLabels[slot];
       if (icon) {
         const tid = inst?.templateId;
         const k = itemIconKey(tid);
         icon.setTexture(this.textures.exists(k) ? k : 'icon_empty');
+        // Dim key slot in buddy mode
+        icon.setAlpha(budMode && slot === 'key' ? 0.35 : 1);
       }
       if (label) {
-        const name = inst ? displayItemName(inst) : '(empty)';
+        const name =
+          budMode && slot === 'key'
+            ? '(n/a)'
+            : inst
+              ? displayItemName(inst)
+              : '(empty)';
         label.setText(
           `${slot.toUpperCase()} [${SLOT_KEYS[slot]}]\n${name}`,
         );
+        label.setAlpha(budMode && slot === 'key' ? 0.4 : 1);
       }
     }
 
-    this.invStats?.setText(
-      [
-        `COINS ${save.coins}c`,
-        `HP ${save.hp}/${save.maxHp}`,
-        `DEF ${save.armor}`,
-        `WPN ${save.hasSword ? 'Y' : '-'} KEY ${save.hasKey ? 'Y' : '-'}`,
-      ].join('\n'),
-    );
+    if (budMode) {
+      this.invStats?.setText(budGearSummary(s));
+      this.invAttrs?.setText(
+        [
+          `STRIKE ${computeBudStrikeDamage(s)}`,
+          `ARMOR ${budArmorDef(s)}`,
+          'GEAR FROM SHARED BAG',
+          'Y BACK TO YOU',
+        ].join('\n'),
+      );
+    } else {
+      this.invStats?.setText(
+        [
+          `COINS ${s.coins}c`,
+          `HP ${s.hp}/${s.maxHp}`,
+          `DEF ${s.armor}`,
+          `WPN ${s.hasSword ? 'Y' : '-'} KEY ${s.hasKey ? 'Y' : '-'}`,
+        ].join('\n'),
+      );
+      this.invAttrs?.setText(
+        [
+          `PTS ${s.attrPoints}`,
+          `1STR${s.attrs.str} 2DEX${s.attrs.dex}`,
+          `3VIT${s.attrs.vit} 4INT${s.attrs.int}`,
+          `5LCK${s.attrs.lck}`,
+        ].join('\n'),
+      );
+    }
 
-    this.invAttrs?.setText(
-      [
-        `PTS ${save.attrPoints}`,
-        `1STR${save.attrs.str} 2DEX${save.attrs.dex}`,
-        `3VIT${save.attrs.vit} 4INT${save.attrs.int}`,
-        `5LCK${save.attrs.lck}`,
-      ].join('\n'),
-    );
-
-    this.renderBagGrid(save);
+    this.renderBagGrid(s);
   }
 
   private renderBagGrid(save: SaveData): void {

@@ -278,16 +278,39 @@ export function meetBestBud(save: SaveData): {
 
   const bud = getBestBud(next.bestBudId);
   next = withFlags(next, 'found');
+  // Fresh buddy starts at LV1 / 0 XP (keep if re-meet edge case)
+  if (typeof next.budXp !== 'number') next = { ...next, budXp: 0 };
+  if (typeof next.budLevel !== 'number' || next.budLevel < 1) {
+    next = { ...next, budLevel: 1 };
+  }
+  if (!next.budEquipped) {
+    next = {
+      ...next,
+      budEquipped: {
+        weapon: null,
+        shield: null,
+        helmet: null,
+        breastplate: null,
+        greaves: null,
+        shoes: null,
+        gloves: null,
+        amulet: null,
+        ring: null,
+        key: null,
+      },
+    };
+  }
   return {
     save: next,
     dialog: [
       ...(bud?.meetDialog ?? ['A WEIRD CREATURE NODS. BEST BUDS.']),
       '',
       `${bud?.name ?? 'BUD'} JOINS YOU!`,
-      'THEY\'LL FOLLOW AND FIGHT. MAGICAL BUD ENERGY.',
+      'THEY\'LL FOLLOW, FIGHT, AND LEVEL UP WITH YOU.',
       bud
         ? `ABILITY: ${bud.abilityStub.toUpperCase()}.`
         : 'ABILITY: BEING COOL IN COMBAT.',
+      'INVENTORY [I] → Y = BUDDY GEAR. SHARE YOUR LOOT.',
       'TALK ANYTIME. DON\'T BE RUDE WITH YOUR SWORD.',
     ],
   };
