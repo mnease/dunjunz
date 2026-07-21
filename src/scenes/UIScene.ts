@@ -18,6 +18,7 @@ import {
 import {
   buildMapzView,
   floorLabel,
+  landForRoom,
   type MapzOpenPayload,
   type MapzViewModel,
 } from '../systems/mapz';
@@ -69,8 +70,12 @@ const SLOT_KEYS: Record<EquipSlot, string> = {
  */
 export class UIScene extends Phaser.Scene {
   private heartsText: Phaser.GameObjects.Text | null = null;
+  /** Row 1: level / XP / coins / def (never room title). */
   private itemsText: Phaser.GameObjects.Text | null = null;
+  /** Row 2 left: room name only. */
   private roomText: Phaser.GameObjects.Text | null = null;
+  /** Row 2 right: control hints + quest mark (separate so they never collide). */
+  private hintsText: Phaser.GameObjects.Text | null = null;
   private dialogBg: Phaser.GameObjects.Rectangle | null = null;
   private dialogText: Phaser.GameObjects.Text | null = null;
   private dialogLines: string[] = [];
@@ -170,26 +175,38 @@ export class UIScene extends Phaser.Scene {
   }
 
   private buildChrome(): void {
-    this.add.rectangle(GAME_W / 2, HUD_H / 2, GAME_W, HUD_H, 0x0a0c10, 0.92);
+    // Two-row HUD (EMA/Comb pass): stats never share a line with room/hints.
+    // Row 1 y≈10: hearts + vitals. Row 2 y≈34: place + controls.
+    this.add.rectangle(GAME_W / 2, HUD_H / 2, GAME_W, HUD_H, 0x0a0c10, 0.94);
     this.add
-      .rectangle(GAME_W / 2, HUD_H - 1, GAME_W, 2, COLORS.green, 0.7)
+      .rectangle(GAME_W / 2, HUD_H - 1, GAME_W, 2, COLORS.green, 0.75)
       .setOrigin(0.5, 1);
 
-    this.heartsText = this.add.text(16, 16, '', {
+    // Hearts — high contrast pink on near-black (WCAG-ish for UI chrome)
+    this.heartsText = this.add.text(12, 10, '', {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: '12px',
+      fontSize: '11px',
       color: '#ff6b9d',
     });
-    this.itemsText = this.add.text(200, 16, '', {
+    // Vitals strip — amber, fixed left after hearts reserve (~180px)
+    this.itemsText = this.add.text(168, 12, '', {
       fontFamily: '"Press Start 2P", monospace',
       fontSize: '9px',
       color: '#ffc857',
     });
-    this.roomText = this.add
-      .text(GAME_W - 16, 16, '', {
+    // Place name — cool gray, left second row; max width via wordWrap
+    this.roomText = this.add.text(12, 34, '', {
+      fontFamily: '"Press Start 2P", monospace',
+      fontSize: '8px',
+      color: '#c5cde0',
+      wordWrap: { width: 420 },
+    });
+    // Hints — right-aligned second row; never overlaid on room name
+    this.hintsText = this.add
+      .text(GAME_W - 12, 34, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
-        color: '#8b93a7',
+        color: '#7dffb3',
         align: 'right',
       })
       .setOrigin(1, 0);
@@ -837,12 +854,16 @@ export class UIScene extends Phaser.Scene {
       this.game.events.emit('dialog-state', false);
     }
 
-    // Support legacy string payloads (no-op graphic fallback title)
+    // Prefer current room's land (not always surface — broke Kingdomz map UX)
     if (!payload || typeof payload === 'string') {
       if (this.lastSave) {
+        const land = landForRoom(ROOMS, this.lastSave.roomId);
         this.mapzPayload = {
           save: this.lastSave,
-          land: 'surface',
+          land:
+            this.lastSave.discoveredMapz?.includes(land) && land
+              ? land
+              : (this.lastSave.discoveredMapz?.[0] ?? 'surface'),
         };
       } else {
         return;
@@ -1942,34 +1963,59 @@ export class UIScene extends Phaser.Scene {
   private refreshHud = (save: SaveData, roomTitle: string): void => {
     this.lastSave = save;
     if (!this.heartsText?.active) return;
+
+    // Row 1 — vitals only (no room strings)
     const filled = Math.max(0, Math.ceil(save.hp / 2));
     const empty = Math.max(0, Math.ceil(save.maxHp / 2) - filled);
-    this.heartsText.setText(`${'♥'.repeat(filled)}${'♡'.repeat(empty)}`);
+    // Prefer numeric HP if many hearts (avoids overflow)
+    if (filled + empty > 10) {
+      this.heartsText.setText(`♥${save.hp}/${save.maxHp}`);
+    } else {
+      this.heartsText.setText(`${'♥'.repeat(filled)}${'♡'.repeat(empty)}`);
+    }
 
     const band = xpProgressInLevel(save.xp);
     const xpPart =
       band.need > 0
         ? `LV${save.level} ${band.into}/${band.need}XP`
         : `LV${save.level} MAX`;
-    const gear = [
-      save.hasSword ? 'WPN' : null,
-      save.hasKey ? 'KEY' : null,
+    // Compact gear: only status that changes decision-making
+    const bits = [
+      xpPart,
+      `${save.coins}c`,
       save.armor > 0 ? `DEF${save.armor}` : null,
+      !save.hasSword ? 'NO WPN' : null,
+      save.hasKey ? 'KEY' : null,
       save.attrPoints > 0 ? `PTS${save.attrPoints}` : null,
+    ].filter(Boolean);
+    this.itemsText?.setText(bits.join(' · '));
+
+    // Row 2 left — place only (shorten land suffix for width)
+    const place = roomTitle
+      .replace(/\s*·\s*KINGDOMZ$/i, '')
+      .replace(/\s*·\s*SEWERZ$/i, '')
+      .replace(/\s*·\s*SURFACE$/i, '')
+      .trim();
+    this.roomText?.setText(place || roomTitle);
+
+    // Row 2 right — controls + quest (never mixed into vitals)
+    const quest =
+      save.activeQuestId
+        ? 'JOB'
+        : save.princessSaved
+          ? '★'
+          : save.landsCleared.includes('dunjunz')
+            ? 'Q'
+            : '';
+    const hints = [
+      '[I] BAG',
+      (save.discoveredMapz?.length ?? 0) > 0 ? '[M] MAP' : null,
+      quest || null,
     ]
       .filter(Boolean)
-      .join(' ');
-    this.itemsText?.setText(
-      `${xpPart}  ${save.coins}c${gear ? '  ' + gear : ''}`,
-    );
-    const questTag = save.princessSaved
-      ? '  ★'
-      : save.landsCleared.includes('dunjunz')
-        ? '  Q'
-        : '';
-    const mapzHint =
-      (save.discoveredMapz?.length ?? 0) > 0 ? '  [M MAPZ]' : '';
-    this.roomText?.setText(roomTitle + '  [I]' + mapzHint + questTag);
+      .join('  ');
+    this.hintsText?.setText(hints);
+
     if (this.inventoryOpen) this.renderInventory(save);
   };
 

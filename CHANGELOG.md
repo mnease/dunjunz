@@ -25,6 +25,8 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 
 ### Fixed
 
+- **Kingdomz exit / map UX** — Royal Road & courtyard mid-band widened (3 tiles) so west trail exit is not a one-tile needle; mapz opens on current land (not always surface)
+- **HUD clutter / overlap** — two-row chrome (vitals | place + controls); hearts cap to numeric when many; controls no longer share a line with room titles
 - **Best Bud Hollow softlock** — continue-save default spawn was `(8,5)` inside a sealed pen (and on water). Hollow layout opened; continue spawn prefers room entrance / walkable tiles.
 - **Best Bud den empty** — den creature only spawned at stage `accepted`, but Prizella's first talk left you on `offered`, so the hollow looked empty. Bud always waits until recruited; den or one Prizella talk can start the friendship.
 - **Dezertz Sand Tower seal** — north link to Edge existed but top row was solid wall and south door had no exit; you could not leave after rescuing Prizella. North door restored; portal near north exit.

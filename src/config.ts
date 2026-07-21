@@ -4,7 +4,8 @@ export const TILE = 16;
 export const SCALE = 3;
 export const VIEW_TILES_W = 16;
 export const VIEW_TILES_H = 11;
-export const HUD_H = 48;
+/** Two-row chrome: stats + room/hints (was 48; overflowed long room titles). */
+export const HUD_H = 56;
 export const MAP_PIXEL_W = VIEW_TILES_W * TILE * SCALE;
 export const MAP_PIXEL_H = VIEW_TILES_H * TILE * SCALE;
 

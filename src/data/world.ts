@@ -124,16 +124,16 @@ export const ROOMS: Record<string, RoomDef> = {
     south: 'dezertz_edge',
     // East → kingdom (gated in GameScene until princessSaved)
     east: 'kingdom_gate',
-    // Rows must be 16 wide; west corridor (y=5) stays open for meadow entry.
-    // East mouth on y=5 for royal road.
+    // Rows must be 16 wide. West corridor open for meadow; east mouth is
+    // 3 tiles tall so leaving/entering Kingdomz is not a one-pixel door.
     tiles: [
       '########D#######',
       '#gggggggggggggg#',
       '#g..........ggg#',
       '#g..########..g#',
-      '#g..#......#..g#',
+      '....#......#....',
       '....#..~~..#....',
-      '#g..#......#..g#',
+      '....#......#....',
       '#g..###..###..g#',
       '#g............g#',
       '#gggggggggggggg#',
@@ -987,15 +987,16 @@ export const ROOMS: Record<string, RoomDef> = {
     mapY: 0,
     west: 'overworld_east',
     east: 'kingdom_courtyard',
+    // Full-width mid band (y=4–6) so trail ↔ castle exits are walkable
     tiles: [
       '################',
       '#gg..........gg#',
       '#g..########..g#',
-      '#g..#......#..g#',
       '#g............g#',
       '................',
+      '................',
+      '................',
       '#g............g#',
-      '#g..#......#..g#',
       '#g..########..g#',
       '#gg..........gg#',
       '################',
@@ -1008,8 +1009,9 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 2,
         dialog: [
           'PRIZELLA\'S KINGDOMZ — KEEP RIGHT.',
+          'WEST: BACK TO THE TRAIL. (WIDE PATH.)',
+          'EAST: COURTYARD. NORTH OF THAT: THRONE.',
           'CREEPS HERE HIT HARDER. ROYAL SECURITY.',
-          'COURTYARD EAST. THRONE NORTH OF THAT.',
         ],
       },
       {
@@ -1052,11 +1054,11 @@ export const ROOMS: Record<string, RoomDef> = {
       '########D#######',
       '#gg..........gg#',
       '#g....####....g#',
-      '#g...#....#...g#',
       '#g............g#',
       '................',
+      '................',
+      '................',
       '#g............g#',
-      '#g...#....#...g#',
       '#g....####....g#',
       '#gg..........gg#',
       '################',
@@ -1164,9 +1166,9 @@ export const ROOMS: Record<string, RoomDef> = {
       '#..............#',
       '#..####..####..#',
       '#..#........#..#',
-      '#..............#',
       '................',
-      '#..............#',
+      '................',
+      '................',
       '#..#........#..#',
       '#..####..####..#',
       '#..............#',
