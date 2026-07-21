@@ -17,6 +17,7 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 
 ### Fixed
 
+- **Best Bud den empty** — den creature only spawned at stage `accepted`, but Prizella's first talk left you on `offered`, so the hollow looked empty. Bud always waits until recruited; den or one Prizella talk can start the friendship.
 - **Dezertz Sand Tower seal** — north link to Edge existed but top row was solid wall and south door had no exit; you could not leave after rescuing Prizella. North door restored; portal near north exit.
 - **Game settings** (footer **Settings** modal, `localStorage`)
   - Master mute, music/SFX toggles + volume sliders

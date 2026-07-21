@@ -932,29 +932,36 @@ export class GameScene extends Phaser.Scene {
 
   /** Best Bud den meet or companion banter. */
   private talkToBestBud(actor: Actor): void {
-    if (this.save.bestBudStage === 'accepted' && this.save.bestBudId) {
-      const r = meetBestBud(this.save);
-      this.save = r.save;
-      writeSave(this.save);
-      actor.alive = false;
-      if (actor.sprite?.active) actor.sprite.destroy();
-      this.game.events.emit('dialog-show', r.dialog);
-      this.syncCompanion();
-      const bud = getBestBud(this.save.bestBudId);
-      this.game.events.emit('toast', bud ? `BEST BUD: ${bud.name}!` : 'BEST BUD!');
-      return;
-    }
-    if (isCompanionActive(this.save)) {
+    // Following companion (not the den entity)
+    if (
+      isCompanionActive(this.save) &&
+      actor.id !== 'best-bud-den'
+    ) {
       this.game.events.emit('dialog-show', bestBudBanter(this.save));
       return;
     }
-    this.game.events.emit(
-      'dialog-show',
-      actor.dialog ?? [
-        '...A CREATURE WAITS.',
-        'TALK TO PRIZELLA ABOUT CHAMPION JOB #1 FIRST.',
-      ],
-    );
+
+    const before = this.save.bestBudStage;
+    const r = meetBestBud(this.save);
+    this.save = r.save;
+    writeSave(this.save);
+    this.game.events.emit('dialog-show', r.dialog);
+
+    // Recruited from den → remove den sprite, start follow
+    if (
+      r.save.bestBudStage === 'found' &&
+      before !== 'found' &&
+      before !== 'complete'
+    ) {
+      actor.alive = false;
+      if (actor.sprite?.active) actor.sprite.destroy();
+      this.syncCompanion();
+      const bud = getBestBud(this.save.bestBudId);
+      this.game.events.emit(
+        'toast',
+        bud ? `BEST BUD: ${bud.name}!` : 'BEST BUD!',
+      );
+    }
   }
 
   /** Spawn/destroy following companion based on quest stage. */

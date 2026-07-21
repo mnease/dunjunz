@@ -67,6 +67,7 @@ import {
   meetBestBud,
   prizellaChampionTalk,
   rollBestBudId,
+  shouldSpawnDenBud,
 } from './best-bud';
 import {
   princessChampionDialog,
@@ -874,24 +875,45 @@ describe('best bud quest', () => {
     expect(a2.save.bestBudId).toBe(id);
   });
 
-  it('meet requires accepted; complete requires found', () => {
+  it('meet auto-accepts after rescue; complete requires found', () => {
     let s = { ...defaultSave(), princessSaved: true, runSeed: 7 };
-    expect(meetBestBud(s).save.bestBudStage).toBe('none');
-    s = acceptBestBudQuest(s).save;
+    // Den visit alone is enough — no empty hollow after one Prizella pitch
     s = meetBestBud(s).save;
     expect(s.bestBudStage).toBe('found');
+    expect(s.bestBudId).not.toBeNull();
     s = completeBestBudQuest(s).save;
     expect(s.bestBudStage).toBe('complete');
     expect(s.coins).toBeGreaterThanOrEqual(20);
   });
 
-  it('prizellaChampionTalk advances offer → accept', () => {
+  it('meet before rescue does not recruit', () => {
+    const s = { ...defaultSave(), princessSaved: false, runSeed: 3 };
+    const r = meetBestBud(s);
+    expect(r.save.bestBudStage).toBe('none');
+    expect(r.dialog.join(' ')).toMatch(/PRINCESZ|SAVE/i);
+  });
+
+  it('shouldSpawnDenBud until recruited', () => {
+    const empty = defaultSave();
+    expect(shouldSpawnDenBud(empty)).toBe(true);
+    const found = {
+      ...defaultSave(),
+      bestBudStage: 'found' as const,
+      bestBudId: 'gloop' as const,
+    };
+    expect(shouldSpawnDenBud(found)).toBe(false);
+  });
+
+  it('prizellaChampionTalk accepts in one talk', () => {
     let s = { ...defaultSave(), princessSaved: true, runSeed: 99 };
-    const o = prizellaChampionTalk(s);
-    expect(o.save.bestBudStage).toBe('offered');
-    const a = prizellaChampionTalk(o.save);
+    const a = prizellaChampionTalk(s);
     expect(a.save.bestBudStage).toBe('accepted');
     expect(a.save.bestBudId).not.toBeNull();
+    // Second talk while still accepted = reminder, not re-roll
+    const id = a.save.bestBudId;
+    const again = prizellaChampionTalk(a.save);
+    expect(again.save.bestBudId).toBe(id);
+    expect(again.save.bestBudStage).toBe('accepted');
   });
 
   it('roster is non-human original creatures', () => {

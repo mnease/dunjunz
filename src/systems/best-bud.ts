@@ -154,8 +154,14 @@ export function isCompanionActive(save: SaveData): boolean {
   );
 }
 
+/**
+ * Den creature is visible until recruited.
+ * (Previously required stage === 'accepted', which left the hollow empty
+ * after Prizella's first pitch (stage 'offered') or before talking to her.)
+ */
 export function shouldSpawnDenBud(save: SaveData): boolean {
-  return save.bestBudStage === 'accepted' && !!save.bestBudId;
+  const stage = save.bestBudStage ?? 'none';
+  return stage !== 'found' && stage !== 'complete';
 }
 
 function withFlags(save: SaveData, stage: BestBudStage): SaveData {
@@ -237,15 +243,39 @@ export function meetBestBud(save: SaveData): {
   dialog: string[];
 } {
   let next = ensureRunSeed(save);
-  if (next.bestBudStage !== 'accepted' || !next.bestBudId) {
+
+  // Already recruited — den should be empty; keep dialog safe
+  if (next.bestBudStage === 'found' || next.bestBudStage === 'complete') {
+    return {
+      save: next,
+      dialog: bestBudBanter(next),
+    };
+  }
+
+  // Pre-rescue: creature is napping; quest not open yet
+  if (!next.princessSaved) {
     return {
       save: next,
       dialog: [
-        '...NOBODY\'S HOME.',
-        'MAYBE TALK TO PRIZELLA ABOUT CHAMPION STUFF FIRST.',
+        '...A WEIRD CREATURE NAPS IN THE HOLLOW.',
+        'IT OPENS ONE EYE. "SAVE SOMEONE COOL FIRST."',
+        'PROBABLY THE PRINCESZ. YEAH.',
+        'THEN COME BACK. OR TALK TO HER ABOUT CHAMPION JOBS.',
       ],
     };
   }
+
+  // Auto-accept: den visit or second chance if player only got the pitch
+  if (!next.bestBudId) {
+    next = {
+      ...next,
+      bestBudId: rollBestBudId(next.runSeed),
+    };
+  }
+  if (next.bestBudStage === 'none' || next.bestBudStage === 'offered') {
+    next = withFlags(next, 'accepted');
+  }
+
   const bud = getBestBud(next.bestBudId);
   next = withFlags(next, 'found');
   return {
@@ -328,11 +358,26 @@ export function prizellaChampionTalk(save: SaveData): {
   const stage: BestBudStage = next.bestBudStage ?? 'none';
 
   if (stage === 'none' || stage === 'offered') {
-    // First talk: offer. Second talk (already offered): accept + roll.
-    if (stage === 'none') {
-      return offerBestBudQuest(next);
-    }
-    return acceptBestBudQuest(next);
+    // One talk: pitch + accept so the den is never empty after this.
+    // (Old flow was offer → empty den until a second talk.)
+    const pitch =
+      stage === 'none'
+        ? [
+            'PRIZELLA: CHAMPION JOB #1. REAL ONE.',
+            'EVERY HERO NEEDS A BEST BUD.',
+            'NOT A SIDEKICK. A BUD. WEIRD. LOYAL.',
+            'ONE HANGS IN A WOODZ HOLLOW — EAST OF EDGE.',
+            '',
+          ]
+        : [
+            'PRIZELLA: STILL HERE? COOL. LET\'S LOCK IT IN.',
+            '',
+          ];
+    const accepted = acceptBestBudQuest(next);
+    return {
+      save: accepted.save,
+      dialog: [...pitch, ...accepted.dialog],
+    };
   }
   if (stage === 'accepted') {
     return {
@@ -340,7 +385,7 @@ export function prizellaChampionTalk(save: SaveData): {
       dialog: [
         'PRIZELLA: STILL NO BUD? WOODZ. EAST OF EDGE.',
         'HOLLOW. COZY. SMELLS LIKE SNACKS AND DESTINY.',
-        'GO. MAKE A FRIEND. I\'LL WAIT. RULING IS BUSY.',
+        'THE BUD IS WAITING THERE. GO BE COOL.',
       ],
     };
   }

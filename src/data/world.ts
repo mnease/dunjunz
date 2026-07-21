@@ -744,9 +744,9 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 8,
         y: 2,
         dialog: [
-          'BEST BUD DEN (PROBABLY)',
-          'IF YOU MEET SOMEONE WEIRD AND LOYAL —',
-          'THAT\'S THE POINT. BE COOL ABOUT IT.',
+          'BEST BUD DEN.',
+          'SOMEONE WEIRD AND LOYAL LIVES HERE.',
+          'TALK TO THEM WITH E. BE COOL ABOUT IT.',
         ],
       },
       {
@@ -756,7 +756,7 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 5,
         dialog: [
           '...A WEIRD CREATURE LOOKS UP.',
-          '(TALK WITH E WHEN YOU\'RE ON THE QUEST.)',
+          '(TALK WITH E.)',
         ],
       },
       {
