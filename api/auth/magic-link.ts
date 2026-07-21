@@ -1,31 +1,45 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { ensureThreeEmptySlots } from '../_lib/auth';
-import { hashToken, isValidEmail, randomToken } from '../_lib/crypto';
-import { dbConfigured, getSql } from '../_lib/db';
-import { clientIp, methodGuard, readJson } from '../_lib/http';
-import { sendMagicLinkEmail } from '../_lib/mail';
-import { rateLimit } from '../_lib/rate-limit';
 
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
 ): Promise<void> {
-  if (!methodGuard(req, res, ['POST'])) return;
-  if (!dbConfigured()) {
-    res.status(503).json({ ok: false, error: 'Database not configured (DATABASE_URL).' });
-    return;
-  }
-
-  const body = readJson<{ email?: string }>(req);
-  const email = String(body.email ?? '').trim();
-
-  // Anti-enumeration: always ok shape for valid emails
-  if (!isValidEmail(email)) {
-    res.status(400).json({ ok: false, error: 'Valid email required.' });
-    return;
-  }
-
   try {
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') {
+      res.status(204).end();
+      return;
+    }
+    if (req.method !== 'POST') {
+      res.status(405).json({ ok: false, error: 'Method not allowed.' });
+      return;
+    }
+
+    if (!process.env.DATABASE_URL?.trim()) {
+      res.status(503).json({
+        ok: false,
+        error: 'no_db',
+        message:
+          'Cloud accounts need DATABASE_URL. Add Neon connection string in Vercel env, run sql/001_auth_slots.sql, redeploy.',
+      });
+      return;
+    }
+
+    const { ensureThreeEmptySlots } = await import('../_lib/auth');
+    const { hashToken, isValidEmail, randomToken } = await import('../_lib/crypto');
+    const { getSql } = await import('../_lib/db');
+    const { clientIp, readJson } = await import('../_lib/http');
+    const { sendMagicLinkEmail } = await import('../_lib/mail');
+    const { rateLimit } = await import('../_lib/rate-limit');
+
+    const body = readJson<{ email?: string }>(req);
+    const email = String(body.email ?? '').trim();
+    if (!isValidEmail(email)) {
+      res.status(400).json({ ok: false, error: 'Valid email required.' });
+      return;
+    }
+
     const ip = clientIp(req);
     const norm = email.toLowerCase();
     if (!(await rateLimit(`magic:ip:${ip}`, 10, 60 * 60 * 1000))) {
@@ -33,7 +47,6 @@ export default async function handler(
       return;
     }
     if (!(await rateLimit(`magic:email:${norm}`, 3, 60 * 60 * 1000))) {
-      // Still success-shaped for anti-enumeration
       res.status(200).json({ ok: true });
       return;
     }
@@ -69,23 +82,21 @@ export default async function handler(
       process.env.AUTH_BASE_URL?.replace(/\/$/, '') ||
       (process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}`
-        : 'http://localhost:3000');
+        : 'https://dunjunz.vercel.app');
     const link = `${base}/api/auth/callback?token=${encodeURIComponent(raw)}`;
 
     try {
       await sendMagicLinkEmail(email, link);
     } catch (mailErr) {
       console.error('[auth/magic-link] mail', mailErr);
-      // Still return ok to avoid enumeration; log for ops
     }
 
     res.status(200).json({ ok: true });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[auth/magic-link]', msg);
-    // Common: relation "users" does not exist → migration not run
     const hint = /relation .* does not exist/i.test(msg)
-      ? 'Run sql/001_auth_slots.sql in your Neon SQL editor.'
+      ? 'Run sql/001_auth_slots.sql in Neon SQL editor.'
       : /DATABASE_URL/i.test(msg)
         ? 'Set DATABASE_URL on Vercel and redeploy.'
         : undefined;
