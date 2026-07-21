@@ -746,7 +746,7 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 7,
         dialog: [
           'A CRUDE FORJE.',
-          'PRESS F TO FORJE GEAR.',
+          'E OR F: OPEN FORJE GRID.',
           'NEED OREZ AND SHARDZ.',
         ],
       },

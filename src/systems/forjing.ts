@@ -1,5 +1,6 @@
 /**
  * Forjing — craft and enhance gear (intentional spelling).
+ * Graphic dual-pane UI: actions left, materials right.
  */
 
 import type { AttrId, ItemInstance, SaveData } from '../types';
@@ -14,6 +15,18 @@ export const FORJING_MATERIALS = [
 ] as const;
 
 export type ForjingMaterial = (typeof FORJING_MATERIALS)[number];
+
+/** Core forje mats always shown + creature parts when owned. */
+export const FORJING_PANEL_MATS = [
+  ...FORJING_MATERIALS,
+  'slime_gel',
+  'bone',
+  'wolf_pelt',
+  'cactus_spine',
+  'ensign_badge',
+] as const;
+
+export const FORJING_ACTION_COLS = 3;
 
 export interface CraftRecipe {
   id: string;
@@ -67,6 +80,141 @@ export const CRAFT_RECIPES: CraftRecipe[] = [
     blurb: 'Finger furniture. +DEF.',
   },
 ];
+
+/** One cell in the forje action grid (left pane). */
+export interface ForjingAction {
+  id: string;
+  kind: 'enhance' | 'imbue' | 'craft';
+  name: string;
+  /** Texture key fragment: icon_${iconId} */
+  iconId: string;
+  cost: Partial<Record<string, number>>;
+  coins: number;
+  blurb: string;
+  attr?: AttrId;
+  recipeId?: string;
+}
+
+/** Material cell for the right pane. */
+export interface ForjingMatCell {
+  stackId: string;
+  name: string;
+  count: number;
+  iconId: string;
+}
+
+export interface ForjingOpenPayload {
+  save: SaveData;
+  selectedIndex?: number;
+}
+
+export function listForjingActions(): ForjingAction[] {
+  const ops: ForjingAction[] = [
+    {
+      id: 'enhance',
+      kind: 'enhance',
+      name: 'ENHANCE',
+      iconId: 'ore_iron',
+      cost: { ore_iron: 1, ore_spark: 1 },
+      coins: 15,
+      blurb: '+1 weapon enhancement (max +3). Uses equipped weapon.',
+    },
+    {
+      id: 'imbue_str',
+      kind: 'imbue',
+      name: 'IMBUE STR',
+      iconId: 'ore_spark',
+      cost: { ore_spark: 2, sand_crystal: 1 },
+      coins: 25,
+      blurb: '+1 STR on equipped weapon.',
+      attr: 'str',
+    },
+    {
+      id: 'imbue_dex',
+      kind: 'imbue',
+      name: 'IMBUE DEX',
+      iconId: 'ore_spark',
+      cost: { ore_spark: 2, sand_crystal: 1 },
+      coins: 25,
+      blurb: '+1 DEX on equipped weapon.',
+      attr: 'dex',
+    },
+    {
+      id: 'imbue_vit',
+      kind: 'imbue',
+      name: 'IMBUE VIT',
+      iconId: 'ore_spark',
+      cost: { ore_spark: 2, sand_crystal: 1 },
+      coins: 25,
+      blurb: '+1 VIT on equipped weapon.',
+      attr: 'vit',
+    },
+  ];
+  for (const r of CRAFT_RECIPES) {
+    ops.push({
+      id: r.id,
+      kind: 'craft',
+      name: r.name,
+      iconId: r.resultTemplateId,
+      cost: r.cost,
+      coins: r.coins ?? 0,
+      blurb: r.blurb,
+      recipeId: r.id,
+    });
+  }
+  return ops;
+}
+
+export function listForjingMats(save: SaveData): ForjingMatCell[] {
+  const cells: ForjingMatCell[] = [];
+  for (const id of FORJING_PANEL_MATS) {
+    const count = save.stacks[id] ?? 0;
+    // Always show core forje mats; parts only if owned
+    const isCore = (FORJING_MATERIALS as readonly string[]).includes(id);
+    if (!isCore && count <= 0) continue;
+    const t = getTemplate(id);
+    cells.push({
+      stackId: id,
+      name: t.name,
+      count,
+      iconId: id,
+    });
+  }
+  return cells;
+}
+
+export function canAffordForjing(
+  save: SaveData,
+  action: ForjingAction,
+): boolean {
+  return hasCosts(save, action.cost, action.coins);
+}
+
+export function formatForjingCost(action: ForjingAction): string {
+  const bits: string[] = [];
+  for (const [k, n] of Object.entries(action.cost)) {
+    if (!n) continue;
+    bits.push(`${n} ${getTemplate(k).name}`);
+  }
+  if (action.coins > 0) bits.push(`${action.coins}c`);
+  return bits.join(' + ') || 'FREE';
+}
+
+export function runForjingAction(
+  save: SaveData,
+  actionId: string,
+): ForjingResult {
+  if (actionId === 'enhance') return forjeEnhanceWeapon(save);
+  if (actionId === 'imbue_str') return forjeImbueWeapon(save, 'str');
+  if (actionId === 'imbue_dex') return forjeImbueWeapon(save, 'dex');
+  if (actionId === 'imbue_vit') return forjeImbueWeapon(save, 'vit');
+  if (actionId.startsWith('craft_')) return forjeCraft(save, actionId);
+  return { ok: false, save, reason: 'UNKNOWN FORJE ACTION' };
+}
+
+export function forjingIconTexture(iconId: string): string {
+  return `icon_${iconId}`;
+}
 
 export type ForjingResult =
   | { ok: true; save: SaveData; message: string }
@@ -189,28 +337,17 @@ export function forjeCraft(
   };
 }
 
+/** Text fallback / toast helper (graphic UI is primary). */
 export function formatForjingPanel(save: SaveData): string {
   const mats = FORJING_MATERIALS.map(
-    (m) => `${m}: ${save.stacks[m] ?? 0}`,
-  ).join('  ');
-  const lines = [
-    '=== FORJING ===',
-    mats || 'NO MATERIALZ',
-    `COINS: ${save.coins}c`,
-    '',
-    '1 ENHANCE WEAPON  (1 iron + 1 spark + 15c)',
-    '2 IMBUE +STR       (2 spark + 1 sand + 25c)',
-    '3 IMBUE +DEX',
-    '4 IMBUE +VIT',
-    '5 CRAFT IRON BLADE (2 iron + 1 wood + 20c)',
-    '6 CRAFT SAND SABER (2 sand + 1 spark + 40c)',
-    '7 CRAFT WOOD SHIELD (2 wood + 1 iron + 15c)',
-    '8 CRAFT IRON SHIELD (3 iron + 1 wood + 30c)',
-    '9 CRAFT COPPER RING (1 iron + 1 spark + 18c)',
-    '',
-    'F CLOSE FORJE',
-  ];
-  return lines.join('\n');
+    (m) => `${getTemplate(m).name}: ${save.stacks[m] ?? 0}`,
+  ).join(' · ');
+  return [
+    'FORJE OPEN',
+    mats,
+    `${save.coins}c`,
+    'ARROWS SELECT · ENTER FORJE · F CLOSE',
+  ].join('\n');
 }
 
 export function getWeaponAttrBonus(inst: ItemInstance, attr: AttrId): number {

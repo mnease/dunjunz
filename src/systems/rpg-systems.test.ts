@@ -52,9 +52,13 @@ import {
   reconcileMapzFromCollected,
 } from './mapz';
 import {
+  canAffordForjing,
   forjeCraft,
   forjeEnhanceWeapon,
   forjeImbueWeapon,
+  listForjingActions,
+  listForjingMats,
+  runForjingAction,
 } from './forjing';
 import {
   questHint,
@@ -603,6 +607,38 @@ describe('forjing craft enhance imbue', () => {
     const save = grantMildSword(defaultSave());
     const r = forjeEnhanceWeapon(save);
     expect(r.ok).toBe(false);
+  });
+
+  it('listForjingActions includes enhance, imbues, and crafts', () => {
+    const actions = listForjingActions();
+    expect(actions.some((a) => a.id === 'enhance')).toBe(true);
+    expect(actions.some((a) => a.id === 'imbue_str')).toBe(true);
+    expect(actions.some((a) => a.kind === 'craft')).toBe(true);
+    expect(actions.length).toBeGreaterThanOrEqual(9);
+  });
+
+  it('listForjingMats always shows core mats', () => {
+    const mats = listForjingMats(defaultSave());
+    expect(mats.some((m) => m.stackId === 'ore_iron')).toBe(true);
+    expect(mats.find((m) => m.stackId === 'ore_iron')?.count).toBe(0);
+  });
+
+  it('runForjingAction crafts by id', () => {
+    let save = defaultSave();
+    save.coins = 30;
+    save.stacks = { ore_iron: 2, wood_shard: 1 };
+    const r = runForjingAction(save, 'craft_iron_blade');
+    expect(r.ok).toBe(true);
+  });
+
+  it('canAffordForjing reflects stacks and coins', () => {
+    const actions = listForjingActions();
+    const enhance = actions.find((a) => a.id === 'enhance')!;
+    expect(canAffordForjing(defaultSave(), enhance)).toBe(false);
+    let save = defaultSave();
+    save.coins = 20;
+    save.stacks = { ore_iron: 1, ore_spark: 1 };
+    expect(canAffordForjing(save, enhance)).toBe(true);
   });
 });
 

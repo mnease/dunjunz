@@ -64,10 +64,9 @@ import {
   reconcileMapzFromCollected,
 } from '../systems/mapz';
 import {
-  formatForjingPanel,
-  forjeCraft,
-  forjeEnhanceWeapon,
-  forjeImbueWeapon,
+  FORJING_ACTION_COLS,
+  listForjingActions,
+  runForjingAction,
 } from '../systems/forjing';
 import {
   questHint,
@@ -192,6 +191,7 @@ export class GameScene extends Phaser.Scene {
   private inventoryOpen = false;
   private mapzOpen = false;
   private forjingOpen = false;
+  private forjingSelected = 0;
   private shopOpen = false;
   private shopId: string | null = null;
   private shopSelected = 0;
@@ -216,6 +216,7 @@ export class GameScene extends Phaser.Scene {
     this.inventoryOpen = false;
     this.mapzOpen = false;
     this.forjingOpen = false;
+    this.forjingSelected = 0;
     this.shopOpen = false;
     this.shopId = null;
     this.shopSelected = 0;
@@ -342,6 +343,7 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on('inventory-state', this.onInventoryState, this);
     this.game.events.on('mapz-state', this.onMapzState, this);
     this.game.events.on('forjing-state', this.onForjingState, this);
+    this.game.events.on('forjing-cursor', this.onForjingCursor, this);
     this.game.events.on('shop-state', this.onShopState, this);
     this.game.events.on('shop-cursor', this.onShopCursor, this);
     this.game.events.on('inventory-bag-activate', this.onBagActivate, this);
@@ -350,6 +352,7 @@ export class GameScene extends Phaser.Scene {
       this.game.events.off('inventory-state', this.onInventoryState, this);
       this.game.events.off('mapz-state', this.onMapzState, this);
       this.game.events.off('forjing-state', this.onForjingState, this);
+      this.game.events.off('forjing-cursor', this.onForjingCursor, this);
       this.game.events.off('shop-state', this.onShopState, this);
       this.game.events.off('shop-cursor', this.onShopCursor, this);
       this.game.events.off('inventory-bag-activate', this.onBagActivate, this);
@@ -432,9 +435,14 @@ export class GameScene extends Phaser.Scene {
 
   private onForjingState = (open: boolean): void => {
     this.forjingOpen = open;
+    if (!open) this.forjingSelected = 0;
     if (open && this.player.body) {
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     }
+  };
+
+  private onForjingCursor = (index: number): void => {
+    this.forjingSelected = index;
   };
 
   private onShopState = (open: boolean): void => {
@@ -541,9 +549,9 @@ export class GameScene extends Phaser.Scene {
       this.cycleEquip('shoes');
       return;
     }
-    if (this.dialogLocked || this.paused || this.mapzOpen) return;
+    if (this.dialogLocked || this.paused || this.mapzOpen || this.shopOpen) return;
     if (this.forjingOpen) {
-      this.game.events.emit('forjing-toggle', formatForjingPanel(this.save));
+      this.game.events.emit('forjing-toggle');
       return;
     }
     // Must be near a forje
@@ -552,12 +560,24 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('toast', 'NO FORJE NEARBY');
       return;
     }
-    this.game.events.emit('forjing-toggle', formatForjingPanel(this.save));
+    this.forjingSelected = 0;
+    this.game.events.emit('forjing-toggle', {
+      save: this.save,
+      selectedIndex: 0,
+    });
+    this.game.events.emit('toast', 'FORJE — SELECT A RECIPE');
   };
 
   private onDigitKey(n: number): void {
     if (this.forjingOpen && !this.dialogLocked && !this.paused) {
-      this.runForjingAction(n);
+      // 1–9 pick action slot (1-based)
+      const actions = listForjingActions();
+      const idx = n - 1;
+      if (idx >= 0 && idx < actions.length) {
+        this.forjingSelected = idx;
+        this.game.events.emit('forjing-select', idx);
+        this.confirmForjingAction();
+      }
       return;
     }
     if (this.inventoryOpen) {
@@ -573,19 +593,11 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private runForjingAction(n: number): void {
-    let result;
-    if (n === 1) result = forjeEnhanceWeapon(this.save);
-    else if (n === 2) result = forjeImbueWeapon(this.save, 'str');
-    else if (n === 3) result = forjeImbueWeapon(this.save, 'dex');
-    else if (n === 4) result = forjeImbueWeapon(this.save, 'vit');
-    else if (n === 5) result = forjeCraft(this.save, 'craft_iron_blade');
-    else if (n === 6) result = forjeCraft(this.save, 'craft_sand_saber');
-    else if (n === 7) result = forjeCraft(this.save, 'craft_wood_shield');
-    else if (n === 8) result = forjeCraft(this.save, 'craft_iron_shield');
-    else if (n === 9) result = forjeCraft(this.save, 'craft_copper_ring');
-    else return;
-
+  private confirmForjingAction(): void {
+    const actions = listForjingActions();
+    const action = actions[this.forjingSelected];
+    if (!action) return;
+    const result = runForjingAction(this.save, action.id);
     if (!result.ok) {
       this.game.events.emit('toast', result.reason);
       return;
@@ -595,8 +607,21 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
     this.refreshPlayerAppearance();
     this.game.events.emit('toast', result.message);
-    this.game.events.emit('forjing-refresh', formatForjingPanel(this.save));
+    this.game.events.emit('forjing-refresh', this.save);
     this.game.events.emit('inventory-refresh', this.save);
+  }
+
+  private navForjing(dir: 'up' | 'down' | 'left' | 'right'): void {
+    if (!this.forjingOpen) return;
+    const actions = listForjingActions();
+    if (!actions.length) return;
+    this.forjingSelected = shopIndexFromDir(
+      this.forjingSelected,
+      actions.length,
+      FORJING_ACTION_COLS,
+      dir,
+    );
+    this.game.events.emit('forjing-select', this.forjingSelected);
   }
 
   private findNearbyKind(kind: EntityKind): Actor | null {
@@ -1459,10 +1484,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (best.kind === 'forje') {
-      const lines = best.dialog?.length
-        ? best.dialog
-        : ['A FORJE.', 'PRESS F TO FORJE GEAR.'];
-      this.game.events.emit('dialog-show', lines);
+      // Open graphic forje UI (same as F when nearby)
+      this.forjingSelected = 0;
+      this.game.events.emit('forjing-toggle', {
+        save: this.save,
+        selectedIndex: 0,
+      });
+      this.game.events.emit('toast', 'FORJE — SELECT A RECIPE');
       return;
     }
 
@@ -2140,7 +2168,7 @@ export class GameScene extends Phaser.Scene {
       } else if (this.mapzOpen) {
         this.game.events.emit('mapz-toggle');
       } else if (this.forjingOpen) {
-        this.game.events.emit('forjing-toggle', '');
+        this.game.events.emit('forjing-toggle');
       } else if (this.shopOpen) {
         this.game.events.emit('shop-toggle');
       } else {
@@ -2181,6 +2209,21 @@ export class GameScene extends Phaser.Scene {
         // E close is handled only in onInteractKey (not JustDown here)
         if (Phaser.Input.Keyboard.JustDown(this.keys.enter)) {
           this.confirmShopTrade();
+        }
+      }
+      // Forje grid navigation
+      if (this.forjingOpen) {
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.keys.a)) {
+          this.navForjing('left');
+        } else if (Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.keys.d)) {
+          this.navForjing('right');
+        } else if (Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.keys.w)) {
+          this.navForjing('up');
+        } else if (Phaser.Input.Keyboard.JustDown(this.cursors.down) || Phaser.Input.Keyboard.JustDown(this.keys.s)) {
+          this.navForjing('down');
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.enter)) {
+          this.confirmForjingAction();
         }
       }
       // Enemies still move while inventory is open so the world is not frozen unfairly

@@ -23,6 +23,15 @@ import {
   type ShopOpenPayload,
   type ShopPane,
 } from '../systems/shop';
+import {
+  canAffordForjing,
+  FORJING_ACTION_COLS,
+  formatForjingCost,
+  forjingIconTexture,
+  listForjingActions,
+  listForjingMats,
+  type ForjingOpenPayload,
+} from '../systems/forjing';
 import { xpProgressInLevel } from '../systems/progression';
 import type { EquipSlot, LandId, SaveData } from '../types';
 
@@ -30,13 +39,8 @@ const MAPZ_CELL = 56;
 const MAPZ_GAP = 14;
 const SHOP_CELL = 56;
 const SHOP_GAP = 10;
-
-const PANEL_STYLE = {
-  fontFamily: '"Press Start 2P", monospace',
-  fontSize: '10px',
-  color: '#f4f0ff',
-  lineSpacing: 8,
-} as const;
+const FORJE_CELL = 56;
+const FORJE_GAP = 10;
 
 const SLOT_KEYS: Record<EquipSlot, string> = {
   weapon: 'W',
@@ -101,7 +105,16 @@ export class UIScene extends Phaser.Scene {
   private mapzPayload: MapzOpenPayload | null = null;
   private mapzFloor: number | undefined;
   private forjingBg: Phaser.GameObjects.Rectangle | null = null;
-  private forjingText: Phaser.GameObjects.Text | null = null;
+  private forjingTitle: Phaser.GameObjects.Text | null = null;
+  private forjingCoins: Phaser.GameObjects.Text | null = null;
+  private forjingActionLabel: Phaser.GameObjects.Text | null = null;
+  private forjingMatLabel: Phaser.GameObjects.Text | null = null;
+  private forjingDetail: Phaser.GameObjects.Text | null = null;
+  private forjingHelp: Phaser.GameObjects.Text | null = null;
+  private forjingLayer: Phaser.GameObjects.Container | null = null;
+  private forjingPieces: Phaser.GameObjects.GameObject[] = [];
+  private forjingPayload: ForjingOpenPayload | null = null;
+  private forjingSelected = 0;
 
   private shopBg: Phaser.GameObjects.Rectangle | null = null;
   private shopTitle: Phaser.GameObjects.Text | null = null;
@@ -138,7 +151,7 @@ export class UIScene extends Phaser.Scene {
       this.setInventoryVisible(false);
       this.ensureMapzChrome();
       this.closeMapzPanel();
-      this.setForjingVisible(false, '');
+      this.closeForjingPanel();
       this.ensureShopChrome();
       this.closeShopPanel();
     }
@@ -307,24 +320,110 @@ export class UIScene extends Phaser.Scene {
   }
 
   private buildForjingPanel(): void {
-    const d = 140;
+    const d = 200;
+    this.clearForjingPieces();
+    this.forjingBg?.destroy();
+    this.forjingTitle?.destroy();
+    this.forjingCoins?.destroy();
+    this.forjingActionLabel?.destroy();
+    this.forjingMatLabel?.destroy();
+    this.forjingDetail?.destroy();
+    this.forjingHelp?.destroy();
+    this.forjingLayer?.destroy();
+
     this.forjingBg = this.add
-      .rectangle(GAME_W / 2, GAME_H / 2 + 8, GAME_W - 48, GAME_H - 100, 0x0a0c10, 0.96)
-      .setStrokeStyle(3, COLORS.gold)
+      .rectangle(GAME_W / 2, GAME_H / 2 + 8, GAME_W - 24, GAME_H - 56, 0x0a0c10, 0.98)
+      .setStrokeStyle(4, COLORS.gold)
       .setScrollFactor(0)
       .setDepth(d)
       .setVisible(false);
-    this.forjingText = this.add
-      .text(GAME_W / 2, GAME_H / 2, '', {
-        ...PANEL_STYLE,
-        fontSize: '10px',
+
+    this.forjingTitle = this.add
+      .text(GAME_W / 2, HUD_H + 12, 'FORJE', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '12px',
         color: '#ffc857',
-        align: 'center',
       })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+
+    this.forjingCoins = this.add
+      .text(GAME_W / 2, HUD_H + 32, '', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '9px',
+        color: '#7dffb3',
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+
+    this.forjingActionLabel = this.add
+      .text(GAME_W * 0.28, HUD_H + 52, 'FORJE MENU', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
+        color: '#ffc857',
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+
+    this.forjingMatLabel = this.add
+      .text(GAME_W * 0.72, HUD_H + 52, 'YOUR MATERIALZ', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
+        color: '#7dffb3',
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+
+    this.forjingLayer = this.add.container(0, 0).setDepth(d + 2).setScrollFactor(0);
+    this.forjingLayer.setVisible(false);
+
+    this.forjingDetail = this.add
+      .text(40, GAME_H - 100, '', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
+        color: '#f4f0ff',
+        lineSpacing: 6,
+        wordWrap: { width: GAME_W - 80 },
+      })
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+
+    this.forjingHelp = this.add
+      .text(
+        GAME_W / 2,
+        GAME_H - 26,
+        'ARROWS SELECT  ·  ENTER / 1-9 FORJE  ·  F / ESC CLOSE',
+        {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '6px',
+          color: '#ffc857',
+        },
+      )
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(d + 1)
       .setVisible(false);
+  }
+
+  private ensureForjingChrome(): void {
+    if (!this.forjingBg?.active || !this.forjingLayer?.active) {
+      this.buildForjingPanel();
+    }
+  }
+
+  private clearForjingPieces(): void {
+    for (const p of this.forjingPieces) p.destroy();
+    this.forjingPieces = [];
+    this.forjingLayer?.removeAll(true);
   }
 
   private buildShopPanel(): void {
@@ -623,6 +722,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.off('mapz-toggle', this.onMapzToggle, this);
     this.game.events.off('mapz-nav', this.onMapzNav, this);
     this.game.events.off('forjing-toggle', this.onForjingToggle, this);
+    this.game.events.off('forjing-select', this.onForjingSelect, this);
     this.game.events.off('forjing-refresh', this.onForjingRefresh, this);
     this.game.events.off('shop-toggle', this.onShopToggle, this);
     this.game.events.off('shop-select', this.onShopSelect, this);
@@ -638,6 +738,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('mapz-toggle', this.onMapzToggle, this);
     this.game.events.on('mapz-nav', this.onMapzNav, this);
     this.game.events.on('forjing-toggle', this.onForjingToggle, this);
+    this.game.events.on('forjing-select', this.onForjingSelect, this);
     this.game.events.on('forjing-refresh', this.onForjingRefresh, this);
     this.game.events.on('shop-toggle', this.onShopToggle, this);
     this.game.events.on('shop-select', this.onShopSelect, this);
@@ -660,6 +761,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('mapz-toggle', this.onMapzToggle, this);
       this.game.events.off('mapz-nav', this.onMapzNav, this);
       this.game.events.off('forjing-toggle', this.onForjingToggle, this);
+      this.game.events.off('forjing-select', this.onForjingSelect, this);
       this.game.events.off('forjing-refresh', this.onForjingRefresh, this);
       this.game.events.off('shop-toggle', this.onShopToggle, this);
       this.game.events.off('shop-select', this.onShopSelect, this);
@@ -675,7 +777,7 @@ export class UIScene extends Phaser.Scene {
     this.resetDialogVisuals();
     this.setInventoryVisible(false);
     this.closeMapzPanel();
-    this.setForjingVisible(false, '');
+    this.closeForjingPanel();
     this.closeShopPanel();
     this.pauseText?.setVisible(false);
     this.toastText?.setAlpha(0);
@@ -996,22 +1098,77 @@ export class UIScene extends Phaser.Scene {
     this.mapzLegend?.setText(legendLines.join('\n'));
   }
 
-  private onForjingToggle = (text: string): void => {
+  private onForjingToggle = (
+    payload?: ForjingOpenPayload | string | null,
+  ): void => {
+    this.ensureForjingChrome();
+    // Close: no payload, empty string, or already-open without save
+    if (
+      this.forjingOpen &&
+      (payload == null ||
+        payload === '' ||
+        (typeof payload === 'object' && !payload.save))
+    ) {
+      this.closeForjingPanel();
+      return;
+    }
     if (this.dialogOpen || this.inventoryOpen || this.mapzOpen || this.shopOpen) {
-      if (this.forjingOpen) this.setForjingVisible(false, '');
+      if (this.forjingOpen) this.closeForjingPanel();
       return;
     }
+    // Legacy text toggle open without payload object
+    if (typeof payload === 'string') {
+      if (this.forjingOpen) {
+        this.closeForjingPanel();
+        return;
+      }
+      if (!this.lastSave) return;
+      this.forjingPayload = { save: this.lastSave, selectedIndex: 0 };
+      this.forjingSelected = 0;
+      this.openForjingGraphic();
+      return;
+    }
+    if (!payload?.save) return;
     if (this.forjingOpen) {
-      this.setForjingVisible(false, '');
+      this.forjingPayload = payload;
+      this.lastSave = payload.save;
+      if (payload.selectedIndex != null) {
+        this.forjingSelected = payload.selectedIndex;
+      }
+      this.renderForjingGrid();
       return;
     }
-    this.setForjingVisible(true, text || 'FORJING');
+    if (this.dialogOpen) {
+      this.resetDialogVisuals();
+      this.game.events.emit('dialog-state', false);
+    }
+    this.forjingPayload = payload;
+    this.lastSave = payload.save;
+    this.forjingSelected = payload.selectedIndex ?? 0;
+    this.openForjingGraphic();
   };
 
-  private onForjingRefresh = (text: string): void => {
-    if (this.forjingOpen && this.forjingText) {
-      this.forjingText.setText(text);
+  private onForjingSelect = (index: number): void => {
+    if (!this.forjingOpen) return;
+    const actions = listForjingActions();
+    if (!actions.length) return;
+    this.forjingSelected = Math.max(0, Math.min(index, actions.length - 1));
+    this.renderForjingGrid();
+  };
+
+  private onForjingRefresh = (saveOrText: SaveData | string): void => {
+    if (!this.forjingOpen) return;
+    if (typeof saveOrText === 'string') {
+      // Legacy refresh — re-render with last save if any
+      if (this.forjingPayload) this.renderForjingGrid();
+      return;
     }
+    this.forjingPayload = {
+      ...(this.forjingPayload ?? { save: saveOrText }),
+      save: saveOrText,
+    };
+    this.lastSave = saveOrText;
+    this.renderForjingGrid();
   };
 
   private onShopToggle = (payload?: ShopOpenPayload | null): void => {
@@ -1344,12 +1501,188 @@ export class UIScene extends Phaser.Scene {
 
   }
 
-  private setForjingVisible(open: boolean, text: string): void {
-    this.forjingOpen = open;
-    this.forjingBg?.setVisible(open);
-    this.forjingText?.setVisible(open);
-    if (open && this.forjingText) this.forjingText.setText(text);
-    this.game.events.emit('forjing-state', open);
+  private openForjingGraphic(): void {
+    if (!this.forjingPayload) return;
+    this.ensureForjingChrome();
+    this.forjingOpen = true;
+    this.forjingBg?.setVisible(true).setDepth(200);
+    this.forjingTitle?.setVisible(true).setDepth(201);
+    this.forjingCoins?.setVisible(true).setDepth(201);
+    this.forjingActionLabel?.setVisible(true).setDepth(201);
+    this.forjingMatLabel?.setVisible(true).setDepth(201);
+    this.forjingDetail?.setVisible(true).setDepth(201);
+    this.forjingHelp?.setVisible(true).setDepth(201);
+    this.forjingLayer?.setVisible(true).setDepth(202);
+    this.renderForjingGrid();
+    this.game.events.emit('forjing-state', true);
+  }
+
+  private closeForjingPanel(): void {
+    this.forjingOpen = false;
+    this.clearForjingPieces();
+    this.forjingBg?.setVisible(false);
+    this.forjingTitle?.setVisible(false);
+    this.forjingCoins?.setVisible(false);
+    this.forjingActionLabel?.setVisible(false);
+    this.forjingMatLabel?.setVisible(false);
+    this.forjingDetail?.setVisible(false);
+    this.forjingHelp?.setVisible(false);
+    this.forjingLayer?.setVisible(false);
+    this.forjingPayload = null;
+    this.game.events.emit('forjing-state', false);
+  }
+
+  private renderForjingGrid(): void {
+    if (!this.forjingPayload || !this.forjingLayer) return;
+    this.clearForjingPieces();
+    const save = this.forjingPayload.save;
+    const actions = listForjingActions();
+    const mats = listForjingMats(save);
+
+    this.forjingTitle?.setText('FORJE');
+    this.forjingCoins?.setText(`YOUR COINS: ${save.coins}c`);
+
+    const midX = GAME_W / 2;
+    const divider = this.add
+      .rectangle(midX, HUD_H + 200, 2, 280, 0x3a3150, 1)
+      .setScrollFactor(0);
+    this.forjingLayer.add(divider);
+    this.forjingPieces.push(divider);
+
+    const cols = FORJING_ACTION_COLS;
+    const originX = 48 + FORJE_CELL / 2;
+    const originY = HUD_H + 78 + FORJE_CELL / 2;
+    if (this.forjingSelected >= actions.length) {
+      this.forjingSelected = Math.max(0, actions.length - 1);
+    }
+
+    actions.forEach((action, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      if (row > 4) return;
+      const x = originX + col * (FORJE_CELL + FORJE_GAP);
+      const y = originY + row * (FORJE_CELL + FORJE_GAP);
+      const selected = i === this.forjingSelected;
+      const afford = canAffordForjing(save, action);
+
+      const frame = this.add
+        .rectangle(x, y, FORJE_CELL, FORJE_CELL, 0x12161f, 1)
+        .setStrokeStyle(
+          selected ? 3 : 2,
+          selected ? COLORS.gold : afford ? 0x4a6a40 : 0x5a4030,
+        )
+        .setScrollFactor(0)
+        .setInteractive({ useHandCursor: true });
+      frame.on('pointerdown', () => {
+        this.forjingSelected = i;
+        this.renderForjingGrid();
+        this.game.events.emit('forjing-cursor', i);
+      });
+      this.forjingLayer!.add(frame);
+      this.forjingPieces.push(frame);
+
+      const iconKey = forjingIconTexture(action.iconId);
+      const tex = this.textures.exists(iconKey)
+        ? iconKey
+        : this.textures.exists(itemIconKey(action.iconId))
+          ? itemIconKey(action.iconId)
+          : 'icon_empty';
+      const icon = this.add
+        .image(x, y - 6, tex)
+        .setScale(1.35)
+        .setScrollFactor(0)
+        .setAlpha(afford ? 1 : 0.4);
+      this.forjingLayer!.add(icon);
+      this.forjingPieces.push(icon);
+
+      const label = this.add
+        .text(x, y + 18, action.name.slice(0, 8), {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '5px',
+          color: afford ? '#7dffb3' : '#e74c3c',
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0);
+      this.forjingLayer!.add(label);
+      this.forjingPieces.push(label);
+    });
+
+    // Right: materials
+    const matCols = 3;
+    const matGridW = matCols * FORJE_CELL + (matCols - 1) * FORJE_GAP;
+    const matOriginX = GAME_W - 48 - matGridW + FORJE_CELL / 2;
+
+    if (!mats.length) {
+      const empty = this.add
+        .text(GAME_W * 0.72, originY + 40, '(no mats)', {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '8px',
+          color: '#6a738a',
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0);
+      this.forjingLayer.add(empty);
+      this.forjingPieces.push(empty);
+    } else {
+      mats.forEach((mat, i) => {
+        const col = i % matCols;
+        const row = Math.floor(i / matCols);
+        if (row > 4) return;
+        const x = matOriginX + col * (FORJE_CELL + FORJE_GAP);
+        const y = originY + row * (FORJE_CELL + FORJE_GAP);
+        const has = mat.count > 0;
+
+        const frame = this.add
+          .rectangle(x, y, FORJE_CELL, FORJE_CELL, 0x12161f, 1)
+          .setStrokeStyle(2, has ? COLORS.green : 0x5c4d7a)
+          .setScrollFactor(0);
+        this.forjingLayer!.add(frame);
+        this.forjingPieces.push(frame);
+
+        const k = itemIconKey(mat.iconId);
+        const tex = this.textures.exists(k) ? k : 'icon_empty';
+        const icon = this.add
+          .image(x, y - 6, tex)
+          .setScale(1.35)
+          .setScrollFactor(0)
+          .setAlpha(has ? 1 : 0.35);
+        this.forjingLayer!.add(icon);
+        this.forjingPieces.push(icon);
+
+        const cnt = this.add
+          .text(x, y + 18, `x${mat.count}`, {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '7px',
+            color: has ? '#ffc857' : '#6a738a',
+          })
+          .setOrigin(0.5)
+          .setScrollFactor(0);
+        this.forjingLayer!.add(cnt);
+        this.forjingPieces.push(cnt);
+      });
+    }
+
+    const sel = actions[this.forjingSelected];
+    if (sel) {
+      const afford = canAffordForjing(save, sel);
+      const wUid = save.equipped.weapon;
+      const wInst = wUid ? findInBag(save, wUid) : undefined;
+      const weaponLine = wInst
+        ? `WEAPON: ${displayItemName(wInst)} +${wInst.enhancement}`
+        : 'WEAPON: (none equipped)';
+      this.forjingDetail?.setText(
+        [
+          `[${sel.kind.toUpperCase()}] ${sel.name}`,
+          sel.blurb,
+          `COST: ${formatForjingCost(sel)}`,
+          weaponLine,
+          afford
+            ? 'ENTER TO FORJE'
+            : 'NEED MORE MATERIALZ OR COINZ',
+        ].join('\n'),
+      );
+      this.forjingDetail?.setColor(afford ? '#f4f0ff' : '#ff8a8a');
+    }
   }
 
   private renderInventory(save: SaveData): void {
@@ -1580,7 +1913,7 @@ export class UIScene extends Phaser.Scene {
     if (!this.dialogBg?.active || !this.dialogText?.active) return;
     if (this.inventoryOpen) this.setInventoryVisible(false);
     if (this.mapzOpen) this.closeMapzPanel();
-    if (this.forjingOpen) this.setForjingVisible(false, '');
+    if (this.forjingOpen) this.closeForjingPanel();
     if (this.shopOpen) this.closeShopPanel();
     this.dialogLines = lines.filter(
       (l) => l !== undefined && l !== null && String(l).trim() !== '',
@@ -1633,7 +1966,7 @@ export class UIScene extends Phaser.Scene {
   private setPaused = (paused: boolean): void => {
     if (paused && this.inventoryOpen) this.setInventoryVisible(false);
     if (paused && this.mapzOpen) this.closeMapzPanel();
-    if (paused && this.forjingOpen) this.setForjingVisible(false, '');
+    if (paused && this.forjingOpen) this.closeForjingPanel();
     if (paused && this.shopOpen) this.closeShopPanel();
     this.pauseText?.setVisible(paused);
   };
