@@ -16,7 +16,7 @@ export interface BestBudDef {
   tint: number;
   meetDialog: string[];
   banterDialog: string[];
-  /** Flavor only in v1 — not wired to combat. */
+  /** Combat ability label (magical Jake energy — they fight). */
   abilityStub: string;
 }
 
@@ -30,13 +30,13 @@ export const BEST_BUD_ROSTER: readonly BestBudDef[] = [
       'GLOOP: OH HEY. YOU SMELL LIKE QUESTS.',
       'I\'VE BEEN STUCK TO THIS LOG FOR... A WHILE.',
       'WANNA BE BEST BUDS? I\'M VERY STRETCHY ABOUT IT.',
-      'NOT A SIDEKICK. A BUD. BIG DIFFERENCE.',
+      'I SLAP MONSTERS FROM WAY OVER HERE. ELASTIC JUSTICE.',
     ],
     banterDialog: [
       'GLOOP: I\'LL GO WHERE YOU GO.',
-      'ALSO I\'M STICKY. SORRY IN ADVANCE.',
+      'ALSO I\'M STICKY. SORRY IN ADVANCE. MOSTLY TO CREEPS.',
     ],
-    abilityStub: 'Stretch-grab distant pickups',
+    abilityStub: 'STRETCH LASH — long slap',
   },
   {
     id: 'nub',
@@ -46,14 +46,14 @@ export const BEST_BUD_ROSTER: readonly BestBudDef[] = [
     meetDialog: [
       'NUB: ...TOOK YOU LONG ENOUGH.',
       'PRIZELLA SAID SOME CHAMPION WOULD SHOW.',
-      'I\'M NOT IMPRESSED. I\'M ALSO NOT LEAVING.',
+      'I FIGHT. I CLAW. I JUDGE YOUR FORM.',
       'BEST BUDS. FINE. DON\'T MAKE IT WEIRD.',
     ],
     banterDialog: [
       'NUB: I\'M NOT FOLLOWING YOU.',
-      'THE PATH IS JUST... SHARED. YEAH.',
+      'I\'M SCOUTING. WITH CLAWS. YEAH.',
     ],
-    abilityStub: 'Dig for hidden mats',
+    abilityStub: 'MIDNIGHT CLAW — fast melee',
   },
   {
     id: 'whisp',
@@ -62,15 +62,15 @@ export const BEST_BUD_ROSTER: readonly BestBudDef[] = [
     tint: 0xe8f0ff,
     meetDialog: [
       'WHISP: MMM. YOU FEEL LIKE SNACKS AND DESTINY.',
-      'I RAIN SNACKS. EMOTIONALLY. SOMETIMES LITERALLY.',
+      'I RAIN SNACKS. ALSO FOG THAT BITES BAD GUYS.',
       'BEST BUDS? I\'M VERY SOFT ABOUT FRIENDSHIP.',
-      'NO ATTACK ORDERS. ONLY COZY ONES.',
+      'AND VERY SHARP ABOUT CREEPS. FLOATY MURDER.',
     ],
     banterDialog: [
       'WHISP: I\'M STILL HERE. FLOATY. LOYAL.',
-      'WANT A FOG HUG? TOO LATE. ALREADY HAPPENING.',
+      'FOG HUG FOR YOU. FOG BITE FOR THEM.',
     ],
-    abilityStub: 'Tiny soft regen aura',
+    abilityStub: 'FOG BITE + cozy heal aura',
   },
   {
     id: 'tater',
@@ -79,15 +79,15 @@ export const BEST_BUD_ROSTER: readonly BestBudDef[] = [
     tint: 0xc4a06a,
     meetDialog: [
       'TATER: I\'M A ROOT VEGETABLE WITH OPINIONS.',
-      'DEAL WITH IT. ALSO: BEST BUDS?',
-      'I ROAST YOU. YOU ROAST ME. THAT\'S LOVE.',
-      'PLATONIC. EDIBLE-ADJACENT. COOL.',
+      'AND A ROAST SPIT. FOR SCIENCE. AND COMBAT.',
+      'BEST BUDS? I ROAST CREEPS. YOU SWING. LOVE.',
+      'PLATONIC. CRISPY. COOL.',
     ],
     banterDialog: [
       'TATER: STILL NOT A SIDE DISH.',
-      'I\'M A MAIN CHARACTER. WITH LEGS. KIND OF.',
+      'I\'M ARTILLERY. WITH LEGS. KIND OF.',
     ],
-    abilityStub: 'Extra forjing scrap luck',
+    abilityStub: 'ROAST SPIT — mid-range fire',
   },
   {
     id: 'zorp',
@@ -96,15 +96,15 @@ export const BEST_BUD_ROSTER: readonly BestBudDef[] = [
     tint: 0x7d5cff,
     meetDialog: [
       'ZORP: I FELL OUT OF A WEIRD SKY.',
-      'YOU SEEM COOL. STAR-FRECKLE COOL.',
+      'I BLINK-SLAP THINGS. DIMENSIONAL VIOLENCE.',
       'BEST BUDS ACROSS DIMENSIONS? RAD.',
-      'I DON\'T DO ORDERS. I DO VIBES.',
+      'I DON\'T DO ORDERS. I DO HOPS. ONTO FACES.',
     ],
     banterDialog: [
       'ZORP: THE UNIVERSE IS BIG.',
-      'WE\'RE SMALL. BUT WE\'RE A TEAM. BLOOP.',
+      'WE\'RE SMALL. BUT WE HIT HARD. BLOOP.',
     ],
-    abilityStub: 'Rare loot sparkle ping',
+    abilityStub: 'POCKET HOP — blink strike',
   },
   {
     id: 'pebbo',
@@ -112,16 +112,16 @@ export const BEST_BUD_ROSTER: readonly BestBudDef[] = [
     species: 'living pebble-snake',
     tint: 0x8a8070,
     meetDialog: [
-      'PEBBO: I COIL INTO A CHAIR. THAT\'S MY WHOLE DEAL.',
-      'ALSO FRIENDSHIP. MOSTLY CHAIRS THOUGH.',
-      'BEST BUDS? I\'LL COIL NEAR DANGER. SOMETIMES.',
-      'WHEN I FEEL LIKE IT. LAZY LOYALTY.',
+      'PEBBO: I COIL INTO A CHAIR. ALSO A SHIELD.',
+      'I\'LL EAT A HIT FOR YOU. WHEN I FEEL LIKE IT.',
+      'BEST BUDS? I COIL-SLAM DANGER. LAZY LOYALTY.',
+      'DON\'T STEP ON ME. THAT\'S RUDE GEOLOGY.',
     ],
     banterDialog: [
       'PEBBO: STILL COILED. STILL YOUR BUD.',
-      'DON\'T STEP ON ME. THAT\'S RUDE GEOLOGY.',
+      'STILL BLOCKING STUFF. SOMETIMES. ROCK ON.',
     ],
-    abilityStub: 'Block one hit (cooldown)',
+    abilityStub: 'COIL SLAM + guard block',
   },
 ];
 
@@ -284,7 +284,11 @@ export function meetBestBud(save: SaveData): {
       ...(bud?.meetDialog ?? ['A WEIRD CREATURE NODS. BEST BUDS.']),
       '',
       `${bud?.name ?? 'BUD'} JOINS YOU!`,
-      'THEY\'LL FOLLOW. TALK ANYTIME. NO COMBAT. JUST VIBES.',
+      'THEY\'LL FOLLOW AND FIGHT. MAGICAL BUD ENERGY.',
+      bud
+        ? `ABILITY: ${bud.abilityStub.toUpperCase()}.`
+        : 'ABILITY: BEING COOL IN COMBAT.',
+      'TALK ANYTIME. DON\'T BE RUDE WITH YOUR SWORD.',
     ],
   };
 }

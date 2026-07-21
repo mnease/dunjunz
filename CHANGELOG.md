@@ -13,6 +13,9 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 
 ### Added
 
+- **Best Bud combat** — companions fight with Jake-energy magic (not vibe-only)
+  - Gloop stretch lash, Nub claws, Whisp fog bite + heal, Tater roast spit, Zorp pocket hop, Pebbo coil slam + hit block
+  - Auto-aggro creeps near you; damage scales lightly with level
 - **Boss exit portal** — after clearing a land boss, a cyan portal appears in the arena; step on it (or E) to zip back to that dungeon's mouth (`b1_entrance` / Woodz Edge / Dezertz Edge)
 
 ### Fixed
@@ -42,7 +45,7 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 
 ### Planned
 
-- Best Bud combat abilities / secondary champion quests
+- Secondary champion quests
 - Blacksmith merchant: destroy gear for parts, optimize / craft
 - More lands / champion jobs from Prizella
 

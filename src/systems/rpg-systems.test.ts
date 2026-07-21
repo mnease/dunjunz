@@ -853,6 +853,25 @@ describe('feedback validation', () => {
   });
 });
 
+describe('best bud combat', () => {
+  it('every bud has a combat profile', async () => {
+    const { budCombatProfile, budAttackDamage, budCanBlockHit } = await import(
+      './best-bud-combat'
+    );
+    for (const b of BEST_BUD_ROSTER) {
+      const p = budCombatProfile(b.id);
+      expect(p).not.toBeNull();
+      expect(p!.baseDamage).toBeGreaterThan(0);
+      expect(p!.cooldownMs).toBeGreaterThan(200);
+      expect(budAttackDamage(b.id, 1)).toBeGreaterThanOrEqual(p!.baseDamage);
+      expect(budAttackDamage(b.id, 10)).toBeGreaterThan(budAttackDamage(b.id, 1));
+    }
+    expect(budCanBlockHit('pebbo', 0)).toBe(true);
+    expect(budCanBlockHit('pebbo', 1000)).toBe(false);
+    expect(budCanBlockHit('gloop', 0)).toBe(false);
+  });
+});
+
 describe('best bud quest', () => {
   it('rollBestBudId is stable for same seed', () => {
     expect(rollBestBudId(0x12345678)).toBe(rollBestBudId(0x12345678));

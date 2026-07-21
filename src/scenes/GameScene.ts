@@ -78,6 +78,15 @@ import {
   shouldSpawnDenBud,
 } from '../systems/best-bud';
 import {
+  BUD_BLOCK_COOLDOWN_MS,
+  BUD_HEAL_COOLDOWN_MS,
+  budAttackDamage,
+  budCanBlockHit,
+  budCombatProfile,
+  budHealAmount,
+  isHostileKind,
+} from '../systems/best-bud-combat';
+import {
   markLandCleared,
   princessChampionDialog,
   questHint,
@@ -226,6 +235,10 @@ export class GameScene extends Phaser.Scene {
   private bossIntroShown = false;
   /** Following Best Bud companion sprite (after found). */
   private companionSprite: Phaser.Physics.Arcade.Sprite | null = null;
+  /** Bud combat cooldowns (ms). */
+  private budAttackCd = 0;
+  private budHealCd = 0;
+  private budBlockCd = 0;
 
   constructor() {
     super('Game');
@@ -969,6 +982,9 @@ export class GameScene extends Phaser.Scene {
     if (!isCompanionActive(this.save) || !this.player) {
       if (this.companionSprite?.active) this.companionSprite.destroy();
       this.companionSprite = null;
+      this.budAttackCd = 0;
+      this.budHealCd = 0;
+      this.budBlockCd = 0;
       return;
     }
     const bud = getBestBud(this.save.bestBudId);
@@ -979,6 +995,7 @@ export class GameScene extends Phaser.Scene {
       this.companionSprite.setScale(SCALE).setDepth(4);
       this.companionSprite.setImmovable(true);
       const body = this.companionSprite.body as Phaser.Physics.Arcade.Body;
+      // Follow/fight via manual position — body off so they don't shove the hero
       body.enable = false;
     }
     if (bud) this.companionSprite.setTint(bud.tint);
@@ -995,6 +1012,169 @@ export class GameScene extends Phaser.Scene {
     if (dist > 24) {
       this.companionSprite.x += dx * 0.1;
       this.companionSprite.y += dy * 0.1;
+    }
+  }
+
+  /** Magical bud combat — chase, strike, heal, block (Jake energy). */
+  private updateCompanionCombat(delta: number): void {
+    this.budAttackCd = Math.max(0, this.budAttackCd - delta);
+    this.budHealCd = Math.max(0, this.budHealCd - delta);
+    this.budBlockCd = Math.max(0, this.budBlockCd - delta);
+
+    if (
+      !this.companionSprite?.active ||
+      !this.player ||
+      !isCompanionActive(this.save) ||
+      this.dialogLocked ||
+      this.paused
+    ) {
+      if (!this.dialogLocked && !this.paused) this.updateCompanionFollow();
+      return;
+    }
+
+    const budId = this.save.bestBudId;
+    const profile = budCombatProfile(budId);
+    if (!profile) {
+      this.updateCompanionFollow();
+      return;
+    }
+
+    // Whisp cozy aura — heal even without creeps nearby
+    if (
+      profile.style === 'aura' &&
+      this.budHealCd <= 0 &&
+      this.save.hp < this.save.maxHp
+    ) {
+      const heal = budHealAmount(this.save.level);
+      this.save.hp = Math.min(this.save.maxHp, this.save.hp + heal);
+      this.budHealCd = BUD_HEAL_COOLDOWN_MS;
+      writeSave(this.save);
+      this.emitHud();
+      playSfx('heal');
+      this.game.events.emit('toast', `WHISP HEALS +${heal}`);
+    }
+
+    const target = this.findNearestHostile(
+      this.companionSprite.x,
+      this.companionSprite.y,
+      profile.aggro,
+    );
+
+    if (!target) {
+      this.updateCompanionFollow();
+      return;
+    }
+
+    // Stay leashed to player — don't abandon the hero mid-room
+    const toPlayer = Math.hypot(
+      this.player.x - this.companionSprite.x,
+      this.player.y - this.companionSprite.y,
+    );
+    if (toPlayer > profile.leash) {
+      this.updateCompanionFollow();
+      return;
+    }
+
+    const tx = target.sprite.x;
+    const ty = target.sprite.y;
+    const dx = tx - this.companionSprite.x;
+    const dy = ty - this.companionSprite.y;
+    const dist = Math.hypot(dx, dy);
+
+    // Approach (Zorp blinks when far)
+    if (dist > profile.range * 0.85) {
+      if (profile.style === 'blink' && dist > profile.range * 1.4 && this.budAttackCd <= 0) {
+        // Pocket hop closer to the creep
+        const hop = Math.min(dist - profile.range * 0.5, 70);
+        this.companionSprite.x += (dx / dist) * hop;
+        this.companionSprite.y += (dy / dist) * hop;
+        this.companionSprite.setAlpha(0.5);
+        this.time.delayedCall(80, () => {
+          this.companionSprite?.setAlpha(1);
+        });
+      } else {
+        this.companionSprite.x += dx * profile.speed;
+        this.companionSprite.y += dy * profile.speed;
+      }
+    }
+
+    // Strike
+    if (dist <= profile.range && this.budAttackCd <= 0 && target.alive) {
+      // Peaceful cube: only fight if already aggressive
+      if (target.kind === 'cube' && !target.aggressive) {
+        this.updateCompanionFollow();
+        return;
+      }
+      const dmg = budAttackDamage(budId, this.save.level);
+      this.budStrike(target, dmg, profile.abilityName);
+      this.budAttackCd = profile.cooldownMs;
+
+      // Visual punch of friendship
+      this.companionSprite.setScale(SCALE * 1.25);
+      this.time.delayedCall(100, () => {
+        this.companionSprite?.setScale(SCALE);
+      });
+    }
+  }
+
+  private findNearestHostile(
+    x: number,
+    y: number,
+    maxDist: number,
+  ): Actor | null {
+    let best: Actor | null = null;
+    let bestD = maxDist;
+    for (const a of this.actors) {
+      if (!a.alive || !a.sprite?.active) continue;
+      if (!isHostileKind(a.kind)) continue;
+      if (a.kind === 'cube' && !a.aggressive) continue;
+      const d = Math.hypot(a.sprite.x - x, a.sprite.y - y);
+      if (d < bestD) {
+        bestD = d;
+        best = a;
+      }
+    }
+    return best;
+  }
+
+  /** Companion hit — independent of player swing flag. */
+  private budStrike(actor: Actor, dmg: number, abilityName: string): void {
+    if (!actor.alive || actor.hurtCooldown > 0) return;
+    if (actor.kind === 'best_bud') return;
+
+    if (actor.kind === 'cube' && !actor.aggressive) {
+      actor.aggressive = true;
+      this.game.events.emit('toast', 'THE CUBE IS MAD AT YOUR BUD');
+    }
+
+    actor.hurtCooldown = 240;
+    actor.hp -= dmg;
+    playSfx('hit_enemy');
+    actor.sprite.setTint(0xa0ffe8);
+    this.time.delayedCall(90, () => {
+      if (actor.alive) actor.sprite.clearTint();
+    });
+
+    const angle = Phaser.Math.Angle.Between(
+      this.companionSprite!.x,
+      this.companionSprite!.y,
+      actor.sprite.x,
+      actor.sprite.y,
+    );
+    const body = actor.sprite.body as Phaser.Physics.Arcade.Body;
+    const knock = actor.kind === 'cube' || actor.kind === 'boss' ? 50 : 100;
+    body.setVelocity(Math.cos(angle) * knock, Math.sin(angle) * knock);
+
+    const bud = getBestBud(this.save.bestBudId);
+    const name = bud?.name ?? 'BUD';
+    if (actor.hp > 0) {
+      this.game.events.emit(
+        'toast',
+        `${name} ${abilityName}! ${actor.hp}/${actor.maxHp}`,
+      );
+    } else {
+      this.game.events.emit('toast', `${name} FINISHED THEM!`);
+      this.killActor(actor);
     }
   }
 
@@ -1276,6 +1456,38 @@ export class GameScene extends Phaser.Scene {
     if (!from.alive || this.invuln > 0 || this.dialogLocked || this.paused) return;
     // Peaceful cube (not yet hit) does not damage — walk up and press E
     if (from.kind === 'cube' && !from.aggressive) return;
+
+    // Pebbo (guard bud) can eat a hit — magical coil shield
+    if (
+      isCompanionActive(this.save) &&
+      budCanBlockHit(this.save.bestBudId, this.budBlockCd)
+    ) {
+      this.budBlockCd = BUD_BLOCK_COOLDOWN_MS;
+      this.invuln = 600;
+      playSfx('success');
+      this.game.events.emit('toast', 'PEBBO COILED THE HIT!');
+      if (this.companionSprite?.active) {
+        this.companionSprite.setTint(0xffc857);
+        this.time.delayedCall(200, () => {
+          const bud = getBestBud(this.save.bestBudId);
+          if (bud && this.companionSprite?.active) {
+            this.companionSprite.setTint(bud.tint);
+          }
+        });
+      }
+      // Knock the creep away from the hero a bit
+      const body = from.sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (body) {
+        const angle = Phaser.Math.Angle.Between(
+          this.player.x,
+          this.player.y,
+          from.sprite.x,
+          from.sprite.y,
+        );
+        body.setVelocity(Math.cos(angle) * 160, Math.sin(angle) * 160);
+      }
+      return;
+    }
 
     // Kind contact damage; armor reduces (min 1) so gear matters
     const baseDmg = resolveEnemyContactDamage(from.kind);
@@ -2519,7 +2731,7 @@ export class GameScene extends Phaser.Scene {
     this.tryUnlockNearPlayer();
     this.checkHazards(delta);
     this.checkRoomExit();
-    this.updateCompanionFollow();
+    this.updateCompanionCombat(delta);
     this.updateEnemies(delta);
   }
 }

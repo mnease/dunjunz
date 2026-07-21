@@ -79,7 +79,7 @@ Intentional spellings: Dunjunz, woodz, dezertz, mapz, forjing, Princesz Prizella
 - Dunjunz multi-floor (B1–B2): cube, speak-friend key, redshirts, Dunjun Master
 - Woodz + Wolf Lord + forje + Best Bud Hollow
 - Dezertz + Sand Wraith + Princesz Prizella
-- Best Bud companion (6 randomized non-human friends)
+- Best Bud companion (6 randomized non-human friends) — **fights with you** (stretch, claws, fog, roast, blink, guard)
 - Chests, dual-pane tinkerer, graphic forje, hearts, lava, pads
 - CRT chrome UI, procedural pixel textures (no external sprite pack)
 
