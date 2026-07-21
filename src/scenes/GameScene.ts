@@ -84,6 +84,8 @@ import {
   rewardDunjunzClear,
   rewardWoodzClear,
 } from '../systems/quest';
+import { playMusic, playSfx, type MusicId } from '../systems/audio';
+import { loadSettings } from '../systems/settings';
 import { loadSave, writeSave } from '../systems/save';
 import type {
   AttrId,
@@ -662,12 +664,14 @@ export class GameScene extends Phaser.Scene {
     // Use potion from bag (works with inventory open or closed)
     const result = useInventoryItem(this.save, 'potion');
     if (!result.ok) {
+      playSfx('error');
       this.game.events.emit('toast', result.reason);
       return;
     }
     this.save = result.save;
     writeSave(this.save);
     this.emitHud();
+    playSfx('heal');
     this.game.events.emit('inventory-refresh', this.save);
     this.game.events.emit('toast', result.message);
   };
@@ -687,12 +691,18 @@ export class GameScene extends Phaser.Scene {
     if (payload.usable) {
       const result = useInventoryItem(this.save, payload.templateId);
       if (!result.ok) {
+        playSfx('error');
         this.game.events.emit('toast', result.reason);
         return;
       }
       this.save = result.save;
       writeSave(this.save);
       this.emitHud();
+      playSfx(
+        payload.templateId === 'potion' || payload.templateId.includes('potion')
+          ? 'heal'
+          : 'pickup',
+      );
       this.game.events.emit('inventory-refresh', this.save);
       this.game.events.emit('toast', result.message);
       return;
@@ -828,6 +838,10 @@ export class GameScene extends Phaser.Scene {
       .forEach((c) => c.destroy());
   }
 
+  private musicForRoom(room: RoomDef): MusicId {
+    return room.land === 'dunjunz' ? 'dungeon' : 'overworld';
+  }
+
   private loadRoom(roomId: string, fromSave: boolean, entryFrom?: string): void {
     const resolved = resolveRoomId(roomId);
     const room = ROOMS[resolved];
@@ -837,6 +851,7 @@ export class GameScene extends Phaser.Scene {
     this.clearRoomObjects();
     this.room = room;
     this.save.roomId = resolved;
+    playMusic(this.musicForRoom(room));
     this.save = markRoomVisited(this.save, resolved);
     this.tileGrid = this.applyPersistentDoorUnlocks(this.parseTiles(room));
 
@@ -1193,7 +1208,10 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
     writeSave(this.save);
 
-    this.cameras.main.shake(120, 0.01);
+    playSfx('hit_player');
+    if (!loadSettings().reduceMotion) {
+      this.cameras.main.shake(120, 0.01);
+    }
     this.player.setTint(0xff6666);
     this.time.delayedCall(150, () => this.player.clearTint());
 
@@ -1214,6 +1232,7 @@ export class GameScene extends Phaser.Scene {
 
   private die(): void {
     this.dialogLocked = true;
+    playSfx('death');
     this.game.events.emit('dialog-show', [
       'YOU HAVE DIED. BUMMER.',
       'THE BARD IS ALREADY WRITING A SONG.',
@@ -1251,6 +1270,7 @@ export class GameScene extends Phaser.Scene {
     actor.hurtCooldown = 280;
     const dmg = computePlayerDamage(this.save);
     actor.hp -= dmg;
+    playSfx('hit_enemy');
     actor.sprite.setTint(0xffffff);
     this.time.delayedCall(80, () => {
       if (actor.alive) actor.sprite.clearTint();
@@ -1299,6 +1319,7 @@ export class GameScene extends Phaser.Scene {
     this.save.level = prog.level;
     this.save.attrPoints = prog.attrPoints;
     if (prog.leveledUp) {
+      playSfx('level_up');
       this.game.events.emit(
         'toast',
         `LEVEL UP! LV ${prog.level} +${prog.attrPointsGained} ATTR (I TO SPEND)`,
@@ -1320,6 +1341,7 @@ export class GameScene extends Phaser.Scene {
       if (drops.length) {
         this.save = applyLootToSave(this.save, drops);
         const summary = lootSummary(drops).slice(0, 3).join(', ');
+        playSfx('pickup');
         this.time.delayedCall(200, () => {
           this.game.events.emit('toast', `LOOT: ${summary}`);
         });
@@ -1716,6 +1738,7 @@ export class GameScene extends Phaser.Scene {
     ];
     writeSave(this.save);
     this.emitHud();
+    playSfx('pickup');
     this.game.events.emit('dialog-show', lines);
   }
 
@@ -1745,6 +1768,7 @@ export class GameScene extends Phaser.Scene {
     this.shopSelected = 0;
     this.shopBagSelected = 0;
     this.shopPane = 'stock';
+    playSfx('shop');
     this.game.events.emit('shop-toggle', {
       save: this.save,
       shopId,
@@ -1772,6 +1796,7 @@ export class GameScene extends Phaser.Scene {
     if (!item) return;
     const result = attemptPurchase(this.save, this.shopId, item.id);
     if (!result.ok) {
+      playSfx('error');
       if (result.reason === 'insufficient_funds') {
         this.game.events.emit(
           'toast',
@@ -1785,6 +1810,7 @@ export class GameScene extends Phaser.Scene {
     this.save = result.save;
     writeSave(this.save);
     this.emitHud();
+    playSfx('coin');
     this.game.events.emit(
       'toast',
       `BOUGHT ${result.item.name} (-${result.item.price}c)`,
@@ -1801,6 +1827,7 @@ export class GameScene extends Phaser.Scene {
       this.shopBagSelected,
     );
     if (!result.ok) {
+      playSfx('error');
       if (result.reason === 'nothing_to_sell') {
         this.game.events.emit('toast', 'NOTHING TO SELL');
       } else {
@@ -1815,6 +1842,7 @@ export class GameScene extends Phaser.Scene {
     if (this.shopBagSelected >= bag.length) {
       this.shopBagSelected = Math.max(0, bag.length - 1);
     }
+    playSfx('coin');
     this.game.events.emit(
       'toast',
       `SOLD ${result.name} (+${result.coins}c)`,
@@ -1919,6 +1947,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.attacking = true;
+    playSfx('attack');
     // Hip sheathe vanishes while the blade is out in front
     this.refreshPlayerAppearance();
 
@@ -2015,6 +2044,7 @@ export class GameScene extends Phaser.Scene {
       this.save = syncDerivedStats(this.save);
     }
     this.save.flags['door-unlocked'] = true;
+    playSfx('door');
     this.game.events.emit('toast', 'THE DOOR HEARS "FRIEND"');
     this.game.events.emit('dialog-show', [
       'THE LOCKED DOOR CLICKS OPEN.',
@@ -2083,11 +2113,13 @@ export class GameScene extends Phaser.Scene {
     if (!this.transitionLock) {
       if (tile === 'stairs' && this.room.stairsDown) {
         this.transitionLock = true;
+        playSfx('stairs');
         this.loadRoom(this.room.stairsDown, false, 'stairsDown');
         return;
       }
       if (tile === 'stairs_up' && this.room.stairsUp) {
         this.transitionLock = true;
+        playSfx('stairs');
         this.loadRoom(this.room.stairsUp, false, 'stairsUp');
         return;
       }
@@ -2103,21 +2135,25 @@ export class GameScene extends Phaser.Scene {
     // Cardinal doors: entryFrom = opposite edge (door entered on destination room)
     if (ty <= 0 && this.room.north) {
       this.transitionLock = true;
+      playSfx('door');
       this.loadRoom(this.room.north, false, entryFromOpposite('north'));
       return;
     }
     if (ty >= VIEW_TILES_H - 1 && this.room.south) {
       this.transitionLock = true;
+      playSfx('door');
       this.loadRoom(this.room.south, false, entryFromOpposite('south'));
       return;
     }
     if (tx <= 0 && this.room.west) {
       this.transitionLock = true;
+      playSfx('door');
       this.loadRoom(this.room.west, false, entryFromOpposite('west'));
       return;
     }
     if (tx >= VIEW_TILES_W - 1 && this.room.east) {
       this.transitionLock = true;
+      playSfx('door');
       this.loadRoom(this.room.east, false, entryFromOpposite('east'));
       return;
     }

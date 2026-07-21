@@ -32,6 +32,7 @@ import {
   listForjingMats,
   type ForjingOpenPayload,
 } from '../systems/forjing';
+import { playSfx } from '../systems/audio';
 import { xpProgressInLevel } from '../systems/progression';
 import type { EquipSlot, LandId, SaveData } from '../types';
 
@@ -1924,6 +1925,7 @@ export class UIScene extends Phaser.Scene {
     this.dialogBg.setVisible(true);
     this.dialogText.setVisible(true);
     this.renderDialogLine();
+    playSfx('dialog');
     this.game.events.emit('dialog-state', true);
   };
 
@@ -1941,6 +1943,7 @@ export class UIScene extends Phaser.Scene {
     if (!this.dialogOpen) return;
     if (this.dialogIndex < this.dialogLines.length - 1) {
       this.dialogIndex += 1;
+      playSfx('dialog');
       this.renderDialogLine();
       return;
     }

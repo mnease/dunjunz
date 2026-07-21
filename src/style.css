@@ -224,7 +224,56 @@ body {
   box-shadow: 1px 1px 0 #0a0c10;
 }
 
-/* —— Feedback modal —— */
+/* —— Settings form —— */
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.settings-check {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.45rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.settings-check input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--neon);
+  cursor: pointer;
+}
+
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.42rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.settings-row strong {
+  color: var(--neon);
+  font-weight: normal;
+}
+
+.settings-row input[type='range'] {
+  width: 100%;
+  accent-color: var(--amber);
+  cursor: pointer;
+}
+
+.settings-actions {
+  margin-top: 0.35rem;
+  justify-content: space-between;
+}
+
+/* —— Feedback / shared modal —— */
 .feedback-modal {
   display: none;
   position: fixed;

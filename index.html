@@ -40,6 +40,9 @@
           </p>
           <div class="legal-actions">
             <span id="auth-status" class="auth-status">Local play</span>
+            <button type="button" id="settings-open" class="feedback-btn ghost-btn">
+              Settings
+            </button>
             <button type="button" id="auth-open" class="feedback-btn ghost-btn">
               Account
             </button>
@@ -49,6 +52,81 @@
           </div>
         </div>
       </footer>
+    </div>
+
+    <div
+      id="settings-modal"
+      class="feedback-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-title"
+      aria-hidden="true"
+    >
+      <div class="feedback-panel settings-panel">
+        <header class="feedback-header">
+          <h2 id="settings-title">Game settings</h2>
+          <button
+            type="button"
+            class="feedback-x"
+            data-settings-close
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </header>
+        <p class="feedback-blurb">
+          Audio is procedural retro synth (no downloads). Saved in this
+          browser.
+        </p>
+        <form id="settings-form" class="settings-form">
+          <label class="settings-check">
+            <input id="set-muted" type="checkbox" />
+            Mute all sound
+          </label>
+          <label class="settings-check">
+            <input id="set-music-enabled" type="checkbox" />
+            Music on
+          </label>
+          <label class="settings-row">
+            <span>Music volume <strong id="set-music-vol-label">35%</strong></span>
+            <input
+              id="set-music-vol"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="35"
+            />
+          </label>
+          <label class="settings-check">
+            <input id="set-sfx-enabled" type="checkbox" />
+            Sound effects on
+          </label>
+          <label class="settings-row">
+            <span>SFX volume <strong id="set-sfx-vol-label">55%</strong></span>
+            <input
+              id="set-sfx-vol"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="55"
+            />
+          </label>
+          <label class="settings-check">
+            <input id="set-reduce-motion" type="checkbox" />
+            Reduce motion (less camera shake)
+          </label>
+          <div class="feedback-actions settings-actions">
+            <button type="button" id="settings-test-sfx" class="btn ghost">
+              Test SFX
+            </button>
+            <button type="button" class="btn primary" data-settings-close>
+              Done
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <div

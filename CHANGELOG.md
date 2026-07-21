@@ -13,6 +13,14 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 
 ### Added
 
+- **Game settings** (footer **Settings** modal, `localStorage`)
+  - Master mute, music/SFX toggles + volume sliders
+  - Reduce motion (skips camera shake)
+  - Live apply + Test SFX button
+- **Procedural audio** (Web Audio API, no asset files)
+  - Music beds: title / overworld / dungeon (arpeggio loops)
+  - SFX: attack, hits, death, level-up, loot, door, stairs, shop, coin, heal, dialog, UI
+  - Browser unlock on first pointer/key gesture
 - **Footer copyright** — © 2026 NeaseMedia
 - **Feedback form** modal → `POST /api/feedback` → **support@neasemedia.com**
 - Mail: **Resend** preferred (`RESEND_API_KEY` / `RESEND_FROM`); SMTP nodemailer fallback
@@ -23,7 +31,7 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
   - Title screen slot picker (↑↓ ENTER / R wipe)
   - Import local save → first empty cloud slot
   - Schema: `sql/001_auth_slots.sql` (Neon Postgres)
-  - APIs under `/api/auth/*` and `/api/slots/*`
+  - APIs under `/api/slots/*` and `/api/auth/*`
 - Env template: `.env.example` (`DATABASE_URL`, `AUTH_BASE_URL`, Resend)
 
 ### Planned

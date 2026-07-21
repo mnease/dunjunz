@@ -5,6 +5,7 @@ import {
   startSlot,
   type SlotSummary,
 } from '../systems/auth-client';
+import { playMusic, playSfx, unlockAudio } from '../systems/audio';
 import { setCloudSyncEnabled } from '../systems/cloud-save';
 import { clearSave, loadSave, writeSave } from '../systems/save';
 import type { SaveData } from '../types';
@@ -24,6 +25,7 @@ export class TitleScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(COLORS.black);
+    void unlockAudio().then(() => playMusic('title'));
 
     this.add
       .rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x0d1220)
@@ -155,22 +157,28 @@ export class TitleScene extends Phaser.Scene {
     });
 
     const onEnter = () => {
+      void unlockAudio();
+      playSfx('ui_click');
       if (this.cloudMode) void this.activateCloudSlot(false);
       else this.startGame(false);
     };
     const onSpace = () => onEnter();
     const onNew = () => {
+      void unlockAudio();
+      playSfx('ui_click');
       if (this.cloudMode) void this.activateCloudSlot(true);
       else this.startGame(true);
     };
     const onUp = () => {
       if (!this.cloudMode) return;
       this.slotCursor = (this.slotCursor + 2) % 3;
+      playSfx('ui_click');
       this.renderCloudSlots();
     };
     const onDown = () => {
       if (!this.cloudMode) return;
       this.slotCursor = (this.slotCursor + 1) % 3;
+      playSfx('ui_click');
       this.renderCloudSlots();
     };
 
@@ -241,6 +249,7 @@ export class TitleScene extends Phaser.Scene {
 
   private startGame(fresh: boolean): void {
     if (fresh) clearSave();
+    playSfx('success');
     if (this.scene.isActive('UI')) {
       this.game.events.emit('ui-reset');
     }
