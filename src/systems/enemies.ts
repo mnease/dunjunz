@@ -2,7 +2,10 @@
  * Enemy combat defaults — HP tiers so creeps are not one-shot equal.
  * Player mild sword is ~2 dmg; iron blade ~3; cleaver ~5; land creeps
  * (trail / woodz / dezertz) are meant to stay scary after the first dunjun.
+ * Threat scaling (later lands / progress) applied via resolveEnemyHp(…, threat).
  */
+
+import { scaleContactDamage, scaleEnemyHp } from './threat';
 
 export const ENEMY_BASE_HP: Record<string, number> = {
   redshirt: 4, // fragile joke; still dies quick
@@ -25,17 +28,29 @@ export const ENEMY_CONTACT_DAMAGE: Record<string, number> = {
   boss: 4,
 };
 
-/** Resolve HP for a spawned enemy (room def may override). */
+/**
+ * Resolve HP for a spawned enemy.
+ * `defHp` is a base override (still scaled by threat).
+ * `threat` from threatForRoom — 0 = original balance.
+ */
 export function resolveEnemyHp(
   kind: string,
   defHp?: number,
+  threat = 0,
 ): number {
-  if (typeof defHp === 'number' && defHp > 0) return defHp;
-  return ENEMY_BASE_HP[kind] ?? 8;
+  const base =
+    typeof defHp === 'number' && defHp > 0
+      ? defHp
+      : (ENEMY_BASE_HP[kind] ?? 8);
+  return scaleEnemyHp(base, threat);
 }
 
-export function resolveEnemyContactDamage(kind: string): number {
-  return ENEMY_CONTACT_DAMAGE[kind] ?? 2;
+export function resolveEnemyContactDamage(
+  kind: string,
+  threat = 0,
+): number {
+  const base = ENEMY_CONTACT_DAMAGE[kind] ?? 2;
+  return scaleContactDamage(base, threat);
 }
 
 /** Display label for floating damage / debug. */

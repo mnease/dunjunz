@@ -853,6 +853,93 @@ describe('feedback validation', () => {
   });
 });
 
+describe('threat scaling', () => {
+  it('later lands and progress raise threat and HP', async () => {
+    const { threatForRoom, scaleEnemyHp, LAND_THREAT } = await import(
+      './threat'
+    );
+    const { resolveEnemyHp, resolveEnemyContactDamage } = await import(
+      './enemies'
+    );
+    expect(LAND_THREAT.sewerz).toBeGreaterThan(LAND_THREAT.dezertz);
+    expect(LAND_THREAT.kingdomz).toBeGreaterThan(LAND_THREAT.woodz);
+
+    const base = defaultSave();
+    const early = threatForRoom({ land: 'surface', floor: 0 }, base);
+    const late = threatForRoom(
+      { land: 'sewerz', floor: -1 },
+      {
+        ...base,
+        princessSaved: true,
+        landsCleared: ['dunjunz', 'woodz', 'dezertz'],
+        bestBudStage: 'complete',
+        questsCompleted: [],
+      },
+    );
+    expect(late).toBeGreaterThan(early);
+    expect(scaleEnemyHp(12, late)).toBeGreaterThan(scaleEnemyHp(12, early));
+    expect(resolveEnemyHp('slime', undefined, late)).toBeGreaterThan(
+      resolveEnemyHp('slime', undefined, 0),
+    );
+    expect(resolveEnemyContactDamage('slime', 4)).toBeGreaterThan(
+      resolveEnemyContactDamage('slime', 0),
+    );
+  });
+});
+
+describe('champion quests + kingdom', () => {
+  it('assigns sewerz after best bud complete', async () => {
+    const {
+      assignQuest,
+      nextAssignableQuest,
+      canTurnInQuest,
+      completeActiveQuest,
+      QUEST_SEWERZ_GOOSE,
+    } = await import('./champion-quests');
+    let s = {
+      ...defaultSave(),
+      princessSaved: true,
+      bestBudStage: 'complete' as const,
+      bestBudId: 'gloop' as const,
+    };
+    const next = nextAssignableQuest(s);
+    expect(next?.id).toBe(QUEST_SEWERZ_GOOSE);
+    const a = assignQuest(s, QUEST_SEWERZ_GOOSE);
+    expect(a.save.activeQuestId).toBe(QUEST_SEWERZ_GOOSE);
+    expect(a.save.discoveredMapz).toContain('sewerz');
+    expect(canTurnInQuest(a.save)).toBe(false);
+    a.save.killed.push('royal-goose');
+    expect(canTurnInQuest(a.save)).toBe(true);
+    const done = completeActiveQuest(a.save);
+    expect(done.save.questsCompleted).toContain(QUEST_SEWERZ_GOOSE);
+    expect(done.save.bag.some((b) => b.templateId === 'honk_blade')).toBe(
+      true,
+    );
+    expect(done.save.landsCleared).toContain('sewerz');
+  });
+
+  it('kingdom and sewerz rooms link correctly', () => {
+    expect(ROOMS.overworld_east.east).toBe('kingdom_gate');
+    expect(ROOMS.kingdom_gate?.west).toBe('overworld_east');
+    expect(ROOMS.kingdom_courtyard?.north).toBe('kingdom_throne');
+    expect(ROOMS.kingdom_courtyard?.east).toBe('sewerz_mouth');
+    expect(ROOMS.sewerz_boss?.west).toBe('sewerz_hall');
+    expect(ROOMS.sewerz_mouth?.land).toBe('sewerz');
+    expect(ROOMS.kingdom_throne?.land).toBe('kingdomz');
+  });
+
+  it('sewerz boss portal targets mouth', async () => {
+    const { bossExitPortalDef, shouldSpawnBossExitPortal } = await import(
+      './portal'
+    );
+    const def = bossExitPortalDef('sewerz_boss', 'sewerz');
+    expect(def?.portalTarget).toBe('sewerz_mouth');
+    const s = defaultSave();
+    s.killed.push('royal-goose');
+    expect(shouldSpawnBossExitPortal(s, 'sewerz_boss', 'sewerz')).toBe(true);
+  });
+});
+
 describe('best bud combat', () => {
   it('every bud has a combat profile', async () => {
     const { budCombatProfile, budAttackDamage, budCanBlockHit } = await import(

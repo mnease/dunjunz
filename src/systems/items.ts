@@ -134,6 +134,15 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     baseAtk: 4,
     look: 'sword',
   },
+  honk_blade: {
+    id: 'honk_blade',
+    name: 'HONK BLADE',
+    blurb: 'Epic. Smells like sewerz and victory.',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 4,
+    look: 'sword',
+  },
   leather_helmet: {
     id: 'leather_helmet',
     name: 'LEATHER CAP',

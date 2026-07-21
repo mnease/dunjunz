@@ -91,12 +91,17 @@ import {
   isHostileKind,
 } from '../systems/best-bud-combat';
 import {
+  QUEST_SEWERZ_GOOSE,
+  prizellaKingdomTalk,
+} from '../systems/champion-quests';
+import {
   markLandCleared,
   princessChampionDialog,
   questHint,
   rewardDezertzClear,
   rewardDunjunzClear,
   rewardWoodzClear,
+  unlockKingdomOnRescue,
 } from '../systems/quest';
 import {
   bossExitPortalDef,
@@ -105,6 +110,7 @@ import {
 import { playMusic, playSfx, type MusicId } from '../systems/audio';
 import { loadSettings } from '../systems/settings';
 import { loadSave, writeSave } from '../systems/save';
+import { threatForRoom } from '../systems/threat';
 import type {
   AttrId,
   EntityDef,
@@ -132,6 +138,8 @@ interface Actor {
   mapzId?: LandId;
   /** Destination room for portal entities. */
   portalTarget?: string;
+  /** Scaled contact damage at spawn (threat-aware). */
+  contactDamage?: number;
   /** Cube stays peaceful until the player hits it. */
   aggressive?: boolean;
 }
@@ -864,7 +872,44 @@ export class GameScene extends Phaser.Scene {
   }
 
   private musicForRoom(room: RoomDef): MusicId {
-    return room.land === 'dunjunz' ? 'dungeon' : 'overworld';
+    if (room.land === 'dunjunz' || room.land === 'sewerz') return 'dungeon';
+    return 'overworld';
+  }
+
+  /** Gates for kingdom / sewerz access. */
+  private canTravelTo(roomId: string): boolean {
+    const resolved = resolveRoomId(roomId);
+    if (resolved.startsWith('kingdom') || resolved === 'kingdom_gate') {
+      if (!this.save.princessSaved) {
+        this.game.events.emit(
+          'toast',
+          'CASTLE LOCKED — SAVE PRIZELLA FIRST',
+        );
+        return false;
+      }
+    }
+    if (resolved.startsWith('sewerz')) {
+      const ok =
+        this.save.activeQuestId === QUEST_SEWERZ_GOOSE ||
+        (this.save.questsCompleted ?? []).includes(QUEST_SEWERZ_GOOSE) ||
+        this.save.killed.includes('royal-goose');
+      if (!ok) {
+        this.game.events.emit(
+          'toast',
+          'SEWERZ SEALED — GET THE JOB FROM PRIZELLA',
+        );
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private travelTo(roomId: string, entryFrom?: string): void {
+    if (!this.canTravelTo(roomId)) {
+      this.transitionLock = false;
+      return;
+    }
+    this.loadRoom(roomId, false, entryFrom);
   }
 
   private loadRoom(roomId: string, fromSave: boolean, entryFrom?: string): void {
@@ -878,6 +923,26 @@ export class GameScene extends Phaser.Scene {
     this.save.roomId = resolved;
     playMusic(this.musicForRoom(room));
     this.save = markRoomVisited(this.save, resolved);
+    // First visit threat toast for meaner lands
+    const threat = threatForRoom(room, this.save);
+    if (
+      threat >= 3 &&
+      !this.save.flags[`threat_toast_${room.land ?? 'x'}`]
+    ) {
+      this.save = {
+        ...this.save,
+        flags: {
+          ...this.save.flags,
+          [`threat_toast_${room.land ?? 'x'}`]: true,
+        },
+      };
+      this.time.delayedCall(200, () => {
+        this.game.events.emit(
+          'toast',
+          `THREAT UP — CREEPS MEANER HERE (T${threat})`,
+        );
+      });
+    }
     this.tileGrid = this.applyPersistentDoorUnlocks(this.parseTiles(room));
 
     for (let y = 0; y < VIEW_TILES_H; y++) {
@@ -945,6 +1010,69 @@ export class GameScene extends Phaser.Scene {
         });
       }
     }
+  }
+
+  /** Prizella: rescue / Best Bud / kingdom quest board. */
+  private talkToPrizella(best: Actor): void {
+    this.save = ensureRunSeed(this.save);
+
+    // Pre-rescue tower talk
+    if (!this.save.princessSaved && !this.save.killed.includes('sand-wraith')) {
+      this.game.events.emit(
+        'dialog-show',
+        best.dialog ?? [
+          'PRIZELLA: BONK THE WRAITH FIRST!',
+          'THEN WE TALK KINGDOM STUFF.',
+        ],
+      );
+      return;
+    }
+
+    // Just rescued (tower path if boss reward didn't set flags)
+    if (!this.save.princessSaved && this.save.killed.includes('sand-wraith')) {
+      this.save = {
+        ...this.save,
+        princessSaved: true,
+        flags: { ...this.save.flags, princess_saved: true },
+      };
+      this.save = markLandCleared(this.save, 'dezertz');
+      this.save = unlockKingdomOnRescue(this.save);
+      writeSave(this.save);
+      this.game.events.emit('dialog-show', [
+        'PRIZELLA: YOU DID IT! MATHEMATICAL!',
+        'I AM FREE. MOSTLY. THERE\'S STILL SAND.',
+        '',
+        ...princessChampionDialog(),
+        '',
+        'I\'M HEADING HOME — CASTLE EAST OF THE TRAIL.',
+        'CYAN PORTAL / NORTH DOOR OUT. BEST BUD NEXT.',
+      ]);
+      this.ensureBossExitPortal(true);
+      return;
+    }
+
+    // Post-rescue: Best Bud job #1 until complete
+    if (this.save.bestBudStage !== 'complete') {
+      if (!this.save.landsCleared.includes('dezertz')) {
+        this.save = markLandCleared(this.save, 'dezertz');
+      }
+      this.save = unlockKingdomOnRescue(this.save);
+      const talk = prizellaChampionTalk(this.save);
+      this.save = talk.save;
+      writeSave(this.save);
+      this.game.events.emit('dialog-show', talk.dialog);
+      this.syncCompanion();
+      this.ensureBossExitPortal(true);
+      return;
+    }
+
+    // Job #2+: throne quest board
+    this.save = unlockKingdomOnRescue(this.save);
+    const kingdom = prizellaKingdomTalk(this.save);
+    this.save = kingdom.save;
+    writeSave(this.save);
+    this.game.events.emit('dialog-show', kingdom.dialog);
+    this.syncCompanion();
   }
 
   /** Best Bud den meet or companion banter. */
@@ -1242,16 +1370,26 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnEntity(def: EntityDef): void {
-    // Den bud only while quest accepted (not yet found)
+    // Den bud only while not yet recruited
     if (def.kind === 'best_bud' && !shouldSpawnDenBud(this.save)) {
       return;
+    }
+
+    // One Prizella: tower pre-rescue, throne post-rescue
+    if (def.kind === 'princess') {
+      const onTower = this.room.id === 'dezertz_tower';
+      const onThrone = this.room.id === 'kingdom_throne';
+      if (onTower && this.save.princessSaved) return;
+      if (onThrone && !this.save.princessSaved) return;
     }
 
     // Captain gets gold command tunic (Kirk), not generic purple NPC
     const tex =
       def.id === 'captain' && this.textures.exists('captain')
         ? 'captain'
-        : (ENTITY_TEX[def.kind] ?? 'npc');
+        : def.id === 'royal-goose' && this.textures.exists('boss')
+          ? 'boss'
+          : (ENTITY_TEX[def.kind] ?? 'npc');
     const pos = this.tileToWorld(def.x, def.y);
     const sprite = this.physics.add.sprite(pos.x, pos.y, tex);
     sprite.setScale(SCALE);
@@ -1260,6 +1398,9 @@ export class GameScene extends Phaser.Scene {
     if (def.kind === 'best_bud') {
       const bud = getBestBud(this.save.bestBudId);
       if (bud) sprite.setTint(bud.tint);
+    }
+    if (def.id === 'royal-goose') {
+      sprite.setTint(0xffe08a);
     }
 
     const hostile = [
@@ -1327,7 +1468,9 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    const hp = resolveEnemyHp(def.kind, def.hp);
+    const threat = threatForRoom(this.room, this.save);
+    const hp = resolveEnemyHp(def.kind, def.hp, threat);
+    const contactDamage = resolveEnemyContactDamage(def.kind, threat);
 
     const actor: Actor = {
       sprite,
@@ -1344,6 +1487,7 @@ export class GameScene extends Phaser.Scene {
       shopId: def.shopId,
       mapzId: def.mapzId,
       portalTarget: def.portalTarget,
+      contactDamage,
       // Cube is peaceful until struck
       aggressive: def.kind === 'cube' ? false : true,
     };
@@ -1488,8 +1632,13 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Kind contact damage; armor reduces (min 1) so gear matters
-    const baseDmg = resolveEnemyContactDamage(from.kind);
+    // Kind contact damage (threat-scaled at spawn); armor reduces (min 1)
+    const baseDmg =
+      from.contactDamage ??
+      resolveEnemyContactDamage(
+        from.kind,
+        threatForRoom(this.room, this.save),
+      );
     const dmg = Math.max(1, baseDmg - this.save.armor);
     this.save.hp = Math.max(0, this.save.hp - dmg);
     this.invuln = 900;
@@ -1593,8 +1742,11 @@ export class GameScene extends Phaser.Scene {
     actor.alive = false;
     this.save.killed.push(actor.id);
 
-    // XP + level from pure progression module
-    const xpGain = enemyXpReward(actor.kind);
+    // XP + level from pure progression module (threat-scaled)
+    const xpGain = enemyXpReward(
+      actor.kind,
+      threatForRoom(this.room, this.save),
+    );
     const prog = grantXp(
       {
         xp: this.save.xp,
@@ -1787,6 +1939,16 @@ export class GameScene extends Phaser.Scene {
       this.ensureBossExitPortal(true);
       return;
     }
+    if (actor.id === 'royal-goose' || this.room.id === 'sewerz_boss') {
+      this.game.events.emit('dialog-show', [
+        'THE ROYAL GOOSE STOPS HONKING.',
+        'TAX SCROLLS FALL OUT. GROSS. VALUABLE.',
+        'EXIT PORTAL → SEWER MOUTH.',
+        'REPORT TO PRIZELLA ON THE THRONE.',
+      ]);
+      this.ensureBossExitPortal(true);
+      return;
+    }
     // Generic boss fallback
     this.save.bossDefeated = true;
     this.game.events.emit('dialog-show', [
@@ -1922,46 +2084,12 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    if (best.kind === 'princess' || best.id === 'prizella') {
-      if (this.save.princessSaved || this.save.landsCleared.includes('dezertz')) {
-        // Champion quests: Best Bud stages via pure helper
-        this.save = ensureRunSeed(this.save);
-        // Safety: rescue talk without boss reward still unlocks portal/exit
-        if (!this.save.landsCleared.includes('dezertz')) {
-          this.save = markLandCleared(this.save, 'dezertz');
-        }
-        const talk = prizellaChampionTalk(this.save);
-        this.save = talk.save;
-        writeSave(this.save);
-        this.game.events.emit('dialog-show', talk.dialog);
-        this.syncCompanion();
-        this.ensureBossExitPortal(true);
-      } else if (this.save.killed.includes('sand-wraith')) {
-        this.save = {
-          ...this.save,
-          princessSaved: true,
-          flags: { ...this.save.flags, princess_saved: true },
-        };
-        this.save = markLandCleared(this.save, 'dezertz');
-        this.save = ensureRunSeed(this.save);
-        writeSave(this.save);
-        // First freedom talk: kingdom duty, then Best Bud on next E
-        this.game.events.emit('dialog-show', [
-          'PRIZELLA: YOU DID IT! MATHEMATICAL!',
-          'I AM FREE. MOSTLY. THERE\'S STILL SAND.',
-          '',
-          ...princessChampionDialog(),
-          '',
-          'CYAN PORTAL BY THE NORTH DOOR — OR WALK NORTH.',
-          'TALK TO ME AGAIN FOR CHAMPION JOB #1.',
-        ]);
-        this.ensureBossExitPortal(true);
-      } else {
-        this.game.events.emit('dialog-show', best.dialog ?? [
-          'PRIZELLA: BONK THE WRAITH FIRST!',
-          'THEN WE TALK KINGDOM STUFF.',
-        ]);
-      }
+    if (
+      best.kind === 'princess' ||
+      best.id === 'prizella' ||
+      best.id === 'prizella-throne'
+    ) {
+      this.talkToPrizella(best);
       return;
     }
 
@@ -2442,25 +2570,25 @@ export class GameScene extends Phaser.Scene {
     if (ty <= 0 && this.room.north) {
       this.transitionLock = true;
       playSfx('door');
-      this.loadRoom(this.room.north, false, entryFromOpposite('north'));
+      this.travelTo(this.room.north, entryFromOpposite('north'));
       return;
     }
     if (ty >= VIEW_TILES_H - 1 && this.room.south) {
       this.transitionLock = true;
       playSfx('door');
-      this.loadRoom(this.room.south, false, entryFromOpposite('south'));
+      this.travelTo(this.room.south, entryFromOpposite('south'));
       return;
     }
     if (tx <= 0 && this.room.west) {
       this.transitionLock = true;
       playSfx('door');
-      this.loadRoom(this.room.west, false, entryFromOpposite('west'));
+      this.travelTo(this.room.west, entryFromOpposite('west'));
       return;
     }
     if (tx >= VIEW_TILES_W - 1 && this.room.east) {
       this.transitionLock = true;
       playSfx('door');
-      this.loadRoom(this.room.east, false, entryFromOpposite('east'));
+      this.travelTo(this.room.east, entryFromOpposite('east'));
       return;
     }
   }

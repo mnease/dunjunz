@@ -40,6 +40,8 @@ export function defaultSave(): SaveData {
         0 || 1,
     bestBudId: null,
     bestBudStage: 'none',
+    activeQuestId: null,
+    questsCompleted: [],
   };
 }
 
@@ -61,6 +63,8 @@ function withV5Fields(s: SaveData): SaveData {
     runSeed,
     bestBudId: s.bestBudId ?? null,
     bestBudStage: s.bestBudStage ?? 'none',
+    activeQuestId: s.activeQuestId ?? null,
+    questsCompleted: Array.isArray(s.questsCompleted) ? s.questsCompleted : [],
   };
 }
 
@@ -123,6 +127,10 @@ export function loadSave(): SaveData {
         typeof parsed.runSeed === 'number' ? parsed.runSeed : base.runSeed,
       bestBudId: (parsed as SaveData).bestBudId ?? null,
       bestBudStage: (parsed as SaveData).bestBudStage ?? 'none',
+      activeQuestId: (parsed as SaveData).activeQuestId ?? null,
+      questsCompleted: Array.isArray((parsed as SaveData).questsCompleted)
+        ? (parsed as SaveData).questsCompleted!
+        : [],
     });
     next.level = levelFromXp(next.xp);
     // Boss already beaten → ensure dunjunz land flagged

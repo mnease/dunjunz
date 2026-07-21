@@ -339,7 +339,8 @@ export function completeBestBudQuest(save: SaveData): {
       'CHAMPION QUEST #1: DONE. MATHEMATICAL.',
       'DON\'T MAKE IT WEIRD. IT\'S NOT A WEDDING.',
       'KINGDOM CARE PACKAGE: +20c, SPARK, WOOD SHARDZ.',
-      'GO BE COOL. TOGETHER.',
+      'FIND ME ON THE THRONE FOR JOB #2.',
+      'CASTLE: EAST OF THE TROPE TRAIL.',
     ].filter(Boolean),
   };
 }

@@ -86,7 +86,13 @@ export interface ItemInstance {
 }
 
 /** Player-facing land ids (intentional misspellingz). */
-export type LandId = 'surface' | 'dunjunz' | 'woodz' | 'dezertz';
+export type LandId =
+  | 'surface'
+  | 'dunjunz'
+  | 'woodz'
+  | 'dezertz'
+  | 'kingdomz'
+  | 'sewerz';
 
 export interface EquippedMap {
   weapon: string | null;
@@ -188,4 +194,8 @@ export interface SaveData {
   bestBudId: BestBudId | null;
   /** Best Bud champion quest stage. */
   bestBudStage: BestBudStage;
+  /** Active champion quest id from Prizella's board (null = none). */
+  activeQuestId: string | null;
+  /** Completed champion quest ids (beyond main rescue / best bud). */
+  questsCompleted: string[];
 }

@@ -13,6 +13,10 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 
 ### Added
 
+- **Progressive creep threat** — HP / contact damage / XP scale by land tier, floor depth, and world progress (later zones hurt more)
+- **Prizella's Kingdomz** (east of Trope Trail after rescue) — gate, courtyard, throne hub
+- **Champion quest board** — after Best Bud, throne assigns **Royal Sewerz** (Job #2)
+- **Sewerz dungeon** — mouth / pipe hall / overflow / Honk Chamber (Royal Goose boss) + exit portal + Honk Blade turn-in
 - **Best Bud combat** — companions fight with Jake-energy magic (not vibe-only)
   - Gloop stretch lash, Nub claws, Whisp fog bite + heal, Tater roast spit, Zorp pocket hop, Pebbo coil slam + hit block
   - Auto-aggro creeps near you; damage scales lightly with level

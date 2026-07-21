@@ -96,8 +96,11 @@ export function grantXp(state: ProgressState, amount: number): GrantXpResult {
   };
 }
 
-export function enemyXpReward(kind: string): number {
-  return ENEMY_XP[kind] ?? 1;
+export function enemyXpReward(kind: string, threat = 0): number {
+  const base = ENEMY_XP[kind] ?? 1;
+  if (threat <= 0) return base;
+  // Light scale so harder zones still pay out
+  return Math.max(1, Math.round(base * (1 + 0.1 * threat)));
 }
 
 /** Sample cumulative thresholds for docs/tests. */

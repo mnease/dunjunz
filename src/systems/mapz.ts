@@ -48,6 +48,22 @@ export const LANDS: Record<LandId, LandInfo> = {
     fog: 0x3a3020,
     border: 0xffc857,
   },
+  kingdomz: {
+    id: 'kingdomz',
+    name: 'KINGDOMZ MAPZ',
+    blurb: 'Prizella rules. Weird taxes. Cool quests.',
+    color: 0x6a4a9a,
+    fog: 0x2a1a40,
+    border: 0xffc857,
+  },
+  sewerz: {
+    id: 'sewerz',
+    name: 'SEWERZ MAPZ',
+    blurb: 'Royal plumbing. Meaner creeps. Goose?',
+    color: 0x3a5a48,
+    fog: 0x152018,
+    border: 0x7dffb3,
+  },
 };
 
 export function discoverMapz(save: SaveData, land: LandId): SaveData {
@@ -290,6 +306,8 @@ export function reconcileMapzFromCollected(save: SaveData): SaveData {
     'mapz-dunjunz': 'dunjunz',
     'mapz-woodz': 'woodz',
     'mapz-dezertz': 'dezertz',
+    'mapz-kingdomz': 'kingdomz',
+    'mapz-sewerz': 'sewerz',
   };
   let next = save;
   for (const id of save.collected) {

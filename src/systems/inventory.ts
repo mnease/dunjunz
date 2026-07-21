@@ -274,6 +274,10 @@ export function migrateEquipment(save: SaveData & Record<string, unknown>): Save
               (Date.now() & 0xffffffff)) >>> 0 || 1,
       bestBudId: save.bestBudId ?? null,
       bestBudStage: save.bestBudStage ?? 'none',
+      activeQuestId: save.activeQuestId ?? null,
+      questsCompleted: Array.isArray(save.questsCompleted)
+        ? save.questsCompleted
+        : [],
     };
     return autoEquipEmptySlots(syncDerivedStats(next));
   }
@@ -318,6 +322,8 @@ export function migrateEquipment(save: SaveData & Record<string, unknown>): Save
         0 || 1,
     bestBudId: null,
     bestBudStage: 'none',
+    activeQuestId: null,
+    questsCompleted: [],
   };
 
   const inv = legacy.inventory ?? {};

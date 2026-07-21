@@ -5,6 +5,7 @@
 
 import type { LandId, SaveData } from '../types';
 import { bestBudQuestHint } from './best-bud';
+import { championQuestHint } from './champion-quests';
 import { discoverMapz } from './mapz';
 import { mintItem } from './items';
 import { autoEquipEmptySlots, syncDerivedStats } from './inventory';
@@ -116,6 +117,7 @@ export function rewardDezertzClear(save: SaveData): {
     princessSaved: true,
     flags: { ...next.flags, princess_saved: true },
   };
+  next = unlockKingdomOnRescue(next);
   const m = mintItem(next, 'sand_saber', 'epic', 1);
   next = m.save;
   next = syncDerivedStats(next);
@@ -126,16 +128,27 @@ export function rewardDezertzClear(save: SaveData): {
       `${PRINCESS_NAME} STEPS OUT, BRUSHING DUNES OFF HER CROWN.`,
       'PRIZELLA: YOU CAME. THAT RULES.',
       'YOU GOT: SAND SABER. SHINY. HISSY.',
-      'CYAN EXIT PORTAL — STEP ON IT FOR EDGE.',
-      'OR WALK NORTH OUT THE DOOR.',
-      'TALK TO ME FOR CHAMPION JOB STUFF.',
+      'I\'M GOING HOME TO RULE MY KINGDOM.',
+      'CASTLE EAST OF TRAIL — KINGDOMZ.',
+      'CYAN EXIT PORTAL — OR WALK NORTH.',
+      'FIND ME ON THE THRONE AFTER BEST-BUD STUFF.',
+      'CHAMPION JOBS START THERE.',
     ],
   };
 }
 
 export function questHint(save: SaveData): string[] {
   if (save.princessSaved) {
-    return bestBudQuestHint(save);
+    // Best Bud first; then kingdom board
+    if (save.bestBudStage !== 'complete') {
+      return bestBudQuestHint(save);
+    }
+    const champ = championQuestHint(save);
+    if (champ.length) return champ;
+    return [
+      'PRIZELLA RULES FROM THE KINGDOMZ.',
+      'EAST OF THE TRAIL. CHECK THE THRONE.',
+    ];
   }
   if (!save.landsCleared.includes('dunjunz')) {
     return [
@@ -159,4 +172,14 @@ export function questHint(save: SaveData): string[] {
     ];
   }
   return ['FIND THE PRINCESZ. SHE\'S COUNTING ON YOU!'];
+}
+
+/** Unlock kingdom on rescue. */
+export function unlockKingdomOnRescue(save: SaveData): SaveData {
+  let next = discoverMapz(save, 'kingdomz');
+  next = {
+    ...next,
+    flags: { ...next.flags, kingdom_unlocked: true },
+  };
+  return next;
 }
