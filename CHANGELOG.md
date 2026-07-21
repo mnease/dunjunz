@@ -11,6 +11,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ## [Unreleased]
 
+### Changed
+
+- **Inventory bag pagination** — bag shows 8×3 slots per page; **◀ PREV / NEXT ▶**, mouse wheel, or **[ ]** / **PgUp/PgDn** when inventory is open (no more silent “+N more” cutoff).
+
 ### Added
 
 - **New-player email to support** — when a brand-new account is created (guest or first magic-link), Resend notifies `support@neasemedia.com` (or `SIGNUP_NOTIFY_TO`). Signup never fails if mail is down.

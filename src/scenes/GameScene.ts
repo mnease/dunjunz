@@ -454,8 +454,26 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-J', this.onJournalKey, this);
     kb.on('keydown-M', this.onMapzKey, this);
     kb.on('keydown-TAB', this.onMapzKey, this);
-    kb.on('keydown-OPEN_BRACKET', () => this.onMapzNav('floor-prev'));
-    kb.on('keydown-CLOSED_BRACKET', () => this.onMapzNav('floor-next'));
+    kb.on('keydown-OPEN_BRACKET', () => {
+      if (this.inventoryOpen) {
+        this.game.events.emit('inventory-bag-page', -1);
+        return;
+      }
+      this.onMapzNav('floor-prev');
+    });
+    kb.on('keydown-CLOSED_BRACKET', () => {
+      if (this.inventoryOpen) {
+        this.game.events.emit('inventory-bag-page', 1);
+        return;
+      }
+      this.onMapzNav('floor-next');
+    });
+    kb.on('keydown-PAGE_UP', () => {
+      if (this.inventoryOpen) this.game.events.emit('inventory-bag-page', -1);
+    });
+    kb.on('keydown-PAGE_DOWN', () => {
+      if (this.inventoryOpen) this.game.events.emit('inventory-bag-page', 1);
+    });
     kb.on('keydown-COMMA', () => this.onMapzNav('land-prev'));
     kb.on('keydown-PERIOD', () => this.onMapzNav('land-next'));
     kb.on('keydown-ONE', () => this.onDigitKey(1));
