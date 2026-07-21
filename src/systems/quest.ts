@@ -4,6 +4,7 @@
  */
 
 import type { LandId, SaveData } from '../types';
+import { bestBudQuestHint } from './best-bud';
 import { discoverMapz } from './mapz';
 import { mintItem } from './items';
 import { autoEquipEmptySlots, syncDerivedStats } from './inventory';
@@ -134,11 +135,7 @@ export function rewardDezertzClear(save: SaveData): {
 
 export function questHint(save: SaveData): string[] {
   if (save.princessSaved) {
-    return [
-      'PRIZELLA\'S BACK TO RULING.',
-      'CHAMPION QUESTS: COMING SOON-ISH.',
-      'FORJE GEAR. STAY RAD. CHECK BACK.',
-    ];
+    return bestBudQuestHint(save);
   }
   if (!save.landsCleared.includes('dunjunz')) {
     return [

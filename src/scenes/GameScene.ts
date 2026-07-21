@@ -69,6 +69,15 @@ import {
   runForjingAction,
 } from '../systems/forjing';
 import {
+  bestBudBanter,
+  ensureRunSeed,
+  getBestBud,
+  isCompanionActive,
+  meetBestBud,
+  prizellaChampionTalk,
+  shouldSpawnDenBud,
+} from '../systems/best-bud';
+import {
   princessChampionDialog,
   questHint,
   rewardDezertzClear,
@@ -155,6 +164,7 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   princess: 'princess',
   cactus: 'cactus',
   wolf: 'wolf',
+  best_bud: 'best_bud',
 };
 
 export class GameScene extends Phaser.Scene {
@@ -204,6 +214,8 @@ export class GameScene extends Phaser.Scene {
   private roomOriginY = 0;
   private padCooldown = 0;
   private bossIntroShown = false;
+  /** Following Best Bud companion sprite (after found). */
+  private companionSprite: Phaser.Physics.Arcade.Sprite | null = null;
 
   constructor() {
     super('Game');
@@ -806,6 +818,10 @@ export class GameScene extends Phaser.Scene {
       a.sprite.destroy();
     }
     this.actors = [];
+    if (this.companionSprite) {
+      this.companionSprite.destroy();
+      this.companionSprite = null;
+    }
     // Destroy map tiles (images tagged)
     this.children.list
       .filter((c) => (c as Phaser.GameObjects.Image).getData?.('mapTile'))
@@ -875,6 +891,7 @@ export class GameScene extends Phaser.Scene {
 
     this.emitHud();
     writeSave(this.save);
+    this.syncCompanion();
 
     if (resolved === 'b2_boss' && !this.save.bossDefeated && !this.bossIntroShown) {
       this.bossIntroShown = true;
@@ -884,6 +901,67 @@ export class GameScene extends Phaser.Scene {
           this.game.events.emit('dialog-show', boss.dialog);
         });
       }
+    }
+  }
+
+  /** Best Bud den meet or companion banter. */
+  private talkToBestBud(actor: Actor): void {
+    if (this.save.bestBudStage === 'accepted' && this.save.bestBudId) {
+      const r = meetBestBud(this.save);
+      this.save = r.save;
+      writeSave(this.save);
+      actor.alive = false;
+      if (actor.sprite?.active) actor.sprite.destroy();
+      this.game.events.emit('dialog-show', r.dialog);
+      this.syncCompanion();
+      const bud = getBestBud(this.save.bestBudId);
+      this.game.events.emit('toast', bud ? `BEST BUD: ${bud.name}!` : 'BEST BUD!');
+      return;
+    }
+    if (isCompanionActive(this.save)) {
+      this.game.events.emit('dialog-show', bestBudBanter(this.save));
+      return;
+    }
+    this.game.events.emit(
+      'dialog-show',
+      actor.dialog ?? [
+        '...A CREATURE WAITS.',
+        'TALK TO PRIZELLA ABOUT CHAMPION JOB #1 FIRST.',
+      ],
+    );
+  }
+
+  /** Spawn/destroy following companion based on quest stage. */
+  private syncCompanion(): void {
+    if (!isCompanionActive(this.save) || !this.player) {
+      if (this.companionSprite?.active) this.companionSprite.destroy();
+      this.companionSprite = null;
+      return;
+    }
+    const bud = getBestBud(this.save.bestBudId);
+    if (!this.companionSprite?.active) {
+      const px = this.player.x - 22;
+      const py = this.player.y + 4;
+      this.companionSprite = this.physics.add.sprite(px, py, 'best_bud');
+      this.companionSprite.setScale(SCALE).setDepth(4);
+      this.companionSprite.setImmovable(true);
+      const body = this.companionSprite.body as Phaser.Physics.Arcade.Body;
+      body.enable = false;
+    }
+    if (bud) this.companionSprite.setTint(bud.tint);
+    else this.companionSprite.clearTint();
+  }
+
+  private updateCompanionFollow(): void {
+    if (!this.companionSprite?.active || !this.player || !isCompanionActive(this.save)) {
+      return;
+    }
+    const dx = this.player.x - 18 - this.companionSprite.x;
+    const dy = this.player.y + 2 - this.companionSprite.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 24) {
+      this.companionSprite.x += dx * 0.1;
+      this.companionSprite.y += dy * 0.1;
     }
   }
 
@@ -952,6 +1030,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnEntity(def: EntityDef): void {
+    // Den bud only while quest accepted (not yet found)
+    if (def.kind === 'best_bud' && !shouldSpawnDenBud(this.save)) {
+      return;
+    }
+
     // Captain gets gold command tunic (Kirk), not generic purple NPC
     const tex =
       def.id === 'captain' && this.textures.exists('captain')
@@ -961,6 +1044,11 @@ export class GameScene extends Phaser.Scene {
     const sprite = this.physics.add.sprite(pos.x, pos.y, tex);
     sprite.setScale(SCALE);
     sprite.setDepth(5);
+
+    if (def.kind === 'best_bud') {
+      const bud = getBestBud(this.save.bestBudId);
+      if (bud) sprite.setTint(bud.tint);
+    }
 
     const hostile = [
       'slime',
@@ -983,6 +1071,7 @@ export class GameScene extends Phaser.Scene {
       'mapz',
       'forje',
       'princess',
+      'best_bud',
     ].includes(def.kind);
 
     // Pickups / talkers: immovable, fat talk hitbox
@@ -1016,6 +1105,7 @@ export class GameScene extends Phaser.Scene {
           'mapz',
           'forje',
           'princess',
+          'best_bud',
         ].includes(def.kind)
       ) {
         sprite.setSize(14, 14);
@@ -1145,6 +1235,12 @@ export class GameScene extends Phaser.Scene {
   private hitEnemy(actor: Actor): void {
     if (!actor.alive || actor.hurtCooldown > 0 || !this.attacking) return;
     if (!hasWeaponEquipped(this.save)) return;
+
+    // Best Bud is immortal friendship — not a target
+    if (actor.kind === 'best_bud') {
+      this.game.events.emit('toast', 'OW. RUDE. STILL BUDDIES.');
+      return;
+    }
 
     // Provoking the cube makes it fight back
     if (actor.kind === 'cube' && !actor.aggressive) {
@@ -1508,24 +1604,29 @@ export class GameScene extends Phaser.Scene {
 
     if (best.kind === 'princess' || best.id === 'prizella') {
       if (this.save.princessSaved || this.save.landsCleared.includes('dezertz')) {
-        // Post-save: kingdom duty + champion offer (not "personal hero")
-        this.game.events.emit('dialog-show', [
-          ...princessChampionDialog(),
-          '',
-          ...questHint(this.save),
-        ]);
+        // Champion quests: Best Bud stages via pure helper
+        this.save = ensureRunSeed(this.save);
+        const talk = prizellaChampionTalk(this.save);
+        this.save = talk.save;
+        writeSave(this.save);
+        this.game.events.emit('dialog-show', talk.dialog);
+        this.syncCompanion();
       } else if (this.save.killed.includes('sand-wraith')) {
         this.save = {
           ...this.save,
           princessSaved: true,
           flags: { ...this.save.flags, princess_saved: true },
         };
+        this.save = ensureRunSeed(this.save);
         writeSave(this.save);
+        // First freedom talk: kingdom duty, then Best Bud on next E
         this.game.events.emit('dialog-show', [
           'PRIZELLA: YOU DID IT! MATHEMATICAL!',
           'I AM FREE. MOSTLY. THERE\'S STILL SAND.',
           '',
           ...princessChampionDialog(),
+          '',
+          'TALK TO ME AGAIN FOR CHAMPION JOB #1.',
         ]);
       } else {
         this.game.events.emit('dialog-show', best.dialog ?? [
@@ -1533,6 +1634,11 @@ export class GameScene extends Phaser.Scene {
           'THEN WE TALK KINGDOM STUFF.',
         ]);
       }
+      return;
+    }
+
+    if (best.kind === 'best_bud' || best.id === 'best-bud-den') {
+      this.talkToBestBud(best);
       return;
     }
 
@@ -2282,6 +2388,7 @@ export class GameScene extends Phaser.Scene {
     this.tryUnlockNearPlayer();
     this.checkHazards(delta);
     this.checkRoomExit();
+    this.updateCompanionFollow();
     this.updateEnemies(delta);
   }
 }

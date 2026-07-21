@@ -267,6 +267,13 @@ export function migrateEquipment(save: SaveData & Record<string, unknown>): Save
       visitedRooms: save.visitedRooms ?? [],
       princessSaved: save.princessSaved ?? false,
       landsCleared: save.landsCleared ?? [],
+      runSeed:
+        typeof save.runSeed === 'number'
+          ? save.runSeed
+          : (Math.floor(Math.random() * 0xffffffff) ^
+              (Date.now() & 0xffffffff)) >>> 0 || 1,
+      bestBudId: save.bestBudId ?? null,
+      bestBudStage: save.bestBudStage ?? 'none',
     };
     return autoEquipEmptySlots(syncDerivedStats(next));
   }
@@ -306,6 +313,11 @@ export function migrateEquipment(save: SaveData & Record<string, unknown>): Save
     visitedRooms: [],
     princessSaved: false,
     landsCleared: legacy.bossDefeated ? ['dunjunz'] : [],
+    runSeed:
+      (Math.floor(Math.random() * 0xffffffff) ^ (Date.now() & 0xffffffff)) >>>
+        0 || 1,
+    bestBudId: null,
+    bestBudStage: 'none',
   };
 
   const inv = legacy.inventory ?? {};

@@ -34,10 +34,20 @@ export function defaultSave(): SaveData {
     visitedRooms: [],
     princessSaved: false,
     landsCleared: [],
+    runSeed:
+      (Math.floor(Math.random() * 0xffffffff) ^ (Date.now() & 0xffffffff)) >>>
+        0 || 1,
+    bestBudId: null,
+    bestBudStage: 'none',
   };
 }
 
 function withV5Fields(s: SaveData): SaveData {
+  const runSeed =
+    typeof s.runSeed === 'number' && Number.isFinite(s.runSeed)
+      ? s.runSeed
+      : (Math.floor(Math.random() * 0xffffffff) ^ (Date.now() & 0xffffffff)) >>>
+          0 || 1;
   return {
     ...s,
     version: 5,
@@ -47,6 +57,9 @@ function withV5Fields(s: SaveData): SaveData {
     visitedRooms: s.visitedRooms ?? [],
     princessSaved: s.princessSaved ?? false,
     landsCleared: s.landsCleared ?? [],
+    runSeed,
+    bestBudId: s.bestBudId ?? null,
+    bestBudStage: s.bestBudStage ?? 'none',
   };
 }
 
@@ -105,6 +118,10 @@ export function loadSave(): SaveData {
       landsCleared: Array.isArray(parsed.landsCleared)
         ? (parsed.landsCleared as LandId[])
         : [],
+      runSeed:
+        typeof parsed.runSeed === 'number' ? parsed.runSeed : base.runSeed,
+      bestBudId: (parsed as SaveData).bestBudId ?? null,
+      bestBudStage: (parsed as SaveData).bestBudStage ?? 'none',
     });
     next.level = levelFromXp(next.xp);
     // Boss already beaten → ensure dunjunz land flagged

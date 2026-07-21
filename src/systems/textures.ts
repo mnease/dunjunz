@@ -827,6 +827,23 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(10, 4, 1, 1);
   });
 
+  // Best Bud base silhouette — tinted per species (never human)
+  canvasTex(scene, 'best_bud', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#d0d0d8';
+    ctx.fillRect(4, 6, 8, 7);
+    ctx.fillRect(3, 8, 10, 4);
+    ctx.fillRect(3, 3, 3, 4);
+    ctx.fillRect(10, 3, 3, 4);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(6, 8, 1, 1);
+    ctx.fillRect(9, 8, 1, 1);
+    ctx.fillStyle = '#ff6b9d';
+    ctx.fillRect(7, 10, 2, 1);
+    ctx.fillStyle = '#a0a0a8';
+    ctx.fillRect(5, 13, 2, 2);
+    ctx.fillRect(9, 13, 2, 2);
+  });
+
   canvasTex(scene, 'particle', 4, 4, (ctx) => {
     ctx.fillStyle = hex(COLORS.gold);
     ctx.fillRect(0, 0, 4, 4);

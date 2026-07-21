@@ -30,7 +30,24 @@ export type EntityKind =
   | 'forje'
   | 'princess'
   | 'cactus'
-  | 'wolf';
+  | 'wolf'
+  | 'best_bud';
+
+/** Non-human best friend companion (randomized per playthrough). */
+export type BestBudId =
+  | 'gloop'
+  | 'nub'
+  | 'whisp'
+  | 'tater'
+  | 'zorp'
+  | 'pebbo';
+
+export type BestBudStage =
+  | 'none'
+  | 'offered'
+  | 'accepted'
+  | 'found'
+  | 'complete';
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
@@ -124,8 +141,8 @@ export interface RoomDef {
 }
 
 /**
- * Save v5 — multi-land quest, mapz, forjing.
- * loadSave migrates ≤4.
+ * Save v5 — multi-land quest, mapz, forjing, best bud.
+ * loadSave migrates ≤4; best-bud fields backfilled on load.
  */
 export interface SaveData {
   version: 5;
@@ -162,4 +179,10 @@ export interface SaveData {
   princessSaved: boolean;
   /** Land bosses cleared (dunjunz, woodz, dezertz). */
   landsCleared: LandId[];
+  /** Stable per-playthrough seed (best bud roll, etc.). */
+  runSeed: number;
+  /** Rolled once on Best Bud quest accept; null until then. */
+  bestBudId: BestBudId | null;
+  /** Best Bud champion quest stage. */
+  bestBudStage: BestBudStage;
 }

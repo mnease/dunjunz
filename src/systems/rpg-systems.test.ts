@@ -61,6 +61,14 @@ import {
   runForjingAction,
 } from './forjing';
 import {
+  acceptBestBudQuest,
+  BEST_BUD_ROSTER,
+  completeBestBudQuest,
+  meetBestBud,
+  prizellaChampionTalk,
+  rollBestBudId,
+} from './best-bud';
+import {
   princessChampionDialog,
   questHint,
   rewardDezertzClear,
@@ -681,7 +689,7 @@ describe('princess quest land clears', () => {
     save = rewardWoodzClear(save).save;
     expect(questHint(save).join(' ')).toMatch(/DEZERTZ/i);
     save = rewardDezertzClear(save).save;
-    expect(questHint(save).join(' ')).toMatch(/CHAMPION|RULING|FORJE/i);
+    expect(questHint(save).join(' ')).toMatch(/BUD|CHAMPION|WOODZ/i);
   });
 
   it('defaultSave is v5 with mapz surface seed', () => {
@@ -691,6 +699,9 @@ describe('princess quest land clears', () => {
     expect(s.visitedRooms).toEqual([]);
     expect(s.princessSaved).toBe(false);
     expect(s.landsCleared).toEqual([]);
+    expect(typeof s.runSeed).toBe('number');
+    expect(s.bestBudId).toBeNull();
+    expect(s.bestBudStage).toBe('none');
   });
 
   it('loadSave without storage returns default v5', () => {
@@ -745,5 +756,62 @@ describe('princess quest land clears', () => {
     expect(migrated.version).toBe(5);
     expect(migrated.landsCleared).toContain('dunjunz');
     expect(migrated.princessSaved).toBe(false);
+  });
+});
+
+describe('best bud quest', () => {
+  it('rollBestBudId is stable for same seed', () => {
+    expect(rollBestBudId(0x12345678)).toBe(rollBestBudId(0x12345678));
+  });
+
+  it('different seeds can produce different buds', () => {
+    const set = new Set(
+      [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => rollBestBudId(i * 99991)),
+    );
+    expect(set.size).toBeGreaterThan(1);
+  });
+
+  it('accept rolls once and never re-rolls', () => {
+    let s = { ...defaultSave(), princessSaved: true, runSeed: 42 };
+    const a1 = acceptBestBudQuest(s);
+    const id = a1.save.bestBudId;
+    expect(id).not.toBeNull();
+    expect(a1.save.bestBudStage).toBe('accepted');
+    const a2 = acceptBestBudQuest(a1.save);
+    expect(a2.save.bestBudId).toBe(id);
+  });
+
+  it('meet requires accepted; complete requires found', () => {
+    let s = { ...defaultSave(), princessSaved: true, runSeed: 7 };
+    expect(meetBestBud(s).save.bestBudStage).toBe('none');
+    s = acceptBestBudQuest(s).save;
+    s = meetBestBud(s).save;
+    expect(s.bestBudStage).toBe('found');
+    s = completeBestBudQuest(s).save;
+    expect(s.bestBudStage).toBe('complete');
+    expect(s.coins).toBeGreaterThanOrEqual(20);
+  });
+
+  it('prizellaChampionTalk advances offer → accept', () => {
+    let s = { ...defaultSave(), princessSaved: true, runSeed: 99 };
+    const o = prizellaChampionTalk(s);
+    expect(o.save.bestBudStage).toBe('offered');
+    const a = prizellaChampionTalk(o.save);
+    expect(a.save.bestBudStage).toBe('accepted');
+    expect(a.save.bestBudId).not.toBeNull();
+  });
+
+  it('roster is non-human original creatures', () => {
+    expect(BEST_BUD_ROSTER.length).toBeGreaterThanOrEqual(6);
+    for (const b of BEST_BUD_ROSTER) {
+      expect(b.id).not.toMatch(/jake|finn|human/i);
+      expect(b.name).not.toMatch(/JAKE|FINN/);
+    }
+  });
+
+  it('woodz_hollow is linked east of woodz_edge', () => {
+    expect(ROOMS.woodz_edge.east).toBe('woodz_hollow');
+    expect(ROOMS.woodz_hollow.west).toBe('woodz_edge');
+    expect(ROOMS.woodz_hollow.land).toBe('woodz');
   });
 });
