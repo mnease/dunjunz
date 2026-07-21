@@ -6,6 +6,7 @@ import { emptyEquipped } from './items';
 import { migrateEquipment, syncDerivedStats } from './inventory';
 import { levelFromXp } from './progression';
 import { reconcileMapzFromCollected } from './mapz';
+import { queueCloudSave } from './cloud-save';
 
 export function defaultSave(): SaveData {
   const attrs = defaultAttrs();
@@ -143,6 +144,7 @@ export function writeSave(data: SaveData): void {
     level: levelFromXp(data.xp),
   });
   localStorage.setItem(SAVE_KEY, JSON.stringify(toStore));
+  queueCloudSave(toStore);
 }
 
 export function clearSave(): void {

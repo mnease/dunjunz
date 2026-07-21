@@ -38,11 +38,62 @@
             © 2026 NeaseMedia. All rights reserved.
             <span class="copyright-sub">DUNJUNZ is an original work by NeaseMedia.</span>
           </p>
-          <button type="button" id="feedback-open" class="feedback-btn">
-            Feedback
-          </button>
+          <div class="legal-actions">
+            <span id="auth-status" class="auth-status">Local play</span>
+            <button type="button" id="auth-open" class="feedback-btn ghost-btn">
+              Account
+            </button>
+            <button type="button" id="feedback-open" class="feedback-btn">
+              Feedback
+            </button>
+          </div>
         </div>
       </footer>
+    </div>
+
+    <div
+      id="auth-modal"
+      class="feedback-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="auth-title"
+      aria-hidden="true"
+    >
+      <div class="feedback-panel auth-panel">
+        <header class="feedback-header">
+          <h2 id="auth-title">Account / cloud saves</h2>
+          <button type="button" class="feedback-x" data-auth-close aria-label="Close">
+            ×
+          </button>
+        </header>
+        <p class="feedback-blurb">
+          Play free as <strong>local</strong> (no email). Optional
+          <strong>guest</strong> (email + device) or <strong>magic link</strong>
+          account for 3 cloud slots.
+        </p>
+        <form id="auth-guest-form">
+          <label>
+            Guest (email required)
+            <input name="email" type="email" required maxlength="200" placeholder="you@example.com" />
+          </label>
+          <button type="submit" class="btn primary">Continue as guest</button>
+        </form>
+        <form id="auth-magic-form" class="auth-magic">
+          <label>
+            Magic link sign-in
+            <input name="email" type="email" required maxlength="200" placeholder="you@example.com" />
+          </label>
+          <button type="submit" class="btn primary">Email me a link</button>
+        </form>
+        <div class="feedback-actions auth-extra">
+          <button type="button" id="auth-import-local" class="btn ghost">
+            Import local save → cloud
+          </button>
+          <button type="button" id="auth-logout" class="btn ghost">Sign out</button>
+          <button type="button" class="btn ghost" data-auth-close>Close</button>
+        </div>
+        <p id="auth-msg" class="feedback-status" data-kind="idle"></p>
+      </div>
     </div>
 
     <div

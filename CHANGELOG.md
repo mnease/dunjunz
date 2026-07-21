@@ -16,7 +16,15 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 - **Footer copyright** — © 2026 NeaseMedia
 - **Feedback form** modal → `POST /api/feedback` → **support@neasemedia.com**
 - Mail: **Resend** preferred (`RESEND_API_KEY` / `RESEND_FROM`); SMTP nodemailer fallback
-- Env template: `.env.example`
+- **Optional accounts (Ema council design)**
+  - Local play still works with no email
+  - **Guest**: email required + device `guest_token` → **3 cloud slots**
+  - **Account**: magic link (Resend) → HttpOnly session → same 3 slots
+  - Title screen slot picker (↑↓ ENTER / R wipe)
+  - Import local save → first empty cloud slot
+  - Schema: `sql/001_auth_slots.sql` (Neon Postgres)
+  - APIs under `/api/auth/*` and `/api/slots/*`
+- Env template: `.env.example` (`DATABASE_URL`, `AUTH_BASE_URL`, Resend)
 
 ### Planned
 

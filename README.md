@@ -100,6 +100,32 @@ Dunjunz has an **isolated Hive Mind silo** (domain-scoped MCP token on Forge):
 
 This is separate from the primary Elastic Hive operator memory so game sessions stay free of platform clutter.
 
+## Accounts + cloud saves (optional)
+
+Local play needs **no account**. Optional cloud identity:
+
+| Mode | Email | How | Slots |
+| --- | --- | --- | --- |
+| Local | No | Always works | Browser `localStorage` only |
+| Guest | **Required** | Footer **Account** → guest | **3** cloud slots (device token) |
+| Account | Yes | Magic link email | **3** slots, multi-device |
+
+**Setup**
+
+1. Create a [Neon](https://neon.tech) Postgres database.
+2. Run [`sql/001_auth_slots.sql`](./sql/001_auth_slots.sql) in the Neon SQL editor.
+3. Vercel env (Production + Preview), then redeploy:
+
+| Key | Value |
+| --- | --- |
+| `DATABASE_URL` | Neon connection string |
+| `AUTH_BASE_URL` | `https://dunjunz.vercel.app` (no trailing slash) |
+| `RESEND_API_KEY` | already used for feedback; also sends magic links |
+
+4. Footer **Account** → guest or magic link; title screen **↑↓** select slot, **Enter** load/new, **R** wipe.
+
+Design notes: [`docs/auth-slots-design.md`](./docs/auth-slots-design.md).
+
 ## Feedback + email (Resend)
 
 The page footer includes **© 2026 NeaseMedia** and a **Feedback** button. The modal posts to **`/api/feedback`**, which emails **support@neasemedia.com**.
