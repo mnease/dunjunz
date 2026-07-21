@@ -11,6 +11,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ## [Unreleased]
 
+### Fixed
+
+- **Hard mode Throne of Meta eject** — boss exit portal no longer spawns on entry during a hard run (only after the hard boss kill). Portal also moved off the south door path; short entry grace avoids walk-on whoosh.
+
 ### Added
 
 - **Humanz & Villagez mode** — at new game, pick **Dunjunz** (classic crawl) or **Humanz & Villagez** (you are the dragon; villagers loot your gold). Turn-based waves: Claw / Flame / Roar / Guard / Hoard. Progress saves separately; title Continue uses last mode.

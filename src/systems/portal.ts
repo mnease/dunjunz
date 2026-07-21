@@ -29,13 +29,18 @@ export const BOSS_ROOMS: ReadonlySet<string> = new Set(
   Object.keys(BOSS_ROOM_META),
 );
 
-/** Tile coords for the portal in each boss room (walkable floor, near exit). */
+/**
+ * Tile coords for the portal in each boss room.
+ * Keep clear of south/north door spawn tiles so re-entry does not
+ * immediately overlap and whoosh the player out.
+ */
 const PORTAL_TILE: Record<string, { x: number; y: number }> = {
-  b2_boss: { x: 8, y: 8 },
-  woodz_deep: { x: 8, y: 8 },
-  // Near north door out to Dezertz Edge
-  dezertz_tower: { x: 8, y: 1 },
-  sewerz_boss: { x: 8, y: 8 },
+  // West of center aisle — south door spawns at ~ (8,9)
+  b2_boss: { x: 3, y: 7 },
+  woodz_deep: { x: 3, y: 7 },
+  // Near north door out to Dezertz Edge (entry is often south)
+  dezertz_tower: { x: 4, y: 3 },
+  sewerz_boss: { x: 3, y: 7 },
 };
 
 export function isBossRoom(roomId: string): boolean {
@@ -54,6 +59,10 @@ export function dungeonEntranceForLand(land: LandId | undefined): string | null 
 /**
  * True when the player has beaten this room's boss (or land-clear flags)
  * and should see a quick exit portal.
+ *
+ * Hard runs: land is already cleared, so we only open the exit after the
+ * *hard* boss kill is recorded — otherwise the portal spawns on entry and
+ * whooshes you out of Throne of Meta immediately.
  */
 export function shouldSpawnBossExitPortal(
   save: SaveData,
@@ -64,6 +73,13 @@ export function shouldSpawnBossExitPortal(
   const meta = BOSS_ROOM_META[roomId];
   if (!meta) return false;
   const effectiveLand = land ?? meta.land;
+
+  // Hard mode: land is already cleared — only open exit after hard boss kill.
+  // (Inline hardRunLand check to avoid circular import with hard-mode.ts)
+  if (save.hardRunLand && save.hardRunLand === effectiveLand) {
+    return (save.hardKilled ?? []).includes(meta.killId);
+  }
+
   if (save.killed.includes(meta.killId)) return true;
   if (save.landsCleared.includes(effectiveLand)) return true;
   // Dezertz rescue flag (talk path / older saves)

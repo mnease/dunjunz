@@ -281,6 +281,8 @@ export class GameScene extends Phaser.Scene {
   private roomOriginX = 0;
   private roomOriginY = 0;
   private padCooldown = 0;
+  /** Blocks walk-on portals right after room load (entry overlap). */
+  private portalCooldown = 0;
   private bossIntroShown = false;
   /** Following Best Bud companion sprite (after found). */
   private companionSprite: Phaser.Physics.Arcade.Sprite | null = null;
@@ -329,6 +331,7 @@ export class GameScene extends Phaser.Scene {
     this.invuln = 0;
     this.transitionLock = false;
     this.padCooldown = 0;
+    this.portalCooldown = 0;
     this.bossIntroShown = false;
     this.facing = 'down';
     this.actors = [];
@@ -1073,6 +1076,8 @@ export class GameScene extends Phaser.Scene {
     if (!room) return;
 
     this.transitionLock = false;
+    // Prevent walk-on portals from firing the frame you enter a room
+    this.portalCooldown = 700;
     this.clearRoomObjects();
     this.room = room;
     this.save.roomId = resolved;
@@ -1746,8 +1751,9 @@ export class GameScene extends Phaser.Scene {
 
   private usePortal(actor: Actor): void {
     // Allow while dialog open so you can leave mid-victory speech if you want;
-    // still block mid-room-transition / pause.
+    // still block mid-room-transition / pause / just-entered grace.
     if (this.transitionLock || this.paused) return;
+    if (this.portalCooldown > 0) return;
     if (!actor.alive || actor.kind !== 'portal') return;
     const target = actor.portalTarget;
 
@@ -3130,6 +3136,7 @@ export class GameScene extends Phaser.Scene {
 
     this.invuln = Math.max(0, this.invuln - delta);
     this.padCooldown = Math.max(0, this.padCooldown - delta);
+    this.portalCooldown = Math.max(0, this.portalCooldown - delta);
     this.dialogCloseCooldown = Math.max(0, this.dialogCloseCooldown - delta);
 
     if (this.dialogLocked || this.panelOpen()) {

@@ -682,6 +682,16 @@ describe('boss exit portals', () => {
       false,
     );
 
+    // Hard run: no exit until dungeon-master is in hardKilled
+    const hard = {
+      ...save,
+      hardRunLand: 'dunjunz' as const,
+      hardKilled: [] as string[],
+    };
+    expect(shouldSpawnBossExitPortal(hard, 'b2_boss', 'dunjunz')).toBe(false);
+    hard.hardKilled = ['dungeon-master'];
+    expect(shouldSpawnBossExitPortal(hard, 'b2_boss', 'dunjunz')).toBe(true);
+
     // Kill flag alone is enough (even without landsCleared)
     const killedOnly = defaultSave();
     killedOnly.killed.push('sand-wraith');
