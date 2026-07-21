@@ -8,7 +8,6 @@ import {
   hasGuestToken,
   importLocalSave,
   logoutCloud,
-  requestMagicLink,
   type AuthMe,
   type SlotSummary,
 } from '../systems/auth-client';
