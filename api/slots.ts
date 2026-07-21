@@ -277,13 +277,3 @@ export default async function handler(
     res.status(500).json({ ok: false, error: 'Server error.', detail: msg.slice(0, 240) });
   }
 }
-
-function dbUrl(): string {
-  return (
-    process.env.dunjunz_DATABASE_URL?.trim() ||
-    process.env.dunjunz_POSTGRES_URL?.trim() ||
-    process.env.DATABASE_URL?.trim() ||
-    process.env.POSTGRES_URL?.trim() ||
-    ''
-  );
-}
