@@ -925,6 +925,7 @@ export class GameScene extends Phaser.Scene {
     if (!ATTR_IDS.includes(attr)) return;
     const result = spendAttrPoint(this.save, attr);
     if (!result.ok) {
+      playSfx('error');
       this.game.events.emit('toast', result.reason);
       return;
     }
@@ -932,7 +933,8 @@ export class GameScene extends Phaser.Scene {
     writeSave(this.save);
     this.emitHud();
     this.game.events.emit('inventory-refresh', this.save);
-    this.game.events.emit('toast', `+1 ${attr.toUpperCase()}`);
+    playSfx(result.step === 'major' ? 'level_up' : 'success');
+    this.game.events.emit('toast', result.message);
   }
 
   /** Reach in world pixels (~2.4 tiles) so roomy NPCs like the cube are talkable. */
@@ -2009,7 +2011,7 @@ export class GameScene extends Phaser.Scene {
       playSfx('level_up');
       this.game.events.emit(
         'toast',
-        `LEVEL UP! LV ${prog.level} +${prog.attrPointsGained} ATTR (I TO SPEND)`,
+        `LEVEL UP! LV ${prog.level} — +${prog.attrPointsGained} PKG: +2 ONE STAT, +1 ANOTHER (I)`,
       );
       this.time.delayedCall(400, () => this.checkHeroPick());
     } else {

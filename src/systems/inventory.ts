@@ -432,9 +432,11 @@ export function migrateEquipment(save: SaveData & Record<string, unknown>): Save
     }
   }
 
-  // Retroactive attr points
+  // Retroactive packages: 1 package per level after 1 (+2 then +1 each)
   const level = Math.max(1, legacy.level ?? 1);
-  next.attrPoints = 2 * Math.max(0, level - 1);
+  next.attrPoints = Math.max(0, level - 1);
+  next.pendingAttrMajor = null;
+  next.flags = { ...next.flags, attr_rule_2plus1: true };
 
   next = autoEquipEmptySlots(next);
   return syncDerivedStats(next);
@@ -444,7 +446,7 @@ export function formatInventoryPanel(save: SaveData): string {
   const lines = [
     '=== INVENTORY ===',
     `COINS ${save.coins}c  HP ${save.hp}/${save.maxHp}  DEF ${save.armor}`,
-    `ATTR PTS: ${save.attrPoints}`,
+    `ATTR PKG: ${save.attrPoints} (+2 then +1)${save.pendingAttrMajor ? ` · +1 pending` : ''}`,
     `STR ${save.attrs.str} DEX ${save.attrs.dex} VIT ${save.attrs.vit} INT ${save.attrs.int} LCK ${save.attrs.lck}`,
     '',
     'SLOTS:',

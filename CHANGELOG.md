@@ -11,6 +11,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ## [Unreleased]
 
+### Changed
+
+- **Level-up stats** — each level grants one package: **+2 to one stat of your choice**, then **+1 to a different stat** (inventory 1–5). No hard cap on level or stat totals.
+
 ### Fixed
 
 - **Hard mode Throne of Meta eject** — boss exit portal no longer spawns on entry during a hard run (only after the hard boss kill). Portal also moved off the south door path; short entry grace avoids walk-on whoosh.

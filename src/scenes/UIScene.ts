@@ -1801,9 +1801,14 @@ export class UIScene extends Phaser.Scene {
           `WPN ${s.hasSword ? 'Y' : '-'} KEY ${s.hasKey ? 'Y' : '-'}`,
         ].join('\n'),
       );
+      const pending = s.pendingAttrMajor
+        ? `NOW +1 (not ${s.pendingAttrMajor.toUpperCase()})`
+        : s.attrPoints > 0
+          ? '1st pick +2 · 2nd +1'
+          : 'no packages';
       this.invAttrs?.setText(
         [
-          `PTS ${s.attrPoints}`,
+          `PKG ${s.attrPoints}  ${pending}`,
           `1STR${s.attrs.str} 2DEX${s.attrs.dex}`,
           `3VIT${s.attrs.vit} 4INT${s.attrs.int}`,
           `5LCK${s.attrs.lck}`,
@@ -1984,7 +1989,9 @@ export class UIScene extends Phaser.Scene {
       save.armor > 0 ? `DEF${save.armor}` : null,
       !save.hasSword ? 'NO WPN' : null,
       save.hasKey ? 'KEY' : null,
-      save.attrPoints > 0 ? `PTS${save.attrPoints}` : null,
+      save.attrPoints > 0 || save.pendingAttrMajor
+        ? `PKG${save.attrPoints}${save.pendingAttrMajor ? '*' : ''}`
+        : null,
     ].filter(Boolean);
     this.itemsText?.setText(bits.join(' · '));
 

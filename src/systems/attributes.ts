@@ -1,6 +1,10 @@
 import type { AttrId, Attributes, SaveData } from '../types';
 import { effectiveAttrs } from './hero-identity';
 import { findInBag, getTemplate, instanceAtk } from './items';
+import {
+  LEVEL_UP_MAJOR_BONUS,
+  LEVEL_UP_MINOR_BONUS,
+} from './progression';
 
 export const ATTR_IDS: AttrId[] = ['str', 'dex', 'vit', 'int', 'lck'];
 
@@ -23,29 +27,85 @@ export function recomputeMaxHp(attrs: Attributes): number {
 }
 
 export type SpendResult =
-  | { ok: true; save: SaveData }
+  | { ok: true; save: SaveData; message: string; step: 'major' | 'minor' }
   | { ok: false; save: SaveData; reason: string };
 
+function withAttrs(save: SaveData, attrs: Attributes): SaveData {
+  const maxHp = recomputeMaxHp(attrs);
+  const hp = Math.min(save.hp, maxHp);
+  return {
+    ...save,
+    attrs,
+    maxHp,
+    hp: Math.max(hp, save.hp > maxHp ? maxHp : save.hp),
+  };
+}
+
+/**
+ * Level-up package spend (inventory 1–5):
+ * 1) First pick: +2 to that stat (package not consumed yet).
+ * 2) Second pick: +1 to a *different* stat, then consume one package.
+ *
+ * No hard cap on how high a stat can go.
+ */
 export function spendAttrPoint(save: SaveData, attr: AttrId): SpendResult {
-  if (save.attrPoints <= 0) {
-    return { ok: false, save, reason: 'NO ATTRIBUTE POINTS' };
-  }
   if (!ATTR_IDS.includes(attr)) {
     return { ok: false, save, reason: 'UNKNOWN ATTR' };
   }
-  const attrs = { ...save.attrs, [attr]: save.attrs[attr] + 1 };
-  const maxHp = recomputeMaxHp(attrs);
-  // Growing maxHp does not auto-heal; only raise ceiling
-  const hp = Math.min(save.hp, maxHp);
-  return {
-    ok: true,
-    save: {
+
+  const pending = save.pendingAttrMajor ?? null;
+
+  // Step 2: minor +1 on a different stat
+  if (pending) {
+    if (attr === pending) {
+      return {
+        ok: false,
+        save,
+        reason: `+1 MUST BE A DIFFERENT STAT (NOT ${pending.toUpperCase()})`,
+      };
+    }
+    const attrs = {
+      ...save.attrs,
+      [attr]: save.attrs[attr] + LEVEL_UP_MINOR_BONUS,
+    };
+    const next = withAttrs(
+      {
+        ...save,
+        attrs,
+        attrPoints: Math.max(0, save.attrPoints - 1),
+        pendingAttrMajor: null,
+      },
+      attrs,
+    );
+    return {
+      ok: true,
+      save: next,
+      step: 'minor',
+      message: `+${LEVEL_UP_MINOR_BONUS} ${attr.toUpperCase()} (PACKAGE DONE)`,
+    };
+  }
+
+  // Step 1: major +2
+  if (save.attrPoints <= 0) {
+    return { ok: false, save, reason: 'NO LEVEL-UP PACKAGES' };
+  }
+  const attrs = {
+    ...save.attrs,
+    [attr]: save.attrs[attr] + LEVEL_UP_MAJOR_BONUS,
+  };
+  const next = withAttrs(
+    {
       ...save,
       attrs,
-      attrPoints: save.attrPoints - 1,
-      maxHp,
-      hp: Math.max(hp, save.hp > maxHp ? maxHp : save.hp),
+      pendingAttrMajor: attr,
     },
+    attrs,
+  );
+  return {
+    ok: true,
+    save: next,
+    step: 'major',
+    message: `+${LEVEL_UP_MAJOR_BONUS} ${attr.toUpperCase()} — NOW PICK +1 ON ANOTHER (1–5)`,
   };
 }
 

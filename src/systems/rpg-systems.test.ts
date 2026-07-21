@@ -96,13 +96,15 @@ describe('XP formula scaling', () => {
     expect(levelFromXp(xpToReachLevel(50))).toBe(50);
   });
 
-  it('grantXp awards attr points on level up', () => {
+  it('grantXp awards one +2/+1 package per level (uncapped curve)', () => {
     const need = xpToReachLevel(2);
     const r = grantXp({ xp: need - 1, level: 1, attrPoints: 0 }, 1);
     expect(r.level).toBe(2);
     expect(r.leveledUp).toBe(true);
-    expect(r.attrPointsGained).toBe(2);
-    expect(r.attrPoints).toBe(2);
+    expect(r.attrPointsGained).toBe(1);
+    expect(r.attrPoints).toBe(1);
+    // No soft level wall — high levels still resolve
+    expect(levelFromXp(xpToReachLevel(100))).toBe(100);
   });
 });
 
@@ -360,13 +362,27 @@ describe('weapon key equip', () => {
 });
 
 describe('attributes', () => {
-  it('spendAttrPoint raises VIT and maxHp', () => {
-    let save = { ...defaultSave(), attrPoints: 2 };
-    const r = spendAttrPoint(save, 'vit');
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    const synced = syncDerivedStats(r.save);
-    expect(synced.attrs.vit).toBe(2);
+  it('spendAttrPoint applies +2 major then +1 minor on different stats', () => {
+    let save = { ...defaultSave(), attrPoints: 1, pendingAttrMajor: null };
+    const major = spendAttrPoint(save, 'vit');
+    expect(major.ok).toBe(true);
+    if (!major.ok) return;
+    expect(major.step).toBe('major');
+    expect(major.save.attrs.vit).toBe(3); // 1 base + 2
+    expect(major.save.pendingAttrMajor).toBe('vit');
+    expect(major.save.attrPoints).toBe(1); // package not consumed yet
+
+    const same = spendAttrPoint(major.save, 'vit');
+    expect(same.ok).toBe(false);
+
+    const minor = spendAttrPoint(major.save, 'str');
+    expect(minor.ok).toBe(true);
+    if (!minor.ok) return;
+    expect(minor.step).toBe('minor');
+    expect(minor.save.attrs.str).toBe(2); // 1 + 1
+    expect(minor.save.attrPoints).toBe(0);
+    expect(minor.save.pendingAttrMajor).toBeNull();
+    const synced = syncDerivedStats(minor.save);
     expect(synced.maxHp).toBeGreaterThan(defaultSave().maxHp);
   });
 
@@ -409,7 +425,8 @@ describe('migrate v3', () => {
     expect(m.bag.some((b) => b.templateId === 'mild_sword')).toBe(true);
     expect(m.bag.some((b) => b.templateId === 'dungeon_key')).toBe(true);
     expect(m.bag.some((b) => b.templateId === 'leather_armor')).toBe(true);
-    expect(m.attrPoints).toBeGreaterThanOrEqual(4);
+    // level 3 → 2 packages under +2/+1 rule
+    expect(m.attrPoints).toBeGreaterThanOrEqual(2);
   });
 });
 

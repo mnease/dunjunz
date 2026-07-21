@@ -1,12 +1,24 @@
 /**
  * Pure XP / level rules for DUNJUNZ.
- * Unbounded formula curve (no level-10 / level-20 soft max for play).
- * A high safety ceiling avoids infinite loops on corrupt XP.
+ * No design hard cap on level — curve is unbounded for play.
+ * LEVEL_SAFETY_CEILING is loop protection only (corrupt XP), not a gameplay max.
  */
 
 /** Loop safety only — not a design cap players should hit in normal play. */
-export const LEVEL_SAFETY_CEILING = 999;
-export const ATTR_POINTS_PER_LEVEL = 2;
+export const LEVEL_SAFETY_CEILING = 9999;
+
+/**
+ * Each level awards one spend package:
+ * +2 to one stat of your choice, then +1 to a different stat.
+ * `attrPoints` on the save is the count of unspent packages.
+ */
+export const ATTR_PACKAGES_PER_LEVEL = 1;
+/** @deprecated alias — packages per level (was free +1 points). */
+export const ATTR_POINTS_PER_LEVEL = ATTR_PACKAGES_PER_LEVEL;
+
+/** Major (+2) then minor (+1) within each package. */
+export const LEVEL_UP_MAJOR_BONUS = 2;
+export const LEVEL_UP_MINOR_BONUS = 1;
 
 /** XP required to go from level L → L+1. Grows with L. */
 export function xpToAdvanceFrom(level: number): number {
@@ -83,7 +95,7 @@ export function grantXp(state: ProgressState, amount: number): GrantXpResult {
   const xp = state.xp + gain;
   const level = levelFromXp(xp);
   const levelsGained = Math.max(0, level - prevLevel);
-  const attrPointsGained = levelsGained * ATTR_POINTS_PER_LEVEL;
+  const attrPointsGained = levelsGained * ATTR_PACKAGES_PER_LEVEL;
   const attrPoints = (state.attrPoints ?? 0) + attrPointsGained;
   return {
     xp,

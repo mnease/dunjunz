@@ -20,7 +20,7 @@ export function defaultSave(): SaveData {
     hasSword: false,
     hasKey: false,
     bossDefeated: false,
-    flags: {},
+    flags: { attr_rule_2plus1: true },
     killed: [],
     collected: [],
     xp: 0,
@@ -55,6 +55,7 @@ export function defaultSave(): SaveData {
     secondaryClass: null,
     race: 'human',
     raceChosen: false,
+    pendingAttrMajor: null,
   };
 }
 
@@ -98,6 +99,29 @@ function withV5Fields(s: SaveData): SaveData {
     secondaryClass: s.secondaryClass ?? null,
     race: s.race ?? 'human',
     raceChosen: !!s.raceChosen,
+    pendingAttrMajor: s.pendingAttrMajor ?? null,
+  };
+}
+
+/**
+ * One-time: old free +1 points (2/level) → packages (1/level = +2 then +1).
+ * Flag attr_rule_2plus1 prevents double conversion.
+ */
+export function migrateAttrPackages(save: SaveData): SaveData {
+  if (save.flags?.attr_rule_2plus1) {
+    return {
+      ...save,
+      pendingAttrMajor: save.pendingAttrMajor ?? null,
+    };
+  }
+  const oldPts = Math.max(0, save.attrPoints ?? 0);
+  // 2 old points ≈ one level package under the new rule
+  const packages = Math.ceil(oldPts / 2);
+  return {
+    ...save,
+    attrPoints: packages,
+    pendingAttrMajor: null,
+    flags: { ...save.flags, attr_rule_2plus1: true },
   };
 }
 
@@ -123,7 +147,9 @@ export function loadSave(): SaveData {
           : base.collected,
         inventory: parsed.inventory ?? {},
       } as SaveData & Record<string, unknown>;
-      const migrated = withV5Fields(migrateEquipment(merged));
+      const migrated = migrateAttrPackages(
+        withV5Fields(migrateEquipment(merged)),
+      );
       migrated.level = levelFromXp(migrated.xp);
       return syncDerivedStats(migrated);
     }
@@ -188,6 +214,7 @@ export function loadSave(): SaveData {
     }
     // Scroll pickups must unlock mapz even if an older save blanked discoveredMapz
     next = reconcileMapzFromCollected(next);
+    next = migrateAttrPackages(next);
     return syncDerivedStats(next);
   } catch {
     return defaultSave();

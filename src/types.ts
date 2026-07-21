@@ -175,8 +175,15 @@ export interface SaveData {
   nextItemUid: number;
   equipped: EquippedMap;
   attrs: Attributes;
-  /** Unspent attribute points from level-ups. */
+  /**
+   * Unspent level-up packages. Each package: +2 to one chosen stat, then +1 to another.
+   * No hard cap on level or on how high a stat can go.
+   */
   attrPoints: number;
+  /**
+   * Mid-package: major (+2) already applied; next 1–5 pick is minor (+1) on a different stat.
+   */
+  pendingAttrMajor?: AttrId | null;
   /** Derived total DEF. */
   armor: number;
   /** Mapz the player has found (enables mapz view for that land). */
