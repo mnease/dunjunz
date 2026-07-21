@@ -29,6 +29,15 @@ Write a status row (via MCP `memory_write` when the project token is active — 
 
 Key pattern: `YYYY-MM-DD-<topic-kebab>` or `dunjunz-<topic>-YYYY-MM-DD`.
 
+### Changelog (mandatory for player-facing ships)
+
+Keep **[`CHANGELOG.md`](./CHANGELOG.md)** current on GitHub:
+
+1. For any notable player-facing feature, fix, or balance change: add a bullet under `## [Unreleased]` (or under a dated version section when cutting a release).
+2. Ship **code + CHANGELOG in the same commit/push** when practical.
+3. On release cuts: move Unreleased into `## [X.Y.Z] — YYYY-MM-DD`, bump `package.json` version, push to `main`.
+4. Format: [Keep a Changelog](https://keepachangelog.com/) — Added / Changed / Fixed / Removed.
+
 ### Misspellings (player-facing)
 
 Dunjunz, woodz, dezertz, mapz, forjing, Princesz Prizella — intentional.
