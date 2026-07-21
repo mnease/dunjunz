@@ -100,6 +100,24 @@ Dunjunz has an **isolated Hive Mind silo** (domain-scoped MCP token on Forge):
 
 This is separate from the primary Elastic Hive operator memory so game sessions stay free of platform clutter.
 
+## Feedback + SMTP
+
+The page footer includes **© 2026 NeaseMedia** and a **Feedback** button. The modal posts to **`/api/feedback`**, a Vercel serverless function that sends mail with **nodemailer** to **support@neasemedia.com**.
+
+Set these in **Vercel → Project → Settings → Environment Variables** (Production + Preview):
+
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `SMTP_HOST` | yes | e.g. `smtp.gmail.com`, `smtp.sendgrid.net`, workspace host |
+| `SMTP_PORT` | no | default `587` |
+| `SMTP_USER` | yes | SMTP username |
+| `SMTP_PASS` | yes | SMTP password / app password |
+| `SMTP_FROM` | no | defaults to `SMTP_USER` |
+| `SMTP_SECURE` | no | `true` for port 465 |
+| `FEEDBACK_TO` | no | default `support@neasemedia.com` |
+
+See [`.env.example`](./.env.example). After setting env vars, redeploy so the function picks them up. Local `vite` does not run `/api/*` — use `vercel dev` or test on Preview.
+
 ## Deploy (NeaseMedia)
 
 ### Option A — Vercel CLI (team `neasemedia`)

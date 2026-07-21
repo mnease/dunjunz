@@ -759,6 +759,41 @@ describe('princess quest land clears', () => {
   });
 });
 
+describe('feedback validation', () => {
+  it('rejects empty / bad fields', async () => {
+    const { validateFeedbackFields } = await import('./feedback-validate');
+    expect(validateFeedbackFields({ name: '', email: 'a@b.c', message: 'hello' }).ok).toBe(
+      false,
+    );
+    expect(
+      validateFeedbackFields({ name: 'A', email: 'not-an-email', message: 'hello' })
+        .ok,
+    ).toBe(false);
+    expect(
+      validateFeedbackFields({ name: 'A', email: 'a@b.co', message: 'hi' }).ok,
+    ).toBe(false);
+  });
+
+  it('accepts valid payload and honeypot fails', async () => {
+    const { validateFeedbackFields } = await import('./feedback-validate');
+    expect(
+      validateFeedbackFields({
+        name: 'Mike',
+        email: 'mike@example.com',
+        message: 'Cool game, more woodz please.',
+      }).ok,
+    ).toBe(true);
+    expect(
+      validateFeedbackFields({
+        name: 'Bot',
+        email: 'b@b.co',
+        message: 'spam spam',
+        website: 'http://spam',
+      }).error,
+    ).toBe('honeypot');
+  });
+});
+
 describe('best bud quest', () => {
   it('rollBestBudId is stable for same seed', () => {
     expect(rollBestBudId(0x12345678)).toBe(rollBestBudId(0x12345678));

@@ -11,6 +11,12 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 
 ## [Unreleased]
 
+### Added
+
+- **Footer copyright** — © 2026 NeaseMedia
+- **Feedback form** modal → `POST /api/feedback` → **support@neasemedia.com** via SMTP (nodemailer)
+- Env template: `.env.example` (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FEEDBACK_TO`)
+
 ### Planned
 
 - Best Bud combat abilities / secondary champion quests

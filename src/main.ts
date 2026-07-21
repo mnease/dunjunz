@@ -5,6 +5,7 @@ import { BootScene } from './scenes/BootScene';
 import { TitleScene } from './scenes/TitleScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
+import { initFeedbackUi } from './ui/feedback';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -29,3 +30,6 @@ const config: Phaser.Types.Core.GameConfig = {
 
 // eslint-disable-next-line no-new
 new Phaser.Game(config);
+
+// Page chrome: copyright footer + feedback modal → /api/feedback (SMTP)
+initFeedbackUi();

@@ -26,13 +26,101 @@
         <div id="game-container"></div>
         <div class="crt-overlay" aria-hidden="true"></div>
       </div>
-      <footer class="help">
-        <span>Arrows / WASD move</span>
-        <span>Space / Z attack</span>
-        <span>E talk · B buy · I inventory / attrs</span>
-        <span>W H C L F G N K equip · 1-5 attrs · U potion</span>
+      <footer class="site-footer">
+        <div class="help">
+          <span>Arrows / WASD move</span>
+          <span>Space / Z attack</span>
+          <span>E talk · B buy · I inventory / attrs</span>
+          <span>W H C L F G N K equip · 1-5 attrs · U potion</span>
+        </div>
+        <div class="legal">
+          <p class="copyright">
+            © 2026 NeaseMedia. All rights reserved.
+            <span class="copyright-sub">DUNJUNZ is an original work by NeaseMedia.</span>
+          </p>
+          <button type="button" id="feedback-open" class="feedback-btn">
+            Feedback
+          </button>
+        </div>
       </footer>
     </div>
+
+    <div
+      id="feedback-modal"
+      class="feedback-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="feedback-title"
+      aria-hidden="true"
+    >
+      <div class="feedback-panel">
+        <header class="feedback-header">
+          <h2 id="feedback-title">Send feedback</h2>
+          <button
+            type="button"
+            class="feedback-x"
+            data-feedback-close
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </header>
+        <p class="feedback-blurb">
+          Bugs, ideas, or vibes — goes to
+          <strong>support@neasemedia.com</strong>.
+        </p>
+        <form id="feedback-form" novalidate>
+          <!-- Honeypot: leave empty -->
+          <label class="hp" aria-hidden="true">
+            Website
+            <input type="text" name="website" tabindex="-1" autocomplete="off" />
+          </label>
+          <label>
+            Name
+            <input
+              id="feedback-name"
+              name="name"
+              type="text"
+              maxlength="120"
+              required
+              autocomplete="name"
+            />
+          </label>
+          <label>
+            Email
+            <input
+              id="feedback-email"
+              name="email"
+              type="email"
+              maxlength="200"
+              required
+              autocomplete="email"
+            />
+          </label>
+          <label>
+            Message
+            <textarea
+              id="feedback-message"
+              name="message"
+              rows="5"
+              maxlength="4000"
+              required
+              placeholder="What broke? What was cool? What should exist?"
+            ></textarea>
+          </label>
+          <p id="feedback-status" class="feedback-status" data-kind="idle"></p>
+          <div class="feedback-actions">
+            <button type="button" class="btn ghost" data-feedback-close>
+              Cancel
+            </button>
+            <button type="submit" id="feedback-submit" class="btn primary">
+              Send
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
