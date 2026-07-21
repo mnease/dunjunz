@@ -1266,30 +1266,127 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   // Best Bud base silhouette — tinted per species (never human)
-  canvasTex(scene, 'best_bud', TILE, TILE, (ctx) => {
+  const drawBudBase = (
+    ctx: CanvasRenderingContext2D,
+    opts: {
+      stretchX?: number;
+      armReach?: number;
+      claw?: boolean;
+      puffed?: boolean;
+      coil?: boolean;
+      soft?: boolean;
+      squint?: boolean;
+    } = {},
+  ): void => {
+    const sx = opts.stretchX ?? 0; // extra body width pixels (right-biased)
     ctx.fillStyle = '#d0d0d8';
-    ctx.fillRect(4, 6, 8, 7);
-    ctx.fillRect(3, 8, 10, 4);
-    // rounder belly
-    ctx.fillRect(5, 12, 6, 1);
+    // body
+    ctx.fillRect(4 - Math.min(1, sx), 6, 8 + sx, 7);
+    ctx.fillRect(3 - Math.min(1, sx), 8, 10 + sx, 4);
+    ctx.fillRect(5, 12, 6 + Math.floor(sx / 2), 1);
     // ears
     ctx.fillRect(3, 3, 3, 4);
-    ctx.fillRect(10, 3, 3, 4);
+    ctx.fillRect(10 + Math.min(2, sx), 3, 3, 4);
     ctx.fillRect(2, 2, 2, 2);
-    ctx.fillRect(12, 2, 2, 2);
+    ctx.fillRect(12 + Math.min(2, sx), 2, 2, 2);
     // face
     ctx.fillStyle = '#222';
-    ctx.fillRect(6, 8, 1, 1);
-    ctx.fillRect(9, 8, 1, 1);
-    ctx.fillStyle = '#ff6b9d';
+    if (opts.squint) {
+      ctx.fillRect(6, 8, 2, 1);
+      ctx.fillRect(9, 8, 2, 1);
+    } else {
+      ctx.fillRect(6, 8, 1, 1);
+      ctx.fillRect(9, 8, 1, 1);
+    }
+    ctx.fillStyle = opts.soft ? '#ffb0c8' : '#ff6b9d';
     ctx.fillRect(7, 10, 2, 1);
-    // cheek dots
     ctx.fillStyle = 'rgba(255,107,157,0.45)';
     ctx.fillRect(5, 9, 1, 1);
     ctx.fillRect(10, 9, 1, 1);
+    // arms / reach
+    const reach = opts.armReach ?? 0;
+    if (reach > 0) {
+      ctx.fillStyle = '#c8c8d0';
+      ctx.fillRect(12, 8, reach, 2);
+      ctx.fillRect(12 + reach - 1, 7, 2, 4);
+      if (opts.claw) {
+        ctx.fillStyle = '#222';
+        ctx.fillRect(12 + reach, 6, 1, 2);
+        ctx.fillRect(13 + reach, 7, 1, 1);
+        ctx.fillRect(12 + reach, 10, 1, 2);
+      }
+    }
+    if (opts.puffed) {
+      ctx.fillStyle = '#e8d0b0';
+      ctx.fillRect(4, 9, 2, 2);
+      ctx.fillRect(10, 9, 2, 2);
+      ctx.fillStyle = '#ff8844';
+      ctx.fillRect(14, 8, 2, 2);
+    }
+    if (opts.coil) {
+      ctx.fillStyle = '#b0b0b8';
+      ctx.fillRect(2, 7, 12, 5);
+      ctx.fillStyle = '#888890';
+      ctx.fillRect(3, 8, 10, 1);
+      ctx.fillRect(4, 10, 8, 1);
+    }
+    if (opts.soft) {
+      ctx.fillStyle = 'rgba(232,240,255,0.55)';
+      ctx.fillRect(2, 5, 12, 8);
+    }
+    // feet
     ctx.fillStyle = '#a0a0a8';
     ctx.fillRect(5, 13, 2, 2);
     ctx.fillRect(9, 13, 2, 2);
+  };
+
+  canvasTex(scene, 'best_bud', TILE, TILE, (ctx) => {
+    drawBudBase(ctx);
+  });
+  // Stretch lash pose — elongated body + reaching arm
+  canvasTex(scene, 'best_bud_stretch', TILE, TILE, (ctx) => {
+    drawBudBase(ctx, { stretchX: 2, armReach: 3, claw: false });
+  });
+  // Grab loot — both arms forward
+  canvasTex(scene, 'best_bud_grab', TILE, TILE, (ctx) => {
+    drawBudBase(ctx, { stretchX: 1, armReach: 4, claw: true });
+  });
+  // Melee strike / claw
+  canvasTex(scene, 'best_bud_strike', TILE, TILE, (ctx) => {
+    drawBudBase(ctx, { armReach: 3, claw: true });
+  });
+  // Spit / roast
+  canvasTex(scene, 'best_bud_spit', TILE, TILE, (ctx) => {
+    drawBudBase(ctx, { puffed: true });
+  });
+  // Blink hop
+  canvasTex(scene, 'best_bud_blink', TILE, TILE, (ctx) => {
+    drawBudBase(ctx, { squint: true, stretchX: 0 });
+    // afterimage streaks
+    ctx.fillStyle = 'rgba(125,92,255,0.5)';
+    ctx.fillRect(0, 7, 3, 3);
+    ctx.fillRect(1, 6, 2, 1);
+  });
+  // Guard coil
+  canvasTex(scene, 'best_bud_guard', TILE, TILE, (ctx) => {
+    drawBudBase(ctx, { coil: true });
+  });
+  // Heal aura
+  canvasTex(scene, 'best_bud_heal', TILE, TILE, (ctx) => {
+    drawBudBase(ctx, { soft: true });
+  });
+  // Elastic limb for stretch ghost (wide strip, tinted in anim)
+  canvasTex(scene, 'bud_stretch_limb', 24, 8, (ctx) => {
+    ctx.fillStyle = '#d0d0d8';
+    ctx.fillRect(0, 2, 24, 4);
+    ctx.fillStyle = '#e8e8f0';
+    ctx.fillRect(0, 3, 24, 2);
+    ctx.fillStyle = '#a8a8b0';
+    ctx.fillRect(0, 2, 24, 1);
+    ctx.fillRect(0, 5, 24, 1);
+    // sticky nubs
+    ctx.fillStyle = '#c0c0c8';
+    for (let i = 2; i < 22; i += 4) ctx.fillRect(i, 1, 2, 6);
   });
 
   // Boss exit portal — cyan ring + gem (step-on warp)

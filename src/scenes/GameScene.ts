@@ -155,6 +155,16 @@ import {
   sparkBurst,
 } from '../systems/vfx';
 import {
+  faceBuddyToward,
+  maybeBuddyIdleStretch,
+  playBuddyAttackAnim,
+  playBuddyBlinkTrail,
+  playBuddyGrabAnim,
+  playBuddyGuardAnim,
+  playBuddyHealAnim,
+  setBuddyPose,
+} from '../systems/bud-anim';
+import {
   canSoftRespawn,
   respawnDelayMs,
   scaleRespawnContact,
@@ -330,6 +340,10 @@ export class GameScene extends Phaser.Scene {
   private budAttackCd = 0;
   private budHealCd = 0;
   private budBlockCd = 0;
+  /** While >0, skip follow/bob so attack/grab tweens own the sprite. */
+  private budAnimLock = 0;
+  /** Time since last combat action — drives idle stretch yawns. */
+  private budIdleMs = 0;
   /** Inventory equip target: hero gear or buddy gear (toggle Y). */
   private gearTarget: EquipTarget = 'hero';
   /** Ambient animated map tiles (water/lava). */
@@ -1411,6 +1425,8 @@ export class GameScene extends Phaser.Scene {
       this.budAttackCd = 0;
       this.budHealCd = 0;
       this.budBlockCd = 0;
+      this.budAnimLock = 0;
+      this.budIdleMs = 0;
       return;
     }
     const bud = getBestBud(this.save.bestBudId);
@@ -1423,6 +1439,8 @@ export class GameScene extends Phaser.Scene {
       const body = this.companionSprite.body as Phaser.Physics.Arcade.Body;
       // Follow/fight via manual position — body off so they don't shove the hero
       body.enable = false;
+      this.budAnimLock = 0;
+      this.budIdleMs = 0;
     }
     if (bud) this.companionSprite.setTint(bud.tint);
     else this.companionSprite.clearTint();
@@ -1432,20 +1450,35 @@ export class GameScene extends Phaser.Scene {
     if (!this.companionSprite?.active || !this.player || !isCompanionActive(this.save)) {
       return;
     }
+    if (this.budAnimLock > 0) return;
     const dx = this.player.x - 18 - this.companionSprite.x;
     const dy = this.player.y + 2 - this.companionSprite.y;
     const dist = Math.hypot(dx, dy);
     if (dist > 24) {
-      this.companionSprite.x += dx * 0.1;
-      this.companionSprite.y += dy * 0.1;
+      this.companionSprite.x += dx * 0.12;
+      this.companionSprite.y += dy * 0.12;
+      faceBuddyToward(this.companionSprite, this.player.x, this.player.y);
+      setBuddyPose(this, this.companionSprite, 'chase');
+    } else {
+      setBuddyPose(this, this.companionSprite, 'idle');
     }
   }
 
-  /** Magical bud combat — chase, strike, heal, block (Jake energy). */
+  /** Stretch-grab toward a world point (loot, chest, kill sparkles). */
+  private buddyGrabAt(x: number, y: number, tint = 0xffc857): void {
+    if (!this.companionSprite?.active || !isCompanionActive(this.save)) return;
+    if (this.budAnimLock > 0) return;
+    this.budAnimLock = 380;
+    this.budIdleMs = 0;
+    playBuddyGrabAnim(this, this.companionSprite, x, y, tint);
+  }
+
+  /** Magical bud combat — chase, stretch-strike, grab energy, heal, block. */
   private updateCompanionCombat(delta: number): void {
     this.budAttackCd = Math.max(0, this.budAttackCd - delta);
     this.budHealCd = Math.max(0, this.budHealCd - delta);
     this.budBlockCd = Math.max(0, this.budBlockCd - delta);
+    this.budAnimLock = Math.max(0, this.budAnimLock - delta);
 
     if (
       !this.companionSprite?.active ||
@@ -1480,7 +1513,14 @@ export class GameScene extends Phaser.Scene {
       this.emitHud();
       playSfx('heal');
       this.game.events.emit('toast', `WHISP HEALS +${heal}`);
-      sparkBurst(this, this.player.x, this.player.y, 0xff6b9d, 4);
+      this.budAnimLock = 420;
+      this.budIdleMs = 0;
+      playBuddyHealAnim(
+        this,
+        this.companionSprite,
+        this.player.x,
+        this.player.y,
+      );
     }
 
     const target = this.findNearestHostile(
@@ -1490,9 +1530,21 @@ export class GameScene extends Phaser.Scene {
     );
 
     if (!target) {
-      this.updateCompanionFollow();
+      this.budIdleMs += delta;
+      // Occasional stretch yawn while parking with the hero
+      if (
+        this.budAnimLock <= 0 &&
+        maybeBuddyIdleStretch(this, this.companionSprite, this.budIdleMs)
+      ) {
+        this.budIdleMs = 0;
+        this.budAnimLock = 480;
+      } else {
+        this.updateCompanionFollow();
+      }
       return;
     }
+
+    this.budIdleMs = 0;
 
     // Stay leashed to player — don't abandon the hero mid-room
     const toPlayer = Math.hypot(
@@ -1504,25 +1556,39 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    // Don't move/attack while a stretch/grab owns the sprite
+    if (this.budAnimLock > 0) return;
+
     const tx = target.sprite.x;
     const ty = target.sprite.y;
     const dx = tx - this.companionSprite.x;
     const dy = ty - this.companionSprite.y;
     const dist = Math.hypot(dx, dy);
 
+    faceBuddyToward(this.companionSprite, tx, ty);
+
     // Approach (Zorp blinks when far)
     if (dist > profile.range * 0.85) {
+      setBuddyPose(this, this.companionSprite, 'chase');
       if (profile.style === 'blink' && dist > profile.range * 1.4 && this.budAttackCd <= 0) {
-        // Pocket hop closer to the creep
         const fromX = this.companionSprite.x;
         const fromY = this.companionSprite.y;
         const hop = Math.min(dist - profile.range * 0.5, 70);
         this.companionSprite.x += (dx / dist) * hop;
         this.companionSprite.y += (dy / dist) * hop;
         this.companionSprite.setAlpha(0.5);
-        sparkBurst(this, fromX, fromY, 0x4ecdc4, 3);
-        this.time.delayedCall(80, () => {
+        setBuddyPose(this, this.companionSprite, 'blink');
+        playBuddyBlinkTrail(
+          this,
+          fromX,
+          fromY,
+          getBestBud(this.save.bestBudId)?.tint ?? 0x7d5cff,
+        );
+        this.time.delayedCall(90, () => {
           this.companionSprite?.setAlpha(1);
+          if (this.companionSprite?.active) {
+            setBuddyPose(this, this.companionSprite, 'idle');
+          }
         });
       } else {
         this.companionSprite.x += dx * profile.speed;
@@ -1530,28 +1596,33 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Strike
+    // Strike — stretch / claw / spit / slam toward the creep
     if (dist <= profile.range && this.budAttackCd <= 0 && target.alive) {
-      // Peaceful cube: only fight if already aggressive
       if (target.kind === 'cube' && !target.aggressive) {
         this.updateCompanionFollow();
         return;
       }
       const dmg = computeBudStrikeDamage(this.save);
-      this.budStrike(target, dmg, profile.abilityName);
+      const fromX = this.companionSprite.x;
+      const fromY = this.companionSprite.y;
       this.budAttackCd = profile.cooldownMs;
+      this.budAnimLock = profile.style === 'stretch' ? 420 : 320;
+      this.budIdleMs = 0;
 
-      // Visual punch of friendship
-      this.companionSprite.setScale(SCALE * 1.25);
-      sparkBurst(
-        this,
-        this.companionSprite.x,
-        this.companionSprite.y,
-        0x7dffb3,
-        3,
-      );
-      this.time.delayedCall(100, () => {
-        this.companionSprite?.setScale(SCALE);
+      playBuddyAttackAnim(this, this.companionSprite, {
+        fromX,
+        fromY,
+        toX: tx,
+        toY: ty,
+        style: profile.style,
+        tint: getBestBud(this.save.bestBudId)?.tint,
+        onComplete: () => {
+          this.budAnimLock = Math.min(this.budAnimLock, 40);
+        },
+      });
+      // Damage lands mid-lash (readable with the stretch ghost)
+      this.time.delayedCall(profile.style === 'slash' ? 70 : 100, () => {
+        if (target.alive) this.budStrike(target, dmg, profile.abilityName);
       });
     }
   }
@@ -1981,15 +2052,11 @@ export class GameScene extends Phaser.Scene {
       playSfx('success');
       this.game.events.emit('toast', 'PEBBO COILED THE HIT!');
       if (this.companionSprite?.active) {
+        this.budAnimLock = 400;
+        this.budIdleMs = 0;
+        playBuddyGuardAnim(this, this.companionSprite);
         this.companionSprite.setTint(0xffc857);
-        sparkBurst(
-          this,
-          this.companionSprite.x,
-          this.companionSprite.y,
-          0x4ecdc4,
-          6,
-        );
-        this.time.delayedCall(200, () => {
+        this.time.delayedCall(280, () => {
           const bud = getBestBud(this.save.bestBudId);
           if (bud && this.companionSprite?.active) {
             this.companionSprite.setTint(bud.tint);
@@ -2206,6 +2273,10 @@ export class GameScene extends Phaser.Scene {
         this.save = applyLootToSave(this.save, drops);
         const summary = lootSummary(drops).slice(0, 3).join(', ');
         playSfx('pickup');
+        // Buddy snaps toward the kill and "grabs" the loot
+        if (this.companionSprite?.active && actor.sprite?.active) {
+          this.buddyGrabAt(actor.sprite.x, actor.sprite.y, 0xffc857);
+        }
         this.time.delayedCall(200, () => {
           this.game.events.emit('toast', `LOOT: ${summary}`);
         });
@@ -2676,6 +2747,10 @@ export class GameScene extends Phaser.Scene {
     writeSave(this.save);
     this.emitHud();
     playSfx('pickup');
+    // Buddy stretch-grabs the chest with you
+    if (this.companionSprite?.active && actor.sprite) {
+      this.buddyGrabAt(actor.sprite.x, actor.sprite.y, 0xffc857);
+    }
     this.game.events.emit('dialog-show', lines);
   }
 
@@ -3486,11 +3561,12 @@ export class GameScene extends Phaser.Scene {
       this.player.setScale(SCALE);
     }
 
-    // Companion bob when parked (not mid strike scale punch)
+    // Companion bob when parked (not mid stretch/grab/strike tween)
     if (
       this.companionSprite?.active &&
       motionAllowed() &&
-      this.budAttackCd < Math.max(0, 80)
+      this.budAnimLock <= 0 &&
+      this.budAttackCd < 80
     ) {
       const cb = bobScale(t + 0.7, false);
       this.companionSprite.setScale(cb.sx * 0.95, cb.sy * 0.95);
@@ -3906,6 +3982,10 @@ export class GameScene extends Phaser.Scene {
       this.invuln = 500;
       playSfx('success');
       this.game.events.emit('toast', 'PEBBO BLOCKED A SHOT!');
+      if (this.companionSprite?.active) {
+        this.budAnimLock = 400;
+        playBuddyGuardAnim(this, this.companionSprite);
+      }
       return;
     }
     const final = Math.max(1, dmg - this.save.armor);

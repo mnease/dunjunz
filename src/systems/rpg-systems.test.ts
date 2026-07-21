@@ -40,6 +40,7 @@ import {
 } from './inventory';
 import { spendAttrPoint, computePlayerDamage } from './attributes';
 import { appearanceFromSave, playerTextureKeyFromSave } from './appearance';
+import { budPoseTextureKey, poseForAttackStyle } from './bud-anim';
 import { effectivePrimary } from './rarity';
 import { defaultSave, loadSave } from './save';
 import { mintItem } from './items';
@@ -481,6 +482,20 @@ describe('appearance + key on doll', () => {
     expect(spec.amulet).toBe('gold');
     expect(playerTextureKeyFromSave(save)).toContain('_iron_');
     expect(playerTextureKeyFromSave(save)).toContain('_gold_');
+  });
+});
+
+describe('bud anim poses', () => {
+  it('maps attack styles to distinct pose textures', () => {
+    expect(poseForAttackStyle('stretch')).toBe('stretch');
+    expect(poseForAttackStyle('slash')).toBe('strike');
+    expect(poseForAttackStyle('spit')).toBe('spit');
+    expect(poseForAttackStyle('blink')).toBe('blink');
+    expect(poseForAttackStyle('guard')).toBe('guard');
+    expect(poseForAttackStyle('aura')).toBe('heal');
+    expect(budPoseTextureKey('stretch')).toBe('best_bud_stretch');
+    expect(budPoseTextureKey('grab')).toBe('best_bud_grab');
+    expect(budPoseTextureKey('idle')).toBe('best_bud');
   });
 });
 
