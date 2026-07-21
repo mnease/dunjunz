@@ -1,6 +1,6 @@
-import { createPool, type VercelPool } from '@vercel/postgres';
+import postgres, { type Sql } from 'postgres';
 
-let pool: VercelPool | null = null;
+let sql: Sql | null = null;
 
 const DB_URL_KEYS = [
   'DATABASE_URL',
@@ -13,6 +13,7 @@ const DB_URL_KEYS = [
   'dunjunz_POSTGRES_PRISMA_URL',
   'dunjunz_DATABASE_URL_UNPOOLED',
   'dunjunz_POSTGRES_URL_NON_POOLING',
+  'dunjunz_POSTGRES_URL_NO_SSL',
 ] as const;
 
 export function resolveDatabaseUrl(): string | null {
@@ -40,43 +41,26 @@ export function dbConfigured(): boolean {
   return !!resolveDatabaseUrl();
 }
 
-function getPool(): VercelPool {
+export function getSql(): Sql {
   const url = resolveDatabaseUrl();
   if (!url) {
-    throw new Error('No database URL (dunjunz_POSTGRES_URL / DATABASE_URL)');
+    throw new Error(
+      'No database URL (expect dunjunz_DATABASE_URL / dunjunz_POSTGRES_URL)',
+    );
   }
-  // @vercel/postgres reads POSTGRES_URL by default — inject our resolved URL
-  if (!process.env.POSTGRES_URL) {
-    process.env.POSTGRES_URL = url;
+  if (!sql) {
+    sql = postgres(url, {
+      ssl: 'require',
+      max: 1,
+      prepare: false,
+      connect_timeout: 10,
+      idle_timeout: 20,
+    });
   }
-  if (!pool) {
-    pool = createPool({ connectionString: url });
-  }
-  return pool;
-}
-
-/** sql tagged template compatible helper */
-export function getSql() {
-  const p = getPool();
-  return p.sql.bind(p) as typeof p.sql;
+  return sql;
 }
 
 export async function pingDb(): Promise<void> {
-  const sql = getSql();
-  await sql`SELECT 1 AS ok`;
-}
-
-/** Execute a query and return rows array */
-export async function query<T extends Record<string, unknown> = Record<string, unknown>>(
-  strings: TemplateStringsArray,
-  ...values: unknown[]
-): Promise<T[]> {
-  const sql = getSql();
-  const result = await sql(strings, ...values);
-  // @vercel/postgres returns { rows, ... }
-  if (result && Array.isArray((result as { rows?: unknown }).rows)) {
-    return (result as { rows: T[] }).rows;
-  }
-  if (Array.isArray(result)) return result as T[];
-  return [];
+  const s = getSql();
+  await s`SELECT 1 AS ok`;
 }

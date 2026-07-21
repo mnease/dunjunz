@@ -146,11 +146,12 @@ export default async function handler(
     steps.push('rate_limits');
 
     const u = await sql`SELECT COUNT(*)::int AS c FROM users`;
+    const count = Number((u[0] as { c?: number } | undefined)?.c ?? 0);
     res.status(200).json({
       ok: true,
       databaseUrlSource: resolveDatabaseUrlSource(),
       steps,
-      usersCount: u[0]?.c ?? 0,
+      usersCount: count,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
