@@ -24,6 +24,10 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
   - Auto-aggro creeps near you; damage scales lightly with level
 - **Boss exit portal** — after clearing a land boss, a cyan portal appears in the arena; step on it (or E) to zip back to that dungeon's mouth (`b1_entrance` / Woodz Edge / Dezertz Edge)
 
+### Changed
+
+- **Shell design + ADA pass (EMA council)** — top menubar (not center-only stack); IBM Plex Mono body + Press Start display; larger type / looser line-height; AA-friendlier muted colors; focus rings; skip link; controls side panel; auth/feedback shared form styles; in-game dialog/HUD/inventory type floors raised
+
 ### Fixed
 
 - **Kingdomz exit / map UX** — Royal Road & courtyard mid-band widened (3 tiles) so west trail exit is not a one-tile needle; mapz opens on current land (not always surface)

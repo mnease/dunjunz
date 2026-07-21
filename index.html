@@ -8,51 +8,79 @@
       name="description"
       content="DUNJUNZ — a humorous retro dungeon crawler. It's dangerous to go alone; take this user agreement."
     />
+    <meta name="theme-color" content="#0a0c10" />
     <title>DUNJUNZ</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Press+Start+2P&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
+    <a class="skip-link" href="#game-container">Skip to game</a>
+
     <div id="shell">
-      <header class="brand">
-        <h1>DUNJUNZ</h1>
-        <p class="tagline">An epic of questionable questing</p>
-      </header>
-      <div id="game-frame">
-        <div id="game-container"></div>
-        <div class="crt-overlay" aria-hidden="true"></div>
-      </div>
-      <footer class="site-footer">
-        <div class="help">
-          <span>Arrows / WASD move</span>
-          <span>Space / Z attack</span>
-          <span>E talk · B buy · I inventory / attrs</span>
-          <span>W H C L F G N K equip · 1-5 attrs · U potion</span>
+      <!-- Top menubar: brand + primary shell actions (not centered-only) -->
+      <header class="topbar" role="banner">
+        <div class="topbar-brand">
+          <a class="logo" href="/" aria-label="DUNJUNZ home">
+            <span class="logo-mark">DUNJUNZ</span>
+          </a>
+          <p class="tagline">An epic of questionable questing</p>
         </div>
-        <div class="legal">
+        <nav class="topbar-nav" aria-label="Site">
+          <span id="auth-status" class="auth-status" role="status">Local play</span>
+          <button type="button" id="journal-open" class="nav-btn">
+            Journal
+            <kbd class="nav-kbd">J</kbd>
+          </button>
+          <button type="button" id="settings-open" class="nav-btn nav-btn-ghost">
+            Settings
+          </button>
+          <button type="button" id="auth-open" class="nav-btn nav-btn-ghost">
+            Account
+          </button>
+          <button type="button" id="feedback-open" class="nav-btn nav-btn-primary">
+            Feedback
+          </button>
+        </nav>
+      </header>
+
+      <main class="main" id="main">
+        <div id="game-frame">
+          <div id="game-container" tabindex="-1"></div>
+          <div class="crt-overlay" aria-hidden="true"></div>
+        </div>
+
+        <aside class="controls-panel" aria-labelledby="controls-heading">
+          <h2 id="controls-heading" class="panel-heading">Controls</h2>
+          <ul class="help-list">
+            <li><kbd>Arrows</kbd> / <kbd>WASD</kbd> move</li>
+            <li><kbd>Space</kbd> / <kbd>Z</kbd> attack</li>
+            <li><kbd>E</kbd> talk · <kbd>B</kbd> buy · <kbd>I</kbd> inventory</li>
+            <li><kbd>J</kbd> journal · <kbd>M</kbd> mapz · <kbd>Y</kbd> buddy gear</li>
+            <li>
+              <kbd>W</kbd> <kbd>O</kbd> <kbd>H</kbd> <kbd>C</kbd> <kbd>L</kbd>
+              <kbd>F</kbd> <kbd>G</kbd> <kbd>N</kbd> <kbd>R</kbd> <kbd>K</kbd>
+              equip
+            </li>
+            <li><kbd>1</kbd>–<kbd>5</kbd> attrs · <kbd>U</kbd> potion</li>
+          </ul>
+        </aside>
+      </main>
+
+      <footer class="site-footer" role="contentinfo">
+        <div class="footer-grid">
           <p class="copyright">
             © 2026 NeaseMedia. All rights reserved.
-            <span class="copyright-sub">DUNJUNZ is an original work by NeaseMedia.</span>
+            <span class="copyright-sub"
+              >DUNJUNZ is an original work by NeaseMedia.</span
+            >
           </p>
-          <div class="legal-actions">
-            <span id="auth-status" class="auth-status">Local play</span>
-            <button type="button" id="journal-open" class="feedback-btn ghost-btn">
-              Journal
-            </button>
-            <button type="button" id="settings-open" class="feedback-btn ghost-btn">
-              Settings
-            </button>
-            <button type="button" id="auth-open" class="feedback-btn ghost-btn">
-              Account
-            </button>
-            <button type="button" id="feedback-open" class="feedback-btn">
-              Feedback
-            </button>
-          </div>
+          <p class="footer-note">
+            Hard-refresh after deploy if the journal or settings look stale.
+          </p>
         </div>
       </footer>
     </div>
@@ -133,7 +161,7 @@
             type="button"
             class="feedback-x"
             data-settings-close
-            aria-label="Close"
+            aria-label="Close settings"
           >
             ×
           </button>
@@ -152,7 +180,10 @@
             Music on
           </label>
           <label class="settings-row">
-            <span>Music volume <strong id="set-music-vol-label">35%</strong></span>
+            <span
+              >Music volume
+              <strong id="set-music-vol-label">35%</strong></span
+            >
             <input
               id="set-music-vol"
               type="range"
@@ -167,7 +198,9 @@
             Sound effects on
           </label>
           <label class="settings-row">
-            <span>SFX volume <strong id="set-sfx-vol-label">55%</strong></span>
+            <span
+              >SFX volume <strong id="set-sfx-vol-label">55%</strong></span
+            >
             <input
               id="set-sfx-vol"
               type="range"
@@ -204,26 +237,45 @@
       <div class="feedback-panel auth-panel">
         <header class="feedback-header">
           <h2 id="auth-title">Account / cloud saves</h2>
-          <button type="button" class="feedback-x" data-auth-close aria-label="Close">
+          <button
+            type="button"
+            class="feedback-x"
+            data-auth-close
+            aria-label="Close account"
+          >
             ×
           </button>
         </header>
         <p class="feedback-blurb">
           Play free as <strong>local</strong> (no email). Optional
-          <strong>guest</strong> (email + device) or <strong>magic link</strong>
-          account for 3 cloud slots.
+          <strong>guest</strong> (email + device) or
+          <strong>magic link</strong> account for 3 cloud slots.
         </p>
-        <form id="auth-guest-form">
+        <form id="auth-guest-form" class="shell-form">
           <label>
             Guest (email required)
-            <input name="email" type="email" required maxlength="200" placeholder="you@example.com" />
+            <input
+              name="email"
+              type="email"
+              required
+              maxlength="200"
+              placeholder="you@example.com"
+              autocomplete="email"
+            />
           </label>
           <button type="submit" class="btn primary">Continue as guest</button>
         </form>
-        <form id="auth-magic-form" class="auth-magic">
+        <form id="auth-magic-form" class="shell-form auth-magic">
           <label>
             Magic link sign-in
-            <input name="email" type="email" required maxlength="200" placeholder="you@example.com" />
+            <input
+              name="email"
+              type="email"
+              required
+              maxlength="200"
+              placeholder="you@example.com"
+              autocomplete="email"
+            />
           </label>
           <button type="submit" class="btn primary">Email me a link</button>
         </form>
@@ -231,8 +283,12 @@
           <button type="button" id="auth-import-local" class="btn ghost">
             Import local save → cloud
           </button>
-          <button type="button" id="auth-logout" class="btn ghost">Sign out</button>
-          <button type="button" class="btn ghost" data-auth-close>Close</button>
+          <button type="button" id="auth-logout" class="btn ghost">
+            Sign out
+          </button>
+          <button type="button" class="btn ghost" data-auth-close>
+            Close
+          </button>
         </div>
         <p id="auth-msg" class="feedback-status" data-kind="idle"></p>
       </div>
@@ -253,7 +309,7 @@
             type="button"
             class="feedback-x"
             data-feedback-close
-            aria-label="Close"
+            aria-label="Close feedback"
           >
             ×
           </button>
@@ -262,8 +318,7 @@
           Bugs, ideas, or vibes — goes to
           <strong>support@neasemedia.com</strong>.
         </p>
-        <form id="feedback-form" novalidate>
-          <!-- Honeypot: leave empty -->
+        <form id="feedback-form" class="shell-form" novalidate>
           <label class="hp" aria-hidden="true">
             Website
             <input type="text" name="website" tabindex="-1" autocomplete="off" />

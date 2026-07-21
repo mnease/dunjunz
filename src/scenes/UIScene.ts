@@ -183,47 +183,45 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0.5, 1);
 
     // Hearts — high contrast pink on near-black (WCAG-ish for UI chrome)
+    // ADA floor: pixel UI ≥8–11px; looser lineSpacing for Press Start
     this.heartsText = this.add.text(12, 10, '', {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: '11px',
+      fontSize: '12px',
       color: '#ff6b9d',
     });
-    // Vitals strip — amber, fixed left after hearts reserve (~180px)
     this.itemsText = this.add.text(168, 12, '', {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: '9px',
+      fontSize: '10px',
       color: '#ffc857',
     });
-    // Place name — cool gray, left second row; max width via wordWrap
     this.roomText = this.add.text(12, 34, '', {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: '8px',
+      fontSize: '9px',
       color: '#c5cde0',
-      wordWrap: { width: 420 },
+      wordWrap: { width: 400 },
     });
-    // Hints — right-aligned second row; never overlaid on room name
     this.hintsText = this.add
       .text(GAME_W - 12, 34, '', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '8px',
+        fontSize: '9px',
         color: '#7dffb3',
         align: 'right',
       })
       .setOrigin(1, 0);
 
     this.dialogBg = this.add
-      .rectangle(GAME_W / 2, 480, GAME_W - 48, 120, 0x12161f, 0.95)
+      .rectangle(GAME_W / 2, 470, GAME_W - 40, 140, 0x12161f, 0.96)
       .setStrokeStyle(3, COLORS.green)
       .setVisible(false)
       .setDepth(100)
       .setScrollFactor(0);
     this.dialogText = this.add
-      .text(48, 440, '', {
+      .text(40, 420, '', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '11px',
+        fontSize: '12px',
         color: '#f4f0ff',
-        wordWrap: { width: GAME_W - 96 },
-        lineSpacing: 8,
+        wordWrap: { width: GAME_W - 88 },
+        lineSpacing: 12,
       })
       .setVisible(false)
       .setDepth(101)
@@ -251,10 +249,10 @@ export class UIScene extends Phaser.Scene {
     this.toastText = this.add
       .text(GAME_W / 2, 100, '', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '10px',
+        fontSize: '11px',
         color: '#ffc857',
-        backgroundColor: '#0a0c10cc',
-        padding: { x: 10, y: 8 },
+        backgroundColor: '#0a0c10ee',
+        padding: { x: 12, y: 10 },
       })
       .setOrigin(0.5)
       .setAlpha(0)
@@ -575,7 +573,7 @@ export class UIScene extends Phaser.Scene {
     this.invTitle = this.add
       .text(GAME_W / 2, 48, 'INVENTORY / CHARACTER', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '11px',
+        fontSize: '12px',
         color: '#7dffb3',
       })
       .setOrigin(0.5)
@@ -598,8 +596,8 @@ export class UIScene extends Phaser.Scene {
     this.invYouLabel = this.add
       .text(78, 210, 'YOU', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '7px',
-        color: '#8b93a7',
+        fontSize: '8px',
+        color: '#a8b0c4',
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -629,9 +627,9 @@ export class UIScene extends Phaser.Scene {
       this.invSlotLabels[slot] = this.add
         .text(x + 28, y - 8, `${slot.toUpperCase()} [${SLOT_KEYS[slot]}]\n(empty)`, {
           fontFamily: '"Press Start 2P", monospace',
-          fontSize: '6px',
+          fontSize: '8px',
           color: '#c5cde0',
-          lineSpacing: 4,
+          lineSpacing: 8,
         })
         .setScrollFactor(0)
         .setDepth(d + 2);
@@ -641,9 +639,9 @@ export class UIScene extends Phaser.Scene {
     this.invStats = this.add
       .text(28, 230, '', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '7px',
+        fontSize: '8px',
         color: '#ffc857',
-        lineSpacing: 5,
+        lineSpacing: 8,
       })
       .setScrollFactor(0)
       .setDepth(d + 2);
@@ -651,9 +649,9 @@ export class UIScene extends Phaser.Scene {
     this.invAttrs = this.add
       .text(28, 300, '', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '7px',
+        fontSize: '8px',
         color: '#7dffb3',
-        lineSpacing: 5,
+        lineSpacing: 8,
       })
       .setScrollFactor(0)
       .setDepth(d + 2);
@@ -677,10 +675,10 @@ export class UIScene extends Phaser.Scene {
     this.invBagDetail = this.add
       .text(40, GAME_H - 78, '', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '8px',
+        fontSize: '9px',
         color: '#c5cde0',
         wordWrap: { width: GAME_W - 80 },
-        lineSpacing: 5,
+        lineSpacing: 8,
       })
       .setScrollFactor(0)
       .setDepth(d + 2);
@@ -692,7 +690,7 @@ export class UIScene extends Phaser.Scene {
         'Y BUDDY/HERO · CLICK BAG · W O H C L F G N R K EQUIP · U USE · I/ESC',
         {
           fontFamily: '"Press Start 2P", monospace',
-          fontSize: '6px',
+          fontSize: '8px',
           color: '#7dffb3',
         },
       )
