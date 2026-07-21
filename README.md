@@ -110,14 +110,21 @@ The page footer includes **© 2026 NeaseMedia** and a **Feedback** button. The m
 
 **Project → Settings → Environment Variables** (Production + Preview), then redeploy:
 
-| Variable | Required | Notes |
-| --- | --- | --- |
-| `RESEND_API_KEY` | **yes** (preferred) | API key from Resend dashboard |
-| `RESEND_FROM` | recommended | e.g. `DUNJUNZ Feedback <feedback@verified-domain>` — domain must be verified in Resend |
-| `FEEDBACK_TO` | no | default `support@neasemedia.com` |
-| `SMTP_*` | no | Fallback only if Resend key is absent (see `.env.example`) |
+| Field in Vercel | Example |
+| --- | --- |
+| **Key / Name** | `RESEND_API_KEY` only (no `@`, no spaces, no `=`) |
+| **Value** | `re_...` your Resend API key |
 
-Until a custom domain is verified, Resend may only allow sending from their test sender to your own account email — verify **neasemedia.com** (or your game domain) in Resend for production.
+Optional (defaults are already set in code):
+
+| Key / Name | Value (example) |
+| --- | --- |
+| `FEEDBACK_TO` | `support@neasemedia.com` |
+| `RESEND_FROM` | `DUNJUNZ Feedback <support@neasemedia.com>` |
+
+**Name** = variable identifier. **Value** = secret or email. Putting `support@neasemedia.com` in **Name** causes Vercel’s “invalid characters” error (`@` is not allowed in names).
+
+Default From in code: `DUNJUNZ Feedback <support@neasemedia.com>` — so you often only need **`RESEND_API_KEY`**. Domain must be verified in Resend.
 
 See [`.env.example`](./.env.example). Local `vite` does not run `/api/*` — use `vercel dev` or a Preview deploy to test.
 

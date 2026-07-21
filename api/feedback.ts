@@ -16,11 +16,15 @@ import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 
 const FEEDBACK_TO = process.env.FEEDBACK_TO?.trim() || 'support@neasemedia.com';
-/** Must be a verified domain/sender in the NeaseMedia Resend account. */
+/**
+ * From address — must use a domain verified in Resend.
+ * Optional env RESEND_FROM; default uses support@ on NeaseMedia.
+ * (Only set the env if you need a different From.)
+ */
 const RESEND_FROM =
   process.env.RESEND_FROM?.trim() ||
   process.env.SMTP_FROM?.trim() ||
-  'DUNJUNZ Feedback <onboarding@resend.dev>';
+  'DUNJUNZ Feedback <support@neasemedia.com>';
 
 const MAX_NAME = 120;
 const MAX_EMAIL = 200;
