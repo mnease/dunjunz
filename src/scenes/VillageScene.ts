@@ -107,7 +107,7 @@ export class VillageScene extends Phaser.Scene {
         color: '#c5cde0',
         align: 'right',
         lineSpacing: 6,
-        wordWrap: { width: 300 },
+        wordWrap: { width: Math.min(420, Math.floor(GAME_W * 0.36)) },
       })
       .setOrigin(1, 0)
       .setDepth(20);

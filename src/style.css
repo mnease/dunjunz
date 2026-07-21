@@ -35,7 +35,8 @@
   --lh-tight: 1.55;
   --lh-body: 1.75;
   --lh-loose: 1.9;
-  --shell-max: 1100px;
+  /* Fits 16:9 canvas (1280) + controls rail without crushing the game */
+  --shell-max: 1560px;
   --touch-min: 2.5rem; /* ~40px min control height */
 }
 
@@ -231,7 +232,7 @@ body {
   align-items: start;
 }
 
-@media (min-width: 960px) {
+@media (min-width: 1100px) {
   .main {
     grid-template-columns: minmax(0, 1fr) minmax(12rem, 15rem);
   }
@@ -251,7 +252,7 @@ body {
 
 #game-container {
   width: 100%;
-  aspect-ratio: 768 / 576;
+  aspect-ratio: 16 / 9;
   background: #000;
 }
 

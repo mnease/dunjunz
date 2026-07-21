@@ -1,11 +1,15 @@
-export const GAME_W = 768;
-export const GAME_H = 576;
+/** Native canvas size — 16:9 HD (was 768×576 / 4:3). */
+export const GAME_W = 1280;
+export const GAME_H = 720;
 export const TILE = 16;
 export const SCALE = 3;
 export const VIEW_TILES_W = 16;
 export const VIEW_TILES_H = 11;
-/** Two-row chrome: stats + room/hints (was 48; overflowed long room titles). */
-export const HUD_H = 56;
+/**
+ * Two-row chrome: vitals (row 1) + place/hints (row 2).
+ * Tall enough for Press Start 2P without clipping.
+ */
+export const HUD_H = 64;
 export const MAP_PIXEL_W = VIEW_TILES_W * TILE * SCALE;
 export const MAP_PIXEL_H = VIEW_TILES_H * TILE * SCALE;
 

@@ -190,7 +190,7 @@ export class UIScene extends Phaser.Scene {
 
   private buildChrome(): void {
     // Two-row HUD (EMA/Comb pass): stats never share a line with room/hints.
-    // Row 1 y≈10: hearts + vitals. Row 2 y≈34: place + controls.
+    // Row 1 y≈12: hearts + vitals. Row 2 y≈38: place + controls.
     this.add.rectangle(GAME_W / 2, HUD_H / 2, GAME_W, HUD_H, 0x0a0c10, 0.94);
     this.add
       .rectangle(GAME_W / 2, HUD_H - 1, GAME_W, 2, COLORS.green, 0.75)
@@ -198,24 +198,25 @@ export class UIScene extends Phaser.Scene {
 
     // Hearts — high contrast pink on near-black (WCAG-ish for UI chrome)
     // ADA floor: pixel UI ≥8–11px; looser lineSpacing for Press Start
-    this.heartsText = this.add.text(12, 10, '', {
+    this.heartsText = this.add.text(16, 12, '', {
       fontFamily: '"Press Start 2P", monospace',
       fontSize: '12px',
       color: '#ff6b9d',
     });
-    this.itemsText = this.add.text(168, 12, '', {
+    this.itemsText = this.add.text(200, 14, '', {
       fontFamily: '"Press Start 2P", monospace',
       fontSize: '10px',
       color: '#ffc857',
+      wordWrap: { width: GAME_W - 220 },
     });
-    this.roomText = this.add.text(12, 34, '', {
+    this.roomText = this.add.text(16, 40, '', {
       fontFamily: '"Press Start 2P", monospace',
       fontSize: '9px',
       color: '#c5cde0',
-      wordWrap: { width: 400 },
+      wordWrap: { width: Math.floor(GAME_W * 0.55) },
     });
     this.hintsText = this.add
-      .text(GAME_W - 12, 34, '', {
+      .text(GAME_W - 16, 40, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '9px',
         color: '#7dffb3',
@@ -223,14 +224,17 @@ export class UIScene extends Phaser.Scene {
       })
       .setOrigin(1, 0);
 
+    // Dialog docked to bottom so it never fights the HUD
+    const dialogH = 152;
+    const dialogCy = GAME_H - dialogH / 2 - 18;
     this.dialogBg = this.add
-      .rectangle(GAME_W / 2, 470, GAME_W - 40, 140, 0x12161f, 0.96)
+      .rectangle(GAME_W / 2, dialogCy, GAME_W - 48, dialogH, 0x12161f, 0.96)
       .setStrokeStyle(3, COLORS.green)
       .setVisible(false)
       .setDepth(100)
       .setScrollFactor(0);
     this.dialogText = this.add
-      .text(40, 420, '', {
+      .text(40, dialogCy - dialogH / 2 + 22, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '12px',
         color: '#f4f0ff',
@@ -247,7 +251,7 @@ export class UIScene extends Phaser.Scene {
     this.buildShopPanel();
 
     this.pauseText = this.add
-      .text(GAME_W / 2, 300, 'PAUSED\n\nESC RESUME  ·  M TITLE', {
+      .text(GAME_W / 2, GAME_H / 2, 'PAUSED\n\nESC RESUME  ·  M TITLE', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '14px',
         color: '#7dffb3',
@@ -261,12 +265,14 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0);
 
     this.toastText = this.add
-      .text(GAME_W / 2, 100, '', {
+      .text(GAME_W / 2, HUD_H + 28, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '11px',
         color: '#ffc857',
         backgroundColor: '#0a0c10ee',
         padding: { x: 12, y: 10 },
+        wordWrap: { width: GAME_W - 80 },
+        align: 'center',
       })
       .setOrigin(0.5)
       .setAlpha(0)
@@ -334,8 +340,10 @@ export class UIScene extends Phaser.Scene {
         'M / TAB / ESC CLOSE   ·   [ ] FLOOR   ·   , . LAND',
         {
           fontFamily: '"Press Start 2P", monospace',
-          fontSize: '7px',
+          fontSize: '8px',
           color: '#7dffb3',
+          wordWrap: { width: GAME_W - 48 },
+          align: 'center',
         },
       )
       .setOrigin(0.5)
@@ -444,8 +452,10 @@ export class UIScene extends Phaser.Scene {
         'ARROWS SELECT  ·  ENTER / 1-9 FORJE  ·  F / ESC CLOSE',
         {
           fontFamily: '"Press Start 2P", monospace',
-          fontSize: '6px',
+          fontSize: '8px',
           color: '#ffc857',
+          wordWrap: { width: GAME_W - 48 },
+          align: 'center',
         },
       )
       .setOrigin(0.5)
@@ -551,8 +561,10 @@ export class UIScene extends Phaser.Scene {
         'ARROWS  ·  TAB PANE  ·  ENTER/B BUY OR SELL  ·  ESC/E CLOSE',
         {
           fontFamily: '"Press Start 2P", monospace',
-          fontSize: '6px',
+          fontSize: '8px',
           color: '#ffc857',
+          wordWrap: { width: GAME_W - 48 },
+          align: 'center',
         },
       )
       .setOrigin(0.5)
@@ -585,7 +597,7 @@ export class UIScene extends Phaser.Scene {
       .setDepth(d);
 
     this.invTitle = this.add
-      .text(GAME_W / 2, 48, 'INVENTORY / CHARACTER', {
+      .text(GAME_W / 2, HUD_H + 14, 'INVENTORY / CHARACTER', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '12px',
         color: '#7dffb3',
@@ -594,21 +606,23 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(d + 1);
 
-    // Compact paper-doll
+    // Paper-doll (left column) — fixed band so bag never collides
+    const dollX = 90;
+    const dollY = HUD_H + 110;
     this.invAvatarPlate = this.add
-      .rectangle(78, 150, 100, 120, 0x12161f, 1)
+      .rectangle(dollX, dollY, 110, 130, 0x12161f, 1)
       .setStrokeStyle(2, COLORS.green)
       .setScrollFactor(0)
       .setDepth(d + 1);
 
     this.invAvatar = this.add
-      .image(78, 145, 'player')
+      .image(dollX, dollY - 6, 'player')
       .setScale(SCALE * 2.2)
       .setScrollFactor(0)
       .setDepth(d + 2);
 
     this.invYouLabel = this.add
-      .text(78, 210, 'YOU', {
+      .text(dollX, dollY + 62, 'YOU', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#a8b0c4',
@@ -617,12 +631,12 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(d + 2);
 
-    // Equip slots — 2 columns × 5 rows, right of avatar
+    // Equip slots — 2 wide columns with room for full item names
     const slots: EquipSlot[] = [...ALL_EQUIP_SLOTS];
-    const startX = 200;
-    const startY = 78;
-    const colW = 200;
-    const rowH = 34;
+    const startX = 220;
+    const startY = HUD_H + 36;
+    const colW = 280;
+    const rowH = 36;
     slots.forEach((slot, i) => {
       const col = i < 5 ? 0 : 1;
       const row = i % 5;
@@ -644,35 +658,40 @@ export class UIScene extends Phaser.Scene {
           fontSize: '8px',
           color: '#c5cde0',
           lineSpacing: 8,
+          wordWrap: { width: colW - 48 },
         })
         .setScrollFactor(0)
         .setDepth(d + 2);
     });
 
-    // Stats under avatar
+    // Stats / attrs in right rail — clear of equip columns and bag
+    const railX = startX + 2 * colW + 24;
     this.invStats = this.add
-      .text(28, 230, '', {
+      .text(railX, startY - 4, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#ffc857',
         lineSpacing: 8,
+        wordWrap: { width: GAME_W - railX - 36 },
       })
       .setScrollFactor(0)
       .setDepth(d + 2);
 
     this.invAttrs = this.add
-      .text(28, 300, '', {
+      .text(railX, startY + 120, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#7dffb3',
         lineSpacing: 8,
+        wordWrap: { width: GAME_W - railX - 36 },
       })
       .setScrollFactor(0)
       .setDepth(d + 2);
 
-    // BAG grid section (full width under equip row)
+    // BAG band: title → grid → pager → detail → help (strict bottom stack)
+    const bagTitleY = HUD_H + 230;
     this.invBagTitle = this.add
-      .text(GAME_W / 2, 268, 'BAG', {
+      .text(GAME_W / 2, bagTitleY, 'BAG', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '10px',
         color: '#ffc857',
@@ -686,8 +705,9 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(d + 2);
 
+    // Detail sits above help; renderBagGrid keeps pager above detail
     this.invBagDetail = this.add
-      .text(40, GAME_H - 78, '', {
+      .text(40, GAME_H - 100, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '9px',
         color: '#c5cde0',
@@ -1909,9 +1929,25 @@ export class UIScene extends Phaser.Scene {
         : `BAG (0)  ·  ${sortTag}`,
     );
 
+    // Vertical band: title → grid → pager → detail → help (no overlap)
+    const bagTitleY = HUD_H + 230;
+    const helpY = GAME_H - 28;
+    const detailY = GAME_H - 108;
+    const pagerReserve = 28;
+    const gridTop = bagTitleY + 22;
+    const cols = UIScene.BAG_COLS;
+    const cell = 48;
+    const gap = 10;
+    const gridH = UIScene.BAG_ROWS * cell + (UIScene.BAG_ROWS - 1) * gap;
+    // Keep pager above detail
+    const originY = Math.min(
+      gridTop + cell / 2,
+      detailY - pagerReserve - gridH + cell / 2,
+    );
+
     if (!bag.length) {
       const empty = this.add
-        .text(GAME_W / 2, 340, '(empty — loot creeps & chests)', {
+        .text(GAME_W / 2, originY + 40, '(empty — loot creeps & chests)', {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '8px',
           color: '#6a738a',
@@ -1920,7 +1956,9 @@ export class UIScene extends Phaser.Scene {
         .setScrollFactor(0);
       this.invBagLayer.add(empty);
       this.invBagPieces.push(empty);
+      this.invBagDetail?.setPosition(40, detailY);
       this.invBagDetail?.setText('PICK UP GEAR TO FILL THE BAG GRID.');
+      this.invHelp?.setPosition(GAME_W / 2, helpY);
       return;
     }
 
@@ -1935,12 +1973,8 @@ export class UIScene extends Phaser.Scene {
     const start = this.invBagPage * UIScene.BAG_PAGE_SIZE;
     const end = Math.min(bag.length, start + UIScene.BAG_PAGE_SIZE);
 
-    const cols = UIScene.BAG_COLS;
-    const cell = 48;
-    const gap = 8;
     const gridW = cols * cell + (cols - 1) * gap;
     const originX = GAME_W / 2 - gridW / 2 + cell / 2;
-    const originY = 300 + cell / 2;
 
     // Hit zone for wheel scroll over the bag grid
     const wheelZone = this.add
@@ -2039,13 +2073,16 @@ export class UIScene extends Phaser.Scene {
       }
     }
 
-    // Page + sort controls under the grid
-    const pagerY = originY + UIScene.BAG_ROWS * (cell + gap) - cell / 2 + 18;
+    // Page + sort controls under the grid (always above detail band)
+    const pagerY = Math.min(
+      originY + UIScene.BAG_ROWS * (cell + gap) - cell / 2 + 18,
+      detailY - 18,
+    );
     const canPrev = this.invBagPage > 0;
     const canNext = this.invBagPage < pages - 1;
 
     const prevBtn = this.add
-      .text(GAME_W / 2 - 120, pagerY, '◀ PREV', {
+      .text(GAME_W / 2 - 160, pagerY, '◀ PREV', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: canPrev ? '#7dffb3' : '#3a4050',
@@ -2073,7 +2110,7 @@ export class UIScene extends Phaser.Scene {
     this.invBagPieces.push(sortBtn);
 
     const pageLabel = this.add
-      .text(GAME_W / 2 + 55, pagerY, `${this.invBagPage + 1}/${pages}`, {
+      .text(GAME_W / 2 + 70, pagerY, `${this.invBagPage + 1}/${pages}`, {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#c5cde0',
@@ -2084,7 +2121,7 @@ export class UIScene extends Phaser.Scene {
     this.invBagPieces.push(pageLabel);
 
     const nextBtn = this.add
-      .text(GAME_W / 2 + 130, pagerY, 'NEXT ▶', {
+      .text(GAME_W / 2 + 170, pagerY, 'NEXT ▶', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: canNext ? '#7dffb3' : '#3a4050',
@@ -2098,8 +2135,12 @@ export class UIScene extends Phaser.Scene {
     this.invBagLayer.add(nextBtn);
     this.invBagPieces.push(nextBtn);
 
+    this.invBagDetail?.setPosition(40, detailY);
+    this.invHelp?.setPosition(GAME_W / 2, helpY);
+
     const sel = bag[this.invBagSelected];
     if (sel) {
+      // One compact detail block (no extra sort/page lines — those have chrome)
       const bits = [
         sel.name + (sel.count > 1 ? ` x${sel.count}` : ''),
         sel.blurb,
@@ -2107,8 +2148,6 @@ export class UIScene extends Phaser.Scene {
       if (sel.equipped) bits.push('[EQUIPPED]');
       else if (sel.usable) bits.push('CLICK AGAIN / U TO USE');
       else if (sel.slot) bits.push(`CLICK TO EQUIP · SLOT ${sel.slot.toUpperCase()}`);
-      bits.push(`SORT ${sortTag} (T OR CLICK) · ${bag.length} ITEMS`);
-      if (pages > 1) bits.push(`[ ] OR WHEEL TO PAGE`);
       this.invBagDetail?.setText(bits.join('\n'));
     }
   }
@@ -2159,13 +2198,11 @@ export class UIScene extends Phaser.Scene {
     ].filter(Boolean);
     this.itemsText?.setText(bits.join(' · '));
 
-    // Row 2 left — place only (shorten land suffix for width)
-    const place = roomTitle
-      .replace(/\s*·\s*KINGDOMZ$/i, '')
-      .replace(/\s*·\s*SEWERZ$/i, '')
-      .replace(/\s*·\s*SURFACE$/i, '')
-      .trim();
-    this.roomText?.setText(place || roomTitle);
+    // Dynamic row-1 layout: vitals sit after hearts, never collide
+    const heartsRight = 16 + (this.heartsText.width || 0) + 20;
+    this.itemsText?.setPosition(heartsRight, 14);
+    const itemsMaxW = Math.max(120, GAME_W - heartsRight - 24);
+    this.itemsText?.setWordWrapWidth(itemsMaxW, true);
 
     // Row 2 right — controls + quest (never mixed into vitals)
     const quest =
@@ -2185,6 +2222,18 @@ export class UIScene extends Phaser.Scene {
       .filter(Boolean)
       .join('  ');
     this.hintsText?.setText(hints);
+    this.hintsText?.setPosition(GAME_W - 16, 40);
+
+    // Row 2 left — place only; wrap width stops short of hints
+    const place = roomTitle
+      .replace(/\s*·\s*KINGDOMZ$/i, '')
+      .replace(/\s*·\s*SEWERZ$/i, '')
+      .replace(/\s*·\s*SURFACE$/i, '')
+      .trim();
+    this.roomText?.setText(place || roomTitle);
+    const hintsW = this.hintsText?.width ?? 160;
+    const roomMax = Math.max(160, GAME_W - 32 - hintsW - 28);
+    this.roomText?.setWordWrapWidth(roomMax, true);
 
     if (this.inventoryOpen) this.renderInventory(save);
   };

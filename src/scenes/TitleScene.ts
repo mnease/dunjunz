@@ -61,8 +61,19 @@ export class TitleScene extends Phaser.Scene {
       .setStrokeStyle(3, COLORS.green, 0.9)
       .setFillStyle(0x000000, 0);
 
+    // Vertical rhythm for 16:9 — keep blocks spaced so nothing collides
+    const yTitle = Math.floor(GAME_H * 0.11);
+    const ySlogan = yTitle + 48;
+    const yNoAds = ySlogan + 22;
+    const yBlurb = yNoAds + 52;
+    const yStatus = yBlurb + 78;
+    const ySlots = yStatus + 36;
+    const yModes = yStatus + 28;
+    const yPrompt = GAME_H - 110;
+    const yFooter = GAME_H - 36;
+
     this.add
-      .text(GAME_W / 2, 72, 'DUNJUNZ', {
+      .text(GAME_W / 2, yTitle, 'DUNJUNZ', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '40px',
         color: '#7dffb3',
@@ -72,7 +83,7 @@ export class TitleScene extends Phaser.Scene {
       .setShadow(4, 4, '#0d3d28', 0, false, true);
 
     this.add
-      .text(GAME_W / 2, 118, 'THE ULTIMATE TOP DOWN RPG', {
+      .text(GAME_W / 2, ySlogan, 'THE ULTIMATE TOP DOWN RPG', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '10px',
         color: '#ffc857',
@@ -81,7 +92,7 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(GAME_W / 2, 138, 'NO ADS EVER', {
+      .text(GAME_W / 2, yNoAds, 'NO ADS EVER', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#7dffb3',
@@ -92,7 +103,7 @@ export class TitleScene extends Phaser.Scene {
     this.blurbText = this.add
       .text(
         GAME_W / 2,
-        185,
+        yBlurb,
         [
           'SAVE PRIZELLA · TOAST THE TOWN',
           'GRADUATE HEROES INTO AN UNLIMITED ARMY',
@@ -104,13 +115,13 @@ export class TitleScene extends Phaser.Scene {
           fontSize: '10px',
           color: '#c5cde0',
           align: 'center',
-          lineSpacing: 8,
+          lineSpacing: 10,
         },
       )
       .setOrigin(0.5);
 
     this.statusText = this.add
-      .text(GAME_W / 2, 255, '', {
+      .text(GAME_W / 2, yStatus, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '9px',
         color: '#7dffb3',
@@ -120,7 +131,7 @@ export class TitleScene extends Phaser.Scene {
 
     for (let i = 0; i < 3; i++) {
       const t = this.add
-        .text(GAME_W / 2, 290 + i * 32, '', {
+        .text(GAME_W / 2, ySlots + i * 36, '', {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '11px',
           color: '#c5cde0',
@@ -133,12 +144,12 @@ export class TitleScene extends Phaser.Scene {
     // Mode select lines (hidden until phase)
     for (let i = 0; i < MODE_COUNT; i++) {
       const t = this.add
-        .text(GAME_W / 2, 275 + i * 42, '', {
+        .text(GAME_W / 2, yModes + i * 48, '', {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '11px',
           color: '#c5cde0',
           align: 'center',
-          lineSpacing: 5,
+          lineSpacing: 6,
         })
         .setOrigin(0.5)
         .setVisible(false);
@@ -146,12 +157,13 @@ export class TitleScene extends Phaser.Scene {
     }
 
     this.prompt = this.add
-      .text(GAME_W / 2, 470, '', {
+      .text(GAME_W / 2, yPrompt, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '11px',
         color: '#ffffff',
         align: 'center',
         lineSpacing: 14,
+        wordWrap: { width: GAME_W - 80 },
       })
       .setOrigin(0.5);
 
@@ -165,7 +177,7 @@ export class TitleScene extends Phaser.Scene {
     });
 
     this.add
-      .text(GAME_W / 2, 545, 'NEASEMEDIA  ·  V0.7  ·  HUMANZ & VILLAGEZ', {
+      .text(GAME_W / 2, yFooter, 'NEASEMEDIA  ·  V0.7  ·  HUMANZ & VILLAGEZ', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#6a738a',

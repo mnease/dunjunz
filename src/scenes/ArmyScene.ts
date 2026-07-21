@@ -87,7 +87,7 @@ export class ArmyScene extends Phaser.Scene {
       });
 
     this.logText = this.add
-      .text(20, 320, '', {
+      .text(20, Math.floor(GAME_H * 0.52), '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#7dffb3',
