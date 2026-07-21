@@ -41,6 +41,10 @@ import {
 import { spendAttrPoint, computePlayerDamage } from './attributes';
 import { appearanceFromSave, playerTextureKeyFromSave } from './appearance';
 import { budPoseTextureKey, poseForAttackStyle } from './bud-anim';
+import {
+  swingTextureKey,
+  weaponLookFromTemplateId,
+} from './weapon-visuals';
 import { effectivePrimary } from './rarity';
 import { defaultSave, loadSave } from './save';
 import { mintItem } from './items';
@@ -186,14 +190,14 @@ describe('loot multi-type', () => {
     // Still sometimes off-class
     expect(staff + swordish).toBeLessThanOrEqual(n);
 
-    let bows = 0;
+    let ranged = 0;
     for (let i = 0; i < n; i++) {
       const w = pickWeapon(mulberry32(i * 19 + 5), {
         primaryClass: 'ranger',
       });
-      if (w === 'short_bow') bows += 1;
+      if (w === 'short_bow' || w === 'hunter_crossbow') ranged += 1;
     }
-    expect(bows).toBeGreaterThan(n * 0.25);
+    expect(ranged).toBeGreaterThan(n * 0.25);
 
     // No class → any weapon from pool is fine
     const open = pickWeapon(mulberry32(42), {});
@@ -483,6 +487,36 @@ describe('appearance + key on doll', () => {
     expect(playerTextureKeyFromSave(save)).toContain('_iron_');
     expect(playerTextureKeyFromSave(save)).toContain('_gold_');
   });
+
+  it('crossbow look is distinct from bow on the avatar', () => {
+    const bow = {
+      uid: 't-bow',
+      templateId: 'short_bow',
+      rarity: 'common' as const,
+      enhancement: 0,
+    };
+    const xbow = {
+      uid: 't-xbow',
+      templateId: 'hunter_crossbow',
+      rarity: 'common' as const,
+      enhancement: 0,
+    };
+    const withBow = {
+      ...defaultSave(),
+      bag: [bow],
+      equipped: { ...defaultSave().equipped, weapon: bow.uid },
+    };
+    const withXbow = {
+      ...defaultSave(),
+      bag: [xbow],
+      equipped: { ...defaultSave().equipped, weapon: xbow.uid },
+    };
+    expect(appearanceFromSave(withBow).weapon).toBe('bow');
+    expect(appearanceFromSave(withXbow).weapon).toBe('crossbow');
+    expect(playerTextureKeyFromSave(withBow)).not.toBe(
+      playerTextureKeyFromSave(withXbow),
+    );
+  });
 });
 
 describe('bud anim poses', () => {
@@ -496,6 +530,28 @@ describe('bud anim poses', () => {
     expect(budPoseTextureKey('stretch')).toBe('best_bud_stretch');
     expect(budPoseTextureKey('grab')).toBe('best_bud_grab');
     expect(budPoseTextureKey('idle')).toBe('best_bud');
+  });
+});
+
+describe('weapon visuals', () => {
+  it('maps every weapon template to a unique look', () => {
+    const pairs: [string, string][] = [
+      ['mild_sword', 'sword'],
+      ['iron_blade', 'iron'],
+      ['sand_saber', 'saber'],
+      ['dunjun_cleaver', 'cleaver'],
+      ['honk_blade', 'honk'],
+      ['phaser', 'phaser'],
+      ['short_bow', 'bow'],
+      ['hunter_crossbow', 'crossbow'],
+      ['wizard_staff', 'staff'],
+    ];
+    const looks = new Set(pairs.map(([, l]) => l));
+    expect(looks.size).toBe(pairs.length);
+    for (const [id, look] of pairs) {
+      expect(weaponLookFromTemplateId(id)).toBe(look);
+      expect(swingTextureKey(look as never)).toBe(`swing_${look}`);
+    }
   });
 });
 

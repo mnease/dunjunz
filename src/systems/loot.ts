@@ -55,6 +55,7 @@ export const WEAPON_POOL = [
   'dunjun_cleaver',
   'honk_blade',
   'short_bow',
+  'hunter_crossbow',
   'wizard_staff',
   'phaser',
 ];
@@ -79,9 +80,13 @@ export const CLASS_WEAPON_PREFS: Record<
   barbarian: { weapons: MELEE_WEAPONS, bias: 0.65 },
   paladin: { weapons: MELEE_WEAPONS, bias: 0.6 },
   monk: { weapons: ['mild_sword', 'iron_blade'], bias: 0.55 },
-  ranger: { weapons: ['short_bow', ...MELEE_WEAPONS.slice(0, 2)], bias: 0.68, ammo: 'arrows' },
+  ranger: {
+    weapons: ['short_bow', 'hunter_crossbow', ...MELEE_WEAPONS.slice(0, 2)],
+    bias: 0.68,
+    ammo: 'arrows',
+  },
   rogue: {
-    weapons: ['mild_sword', 'iron_blade', 'short_bow', 'phaser'],
+    weapons: ['mild_sword', 'iron_blade', 'short_bow', 'hunter_crossbow', 'phaser'],
     bias: 0.6,
   },
   bard: {
@@ -163,7 +168,7 @@ export function maybeClassAmmoDrop(
   rng: Rng,
   ctx: LootClassContext,
 ): LootDrop | null {
-  if (weaponId !== 'short_bow') return null;
+  if (weaponId !== 'short_bow' && weaponId !== 'hunter_crossbow') return null;
   const wantsAmmo =
     ctx.primaryClass === 'ranger' ||
     ctx.secondaryClass === 'ranger' ||

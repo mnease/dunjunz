@@ -10,6 +10,13 @@ import {
   type RingLook,
   type ShoesLook,
 } from './appearance';
+import {
+  drawWeaponAvatar,
+  drawWeaponIcon,
+  drawWeaponSwing,
+  swingTextureKey,
+  weaponLookFromTemplateId,
+} from './weapon-visuals';
 
 function canvasTex(
   scene: Phaser.Scene,
@@ -32,86 +39,11 @@ function hex(n: number): string {
   return `#${n.toString(16).padStart(6, '0')}`;
 }
 
-/** Draw unique hip / hand weapon silhouette (right side). */
 function drawWeapon(
   ctx: CanvasRenderingContext2D,
   look: WeaponLook,
 ): void {
-  if (look === 'none') return;
-
-  if (look === 'bow') {
-    // Compact recurve on right hip
-    ctx.fillStyle = '#6b4423';
-    ctx.fillRect(13, 6, 1, 7);
-    ctx.fillStyle = '#8b5a2b';
-    ctx.fillRect(14, 7, 1, 5);
-    ctx.fillStyle = '#d0d8e0';
-    ctx.fillRect(13, 7, 1, 1);
-    ctx.fillRect(13, 11, 1, 1);
-    return;
-  }
-  if (look === 'staff') {
-    ctx.fillStyle = '#6b4423';
-    ctx.fillRect(13, 4, 2, 9);
-    ctx.fillStyle = '#7dffb3';
-    ctx.fillRect(13, 3, 2, 2);
-    ctx.fillStyle = '#c9ffe0';
-    ctx.fillRect(13, 3, 1, 1);
-    return;
-  }
-  if (look === 'phaser') {
-    ctx.fillStyle = '#3a3a48';
-    ctx.fillRect(12, 8, 3, 3);
-    ctx.fillStyle = '#ff3344';
-    ctx.fillRect(14, 9, 2, 1);
-    ctx.fillStyle = '#888';
-    ctx.fillRect(12, 9, 1, 1);
-    return;
-  }
-  if (look === 'cleaver') {
-    ctx.fillStyle = '#ff6b9d';
-    ctx.fillRect(12, 6, 3, 5);
-    ctx.fillStyle = '#c04070';
-    ctx.fillRect(14, 6, 1, 5);
-    ctx.fillStyle = '#8b5a2b';
-    ctx.fillRect(12, 11, 2, 2);
-    return;
-  }
-  if (look === 'honk') {
-    // Gold blade + green goose accent
-    ctx.fillStyle = '#ffe08a';
-    ctx.fillRect(13, 5, 2, 7);
-    ctx.fillStyle = '#5ad45a';
-    ctx.fillRect(13, 5, 2, 2);
-    ctx.fillStyle = '#8b5a2b';
-    ctx.fillRect(12, 11, 3, 1);
-    return;
-  }
-  if (look === 'saber') {
-    // Curved sand-gold edge
-    ctx.fillStyle = '#e8c070';
-    ctx.fillRect(13, 5, 1, 7);
-    ctx.fillRect(14, 6, 1, 5);
-    ctx.fillStyle = '#c9a227';
-    ctx.fillRect(12, 11, 3, 1);
-    return;
-  }
-  if (look === 'iron') {
-    ctx.fillStyle = '#8a98a8';
-    ctx.fillRect(13, 5, 2, 7);
-    ctx.fillStyle = '#5a6878';
-    ctx.fillRect(14, 5, 1, 7);
-    ctx.fillStyle = '#6a5a40';
-    ctx.fillRect(12, 11, 4, 1);
-    return;
-  }
-  // default mild sword — bright steel short blade
-  ctx.fillStyle = '#dfe6f0';
-  ctx.fillRect(13, 6, 2, 6);
-  ctx.fillStyle = '#c9a227';
-  ctx.fillRect(12, 11, 4, 1);
-  ctx.fillStyle = '#8b5a2b';
-  ctx.fillRect(13, 12, 2, 1);
+  drawWeaponAvatar(ctx, look);
 }
 
 /** Draw unique left-arm shield. */
@@ -388,60 +320,12 @@ function drawItemIcon(
     ctx.fillRect(11, 4, 2, 3);
     return;
   }
-  if (
-    itemId === 'mild_sword' ||
-    itemId === 'iron_blade' ||
-    itemId === 'sand_saber' ||
-    itemId === 'dunjun_cleaver' ||
-    itemId === 'honk_blade'
-  ) {
-    ctx.fillStyle =
-      itemId === 'dunjun_cleaver'
-        ? '#ff6b9d'
-        : itemId === 'sand_saber'
-          ? '#e8c070'
-          : itemId === 'iron_blade'
-            ? '#a0b0c0'
-            : itemId === 'honk_blade'
-              ? '#ffe08a'
-              : '#dfe6f0';
-    ctx.fillRect(11, 4, 2, 14);
-    ctx.fillStyle = '#c9a227';
-    ctx.fillRect(8, 14, 8, 2);
-    ctx.fillStyle = '#8b5a2b';
-    ctx.fillRect(11, 16, 2, 4);
-    return;
-  }
-  if (itemId === 'phaser') {
-    ctx.fillStyle = '#444';
-    ctx.fillRect(6, 10, 12, 4);
-    ctx.fillStyle = '#ff3344';
-    ctx.fillRect(14, 11, 6, 2);
-    ctx.fillStyle = '#888';
-    ctx.fillRect(4, 11, 3, 2);
-    return;
-  }
-  if (itemId === 'short_bow') {
-    ctx.strokeStyle = '#8b5a2b';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(12, 12, 8, -1.2, 1.2);
-    ctx.stroke();
-    ctx.strokeStyle = '#ddd';
-    ctx.beginPath();
-    ctx.moveTo(12, 4);
-    ctx.lineTo(12, 20);
-    ctx.stroke();
-    return;
-  }
-  if (itemId === 'wizard_staff') {
-    ctx.fillStyle = '#6b4423';
-    ctx.fillRect(11, 4, 2, 16);
-    ctx.fillStyle = '#7dffb3';
-    ctx.beginPath();
-    ctx.arc(12, 5, 3, 0, Math.PI * 2);
-    ctx.fill();
-    return;
+  {
+    const wLook = weaponLookFromTemplateId(itemId);
+    if (wLook) {
+      drawWeaponIcon(ctx, wLook);
+      return;
+    }
   }
   if (itemId === 'beam_me_up' || itemId === 'arrows') {
     ctx.fillStyle = itemId === 'arrows' ? '#c8b090' : '#4ecdc4';
@@ -776,6 +660,13 @@ export function generateTextures(scene: Phaser.Scene): void {
     'iron_blade',
     'sand_saber',
     'dunjun_cleaver',
+    'honk_blade',
+    'short_bow',
+    'hunter_crossbow',
+    'wizard_staff',
+    'phaser',
+    'arrows',
+    'beam_me_up',
     'leather_armor',
     'reinforced_leather',
     'leather_helmet',
@@ -819,16 +710,26 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.strokeRect(4, 4, 32, 32);
   });
 
+  // Default melee swing + one FX frame per weapon look (attack reads uniquely)
+  const swingLooks: WeaponLook[] = [
+    'sword',
+    'iron',
+    'saber',
+    'cleaver',
+    'honk',
+    'phaser',
+    'bow',
+    'crossbow',
+    'staff',
+  ];
   canvasTex(scene, 'sword-swing', 20, 20, (ctx) => {
-    ctx.fillStyle = '#dfe6f0';
-    ctx.fillRect(8, 0, 4, 14);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(9, 1, 1, 10);
-    ctx.fillStyle = '#c9a227';
-    ctx.fillRect(6, 12, 8, 3);
-    ctx.fillStyle = '#8b5a2b';
-    ctx.fillRect(8, 15, 4, 4);
+    drawWeaponSwing(ctx, 'sword');
   });
+  for (const look of swingLooks) {
+    canvasTex(scene, swingTextureKey(look), 20, 20, (ctx) => {
+      drawWeaponSwing(ctx, look);
+    });
+  }
 
   // Motion arc for attack VFX
   canvasTex(scene, 'slash-arc', 24, 24, (ctx) => {

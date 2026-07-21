@@ -42,6 +42,7 @@ import {
   withHiddenWeapon,
 } from '../systems/appearance';
 import { ensurePlayerTexture } from '../systems/textures';
+import { swingTextureKey } from '../systems/weapon-visuals';
 import {
   ATTR_IDS,
   spendAttrPoint,
@@ -2994,6 +2995,12 @@ export class GameScene extends Phaser.Scene {
       angle = 90;
     }
 
+    // Attack FX matches equipped weapon silhouette
+    const wLook = appearanceFromSave(this.save).weapon;
+    const swingKey = swingTextureKey(wLook);
+    this.swordHit.setTexture(
+      this.textures.exists(swingKey) ? swingKey : 'sword-swing',
+    );
     this.swordHit.setPosition(x, y);
     this.swordHit.setAngle(angle - 25);
     this.swordHit.setVisible(true);

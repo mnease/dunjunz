@@ -23,6 +23,7 @@ export type WeaponLook =
   | 'honk'
   | 'phaser'
   | 'bow'
+  | 'crossbow'
   | 'staff';
 export type ShieldLook = 'none' | 'wood' | 'iron' | 'tower';
 export type KeyLook = 'none' | 'key';
@@ -66,6 +67,8 @@ function mapWeapon(look: string | undefined): WeaponLook {
       return 'phaser';
     case 'bow':
       return 'bow';
+    case 'crossbow':
+      return 'crossbow';
     case 'staff':
       return 'staff';
     default:
