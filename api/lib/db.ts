@@ -1,6 +1,8 @@
-import postgres, { type Sql } from 'postgres';
+type Sql = ReturnType<typeof import('postgres')> extends never
+  ? never
+  : import('postgres').Sql;
 
-let sql: Sql | null = null;
+let sqlPromise: Promise<Sql> | null = null;
 
 const DB_URL_KEYS = [
   'DATABASE_URL',
@@ -41,26 +43,31 @@ export function dbConfigured(): boolean {
   return !!resolveDatabaseUrl();
 }
 
-export function getSql(): Sql {
-  const url = resolveDatabaseUrl();
-  if (!url) {
-    throw new Error(
-      'No database URL (expect dunjunz_DATABASE_URL / dunjunz_POSTGRES_URL)',
-    );
+/** Lazy dynamic import — static import of postgres crashed some Vercel functions. */
+export async function getSql(): Promise<Sql> {
+  if (!sqlPromise) {
+    sqlPromise = (async () => {
+      const url = resolveDatabaseUrl();
+      if (!url) {
+        throw new Error(
+          'No database URL (expect dunjunz_DATABASE_URL / dunjunz_POSTGRES_URL)',
+        );
+      }
+      const mod = await import('postgres');
+      const postgres = (mod as { default?: typeof mod }).default ?? mod;
+      return (postgres as typeof import('postgres'))(url, {
+        ssl: 'require',
+        max: 1,
+        prepare: false,
+        connect_timeout: 10,
+        idle_timeout: 20,
+      }) as unknown as Sql;
+    })();
   }
-  if (!sql) {
-    sql = postgres(url, {
-      ssl: 'require',
-      max: 1,
-      prepare: false,
-      connect_timeout: 10,
-      idle_timeout: 20,
-    });
-  }
-  return sql;
+  return sqlPromise;
 }
 
 export async function pingDb(): Promise<void> {
-  const s = getSql();
+  const s = await getSql();
   await s`SELECT 1 AS ok`;
 }

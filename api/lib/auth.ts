@@ -24,7 +24,7 @@ export async function resolveAuth(
   const sessionRaw =
     cookies[SESSION_COOKIE] || (bearer?.startsWith('sess_') ? bearer : null);
   if (sessionRaw) {
-    const sql = getSql();
+    const sql = await getSql();
     const h = hashToken(sessionRaw);
     const rows = await sql`
       SELECT s.user_id, u.email, u.email_verified_at
@@ -56,7 +56,7 @@ export async function resolveAuth(
   // 2) Guest bearer
   const guestRaw = bearer && !bearer.startsWith('sess_') ? bearer : null;
   if (guestRaw) {
-    const sql = getSql();
+    const sql = await getSql();
     const h = hashToken(guestRaw);
     const rows = await sql`
       SELECT g.user_id, u.email, u.email_verified_at
@@ -99,7 +99,7 @@ function extractBearer(req: VercelRequest): string | null {
 }
 
 export async function ensureThreeEmptySlots(userId: string): Promise<void> {
-  const sql = getSql();
+  const sql = await getSql();
   for (let i = 0; i < 3; i++) {
     await sql`
       INSERT INTO save_slots (user_id, slot_index, name, is_empty)
@@ -110,7 +110,7 @@ export async function ensureThreeEmptySlots(userId: string): Promise<void> {
 }
 
 export async function listSlotSummaries(userId: string) {
-  const sql = getSql();
+  const sql = await getSql();
   const rows = await sql`
     SELECT id, slot_index, name, summary_level, summary_room, summary_land,
            is_empty, save_version, updated_at

@@ -47,7 +47,7 @@ export default async function handler(
       return;
     }
 
-    const sql = getSql();
+    const sql = await getSql();
     const steps: string[] = [];
 
     await sql`CREATE EXTENSION IF NOT EXISTS pgcrypto`;

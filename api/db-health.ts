@@ -18,7 +18,7 @@ export default async function handler(
       });
       return;
     }
-    const sql = getSql();
+    const sql = await getSql();
     const one = await sql`SELECT 1 AS n`;
     let usersTable = false;
     let usersDetail = '';

@@ -6,7 +6,7 @@ export async function rateLimit(
   limit: number,
   windowMs: number,
 ): Promise<boolean> {
-  const sql = getSql();
+  const sql = await getSql();
   const rows = await sql`
     SELECT count, window_start FROM rate_limits WHERE bucket_key = ${bucket}
   `;

@@ -29,7 +29,7 @@ export default async function handler(
   }
 
   try {
-    const sql = getSql();
+    const sql = await getSql();
     const th = hashToken(token);
     const rows = await sql`
       SELECT id, user_id, expires_at, used_at

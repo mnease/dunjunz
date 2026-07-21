@@ -48,7 +48,7 @@ export default async function handler(
       res.status(413).json({ ok: false, error: 'Save too large.' });
       return;
     }
-    const sql = getSql();
+    const sql = await getSql();
     await sql`
       UPDATE save_slots SET
         name = ${name},

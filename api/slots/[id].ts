@@ -27,7 +27,7 @@ export default async function handler(
       res.status(401).json({ ok: false, error: 'unauthorized' });
       return;
     }
-    const sql = getSql();
+    const sql = await getSql();
 
     if (req.method === 'GET') {
       if (!(await rateLimit(`slots:r:${auth.userId}`, 120, 60_000))) {

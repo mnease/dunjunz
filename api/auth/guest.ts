@@ -46,7 +46,7 @@ export default async function handler(
       return;
     }
 
-    const sql = getSql();
+    const sql = await getSql();
     const norm = email.toLowerCase();
 
     const existing = await sql`

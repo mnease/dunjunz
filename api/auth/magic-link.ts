@@ -50,7 +50,7 @@ export default async function handler(
       return;
     }
 
-    const sql = getSql();
+    const sql = await getSql();
     let userId: string;
     const existing = await sql`
       SELECT id FROM users WHERE email_normalized = ${norm} LIMIT 1

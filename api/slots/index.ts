@@ -55,7 +55,7 @@ export default async function handler(
       ? body.data
       : defaultSaveJson();
     const sum = summarizeSave(data);
-    const sql = getSql();
+    const sql = await getSql();
 
     await ensureThreeEmptySlots(auth.userId);
     await sql`

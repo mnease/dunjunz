@@ -18,7 +18,7 @@ export default async function handler(
       const cookies = parseCookies(req);
       const raw = cookies.dunjunz_session;
       if (raw) {
-        const sql = getSql();
+        const sql = await getSql();
         await sql`
           UPDATE sessions SET revoked_at = now()
           WHERE token_hash = ${hashToken(raw)} AND revoked_at IS NULL
