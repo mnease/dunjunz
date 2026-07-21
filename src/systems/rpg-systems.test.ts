@@ -490,6 +490,74 @@ describe('potion use', () => {
   });
 });
 
+describe('inventory sort', () => {
+  it('sorts by name, type, equipped, rarity', async () => {
+    const {
+      sortInventoryLines,
+      nextInventorySortMode,
+      inventorySortLabel,
+    } = await import('./inventory');
+    type Line = import('./inventory').InventoryLine;
+    const lines: Line[] = [
+      {
+        templateId: 'potion',
+        name: 'HEALING POTION',
+        count: 2,
+        blurb: 'heal',
+        usable: true,
+        equipped: false,
+      },
+      {
+        uid: 'i_1',
+        templateId: 'iron_blade',
+        name: 'IRON BLADE (RARE)',
+        count: 1,
+        blurb: 'sword',
+        usable: false,
+        slot: 'weapon',
+        equipped: false,
+        rarity: 'rare',
+      },
+      {
+        uid: 'i_2',
+        templateId: 'leather_armor',
+        name: 'LEATHER BREASTPLATE',
+        count: 1,
+        blurb: 'armor',
+        usable: false,
+        slot: 'breastplate',
+        equipped: true,
+        rarity: 'common',
+      },
+      {
+        uid: 'i_3',
+        templateId: 'dunjun_cleaver',
+        name: 'DUNJUN CLEAVER',
+        count: 1,
+        blurb: 'big',
+        usable: false,
+        slot: 'weapon',
+        equipped: false,
+        rarity: 'legendary',
+      },
+    ];
+    const byName = sortInventoryLines(lines, 'name');
+    expect(byName[0]!.name <= byName[1]!.name).toBe(true);
+
+    const byEq = sortInventoryLines(lines, 'equipped');
+    expect(byEq[0]!.equipped).toBe(true);
+
+    const byR = sortInventoryLines(lines, 'rarity');
+    expect(byR[0]!.rarity).toBe('legendary');
+
+    const byType = sortInventoryLines(lines, 'type');
+    expect(byType[0]!.usable).toBe(true);
+
+    expect(nextInventorySortMode('default')).toBe('name');
+    expect(inventorySortLabel('rarity')).toBe('RARITY');
+  });
+});
+
 describe('listInventory', () => {
   it('lists stacks and bag', () => {
     let save = defaultSave();

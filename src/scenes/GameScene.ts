@@ -474,6 +474,9 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-PAGE_DOWN', () => {
       if (this.inventoryOpen) this.game.events.emit('inventory-bag-page', 1);
     });
+    kb.on('keydown-T', () => {
+      if (this.inventoryOpen) this.game.events.emit('inventory-bag-sort');
+    });
     kb.on('keydown-COMMA', () => this.onMapzNav('land-prev'));
     kb.on('keydown-PERIOD', () => this.onMapzNav('land-next'));
     kb.on('keydown-ONE', () => this.onDigitKey(1));

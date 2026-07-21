@@ -82,7 +82,109 @@ export interface InventoryLine {
   rarity?: string;
 }
 
-export function listInventory(save: SaveData): InventoryLine[] {
+/** Bag display sort modes (cycle in inventory UI). */
+export type InventorySortMode =
+  | 'default'
+  | 'name'
+  | 'type'
+  | 'equipped'
+  | 'rarity';
+
+export const INVENTORY_SORT_MODES: InventorySortMode[] = [
+  'default',
+  'name',
+  'type',
+  'equipped',
+  'rarity',
+];
+
+export function inventorySortLabel(mode: InventorySortMode): string {
+  switch (mode) {
+    case 'name':
+      return 'NAME';
+    case 'type':
+      return 'TYPE';
+    case 'equipped':
+      return 'EQUIPPED';
+    case 'rarity':
+      return 'RARITY';
+    default:
+      return 'DEFAULT';
+  }
+}
+
+export function nextInventorySortMode(
+  mode: InventorySortMode,
+): InventorySortMode {
+  const i = INVENTORY_SORT_MODES.indexOf(mode);
+  return INVENTORY_SORT_MODES[(i + 1) % INVENTORY_SORT_MODES.length]!;
+}
+
+const SLOT_SORT_ORDER: Record<string, number> = {
+  weapon: 0,
+  shield: 1,
+  helmet: 2,
+  breastplate: 3,
+  greaves: 4,
+  shoes: 5,
+  gloves: 6,
+  amulet: 7,
+  ring: 8,
+  key: 9,
+};
+
+const RARITY_SORT_ORDER: Record<string, number> = {
+  legendary: 0,
+  epic: 1,
+  rare: 2,
+  uncommon: 3,
+  common: 4,
+};
+
+function typeRank(line: InventoryLine): number {
+  if (line.usable) return 0; // potions / consumables first
+  if (line.slot) return 10 + (SLOT_SORT_ORDER[line.slot] ?? 20);
+  return 30; // mats / junk
+}
+
+/**
+ * Sort a bag listing for display. Does not mutate the save — pure UI order.
+ */
+export function sortInventoryLines(
+  lines: InventoryLine[],
+  mode: InventorySortMode,
+): InventoryLine[] {
+  if (mode === 'default' || lines.length < 2) return lines.slice();
+
+  const copy = lines.slice();
+  copy.sort((a, b) => {
+    if (mode === 'name') {
+      return a.name.localeCompare(b.name) || a.templateId.localeCompare(b.templateId);
+    }
+    if (mode === 'type') {
+      const tr = typeRank(a) - typeRank(b);
+      if (tr !== 0) return tr;
+      return a.name.localeCompare(b.name);
+    }
+    if (mode === 'equipped') {
+      if (a.equipped !== b.equipped) return a.equipped ? -1 : 1;
+      const tr = typeRank(a) - typeRank(b);
+      if (tr !== 0) return tr;
+      return a.name.localeCompare(b.name);
+    }
+    // rarity: best first; stacks (no rarity) after gear
+    const ra = a.rarity ? (RARITY_SORT_ORDER[a.rarity] ?? 5) : 6;
+    const rb = b.rarity ? (RARITY_SORT_ORDER[b.rarity] ?? 5) : 6;
+    if (ra !== rb) return ra - rb;
+    return a.name.localeCompare(b.name);
+  });
+  return copy;
+}
+
+export function listInventory(
+  save: SaveData,
+  sortMode: InventorySortMode = 'default',
+): InventoryLine[] {
   const lines: InventoryLine[] = [];
 
   for (const [id, count] of Object.entries(save.stacks)) {
@@ -117,7 +219,7 @@ export function listInventory(save: SaveData): InventoryLine[] {
     });
   }
 
-  return lines;
+  return sortInventoryLines(lines, sortMode);
 }
 
 export type UseItemResult =

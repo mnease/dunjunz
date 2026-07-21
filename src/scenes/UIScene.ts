@@ -5,7 +5,12 @@ import {
   itemIconKey,
   playerTextureKeyFromSave,
 } from '../systems/appearance';
-import { listInventory } from '../systems/inventory';
+import {
+  inventorySortLabel,
+  listInventory,
+  nextInventorySortMode,
+  type InventorySortMode,
+} from '../systems/inventory';
 import { ALL_EQUIP_SLOTS, displayItemName, findInBag } from '../systems/items';
 import { getBestBud, isCompanionActive } from '../systems/best-bud';
 import {
@@ -98,6 +103,8 @@ export class UIScene extends Phaser.Scene {
   private invBagSelected = 0;
   /** Bag grid page (0-based). 8×3 = 24 slots per page. */
   private invBagPage = 0;
+  /** Display sort for bag listing (does not reorder save data). */
+  private invBagSort: InventorySortMode = 'default';
   private invHelp: Phaser.GameObjects.Text | null = null;
 
   private static readonly BAG_COLS = 8;
@@ -694,7 +701,7 @@ export class UIScene extends Phaser.Scene {
       .text(
         GAME_W / 2,
         GAME_H - 28,
-        'Y BUDDY · CLICK BAG · [ ] PAGE · WHEEL · EQUIP KEYS · U USE · I/ESC',
+        'Y BUDDY · T SORT · [ ] PAGE · WHEEL · EQUIP · U USE · I/ESC',
         {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '8px',
@@ -726,9 +733,31 @@ export class UIScene extends Phaser.Scene {
     this.shiftBagPage(dir);
   };
 
+  private onBagSort = (): void => {
+    if (!this.inventoryOpen || !this.lastSave) return;
+    this.cycleBagSort();
+  };
+
+  private bagList(save: SaveData) {
+    return listInventory(save, this.invBagSort);
+  }
+
+  private cycleBagSort(): void {
+    if (!this.lastSave) return;
+    this.invBagSort = nextInventorySortMode(this.invBagSort);
+    this.invBagPage = 0;
+    this.invBagSelected = 0;
+    playSfx('ui_click');
+    this.renderBagGrid(this.lastSave);
+    this.game.events.emit(
+      'toast',
+      `BAG SORT: ${inventorySortLabel(this.invBagSort)}`,
+    );
+  }
+
   private shiftBagPage(dir: number): void {
     if (!this.lastSave) return;
-    const bag = listInventory(this.lastSave);
+    const bag = this.bagList(this.lastSave);
     const pages = Math.max(1, Math.ceil(bag.length / UIScene.BAG_PAGE_SIZE));
     const next = Phaser.Math.Clamp(this.invBagPage + dir, 0, pages - 1);
     if (next === this.invBagPage) return;
@@ -748,7 +777,7 @@ export class UIScene extends Phaser.Scene {
     if (open) {
       // Fresh open: if selection off-page, jump to its page
       if (this.lastSave) {
-        const bag = listInventory(this.lastSave);
+        const bag = this.bagList(this.lastSave);
         if (this.invBagSelected >= bag.length) this.invBagSelected = 0;
         this.invBagPage = Math.floor(
           this.invBagSelected / UIScene.BAG_PAGE_SIZE,
@@ -804,6 +833,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('inventory-toggle', this.onInventoryToggle, this);
     this.game.events.on('inventory-refresh', this.onInventoryRefresh, this);
     this.game.events.on('inventory-bag-page', this.onBagPage, this);
+    this.game.events.on('inventory-bag-sort', this.onBagSort, this);
     this.game.events.on('gear-target', this.onGearTarget, this);
     this.game.events.on('mapz-toggle', this.onMapzToggle, this);
     this.game.events.on('mapz-nav', this.onMapzNav, this);
@@ -829,6 +859,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('inventory-toggle', this.onInventoryToggle, this);
       this.game.events.off('inventory-refresh', this.onInventoryRefresh, this);
       this.game.events.off('inventory-bag-page', this.onBagPage, this);
+      this.game.events.off('inventory-bag-sort', this.onBagSort, this);
       this.game.events.off('gear-target', this.onGearTarget, this);
       this.game.events.off('mapz-toggle', this.onMapzToggle, this);
       this.game.events.off('mapz-nav', this.onMapzNav, this);
@@ -1866,15 +1897,16 @@ export class UIScene extends Phaser.Scene {
     if (!this.invBagLayer) return;
     this.clearInvBagPieces();
 
-    const bag = listInventory(save);
+    const bag = this.bagList(save);
     const pages = Math.max(1, Math.ceil(bag.length / UIScene.BAG_PAGE_SIZE));
     if (this.invBagPage >= pages) this.invBagPage = pages - 1;
     if (this.invBagPage < 0) this.invBagPage = 0;
 
+    const sortTag = inventorySortLabel(this.invBagSort);
     this.invBagTitle?.setText(
       bag.length
-        ? `BAG (${bag.length})  ·  PAGE ${this.invBagPage + 1}/${pages}`
-        : 'BAG (0)',
+        ? `BAG (${bag.length})  ·  ${sortTag}  ·  P${this.invBagPage + 1}/${pages}`
+        : `BAG (0)  ·  ${sortTag}`,
     );
 
     if (!bag.length) {
@@ -2007,13 +2039,13 @@ export class UIScene extends Phaser.Scene {
       }
     }
 
-    // Page controls under the grid
+    // Page + sort controls under the grid
     const pagerY = originY + UIScene.BAG_ROWS * (cell + gap) - cell / 2 + 18;
     const canPrev = this.invBagPage > 0;
     const canNext = this.invBagPage < pages - 1;
 
     const prevBtn = this.add
-      .text(GAME_W / 2 - 90, pagerY, '◀ PREV', {
+      .text(GAME_W / 2 - 120, pagerY, '◀ PREV', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: canPrev ? '#7dffb3' : '#3a4050',
@@ -2027,8 +2059,21 @@ export class UIScene extends Phaser.Scene {
     this.invBagLayer.add(prevBtn);
     this.invBagPieces.push(prevBtn);
 
+    const sortBtn = this.add
+      .text(GAME_W / 2 - 20, pagerY, `SORT:${sortTag}`, {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
+        color: '#ffc857',
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    sortBtn.on('pointerdown', () => this.cycleBagSort());
+    this.invBagLayer.add(sortBtn);
+    this.invBagPieces.push(sortBtn);
+
     const pageLabel = this.add
-      .text(GAME_W / 2, pagerY, `${this.invBagPage + 1} / ${pages}`, {
+      .text(GAME_W / 2 + 55, pagerY, `${this.invBagPage + 1}/${pages}`, {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#c5cde0',
@@ -2039,7 +2084,7 @@ export class UIScene extends Phaser.Scene {
     this.invBagPieces.push(pageLabel);
 
     const nextBtn = this.add
-      .text(GAME_W / 2 + 90, pagerY, 'NEXT ▶', {
+      .text(GAME_W / 2 + 130, pagerY, 'NEXT ▶', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: canNext ? '#7dffb3' : '#3a4050',
@@ -2062,7 +2107,8 @@ export class UIScene extends Phaser.Scene {
       if (sel.equipped) bits.push('[EQUIPPED]');
       else if (sel.usable) bits.push('CLICK AGAIN / U TO USE');
       else if (sel.slot) bits.push(`CLICK TO EQUIP · SLOT ${sel.slot.toUpperCase()}`);
-      if (pages > 1) bits.push(`[ ] OR WHEEL TO PAGE · ${bag.length} ITEMS`);
+      bits.push(`SORT ${sortTag} (T OR CLICK) · ${bag.length} ITEMS`);
+      if (pages > 1) bits.push(`[ ] OR WHEEL TO PAGE`);
       this.invBagDetail?.setText(bits.join('\n'));
     }
   }

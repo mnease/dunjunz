@@ -13,7 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
-- **Inventory bag pagination** — bag shows 8×3 slots per page; **◀ PREV / NEXT ▶**, mouse wheel, or **[ ]** / **PgUp/PgDn** when inventory is open (no more silent “+N more” cutoff).
+- **Inventory bag sort + pagination** — **T** or **SORT:** cycles DEFAULT → NAME → TYPE → EQUIPPED → RARITY; 8×3 pages with **◀ PREV / NEXT ▶**, wheel, **[ ]** / **PgUp/PgDn**.
 
 ### Added
 
