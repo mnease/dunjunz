@@ -11,6 +11,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ## [Unreleased]
 
+### Added
+
+- **Google Analytics** (`G-P8ZG98HDSC`) on landing + play via deferred `/analytics.js` (idle load; play page delays so Phaser boots first; beacon transport). Not ads.
+
 ### Changed
 
 - **Slogan** — "The ultimate top down RPG" · **No ads ever** (landing, play shell, title).
