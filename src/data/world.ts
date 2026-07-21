@@ -1,11 +1,14 @@
 import type { RoomDef } from '../types';
 
 /**
- * Tile legend (16×11 rooms, NES Zelda-style):
+ * Tile legend (authored 16×11 rooms, NES Zelda-style):
  *  . floor   # wall   g grass   d dirt   ~ water
  *  D open door   L locked door
  *  S stairs DOWN   U stairs UP
  *  = lava    P transporter pad
+ *
+ * Live view expands each room to fill the 16:9 playfield (see room-expand.ts
+ * + VIEW_TILES_* in config). Authored rows stay 16 wide / 11 tall.
  *
  * MAP CONTRACT
  * ------------

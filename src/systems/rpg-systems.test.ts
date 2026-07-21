@@ -786,7 +786,7 @@ describe('mapz discovery + fog of war', () => {
 });
 
 describe('world tile geometry', () => {
-  it('every room tile row is exactly 16 wide (no silent wall pad)', () => {
+  it('every authored room tile row is exactly 16 wide (no silent wall pad)', () => {
     for (const room of Object.values(ROOMS)) {
       expect(room.tiles).toHaveLength(11);
       for (let y = 0; y < room.tiles.length; y++) {
@@ -806,6 +806,59 @@ describe('world tile geometry', () => {
       const ch = meadow.tiles[y][15];
       expect(ch === '#' || ch === '~' || ch === 'L').toBe(false);
     }
+  });
+});
+
+describe('room expand to 16:9 view', () => {
+  it('fills VIEW_TILES and keeps east trail open on outer edge', async () => {
+    const { expandRoomTiles } = await import('./room-expand');
+    const { VIEW_TILES_W, VIEW_TILES_H, MAP_PIXEL_W, MAP_PIXEL_H, GAME_W, GAME_H, HUD_H } =
+      await import('../config');
+    expect(VIEW_TILES_W).toBeGreaterThan(16);
+    expect(VIEW_TILES_H).toBeGreaterThan(11);
+    // Map nearly fills playfield
+    expect(MAP_PIXEL_W).toBeLessThanOrEqual(GAME_W);
+    expect(MAP_PIXEL_H).toBeLessThanOrEqual(GAME_H - HUD_H);
+    expect(MAP_PIXEL_W).toBeGreaterThan(GAME_W * 0.9);
+    expect(MAP_PIXEL_H).toBeGreaterThan((GAME_H - HUD_H) * 0.9);
+
+    const meadow = ROOMS.overworld;
+    const ex = expandRoomTiles(meadow.tiles);
+    expect(ex.tiles).toHaveLength(VIEW_TILES_H);
+    expect(ex.tiles[0]?.length).toBe(VIEW_TILES_W);
+    // Expanded east openings remain walkable on the outer edge
+    for (const y of [4, 5, 6]) {
+      const ty = ex.offsetY + y;
+      const ch = ex.tiles[ty]?.[VIEW_TILES_W - 1];
+      expect(ch === '#' || ch === '~' || ch === 'L').toBe(false);
+    }
+  });
+
+  it('moves west doors to outer edge with a corridor', async () => {
+    const { expandRoomTiles } = await import('./room-expand');
+    const { VIEW_TILES_W } = await import('../config');
+    // Synthetic room with a west door mid-row
+    const src = [
+      '################',
+      '################',
+      '################',
+      '################',
+      'D..............#',
+      '################',
+      '################',
+      '################',
+      '################',
+      '################',
+      '################',
+    ];
+    const ex = expandRoomTiles(src);
+    const ty = ex.offsetY + 4;
+    expect(ex.tiles[ty]?.[0]).toBe('D');
+    // corridor between outer door and content is walkable
+    if (ex.offsetX > 1) {
+      expect(ex.tiles[ty]?.[1]).not.toBe('#');
+    }
+    expect(ex.tiles[ty]?.length).toBe(VIEW_TILES_W);
   });
 });
 

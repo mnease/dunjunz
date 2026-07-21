@@ -1,17 +1,28 @@
-/** Native canvas size — 16:9 HD (was 768×576 / 4:3). */
+/** Native canvas size — 16:9 HD. */
 export const GAME_W = 1280;
 export const GAME_H = 720;
 export const TILE = 16;
 export const SCALE = 3;
-export const VIEW_TILES_W = 16;
-export const VIEW_TILES_H = 11;
 /**
  * Two-row chrome: vitals (row 1) + place/hints (row 2).
  * Tall enough for Press Start 2P without clipping.
  */
 export const HUD_H = 64;
+
+/**
+ * Live dungeon grid fills the playfield under the HUD (16:9).
+ * Authored rooms stay 16×11 in world.ts and expand at load (room-expand).
+ * 26×13 × 48px = 1248×624 — nearly full 1280×656 play area.
+ */
+export const VIEW_TILES_W = Math.floor(GAME_W / (TILE * SCALE));
+export const VIEW_TILES_H = Math.floor((GAME_H - HUD_H) / (TILE * SCALE));
+
 export const MAP_PIXEL_W = VIEW_TILES_W * TILE * SCALE;
 export const MAP_PIXEL_H = VIEW_TILES_H * TILE * SCALE;
+
+/** Pixel playfield below HUD (may be slightly larger than MAP_* if not divisible). */
+export const PLAY_W = GAME_W;
+export const PLAY_H = GAME_H - HUD_H;
 
 export const COLORS = {
   black: 0x0a0c10,

@@ -18,6 +18,10 @@ import {
   spawnInsideEntryEdge,
 } from '../systems/map-spawn';
 import {
+  expandRoomTiles,
+  offsetEntityTile,
+} from '../systems/room-expand';
+import {
   enemyXpReward,
   grantXp,
 } from '../systems/progression';
@@ -331,6 +335,9 @@ export class GameScene extends Phaser.Scene {
   private transitionLock = false;
   private roomOriginX = 0;
   private roomOriginY = 0;
+  /** Authored→expanded tile offset for entities (room-expand). */
+  private roomTileOffsetX = 0;
+  private roomTileOffsetY = 0;
   private padCooldown = 0;
   /** Blocks walk-on portals right after room load (entry overlap). */
   private portalCooldown = 0;
@@ -1107,9 +1114,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private parseTiles(room: RoomDef): TileKind[][] {
+    // Expand authored 16×11 into full 16:9 playfield grid
+    const expanded = expandRoomTiles(room.tiles, VIEW_TILES_W, VIEW_TILES_H);
+    this.roomTileOffsetX = expanded.offsetX;
+    this.roomTileOffsetY = expanded.offsetY;
     const grid: TileKind[][] = [];
     for (let y = 0; y < VIEW_TILES_H; y++) {
-      const row = room.tiles[y] ?? '#'.repeat(VIEW_TILES_W);
+      const row = expanded.tiles[y] ?? '#'.repeat(VIEW_TILES_W);
       const cells: TileKind[] = [];
       for (let x = 0; x < VIEW_TILES_W; x++) {
         const ch = row[x] ?? '#';
@@ -1773,7 +1784,13 @@ export class GameScene extends Phaser.Scene {
         : def.id === 'royal-goose' && this.textures.exists('boss')
           ? 'boss'
           : (ENTITY_TEX[def.kind] ?? 'npc');
-    const pos = this.tileToWorld(def.x, def.y);
+    const placed = offsetEntityTile(
+      def.x,
+      def.y,
+      this.roomTileOffsetX,
+      this.roomTileOffsetY,
+    );
+    const pos = this.tileToWorld(placed.x, placed.y);
     const sprite = this.physics.add.sprite(pos.x, pos.y, tex);
     sprite.setScale(SCALE);
     sprite.setDepth(5);

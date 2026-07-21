@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Dungeon fills 16:9** — live room grid is **26×13** tiles (was 16×11 view), expanding authored maps at load so the playfield fills under the HUD. Edge doors/openings grow corridors to the outer rim; entities offset correctly.
 - **Readable unique weapons** — every weapon has a distinct silhouette on hip, inventory icon, and swing FX (short sword · iron broadsword · sand saber · cleaver · honk blade · bow · **hunter crossbow** · phaser · staff). Bow ≠ crossbow ≠ phaser at a glance.
 - **Buddy combat animations** — Best Buds stretch, grab, claw, spit, blink, coil, and heal with unique poses + elastic limb trails. Idle stretch yawns; grab toward chests/loot; attacks lash toward creeps (Gloop stretch is extra elastic). Honors reduce-motion.
 - **Unique equipped gear on avatar** — every slot paints a distinct look on the hero (and inventory doll): swords vs iron vs saber vs cleaver vs honk, phaser / bow / staff, wood / iron / tower shields, leather vs reinforced armor, greaves, boots of apology, gloves, gold / bauble / cube amulets, copper / silver / luck rings, key on belt. Loadout textures generate on demand.
