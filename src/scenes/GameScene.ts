@@ -69,6 +69,7 @@ import {
   runForjingAction,
 } from '../systems/forjing';
 import {
+  princessChampionDialog,
   questHint,
   rewardDezertzClear,
   rewardDunjunzClear,
@@ -1124,10 +1125,10 @@ export class GameScene extends Phaser.Scene {
   private die(): void {
     this.dialogLocked = true;
     this.game.events.emit('dialog-show', [
-      'YOU HAVE DIED.',
-      'THE BARD WILL WRITE A SONG.',
-      'IT WILL NOT BE FLATTERING.',
-      'RESPAWNING AT THE MEADOW...',
+      'YOU HAVE DIED. BUMMER.',
+      'THE BARD IS ALREADY WRITING A SONG.',
+      'IT WILL NOT BE FLATTERING. AT ALL.',
+      'RESPAWNING AT THE MEADOW... AGAIN...',
     ]);
     this.time.delayedCall(100, () => {
       this.save.hp = this.save.maxHp;
@@ -1263,6 +1264,7 @@ export class GameScene extends Phaser.Scene {
         '*ANGRY WOBBLE*',
         'YOU HIT ME FIRST!',
         'NO GIFTS FOR MEAN HEROES!',
+        'THAT\'S JUST SCIENCE.',
       ]);
       return;
     }
@@ -1272,7 +1274,7 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('dialog-show', [
         '*FRIENDLY WOBBLE*',
         'YOU ALREADY HAVE MY APOLOGY BOOTS.',
-        'PLEASE DO NOT HIT ME.',
+        'PLEASE DO NOT HIT ME. WE\'RE BUDS.',
         'WEST LEADS BACK TO THE ENTRANCE.',
       ]);
       return;
@@ -1294,7 +1296,8 @@ export class GameScene extends Phaser.Scene {
       '',
       'YOU GOT: BOOTS OF APOLOGY!',
       '(SHOES SLOT · +DEF · WON\'T DISSOLVE)',
-      'KILLING THE CUBE YIELDS A DIFFERENT PRIZE.',
+      'KILLING ME YIELDS A DIFFERENT PRIZE.',
+      'JUST... saying. Not suggesting.',
     ]);
     this.game.events.emit('toast', 'BOOTS OF APOLOGY!');
   }
@@ -1321,11 +1324,11 @@ export class GameScene extends Phaser.Scene {
     const summary = lootSummary(drops).slice(0, 4).join(', ');
     this.game.events.emit('dialog-show', [
       'THE CUBE COLLAPSES INTO A PUDDLE.',
-      'NO MORE APOLOGIES.',
+      'NO MORE APOLOGIES. NO MORE WOBBLES.',
       `LOOT: ${summary}`,
       this.save.flags['cube_forgiven']
-        ? 'AT LEAST YOU TOOK THE BOOTS FIRST.'
-        : 'IT NEVER GOT TO SAY SORRY.',
+        ? 'AT LEAST YOU TOOK THE BOOTS FIRST. MIXED VIBES.'
+        : 'IT NEVER GOT TO SAY SORRY. HARSH.',
     ]);
     this.game.events.emit('toast', `CUBE LOOT: ${summary}`);
   }
@@ -1340,7 +1343,8 @@ export class GameScene extends Phaser.Scene {
         this.save.bossDefeated = true;
         this.game.events.emit('dialog-show', [
           'THE DUNJUN MASTER FALLS... AGAIN?',
-          'A CHEST MAY STILL HOLD LOOT.',
+          'DEJA VU, BUT WITH MORE LOOT MAYBE.',
+          'CHECK THE CHEST. BE THOROUGH.',
         ]);
       }
       const chestDef = this.room.entities?.find((e) => e.id === 'boss-chest');
@@ -1375,7 +1379,10 @@ export class GameScene extends Phaser.Scene {
     }
     // Generic boss fallback
     this.save.bossDefeated = true;
-    this.game.events.emit('dialog-show', ['A BOSS FALLS!', 'NICE WORK.']);
+    this.game.events.emit('dialog-show', [
+      'A BOSS FALLS!',
+      'NICE WORK. THAT WAS RAD.',
+    ]);
   }
 
   private collectItem(actor: Actor): void {
@@ -1501,9 +1508,10 @@ export class GameScene extends Phaser.Scene {
 
     if (best.kind === 'princess' || best.id === 'prizella') {
       if (this.save.princessSaved || this.save.landsCleared.includes('dezertz')) {
+        // Post-save: kingdom duty + champion offer (not "personal hero")
         this.game.events.emit('dialog-show', [
-          'PRIZELLA: THANKS AGAIN.',
-          'NOW GO FORJE SOMETHING COOL.',
+          ...princessChampionDialog(),
+          '',
           ...questHint(this.save),
         ]);
       } else if (this.save.killed.includes('sand-wraith')) {
@@ -1514,13 +1522,15 @@ export class GameScene extends Phaser.Scene {
         };
         writeSave(this.save);
         this.game.events.emit('dialog-show', [
-          'PRIZELLA: YOU DID IT!',
-          'I AM FREE. MOSTLY.',
-          'QUEST COMPLETE... FOR NOW.',
+          'PRIZELLA: YOU DID IT! MATHEMATICAL!',
+          'I AM FREE. MOSTLY. THERE\'S STILL SAND.',
+          '',
+          ...princessChampionDialog(),
         ]);
       } else {
         this.game.events.emit('dialog-show', best.dialog ?? [
-          'PRIZELLA: DEFEAT THE WRAITH FIRST!',
+          'PRIZELLA: BONK THE WRAITH FIRST!',
+          'THEN WE TALK KINGDOM STUFF.',
         ]);
       }
       return;
@@ -1533,13 +1543,13 @@ export class GameScene extends Phaser.Scene {
         best.dialog?.length
           ? best.dialog
           : [
-              'TINKERER: RARE WARES!',
+              'TINKERER: RARE WARES! FAIR-ISH PRICES!',
               'PRESS ENTER TO BROWSE THE SHOP.',
             ];
       this.game.events.emit('dialog-show', [
         ...greet,
         '',
-        'OPENING SHOP…',
+        'OPENING SHOP… TRY NOT TO TOUCH EVERYTHING.',
       ]);
       // After dialog closes, open shop once
       const openShopAfter = (open: boolean) => {
@@ -1558,8 +1568,8 @@ export class GameScene extends Phaser.Scene {
         this.game.events.emit('dialog-show', [
           ...best.dialog,
           '',
-          'SWORD OF MILD ENTHUSIASM:',
-          'ACQUIRED. SPACE / Z TO SWING.',
+          'SWORD OF MILD ENTHUSIASM: YOURS NOW.',
+          'SPACE / Z TO SWING. GO BE COOL.',
         ]);
         return;
       }

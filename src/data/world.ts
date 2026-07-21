@@ -69,11 +69,12 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 3,
         dialog: [
           "IT'S DANGEROUS TO GO ALONE!",
-          'PRINCESZ PRIZELLA WAS TAKEN!',
-          'THE DUNJUN MASTER DRAGGED HER DOWN.',
-          'STAIRS = DUNJUNZ. EAST = TRAIL.',
+          'ALSO: PRINCESZ PRIZELLA GOT KIDNAPPED.',
+          'THE DUNJUN MASTER DID THE YEETING.',
+          'STAIRS = DUNJUNZ. EAST = THE TRAIL.',
           'NORTH OF TRAIL: WOODZ. SOUTH: DEZERTZ.',
-          'FIND MAPZ. FORJE STEEL. SAVE HER.',
+          'GRAB MAPZ. FORJE STEEL. SAVE HER.',
+          'MATHEMATICAL!',
         ],
       },
       {
@@ -88,11 +89,12 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 11,
         y: 2,
         dialog: [
-          'QUEST: SAVE PRIZELLA',
-          'STAIRS = DUNJUNZ B1',
-          'EAST TRAIL → WOODZ / DEZERTZ',
-          'PRESS M FOR MAPZ (WHEN FOUND)',
-          'PRESS F AT A FORJE TO FORJE',
+          'OFFICIAL QUEST SIGN (VERY OFFICIAL)',
+          'SAVE PRIZELLA. SHE RULES. LITERALLY.',
+          'STAIRS = DUNJUNZ B1. EAST = TRAIL.',
+          'TRAIL NORTH: WOODZ. SOUTH: DEZERTZ.',
+          'M = MAPZ (ONCE YOU FIND SOME)',
+          'F AT A FORJE = MAKE COOLER STUFF',
         ],
       },
       {
@@ -101,7 +103,11 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 10,
         y: 4,
         mapzId: 'surface',
-        dialog: ['YOU FOUND SURFACE MAPZ!', 'PRESS M TO VIEW.'],
+        dialog: [
+          'WHOA — SURFACE MAPZ!',
+          'IT SMELLS LIKE ADVENTURE AND DIRT.',
+          'PRESS M TO UNFURL IT.',
+        ],
       },
     ],
   },
@@ -137,10 +143,11 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 10,
         y: 8,
         dialog: [
-          'I SING OF PRIZELLA LOST...',
-          'NORTH: WOODZ. SOUTH: DEZERTZ.',
-          'WEST: MEADOW + DUNJUN STAIRS.',
-          'THE MAPZ WILL HELP. IF YOU FIND THEM.',
+          '♪ PRIZELLA LOST, THE BALLAD OF DUST ♪',
+          '...sorry, still workshopping the chorus.',
+          'NORTH: WOODZ. SOUTH: HOT DEZERTZ.',
+          'WEST: MEADOW + THOSE SPOOKY STAIRS.',
+          'MAPZ HELP. IF YOU, Y\'KNOW, FIND THEM.',
         ],
       },
       {
@@ -163,9 +170,10 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 7,
         shopId: 'tinkerer',
         dialog: [
-          'TINKERER: RARE WARES!',
-          'PRESS E TO OPEN THE SHOP GRID.',
-          'ARROWS SELECT · ENTER/B BUY.',
+          'TINKERER: RARE WARES! FAIR-ISH PRICES!',
+          'I DON\'T JUDGE YOUR FASHION. MUCH.',
+          'E OPENS THE SHOP GRID. BUY LEFT, SELL RIGHT.',
+          'BRING COINZ. OR BONES. I BUY BONES.',
         ],
       },
       {
@@ -209,10 +217,10 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 3,
         y: 9,
         dialog: [
-          'B1 ENTRANCE',
-          'U = STAIRS UP (SURFACE)',
-          'N = DEEPER HALLS',
-          'E = THE SORRY CUBE',
+          'B1 ENTRANCE — WELCOME TO THE UNDERGROUND',
+          'U = BACK TO GRASS AND SUNLIGHT',
+          'N = DEEPER HALLS (BAD IDEAS LIVE THERE)',
+          'E = THE SORRY CUBE. BE NICE... OR DON\'T.',
         ],
       },
       {
@@ -266,11 +274,11 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 10,
         y: 5,
         dialog: [
-          '*WOBBLE*',
-          'OH NO. DID I DISSOLVE YOUR',
-          'BOOTS AGAIN? I AM SO SORRY.',
-          'PLEASE TAKE THESE INSTEAD.',
-          'WEST LEADS BACK TO THE ENTRANCE.',
+          '*WOBBLE* ...hi.',
+          'OH GLOB. DID I DISSOLVE YOUR BOOTS AGAIN?',
+          'I AM SO, SO SORRY. LIKE. EMOTIONALLY.',
+          'PLEASE TAKE THESE INSTEAD. THEY\'RE NICE.',
+          'WEST GOES BACK. I\'LL JUST... sit here.',
         ],
       },
       {
@@ -279,10 +287,11 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 3,
         y: 3,
         dialog: [
-          'THE SORRY CUBE',
-          'E = TALK (GIFT IF KIND)',
-          'SWORD = FIGHT (DIFFERENT LOOT)',
-          'IT ONLY FIGHTS IF HIT FIRST.',
+          'LOCAL LEGEND: THE SORRY CUBE',
+          'E = TALK. KINDNESS HAS LOOT.',
+          'SWORD = DIFFERENT LOOT. RUDE LOOT.',
+          'IT ONLY FIGHTS IF YOU START IT.',
+          'CHOOSE YOUR VIBE.',
         ],
       },
       {
@@ -331,11 +340,12 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 5,
         y: 2,
         dialog: [
-          'NORTH DOOR IS LOCKED.',
+          'NORTH DOOR: LOCKED. VERY LOCKED.',
           '"SPEAK FRIEND AND ENTER."',
-          'HINT: THE PASSWORD IS FRIEND.',
-          'WEST: USS PLOT HOLE.',
-          'SOUTH: ENTRANCE / STAIRS UP.',
+          'HINT: THE PASSWORD IS... FRIEND.',
+          'I KNOW. I KNOW. IT\'S RIGHT THERE.',
+          'WEST: USS PLOT HOLE. RED SHIRTS GALORE.',
+          'SOUTH: ESCAPE HATCH TO B1 ENTRANCE.',
         ],
       },
       {
@@ -351,7 +361,8 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 5,
         dialog: [
           'WEST: ENGINEERING / BRIDGE',
-          'RED SHIRTS: SHORT CAREERS.',
+          'RED SHIRTS: SHORT, NOBLE CAREERS.',
+          'GOLD SHIRT: TALKS A LOT. SURVIVES.',
         ],
       },
     ],
@@ -403,11 +414,12 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 8,
         y: 5,
         dialog: [
-          "CAPTAIN'S LOG: STARDATE ???",
-          'GOLD SHIRT. COMMAND TRACK.',
-          'WE BEAMED INTO A DUNGEON.',
+          "CAPTAIN'S LOG: STARDATE... UH...",
+          'GOLD SHIRT. COMMAND TRACK. VIBES: 10.',
+          'WE BEAMED INTO A DUNGEON. COOL. COOL.',
           'EAST RETURNS TO THE GATE.',
-          'ENSIGNS IN RED: STOP DYING.',
+          'ENSIGNS IN RED: PLEASE STOP DYING.',
+          'THAT\'S AN ORDER. A SOFT ORDER.',
         ],
       },
       {
@@ -467,8 +479,8 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 8,
         dialog: [
           'NORTH: STAIRS TO B2',
-          'THE DUNJUN GOES DEEPER.',
-          'SOUTH: BACK TO THE GATE.',
+          'THE DUNJUN GOES DEEPER. ON PURPOSE.',
+          'SOUTH: BACK TO THE GATE. NO SHAME.',
         ],
       },
     ],
@@ -549,9 +561,9 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 12,
         y: 8,
         dialog: [
-          'B2: THE LOWER DEPTHS',
-          'U = STAIRS UP TO B1',
-          'N = THRONE OF META',
+          'B2: THE LOWER DEPTHS. VERY LOWER.',
+          'U = STAIRS UP (FRESH AIR OPTIONAL)',
+          'N = THRONE OF META. BRING SNACKS.',
         ],
       },
       {
@@ -599,10 +611,11 @@ export const ROOMS: Record<string, RoomDef> = {
         hp: 52,
         dialog: [
           'I AM THE DUNGEON MASTER!',
-          'PRIZELLA? ALREADY SHIPPED',
-          'TO THE DEZERTZ. HA HA.',
-          'ROLL FOR INITIATIVE...',
-          'NAT 1. AWKWARD. FIGHT!',
+          'PRIZELLA? YEAH I SHIPPED HER',
+          'TO THE DEZERTZ. HA. HA. ...HA.',
+          'ROLL FOR INITIATIVE—',
+          'NAT 1. AWKWARD.',
+          'OKAY FINE. FIGHT!',
         ],
       },
       {
@@ -612,9 +625,9 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 5,
         chestTable: 'boss',
         dialog: [
-          'LEGENDARY DUNJUN LOOT!',
-          'MAPZ OF THE WIDE WORLD...',
-          'PRIZELLA AWAITS IN DEZERTZ.',
+          'LEGENDARY DUNJUN LOOT. SHINY.',
+          'MAPZ OF THE WIDE WEIRD WORLD...',
+          'PRIZELLA\'S IN THE DEZERTZ. GO GET HER.',
         ],
       },
       {
@@ -623,7 +636,10 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 12,
         y: 3,
         mapzId: 'dunjunz',
-        dialog: ['DUNJUNZ MAPZ ACQUIRED!', 'PRESS M TO VIEW.'],
+        dialog: [
+          'DUNJUNZ MAPZ! IT\'S ALL HALLWAYS.',
+          'PRESS M. GET LOST ON PURPOSE.',
+        ],
       },
       {
         kind: 'merchant',
@@ -632,9 +648,10 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 8,
         shopId: 'tinkerer',
         dialog: [
-          'TINKERER: SHE WAS NEVER HERE.',
-          'TRY THE DEZERTZ TOWER.',
-          'PRESS E FOR THE SHOP GRID.',
+          'TINKERER: YEAH SHE WAS NEVER HERE.',
+          'I\'D KNOW. I SELL TO EVERYONE.',
+          'TRY THE DEZERTZ TOWER. HOT. SANDY.',
+          'E FOR THE SHOP. BUY STUFF. LIVE A LITTLE.',
         ],
       },
     ],
@@ -682,9 +699,9 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 3,
         y: 2,
         dialog: [
-          'THE WOODZ',
-          'NORTH: WOLF LORD',
-          'SOUTH: BACK TO TRAIL',
+          'THE WOODZ — TREES, HOWLING, VIBES',
+          'NORTH: WOLF LORD (HE THINKS HE OWNS THIS)',
+          'SOUTH: BACK TO THE TRAIL. SMART.',
         ],
       },
       {
@@ -727,8 +744,9 @@ export const ROOMS: Record<string, RoomDef> = {
         hp: 48,
         dialog: [
           'WOLF LORD: THIS IS MY FOREST!',
-          'THE PRINCESZ WAS NEVER HERE.',
-          'BUT MY SHARDZ ARE.',
+          'THE PRINCESZ? NEVER MET HER.',
+          'BUT MY SHARDZ? ALL MINE.',
+          'COME GET SOME. IF YOU DARE. AWOO.',
         ],
       },
       {
@@ -737,7 +755,10 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 4,
         y: 3,
         mapzId: 'woodz',
-        dialog: ['WOODZ MAPZ FOUND!', 'PRESS M TO VIEW.'],
+        dialog: [
+          'WOODZ MAPZ! MOSTLY TREES. HONESTLY.',
+          'PRESS M. TRY NOT TO GET BIT.',
+        ],
       },
       {
         kind: 'forje',
@@ -745,9 +766,9 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 12,
         y: 7,
         dialog: [
-          'A CRUDE FORJE.',
-          'E OR F: OPEN FORJE GRID.',
-          'NEED OREZ AND SHARDZ.',
+          'A CRUDE FORJE. IT\'S TRYING ITS BEST.',
+          'E OR F: OPEN THE FORJE GRID.',
+          'FEED IT OREZ AND SHARDZ. MAKE MAGIC.',
         ],
       },
     ],
@@ -795,9 +816,9 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 8,
         y: 2,
         dialog: [
-          'DEZERTZ',
-          'SOUTH: SAND TOWER',
-          'PRIZELLA IS SAID TO BE THERE.',
+          'DEZERTZ — HOT. SANDY. DRAMATIC.',
+          'SOUTH: SAND TOWER. VERY TOWER.',
+          'PRIZELLA\'S PROBABLY THERE. BRING WATER.',
         ],
       },
       {
@@ -806,7 +827,10 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 3,
         y: 8,
         mapzId: 'dezertz',
-        dialog: ['DEZERTZ MAPZ!', 'PRESS M TO VIEW.'],
+        dialog: [
+          'DEZERTZ MAPZ! MOSTLY SAND. SOME MORE SAND.',
+          'PRESS M. STAY HYDRATED. MENTALLY.',
+        ],
       },
       {
         kind: 'forje',
@@ -814,8 +838,9 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 12,
         y: 8,
         dialog: [
-          'A SAND FORJE GLOWS HOT.',
-          'E OR F: OPEN FORJE GRID.',
+          'A SAND FORJE GLOWS HOT. COOL HOT.',
+          'E OR F: OPEN THE FORJE GRID.',
+          'MAKE SOMETHING THAT HISSES.',
         ],
       },
     ],
@@ -851,8 +876,9 @@ export const ROOMS: Record<string, RoomDef> = {
         hp: 56,
         dialog: [
           'SAND WRAITH: THE PRINCESZ IS MINE!',
-          'OR AT LEAST... RENTED.',
-          'FACE THE DUNES!',
+          'OR AT LEAST... RENTED. MONTHLY.',
+          'FACE THE DUNES, LITTLE HERO!',
+          'I AM VERY SANDY AND VERY SERIOUS.',
         ],
       },
       {
@@ -861,10 +887,11 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 10,
         y: 5,
         dialog: [
-          'PRIZELLA: YOU CAME!',
-          'I WAS THIS CLOSE TO ESCAPING',
-          'USING A GRAPH SPREADSHEET.',
-          'DEFEAT THE WRAITH. THEN TALK.',
+          'PRIZELLA: YOU CAME! MATHEMATICAL!',
+          'I WAS THIS CLOSE TO ESCAPING WITH A',
+          'GRAPH SPREADSHEET AND A BAD ATTITUDE.',
+          'BONK THE WRAITH FIRST. THEN WE TALK.',
+          'I\'VE GOT KINGDOM STUFF TO SORT OUT.',
         ],
       },
       {

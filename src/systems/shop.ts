@@ -65,7 +65,8 @@ export const SHOPS: Record<string, ShopDef> = {
     name: 'TRAVELING TINKERER',
     greeting: [
       'TINKERER: BUY LEFT · SELL RIGHT!',
-      'E OPEN SHOP · TAB SWITCH PANE · ENTER TRADE',
+      'FAIR-ISH PRICES. I DON\'T JUDGE. MUCH.',
+      'E OPEN SHOP · TAB PANE · ENTER TRADE',
     ],
     stock: [
       {

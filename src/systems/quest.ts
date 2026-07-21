@@ -1,5 +1,6 @@
 /**
  * Princess Prizella quest + land clear flags.
+ * Dialogue voice: earnest, weird, Adventure-Time-adjacent.
  */
 
 import type { LandId, SaveData } from '../types';
@@ -40,12 +41,14 @@ export function rewardDunjunzClear(save: SaveData): {
   return {
     save: next,
     dialog: [
-      'THE DUNJUN MASTER FALLS!',
-      'HE GASPS: "SHE IS NOT HERE..."',
-      `${PRINCESS_NAME} WAS TAKEN TO THE DEZERTZ!`,
-      'YOU LOOT: DUNJUN CLEAVER (LEGENDARY)!',
-      'MAPZ OF WOODZ + DEZERTZ UNFURL.',
-      'PRESS M FOR MAPZ. FIND A FORJE.',
+      'THE DUNJUN MASTER FACEPLANTS.',
+      'HE WHISPERS: "SHE\'S NOT EVEN HERE..."',
+      'WAIT. WHAT.',
+      `${PRINCESS_NAME} GOT YEETED TO THE DEZERTZ!`,
+      '',
+      'YOU LOOT: DUNJUN CLEAVER — LEGENDARY!',
+      'MAPZ OF WOODZ + DEZERTZ UNFURL LIKE BAD NEWS.',
+      'PRESS M. FORJE UP. GO EAST. BE COOL ABOUT IT.',
     ],
   };
 }
@@ -65,12 +68,38 @@ export function rewardWoodzClear(save: SaveData): {
   return {
     save: next,
     dialog: [
-      'THE WOLF LORD FALLS!',
-      'WOODZ ARE SAFE...ISH.',
-      'YOU GAIN WOOD SHARDZ + ORE.',
-      'DEZERTZ LIES SOUTH OF THE TRAIL.',
+      'THE WOLF LORD HITS THE DIRT.',
+      'SOMEWHERE A TREE DOES A LITTLE CLAP.',
+      'WOODZ: LESS BITING. STILL WEIRD.',
+      '',
+      'YOU SCORE WOOD SHARDZ + ORE.',
+      'DEZERTZ IS SOUTH OF THE TRAIL.',
+      'PRIZELLA\'S PROBABLY SANDY AND MAD.',
     ],
   };
+}
+
+/**
+ * Post-rescue Prizella voice — kingdom duty + champion (not "personal hero").
+ */
+export function princessChampionDialog(): string[] {
+  return [
+    'PRIZELLA: OKAY. REAL TALK.',
+    'I GOTTA GO RULE MY KINGDOM NOW.',
+    'DECREES. PARADES. WEIRD TAXES ON LAVA.',
+    'SOMEBODY\'S GOTTA SIGN THE SCROLLS.',
+    '',
+    'BUT IF YOU WANT EXTRA QUESTS...',
+    'COME BE MY CHAMPION HERO.',
+    'NOT MY PERSONAL HERO. GROSS. NO.',
+    'LIKE... MY CHAMPION. THE ONE WHO',
+    'GOES ON COOL QUESTS FOR STUFF',
+    'THE KINGDOM ACTUALLY NEEDS.',
+    'DRAGONS. LOST RECIPES. MAYBE A GOOSE.',
+    '',
+    'FIND ME WHEN YOU\'RE READY.',
+    'I\'LL HAVE SOMETHING RAD LINED UP.',
+  ];
 }
 
 export function rewardDezertzClear(save: SaveData): {
@@ -89,39 +118,48 @@ export function rewardDezertzClear(save: SaveData): {
   return {
     save: next,
     dialog: [
-      'THE SAND WRAITH CRUMBLES!',
-      `${PRINCESS_NAME} IS FREE!`,
-      'SHE SAYS: "TOOK YOU LONG ENOUGH."',
-      'THEN: "THANKS. ALSO, NICE SWORD."',
-      'QUEST COMPLETE... FOR NOW.',
+      'THE SAND WRAITH GOES *POOF* — SANDY POOF.',
+      `${PRINCESS_NAME} STEPS OUT, BRUSHING DUNES OFF HER CROWN.`,
+      '',
+      'PRIZELLA: YOU CAME. THAT RULES.',
+      'I WAS THIS CLOSE TO ESCAPING WITH A',
+      'GRAPH SPREADSHEET AND A BAD ATTITUDE.',
+      '',
+      'YOU GOT: SAND SABER. SHINY. HISSY.',
+      '',
+      ...princessChampionDialog(),
     ],
   };
 }
 
 export function questHint(save: SaveData): string[] {
   if (save.princessSaved) {
-    return ['PRINCESZ SAVED. GO FORJE MORE STUFF.'];
+    return [
+      'PRIZELLA\'S BACK TO RULING.',
+      'CHAMPION QUESTS: COMING SOON-ISH.',
+      'FORJE GEAR. STAY RAD. CHECK BACK.',
+    ];
   }
   if (!save.landsCleared.includes('dunjunz')) {
     return [
-      'QUEST: SAVE PRIZELLA',
-      'THE DUNJUN STAIRS ARE IN THE MEADOW.',
-      'BEAT THE DUNJUN MASTER.',
+      'MAIN QUEST: SAVE PRIZELLA.',
+      'STAIRS IN THE MEADOW = DUNJUNZ.',
+      'BONK THE DUNJUN MASTER. POLITELY.',
     ];
   }
   if (!save.landsCleared.includes('woodz')) {
     return [
-      'PRIZELLA WAS MOVED TO DEZERTZ.',
-      'OPTIONAL: CLEAR THE WOODZ FIRST.',
-      'EAST TRAIL → NORTH INTO WOODZ.',
+      'PRIZELLA GOT MOVED TO THE DEZERTZ.',
+      'OPTIONAL SIDE ADVENTURE: WOODZ NORTH.',
+      'OR GO SOUTH IF YOU\'RE FEELING BRAVE.',
     ];
   }
   if (!save.landsCleared.includes('dezertz')) {
     return [
-      'CROSS THE DEZERTZ SOUTH OF THE TRAIL.',
-      'THE TOWER HOLDS PRIZELLA.',
-      'FORJE GEAR IF YOU ARE WEAK.',
+      'DEZERTZ = SOUTH OF THE TRAIL.',
+      'TOWER. WRAITH. PRIZELLA. PROBABLY SAND.',
+      'FORJE FIRST IF YOU FEEL SQUISHY.',
     ];
   }
-  return ['FIND THE PRINCESZ!'];
+  return ['FIND THE PRINCESZ. SHE\'S COUNTING ON YOU!'];
 }

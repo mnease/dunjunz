@@ -61,6 +61,7 @@ import {
   runForjingAction,
 } from './forjing';
 import {
+  princessChampionDialog,
   questHint,
   rewardDezertzClear,
   rewardDunjunzClear,
@@ -661,6 +662,17 @@ describe('princess quest land clears', () => {
     expect(r.save.landsCleared).toContain('dezertz');
   });
 
+  it('princess champion dialog is duty + champion, not personal hero', () => {
+    const d = princessChampionDialog().join(' ');
+    expect(d).toMatch(/KINGDOM/i);
+    expect(d).toMatch(/CHAMPION/i);
+    expect(d).toMatch(/NOT MY PERSONAL HERO/i);
+    expect(d).toMatch(/QUEST/i);
+    // rescue loot line also mentions champion
+    const r = rewardDezertzClear(defaultSave());
+    expect(r.dialog.join(' ')).toMatch(/CHAMPION|KINGDOM/i);
+  });
+
   it('questHint advances with landsCleared', () => {
     let save = defaultSave();
     expect(questHint(save)[0]).toContain('QUEST');
@@ -669,7 +681,7 @@ describe('princess quest land clears', () => {
     save = rewardWoodzClear(save).save;
     expect(questHint(save).join(' ')).toMatch(/DEZERTZ/i);
     save = rewardDezertzClear(save).save;
-    expect(questHint(save).join(' ')).toMatch(/FORJE|SAVED/i);
+    expect(questHint(save).join(' ')).toMatch(/CHAMPION|RULING|FORJE/i);
   });
 
   it('defaultSave is v5 with mapz surface seed', () => {
