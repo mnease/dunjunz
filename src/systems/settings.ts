@@ -15,6 +15,11 @@ export interface GameSettings {
   sfxVolume: number;
   /** Reduce screen shake / flash if desired later */
   reduceMotion: boolean;
+  /**
+   * When true, level-up stat packages auto-apply (+2 lowest / +1 2nd-lowest;
+   * every 5th level uses class focus). When false, spend manually in inventory (1–5).
+   */
+  autoStatAllocate: boolean;
 }
 
 const DEFAULTS: GameSettings = {
@@ -24,6 +29,7 @@ const DEFAULTS: GameSettings = {
   musicVolume: 0.35,
   sfxVolume: 0.55,
   reduceMotion: false,
+  autoStatAllocate: false,
 };
 
 let cached: GameSettings | null = null;
@@ -57,6 +63,7 @@ export function loadSettings(): GameSettings {
         typeof p.sfxVolume === 'number' ? p.sfxVolume : DEFAULTS.sfxVolume,
       ),
       reduceMotion: !!p.reduceMotion,
+      autoStatAllocate: !!p.autoStatAllocate,
     };
     return { ...cached };
   } catch {
@@ -73,6 +80,7 @@ export function saveSettings(next: GameSettings): GameSettings {
     musicVolume: clamp01(next.musicVolume),
     sfxVolume: clamp01(next.sfxVolume),
     reduceMotion: !!next.reduceMotion,
+    autoStatAllocate: !!next.autoStatAllocate,
   };
   cached = clean;
   try {

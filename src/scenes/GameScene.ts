@@ -153,6 +153,16 @@ import {
   slashArc,
   sparkBurst,
 } from '../systems/vfx';
+import {
+  canSoftRespawn,
+  respawnDelayMs,
+  scaleRespawnContact,
+  scaleRespawnHp,
+} from '../systems/respawn';
+import {
+  flushAutoStatPackages,
+  hasUnspentStatPackages,
+} from '../systems/stat-allocate';
 import type {
   AttrId,
   EntityDef,
@@ -186,6 +196,8 @@ interface Actor {
   aggressive?: boolean;
   /** Hard-mode shoot cooldown (ms). */
   shootCooldown?: number;
+  /** Soft-respawn generation (0 = first spawn). */
+  respawnGen?: number;
 }
 
 const SOLID: TileKind[] = ['wall', 'water', 'void', 'locked'];
@@ -334,6 +346,11 @@ export class GameScene extends Phaser.Scene {
     fromPlayer: boolean;
   }[] = [];
   private rangedCd = 0;
+  /** Soft-respawn generation per entity id (room-local). */
+  private respawnGen = new Map<string, number>();
+  private onAutoStatsEnabled = (): void => {
+    this.applyAutoStatsIfEnabled(true);
+  };
 
   constructor() {
     super('Game');
@@ -482,7 +499,12 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on('shop-state', this.onShopState, this);
     this.game.events.on('shop-cursor', this.onShopCursor, this);
     this.game.events.on('inventory-bag-activate', this.onBagActivate, this);
+    window.addEventListener('dunjunz-auto-stats-enabled', this.onAutoStatsEnabled);
     this.events.once('shutdown', () => {
+      window.removeEventListener(
+        'dunjunz-auto-stats-enabled',
+        this.onAutoStatsEnabled,
+      );
       this.game.events.off('dialog-state', this.onDialogState, this);
       this.game.events.off('inventory-state', this.onInventoryState, this);
       this.game.events.off('mapz-state', this.onMapzState, this);
@@ -1076,6 +1098,7 @@ export class GameScene extends Phaser.Scene {
   private clearRoomObjects(): void {
     for (const p of this.projectiles) p.img.destroy();
     this.projectiles = [];
+    this.respawnGen.clear();
     this.walls.clear(true, true);
     for (const a of this.actors) {
       // Kill ambient pulses before destroy so room transitions leave no ghosts
@@ -1632,7 +1655,10 @@ export class GameScene extends Phaser.Scene {
     return spawnForContinue(this.tileGrid, this.room);
   }
 
-  private spawnEntity(def: EntityDef): void {
+  private spawnEntity(
+    def: EntityDef,
+    opts?: { generation?: number },
+  ): void {
     // Den bud only while not yet recruited
     if (def.kind === 'best_bud' && !shouldSpawnDenBud(this.save)) {
       return;
@@ -1752,13 +1778,23 @@ export class GameScene extends Phaser.Scene {
     }
 
     const threat = threatForRoom(this.room, this.save);
-    const hp =
+    const generation = Math.max(0, opts?.generation ?? 0);
+    let hp =
       isTree || isTumbleweed
         ? 1
         : resolveEnemyHp(def.kind, def.hp, threat);
-    const contactDamage = contactHostile
+    let contactDamage = contactHostile
       ? resolveEnemyContactDamage(def.kind, threat)
       : 0;
+    // Soft-respawned creeps scale with hero level + generation
+    if (generation > 0 && contactHostile) {
+      hp = scaleRespawnHp(hp, this.save.level, generation);
+      contactDamage = scaleRespawnContact(
+        contactDamage,
+        this.save.level,
+        generation,
+      );
+    }
 
     const actor: Actor = {
       sprite,
@@ -1778,6 +1814,7 @@ export class GameScene extends Phaser.Scene {
       contactDamage,
       // Cube is peaceful until struck; cactus is always "aggressive" for contact
       aggressive: def.kind === 'cube' ? false : true,
+      respawnGen: generation,
     };
 
     if (contactHostile) {
@@ -2079,7 +2116,12 @@ export class GameScene extends Phaser.Scene {
 
   private killActor(actor: Actor): void {
     actor.alive = false;
-    this.save = recordKill(this.save, actor.id, this.room.land);
+    // Soft-respawn creeps: XP now, return on a clock (not permanent kill list)
+    if (canSoftRespawn(actor.kind, actor.id)) {
+      this.scheduleCreepRespawn(actor);
+    } else {
+      this.save = recordKill(this.save, actor.id, this.room.land);
+    }
 
     // XP + level from pure progression module (threat-scaled)
     const xpGain = enemyXpReward(
@@ -2099,10 +2141,18 @@ export class GameScene extends Phaser.Scene {
     this.save.attrPoints = prog.attrPoints;
     if (prog.leveledUp) {
       playSfx('level_up');
-      this.game.events.emit(
-        'toast',
-        `LEVEL UP! LV ${prog.level} — +${prog.attrPointsGained} PKG: +2 ONE STAT, +1 ANOTHER (I)`,
-      );
+      if (loadSettings().autoStatAllocate) {
+        this.applyAutoStatsIfEnabled(false);
+        this.game.events.emit(
+          'toast',
+          `LEVEL UP! LV ${prog.level} — STATS AUTO-ASSIGNED`,
+        );
+      } else {
+        this.game.events.emit(
+          'toast',
+          `LEVEL UP! LV ${prog.level} — +${prog.attrPointsGained} PKG: +2/+1 (I) OR SETTINGS→AUTO`,
+        );
+      }
       this.time.delayedCall(400, () => this.checkHeroPick());
     } else {
       this.game.events.emit('toast', `+${xpGain} XP`);
@@ -3475,6 +3525,51 @@ export class GameScene extends Phaser.Scene {
     window.dispatchEvent(
       new CustomEvent('dunjunz-hero-pick', { detail: { kind } }),
     );
+  }
+
+  /** Apply all unspent +2/+1 packages when auto-stats is on. */
+  private applyAutoStatsIfEnabled(fromSettings: boolean): void {
+    if (!loadSettings().autoStatAllocate) return;
+    if (!hasUnspentStatPackages(this.save)) {
+      if (fromSettings) {
+        this.game.events.emit('toast', 'AUTO STATS ON — NEXT LEVEL-UPS AUTO');
+      }
+      return;
+    }
+    const { save, notes } = flushAutoStatPackages(this.save);
+    this.save = syncDerivedStats(save);
+    writeSave(this.save);
+    this.emitHud();
+    playSfx('success');
+    const brief =
+      notes.length > 2
+        ? `${notes.length} PACKAGES APPLIED`
+        : notes.slice(0, 2).join(' · ');
+    this.game.events.emit(
+      'toast',
+      fromSettings ? `AUTO STATS: ${brief}` : brief,
+    );
+  }
+
+  /**
+   * Soft-respawn common creeps after ~55–75s, a bit tougher with level/gen.
+   */
+  private scheduleCreepRespawn(actor: Actor): void {
+    const def = this.room.entities?.find((e) => e.id === actor.id);
+    if (!def) return;
+    const roomId = this.room.id;
+    const prev = this.respawnGen.get(actor.id) ?? actor.respawnGen ?? 0;
+    const gen = prev + 1;
+    this.respawnGen.set(actor.id, gen);
+    const delay = respawnDelayMs();
+    this.time.delayedCall(delay, () => {
+      if (!this.scene.isActive() || this.room?.id !== roomId) return;
+      if (this.actors.some((a) => a.alive && a.id === def.id)) return;
+      this.spawnEntity(def, { generation: gen });
+      if (motionAllowed()) {
+        this.game.events.emit('toast', 'SOMETHING STIRS…');
+      }
+    });
   }
 
   private ensureHardModeGates(): void {

@@ -221,6 +221,28 @@
             <input id="set-reduce-motion" type="checkbox" />
             Reduce motion (less camera shake)
           </label>
+          <fieldset class="settings-fieldset">
+            <legend class="settings-legend">Level-up stats</legend>
+            <label class="settings-check">
+              <input
+                id="set-auto-stats"
+                type="radio"
+                name="stat-mode"
+                value="auto"
+              />
+              Auto-assign stats (+2 lowest, +1 second-lowest; class focus every 5 levels)
+            </label>
+            <label class="settings-check">
+              <input
+                id="set-manual-stats"
+                type="radio"
+                name="stat-mode"
+                value="manual"
+                checked
+              />
+              Manual — spend packages in inventory (1–5: +2 then +1 another)
+            </label>
+          </fieldset>
           <div class="feedback-actions settings-actions">
             <button type="button" id="settings-test-sfx" class="btn ghost">
               Test SFX

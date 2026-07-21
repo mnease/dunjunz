@@ -13,6 +13,8 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Creep respawn clock** — common creeps return after ~55–75s a bit tougher (scales with player level + respawn generation). Bosses/quest kills stay permanent.
+- **Auto vs manual stats** — Settings → Level-up stats: auto-assign packages (+2 lowest / +1 2nd-lowest; class focus every 5 levels) or keep manual inventory spend.
 - **Google Analytics** (`G-P8ZG98HDSC`) on landing + play via deferred `/analytics.js` (idle load; play page delays so Phaser boots first; beacon transport). Not ads.
 
 ### Changed

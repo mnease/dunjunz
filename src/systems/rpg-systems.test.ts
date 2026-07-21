@@ -1590,3 +1590,82 @@ describe('army mode', () => {
     expect('member' in ok).toBe(true);
   });
 });
+
+// ── Respawn + auto stats ────────────────────────────────
+import {
+  canSoftRespawn,
+  isPermanentKill,
+  respawnDelayMs,
+  scaleRespawnContact,
+  scaleRespawnHp,
+  RESPAWN_BASE_MS,
+} from './respawn';
+import {
+  flushAutoStatPackages,
+  classFocusStats,
+  hasUnspentStatPackages,
+} from './stat-allocate';
+import { loadSettings, patchSettings, defaultSettings } from './settings';
+
+describe('creep respawn', () => {
+  it('soft-respawns common creeps but not bosses', () => {
+    expect(canSoftRespawn('slime', 'hall-slime')).toBe(true);
+    expect(canSoftRespawn('scorpion', 'dez-scorp-1')).toBe(true);
+    expect(canSoftRespawn('boss', 'dungeon-master')).toBe(false);
+    expect(isPermanentKill('boss', 'wolf-lord')).toBe(true);
+    expect(isPermanentKill('redshirt', 'ensign-1')).toBe(true);
+    expect(canSoftRespawn('redshirt', 'trail-red-1')).toBe(true);
+  });
+
+  it('delay is in a moderate band', () => {
+    for (let i = 0; i < 20; i++) {
+      const d = respawnDelayMs(() => i / 20);
+      expect(d).toBeGreaterThanOrEqual(RESPAWN_BASE_MS);
+      expect(d).toBeLessThan(RESPAWN_BASE_MS + 25_000);
+    }
+  });
+
+  it('respawn HP rises with player level and generation', () => {
+    const base = 20;
+    const weak = scaleRespawnHp(base, 1, 0);
+    const mid = scaleRespawnHp(base, 10, 1);
+    const hard = scaleRespawnHp(base, 20, 5);
+    expect(mid).toBeGreaterThan(weak);
+    expect(hard).toBeGreaterThan(mid);
+    expect(scaleRespawnContact(2, 15, 4)).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('auto stat allocate', () => {
+  it('classFocusStats prefers class bonuses', () => {
+    const w = classFocusStats('wizard');
+    expect(w.primary).toBe('int');
+    const f = classFocusStats('fighter');
+    expect(['str', 'vit']).toContain(f.primary);
+  });
+
+  it('flushAutoStatPackages spends all packages', () => {
+    let save = defaultSave();
+    save.level = 6;
+    save.attrPoints = 2;
+    save.attrs = { str: 5, dex: 2, vit: 4, int: 3, lck: 3 };
+    save.primaryClass = 'rogue';
+    expect(hasUnspentStatPackages(save)).toBe(true);
+    const { save: next, notes } = flushAutoStatPackages(save, () => 0.1);
+    expect(next.attrPoints).toBe(0);
+    expect(next.pendingAttrMajor).toBeNull();
+    expect(notes.length).toBeGreaterThanOrEqual(2);
+    // dex was lowest — should have grown
+    expect(next.attrs.dex).toBeGreaterThan(save.attrs.dex);
+  });
+
+  it('settings include autoStatAllocate', () => {
+    const d = defaultSettings();
+    expect(d.autoStatAllocate).toBe(false);
+    const s = patchSettings({ autoStatAllocate: true });
+    expect(s.autoStatAllocate).toBe(true);
+    // reset for other tests
+    patchSettings({ autoStatAllocate: false });
+    void loadSettings;
+  });
+});

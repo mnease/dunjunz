@@ -36,6 +36,12 @@ export function initSettingsUi(): void {
   const reduce = document.getElementById(
     'set-reduce-motion',
   ) as HTMLInputElement | null;
+  const autoStats = document.getElementById(
+    'set-auto-stats',
+  ) as HTMLInputElement | null;
+  const manualStats = document.getElementById(
+    'set-manual-stats',
+  ) as HTMLInputElement | null;
   const musicLabel = document.getElementById('set-music-vol-label');
   const sfxLabel = document.getElementById('set-sfx-vol-label');
   const testBtn = document.getElementById('settings-test-sfx');
@@ -60,6 +66,8 @@ export function initSettingsUi(): void {
     if (musicVol) musicVol.value = String(Math.round(s.musicVolume * 100));
     if (sfxVol) sfxVol.value = String(Math.round(s.sfxVolume * 100));
     if (reduce) reduce.checked = s.reduceMotion;
+    if (autoStats) autoStats.checked = !!s.autoStatAllocate;
+    if (manualStats) manualStats.checked = !s.autoStatAllocate;
     if (musicLabel) musicLabel.textContent = `${Math.round(s.musicVolume * 100)}%`;
     if (sfxLabel) sfxLabel.textContent = `${Math.round(s.sfxVolume * 100)}%`;
   };
@@ -71,15 +79,23 @@ export function initSettingsUi(): void {
     musicVolume: Number(musicVol?.value ?? 35) / 100,
     sfxVolume: Number(sfxVol?.value ?? 55) / 100,
     reduceMotion: !!reduce?.checked,
+    autoStatAllocate: !!autoStats?.checked,
   });
 
   const applyLive = () => {
+    const prev = loadSettings();
     const s = patchSettings(readForm());
     onSettingsChanged(s);
     if (musicLabel) {
       musicLabel.textContent = `${Math.round(s.musicVolume * 100)}%`;
     }
     if (sfxLabel) sfxLabel.textContent = `${Math.round(s.sfxVolume * 100)}%`;
+    // Tell the running game to flush packages if auto was just enabled
+    if (s.autoStatAllocate && !prev.autoStatAllocate) {
+      window.dispatchEvent(
+        new CustomEvent('dunjunz-auto-stats-enabled', { detail: s }),
+      );
+    }
   };
 
   openBtn.addEventListener('click', () => {
