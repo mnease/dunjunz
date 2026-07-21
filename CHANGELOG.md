@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Graphics motion pass (EMA)** — richer tiles (floor grout, brick walls, water/lava 2-frame shimmer, forje embers, portal sparkles, bud silhouette); player/companion idle & walk bob; enemy squash/wobble + 2-frame slime; sword slash arc + hit sparks; kind-tinted death particles; portal/forje ambient pulse; companion combat accents (heal/block/blink/strike). All decorative motion gated by Settings → Reduce motion.
 - **Landing page at /** — welcome, what/how/why, support (Ko-fi tip jar); game at **`/play`** (MPA Vite + Vercel rewrites). Live: [dunjunz.com](https://dunjunz.com) · [dunjunz.com/play](https://dunjunz.com/play)
 - **Journal (J / top bar)** — quest list with progress (main path, champion jobs, side bits) + **Brags** achievement board (22 unlocks, `NEW BRAG:` toasts). Tone stays bard-weird, not corporate.
 - **Best Bud XP + gear** — buddies gain XP on kills and level up; inventory **Y** toggles buddy gear mode (shared bag, separate slots; no keyring). Weapon/armor boost strike damage.

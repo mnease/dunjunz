@@ -117,6 +117,13 @@ import { loadSettings } from '../systems/settings';
 import { loadSave, writeSave } from '../systems/save';
 import { threatForRoom } from '../systems/threat';
 import { syncAchievements } from '../systems/achievements';
+import {
+  bobScale,
+  enemyBobScale,
+  motionAllowed,
+  slashArc,
+  sparkBurst,
+} from '../systems/vfx';
 import type {
   AttrId,
   EntityDef,
@@ -259,6 +266,11 @@ export class GameScene extends Phaser.Scene {
   private budBlockCd = 0;
   /** Inventory equip target: hero gear or buddy gear (toggle Y). */
   private gearTarget: EquipTarget = 'hero';
+  /** Ambient animated map tiles (water/lava). */
+  private ambientTiles: { img: Phaser.GameObjects.Image; kind: 'water' | 'lava' }[] =
+    [];
+  private animTime = 0;
+  private ambientFrame = 0;
 
   constructor() {
     super('Game');
@@ -925,10 +937,14 @@ export class GameScene extends Phaser.Scene {
   private clearRoomObjects(): void {
     this.walls.clear(true, true);
     for (const a of this.actors) {
+      // Kill ambient pulses before destroy so room transitions leave no ghosts
+      this.tweens.killTweensOf(a.sprite);
       a.sprite.destroy();
     }
     this.actors = [];
+    this.ambientTiles = [];
     if (this.companionSprite) {
+      this.tweens.killTweensOf(this.companionSprite);
       this.companionSprite.destroy();
       this.companionSprite = null;
     }
@@ -1011,6 +1027,8 @@ export class GameScene extends Phaser.Scene {
       });
     }
     this.tileGrid = this.applyPersistentDoorUnlocks(this.parseTiles(room));
+    this.ambientTiles = [];
+    this.ambientFrame = 0;
 
     for (let y = 0; y < VIEW_TILES_H; y++) {
       for (let x = 0; x < VIEW_TILES_W; x++) {
@@ -1021,6 +1039,9 @@ export class GameScene extends Phaser.Scene {
           .setScale(SCALE)
           .setDepth(0);
         img.setData('mapTile', true);
+        if (kind === 'water' || kind === 'lava') {
+          this.ambientTiles.push({ img, kind });
+        }
 
         if (SOLID.includes(kind)) {
           this.addWallAt(pos.x, pos.y, kind);
@@ -1063,6 +1084,7 @@ export class GameScene extends Phaser.Scene {
 
     // Quick exit portal after land boss is cleared
     this.ensureBossExitPortal();
+    this.startRoomAmbience();
 
     this.emitHud();
     writeSave(this.save);
@@ -1254,6 +1276,7 @@ export class GameScene extends Phaser.Scene {
       this.emitHud();
       playSfx('heal');
       this.game.events.emit('toast', `WHISP HEALS +${heal}`);
+      sparkBurst(this, this.player.x, this.player.y, 0xff6b9d, 4);
     }
 
     const target = this.findNearestHostile(
@@ -1287,10 +1310,13 @@ export class GameScene extends Phaser.Scene {
     if (dist > profile.range * 0.85) {
       if (profile.style === 'blink' && dist > profile.range * 1.4 && this.budAttackCd <= 0) {
         // Pocket hop closer to the creep
+        const fromX = this.companionSprite.x;
+        const fromY = this.companionSprite.y;
         const hop = Math.min(dist - profile.range * 0.5, 70);
         this.companionSprite.x += (dx / dist) * hop;
         this.companionSprite.y += (dy / dist) * hop;
         this.companionSprite.setAlpha(0.5);
+        sparkBurst(this, fromX, fromY, 0x4ecdc4, 3);
         this.time.delayedCall(80, () => {
           this.companionSprite?.setAlpha(1);
         });
@@ -1313,6 +1339,13 @@ export class GameScene extends Phaser.Scene {
 
       // Visual punch of friendship
       this.companionSprite.setScale(SCALE * 1.25);
+      sparkBurst(
+        this,
+        this.companionSprite.x,
+        this.companionSprite.y,
+        0x7dffb3,
+        3,
+      );
       this.time.delayedCall(100, () => {
         this.companionSprite?.setScale(SCALE);
       });
@@ -1353,6 +1386,7 @@ export class GameScene extends Phaser.Scene {
     actor.hp -= dmg;
     playSfx('hit_enemy');
     actor.sprite.setTint(0xa0ffe8);
+    sparkBurst(this, actor.sprite.x, actor.sprite.y, 0x7dffb3, 3);
     this.time.delayedCall(90, () => {
       if (actor.alive) actor.sprite.clearTint();
     });
@@ -1585,6 +1619,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.actors.push(actor);
+    if (def.kind === 'portal' || def.kind === 'forje') {
+      this.pulseAmbientProp(sprite, def.kind);
+    }
   }
 
   /** After land clear, ensure a walk-on portal exists in the boss arena. */
@@ -1681,6 +1718,13 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('toast', 'PEBBO COILED THE HIT!');
       if (this.companionSprite?.active) {
         this.companionSprite.setTint(0xffc857);
+        sparkBurst(
+          this,
+          this.companionSprite.x,
+          this.companionSprite.y,
+          0x4ecdc4,
+          6,
+        );
         this.time.delayedCall(200, () => {
           const bud = getBestBud(this.save.bestBudId);
           if (bud && this.companionSprite?.active) {
@@ -1784,6 +1828,16 @@ export class GameScene extends Phaser.Scene {
     actor.hp -= dmg;
     playSfx('hit_enemy');
     actor.sprite.setTint(0xffffff);
+    sparkBurst(this, actor.sprite.x, actor.sprite.y, 0xffffff, 4);
+    if (motionAllowed() && actor.sprite.active) {
+      this.tweens.add({
+        targets: actor.sprite,
+        scaleX: SCALE * 1.15,
+        scaleY: SCALE * 0.85,
+        duration: 60,
+        yoyo: true,
+      });
+    }
     this.time.delayedCall(80, () => {
       if (actor.alive) actor.sprite.clearTint();
     });
@@ -1883,16 +1937,36 @@ export class GameScene extends Phaser.Scene {
       this.applyBossReward(actor);
     }
 
-    // Death particles
-    for (let i = 0; i < 6; i++) {
-      const p = this.add.image(actor.sprite.x, actor.sprite.y, 'particle');
-      p.setScale(SCALE);
+    // Death particles — kind-tinted, richer when motion allowed
+    const px = actor.sprite.x;
+    const py = actor.sprite.y;
+    const count = motionAllowed() ? 8 : 4;
+    const kindTint =
+      actor.kind === 'slime'
+        ? 0x7dffb3
+        : actor.kind === 'skeleton'
+          ? 0xe8e0d0
+          : actor.kind === 'wolf'
+            ? 0x9a9ab0
+            : actor.kind === 'cactus'
+              ? 0x5ab878
+              : actor.kind === 'boss'
+                ? 0xff6b9d
+                : 0xffc857;
+    const colors = [kindTint, 0xffc857, 0xffffff, kindTint];
+    for (let i = 0; i < count; i++) {
+      const p = this.add.image(px, py, i % 2 === 0 ? 'particle' : 'particle-hit');
+      p.setScale(SCALE * (0.6 + Math.random() * 0.5));
+      p.setTint(colors[i % colors.length]!);
+      p.setDepth(18);
       this.tweens.add({
         targets: p,
-        x: p.x + Phaser.Math.Between(-40, 40),
-        y: p.y + Phaser.Math.Between(-40, 40),
+        x: px + Phaser.Math.Between(-48, 48),
+        y: py + Phaser.Math.Between(-48, 48),
         alpha: 0,
-        duration: 350,
+        angle: Phaser.Math.Between(-90, 90),
+        duration: 280 + Math.random() * 200,
+        ease: 'Cubic.easeOut',
         onComplete: () => p.destroy(),
       });
     }
@@ -2504,16 +2578,30 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.swordHit.setPosition(x, y);
-    this.swordHit.setAngle(angle);
+    this.swordHit.setAngle(angle - 25);
     this.swordHit.setVisible(true);
     this.swordHit.setActive(true);
     this.swordHit.setDepth(15);
+    this.swordHit.setScale(SCALE * 0.85);
+    this.swordHit.setAlpha(1);
     const body = this.swordHit.body as Phaser.Physics.Arcade.Body;
     body.enable = true;
     body.moves = false;
     // Larger than sprite so overlaps vs big creeps (cube 20px frame) register
     body.setSize(28, 28);
     body.reset(x, y);
+
+    if (motionAllowed()) {
+      slashArc(this, x, y, angle);
+      this.tweens.add({
+        targets: this.swordHit,
+        angle: angle + 28,
+        scale: SCALE * 1.25,
+        duration: 90,
+        yoyo: true,
+        ease: 'Quad.easeOut',
+      });
+    }
 
     // Immediate range check — reliable vs oversized frames if overlap misses a frame
     const reach = TILE * SCALE * 1.35;
@@ -2914,6 +3002,7 @@ export class GameScene extends Phaser.Scene {
       }
       // Enemies still move while inventory is open so the world is not frozen unfairly
       this.updateEnemies(delta);
+      this.updateVisualMotion(delta, false);
       return;
     }
 
@@ -2960,5 +3049,117 @@ export class GameScene extends Phaser.Scene {
     this.checkRoomExit();
     this.updateCompanionCombat(delta);
     this.updateEnemies(delta);
+    this.updateVisualMotion(delta, vx !== 0 || vy !== 0);
+  }
+
+  /** Soft alpha/scale loop for portal rings and forje glow. */
+  private pulseAmbientProp(
+    sprite: Phaser.GameObjects.Sprite | Phaser.GameObjects.Image,
+    kind: 'portal' | 'forje',
+  ): void {
+    if (!motionAllowed() || !sprite.active) return;
+    this.tweens.killTweensOf(sprite);
+    sprite.setAlpha(1);
+    if (kind === 'portal') {
+      this.tweens.add({
+        targets: sprite,
+        alpha: 0.62,
+        scale: SCALE * 1.1,
+        duration: 520,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    } else {
+      this.tweens.add({
+        targets: sprite,
+        alpha: 0.72,
+        duration: 280,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
+  }
+
+  /**
+   * Portal / forje pulse on room load (also applied at spawn for mid-fight portals).
+   * Tweens killed in clearRoomObjects.
+   */
+  private startRoomAmbience(): void {
+    if (!motionAllowed()) return;
+    for (const a of this.actors) {
+      if (!a.alive || !a.sprite?.active) continue;
+      if (a.kind === 'portal' || a.kind === 'forje') {
+        this.pulseAmbientProp(a.sprite, a.kind);
+      }
+    }
+  }
+
+  /**
+   * Idle bob, enemy squash, ambient water/lava shimmer.
+   * Physics positions untouched — only display scale/texture.
+   */
+  private updateVisualMotion(delta: number, playerMoving: boolean): void {
+    this.animTime += delta;
+    const t = this.animTime / 1000;
+
+    if (motionAllowed() && this.player?.active && !this.attacking) {
+      const b = bobScale(t, playerMoving);
+      this.player.setScale(b.sx, b.sy);
+    } else if (this.player?.active && !this.attacking) {
+      this.player.setScale(SCALE);
+    }
+
+    // Companion bob when parked (not mid strike scale punch)
+    if (
+      this.companionSprite?.active &&
+      motionAllowed() &&
+      this.budAttackCd < Math.max(0, 80)
+    ) {
+      const cb = bobScale(t + 0.7, false);
+      this.companionSprite.setScale(cb.sx * 0.95, cb.sy * 0.95);
+    }
+
+    // Enemy idle motion — skip while hurt so hit-squash tween can read
+    if (motionAllowed()) {
+      let i = 0;
+      for (const a of this.actors) {
+        if (!a.alive || !a.sprite?.active) continue;
+        if (a.hurtCooldown > 0) continue;
+        if (
+          !['slime', 'skeleton', 'redshirt', 'cube', 'boss', 'wolf', 'cactus'].includes(
+            a.kind,
+          )
+        ) {
+          continue;
+        }
+        const eb = enemyBobScale(t, a.kind, i++);
+        a.sprite.setScale(eb.sx, eb.sy);
+        if (a.kind === 'slime' && this.textures.exists('slime-b')) {
+          const frame = Math.floor(this.animTime / 380) % 2;
+          const key = frame === 0 ? 'slime' : 'slime-b';
+          if (a.sprite.texture.key !== key) a.sprite.setTexture(key);
+        }
+      }
+    }
+
+    // Ambient water / lava texture ping-pong
+    if (motionAllowed() && this.ambientTiles.length) {
+      const next = Math.floor(this.animTime / 420) % 2;
+      if (next !== this.ambientFrame) {
+        this.ambientFrame = next;
+        for (const { img, kind } of this.ambientTiles) {
+          if (!img.active) continue;
+          if (kind === 'water') {
+            const k = next === 0 ? 'tile-water' : 'tile-water-b';
+            if (this.textures.exists(k)) img.setTexture(k);
+          } else if (kind === 'lava') {
+            const k = next === 0 ? 'tile-lava' : 'tile-lava-b';
+            if (this.textures.exists(k)) img.setTexture(k);
+          }
+        }
+      }
+    }
   }
 }

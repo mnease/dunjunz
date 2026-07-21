@@ -307,6 +307,12 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillStyle = hex(COLORS.floorAlt);
     ctx.fillRect(1, 1, 2, 2);
     ctx.fillRect(10, 9, 2, 2);
+    ctx.fillRect(6, 5, 1, 1);
+    ctx.fillRect(13, 3, 1, 1);
+    // subtle grout
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(0, 7, TILE, 1);
+    ctx.fillRect(7, 0, 1, TILE);
   });
 
   canvasTex(scene, 'tile-wall', TILE, TILE, (ctx) => {
@@ -314,8 +320,15 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(0, 0, TILE, TILE);
     ctx.fillStyle = hex(COLORS.wall);
     ctx.fillRect(1, 1, TILE - 2, TILE - 3);
+    // brick seams
     ctx.fillStyle = '#2a2438';
     ctx.fillRect(0, TILE - 2, TILE, 2);
+    ctx.fillRect(1, 5, TILE - 2, 1);
+    ctx.fillRect(4, 1, 1, 4);
+    ctx.fillRect(10, 6, 1, 5);
+    // highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(2, 2, TILE - 5, 1);
   });
 
   canvasTex(scene, 'tile-grass', TILE, TILE, (ctx) => {
@@ -325,6 +338,11 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(3, 4, 1, 3);
     ctx.fillRect(8, 2, 1, 4);
     ctx.fillRect(12, 7, 1, 3);
+    ctx.fillRect(5, 10, 1, 2);
+    ctx.fillStyle = '#4a9a5a';
+    ctx.fillRect(2, 2, 1, 1);
+    ctx.fillRect(11, 5, 1, 1);
+    ctx.fillRect(7, 12, 1, 1);
   });
 
   canvasTex(scene, 'tile-dirt', TILE, TILE, (ctx) => {
@@ -333,6 +351,10 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillStyle = '#5a4538';
     ctx.fillRect(4, 5, 2, 1);
     ctx.fillRect(10, 9, 2, 1);
+    ctx.fillRect(2, 11, 1, 1);
+    ctx.fillRect(13, 3, 2, 1);
+    ctx.fillStyle = '#7a6554';
+    ctx.fillRect(7, 2, 1, 1);
   });
 
   canvasTex(scene, 'tile-water', TILE, TILE, (ctx) => {
@@ -341,6 +363,21 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillStyle = '#3d7eb0';
     ctx.fillRect(2, 4, 5, 1);
     ctx.fillRect(8, 10, 5, 1);
+    ctx.fillStyle = 'rgba(180,220,255,0.35)';
+    ctx.fillRect(4, 2, 3, 1);
+    ctx.fillRect(10, 7, 4, 1);
+  });
+
+  // Second water frame for shimmer
+  canvasTex(scene, 'tile-water-b', TILE, TILE, (ctx) => {
+    ctx.fillStyle = hex(COLORS.water);
+    ctx.fillRect(0, 0, TILE, TILE);
+    ctx.fillStyle = '#4a8ec0';
+    ctx.fillRect(4, 6, 5, 1);
+    ctx.fillRect(1, 11, 6, 1);
+    ctx.fillStyle = 'rgba(200,230,255,0.4)';
+    ctx.fillRect(9, 3, 4, 1);
+    ctx.fillRect(3, 9, 3, 1);
   });
 
   canvasTex(scene, 'tile-lava', TILE, TILE, (ctx) => {
@@ -349,6 +386,19 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillStyle = '#ff8a4c';
     ctx.fillRect(3, 3, 3, 2);
     ctx.fillRect(9, 9, 4, 2);
+    ctx.fillStyle = '#ffcc66';
+    ctx.fillRect(6, 6, 2, 2);
+    ctx.fillRect(1, 12, 2, 1);
+  });
+
+  canvasTex(scene, 'tile-lava-b', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#d4542b';
+    ctx.fillRect(0, 0, TILE, TILE);
+    ctx.fillStyle = '#ffaa55';
+    ctx.fillRect(5, 2, 4, 2);
+    ctx.fillRect(2, 10, 3, 2);
+    ctx.fillStyle = '#ffe08a';
+    ctx.fillRect(9, 7, 2, 2);
   });
 
   // Wide door graphic (single tile — fills full width, not multi-D ASCII)
@@ -517,10 +567,26 @@ export function generateTextures(scene: Phaser.Scene): void {
   canvasTex(scene, 'sword-swing', 20, 20, (ctx) => {
     ctx.fillStyle = '#dfe6f0';
     ctx.fillRect(8, 0, 4, 14);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(9, 1, 1, 10);
     ctx.fillStyle = '#c9a227';
     ctx.fillRect(6, 12, 8, 3);
     ctx.fillStyle = '#8b5a2b';
     ctx.fillRect(8, 15, 4, 4);
+  });
+
+  // Motion arc for attack VFX
+  canvasTex(scene, 'slash-arc', 24, 24, (ctx) => {
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(12, 12, 9, -0.9, 0.9);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(125,255,179,0.55)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(12, 12, 7, -0.7, 0.7);
+    ctx.stroke();
   });
 
   canvasTex(scene, 'slime', TILE, TILE, (ctx) => {
@@ -528,12 +594,32 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.beginPath();
     ctx.ellipse(8, 10, 6, 5, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(6, 8, 2, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.fillRect(5, 8, 2, 2);
     ctx.fillRect(9, 8, 2, 2);
     ctx.fillStyle = '#000';
     ctx.fillRect(6, 9, 1, 1);
     ctx.fillRect(10, 9, 1, 1);
+    // drip
+    ctx.fillStyle = hex(COLORS.slime);
+    ctx.fillRect(7, 14, 2, 2);
+  });
+
+  canvasTex(scene, 'slime-b', TILE, TILE, (ctx) => {
+    ctx.fillStyle = hex(COLORS.slime);
+    ctx.beginPath();
+    ctx.ellipse(8, 10, 6.5, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(5, 8, 2, 2);
+    ctx.fillRect(9, 7, 2, 2);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(6, 9, 1, 1);
+    ctx.fillRect(10, 8, 1, 1);
   });
 
   canvasTex(scene, 'skeleton', TILE, TILE, (ctx) => {
@@ -544,9 +630,15 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(10, 8, 2, 4);
     ctx.fillRect(6, 12, 2, 3);
     ctx.fillRect(9, 12, 2, 3);
+    ctx.fillStyle = '#c8c0b0';
+    ctx.fillRect(6, 3, 4, 1);
     ctx.fillStyle = '#000';
     ctx.fillRect(6, 4, 1, 1);
     ctx.fillRect(9, 4, 1, 1);
+    // ribs
+    ctx.fillStyle = '#d0c8b8';
+    ctx.fillRect(7, 8, 2, 1);
+    ctx.fillRect(7, 10, 2, 1);
   });
 
   canvasTex(scene, 'redshirt', TILE, TILE, (ctx) => {
@@ -778,10 +870,17 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(3, 8, 10, 5);
     ctx.fillStyle = '#5a5a68';
     ctx.fillRect(2, 6, 12, 3);
+    ctx.fillStyle = '#2a2a34';
+    ctx.fillRect(4, 9, 8, 1);
+    // embers
     ctx.fillStyle = '#ff8a4c';
     ctx.fillRect(6, 3, 4, 3);
+    ctx.fillRect(5, 2, 1, 2);
+    ctx.fillRect(10, 1, 1, 2);
     ctx.fillStyle = hex(COLORS.gold);
     ctx.fillRect(7, 4, 2, 1);
+    ctx.fillStyle = '#ffcc66';
+    ctx.fillRect(7, 2, 1, 1);
   });
 
   // Princesz Prizella
@@ -832,13 +931,23 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillStyle = '#d0d0d8';
     ctx.fillRect(4, 6, 8, 7);
     ctx.fillRect(3, 8, 10, 4);
+    // rounder belly
+    ctx.fillRect(5, 12, 6, 1);
+    // ears
     ctx.fillRect(3, 3, 3, 4);
     ctx.fillRect(10, 3, 3, 4);
+    ctx.fillRect(2, 2, 2, 2);
+    ctx.fillRect(12, 2, 2, 2);
+    // face
     ctx.fillStyle = '#222';
     ctx.fillRect(6, 8, 1, 1);
     ctx.fillRect(9, 8, 1, 1);
     ctx.fillStyle = '#ff6b9d';
     ctx.fillRect(7, 10, 2, 1);
+    // cheek dots
+    ctx.fillStyle = 'rgba(255,107,157,0.45)';
+    ctx.fillRect(5, 9, 1, 1);
+    ctx.fillRect(10, 9, 1, 1);
     ctx.fillStyle = '#a0a0a8';
     ctx.fillRect(5, 13, 2, 2);
     ctx.fillRect(9, 13, 2, 2);
@@ -858,6 +967,12 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.beginPath();
     ctx.arc(8, 8, 4, 0, Math.PI * 2);
     ctx.stroke();
+    // outer sparkles
+    ctx.fillStyle = 'rgba(78,205,196,0.7)';
+    ctx.fillRect(1, 7, 1, 1);
+    ctx.fillRect(14, 8, 1, 1);
+    ctx.fillRect(7, 1, 1, 1);
+    ctx.fillRect(8, 14, 1, 1);
     ctx.fillStyle = '#ffc857';
     ctx.fillRect(7, 6, 2, 2);
     ctx.fillStyle = '#4ecdc4';
@@ -866,6 +981,15 @@ export function generateTextures(scene: Phaser.Scene): void {
 
   canvasTex(scene, 'particle', 4, 4, (ctx) => {
     ctx.fillStyle = hex(COLORS.gold);
-    ctx.fillRect(0, 0, 4, 4);
+    ctx.fillRect(1, 0, 2, 4);
+    ctx.fillRect(0, 1, 4, 2);
+  });
+
+  canvasTex(scene, 'particle-hit', 6, 6, (ctx) => {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(2, 0, 2, 6);
+    ctx.fillRect(0, 2, 6, 2);
+    ctx.fillStyle = hex(COLORS.green);
+    ctx.fillRect(2, 2, 2, 2);
   });
 }
