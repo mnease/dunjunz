@@ -9,7 +9,7 @@ export function getSql(): NeonQueryFunction<false, false> {
   }
   if (!sql) {
     // HTTP fetch driver (no WebSocket) — works on Vercel Node 20
-    sql = neon(url, { fullResults: false });
+    sql = neon(url);
   }
   return sql;
 }
