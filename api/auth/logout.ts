@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { hashToken } from '../_lib/crypto';
-import { dbConfigured, getSql } from '../_lib/db';
+import { hashToken } from '../lib/crypto';
+import { dbConfigured, getSql } from '../lib/db';
 import {
   clearSessionCookie,
   methodGuard,
   parseCookies,
-} from '../_lib/http';
+} from '../lib/http';
 
 export default async function handler(
   req: VercelRequest,

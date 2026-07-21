@@ -1,4 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import {
+  ensureThreeEmptySlots,
+  listSlotSummaries,
+} from '../lib/auth';
+import { hashToken, isValidEmail, randomToken } from '../lib/crypto';
+import { dbConfigured, getSql } from '../lib/db';
+import { clientIp, readJson } from '../lib/http';
+import { rateLimit } from '../lib/rate-limit';
 
 export default async function handler(
   req: VercelRequest,
@@ -16,21 +24,14 @@ export default async function handler(
       return;
     }
 
-    const { dbConfigured, getSql } = await import('../_lib/db');
     if (!dbConfigured()) {
       res.status(503).json({
         ok: false,
         error: 'no_db',
-        message:
-          'Cloud guest needs Neon (POSTGRES_URL from Vercel Storage, or DATABASE_URL). Run sql/001_auth_slots.sql, redeploy.',
+        message: 'Cloud guest needs Neon (dunjunz_POSTGRES_URL).',
       });
       return;
     }
-
-    const { ensureThreeEmptySlots, listSlotSummaries } = await import('../_lib/auth');
-    const { hashToken, isValidEmail, randomToken } = await import('../_lib/crypto');
-    const { clientIp, readJson } = await import('../_lib/http');
-    const { rateLimit } = await import('../_lib/rate-limit');
 
     const ip = clientIp(req);
     if (!(await rateLimit(`guest:ip:${ip}`, 5, 60 * 60 * 1000))) {
@@ -53,10 +54,7 @@ export default async function handler(
       WHERE email_normalized = ${norm}
       LIMIT 1
     `;
-    if (
-      existing.length &&
-      (existing[0] as { email_verified_at: string | null }).email_verified_at
-    ) {
+    if (existing.length && existing[0]!.email_verified_at) {
       res.status(409).json({
         ok: false,
         error: 'email_has_account',
@@ -67,13 +65,13 @@ export default async function handler(
 
     let userId: string;
     if (existing.length) {
-      userId = (existing[0] as { id: string }).id;
+      userId = existing[0]!.id as string;
     } else {
       const created = await sql`
         INSERT INTO users (email) VALUES (${email})
         RETURNING id
       `;
-      userId = (created[0] as { id: string }).id;
+      userId = created[0]!.id as string;
     }
 
     await ensureThreeEmptySlots(userId);
@@ -103,7 +101,7 @@ export default async function handler(
       error: 'Server error creating guest.',
       detail: msg.slice(0, 240),
       hint: /relation .* does not exist/i.test(msg)
-        ? 'Run sql/001_auth_slots.sql in Neon.'
+        ? 'POST /api/migrate with bootstrap secret.'
         : undefined,
     });
   }

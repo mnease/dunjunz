@@ -1,4 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { ensureThreeEmptySlots } from '../lib/auth';
+import { hashToken, isValidEmail, randomToken } from '../lib/crypto';
+import { dbConfigured, getSql } from '../lib/db';
+import { clientIp, readJson } from '../lib/http';
+import { sendMagicLinkEmail } from '../lib/mail';
+import { rateLimit } from '../lib/rate-limit';
 
 export default async function handler(
   req: VercelRequest,
@@ -16,22 +22,15 @@ export default async function handler(
       return;
     }
 
-    const { dbConfigured, getSql } = await import('../_lib/db');
     if (!dbConfigured()) {
       res.status(503).json({
         ok: false,
         error: 'no_db',
         message:
-          'Cloud accounts need a Neon URL (POSTGRES_URL from Vercel Storage, or DATABASE_URL). Run sql/001_auth_slots.sql, redeploy.',
+          'Cloud accounts need Neon (dunjunz_POSTGRES_URL). Link Storage + redeploy.',
       });
       return;
     }
-
-    const { ensureThreeEmptySlots } = await import('../_lib/auth');
-    const { hashToken, isValidEmail, randomToken } = await import('../_lib/crypto');
-    const { clientIp, readJson } = await import('../_lib/http');
-    const { sendMagicLinkEmail } = await import('../_lib/mail');
-    const { rateLimit } = await import('../_lib/rate-limit');
 
     const body = readJson<{ email?: string }>(req);
     const email = String(body.email ?? '').trim();
@@ -57,12 +56,12 @@ export default async function handler(
       SELECT id FROM users WHERE email_normalized = ${norm} LIMIT 1
     `;
     if (existing.length) {
-      userId = (existing[0] as { id: string }).id;
+      userId = existing[0]!.id as string;
     } else {
       const created = await sql`
         INSERT INTO users (email) VALUES (${email}) RETURNING id
       `;
-      userId = (created[0] as { id: string }).id;
+      userId = created[0]!.id as string;
     }
     await ensureThreeEmptySlots(userId);
 
@@ -82,7 +81,7 @@ export default async function handler(
       process.env.AUTH_BASE_URL?.replace(/\/$/, '') ||
       (process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}`
-        : 'https://dunjunz.vercel.app');
+        : 'https://www.dunjunz.com');
     const link = `${base}/api/auth/callback?token=${encodeURIComponent(raw)}`;
 
     try {
@@ -96,10 +95,8 @@ export default async function handler(
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[auth/magic-link]', msg);
     const hint = /relation .* does not exist/i.test(msg)
-      ? 'Run sql/001_auth_slots.sql in Neon SQL editor.'
-      : /DATABASE_URL/i.test(msg)
-        ? 'Set DATABASE_URL on Vercel and redeploy.'
-        : undefined;
+      ? 'POST /api/migrate with bootstrap secret to create tables.'
+      : undefined;
     res.status(500).json({
       ok: false,
       error: 'Server error.',

@@ -1,9 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { listSlotSummaries, resolveAuth } from '../lib/auth';
+import { dbConfigured } from '../lib/db';
 
-/**
- * Identity probe. Intentionally minimal imports so it never hard-crashes
- * when DATABASE_URL is missing (unlike the full slots stack).
- */
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
@@ -21,20 +19,17 @@ export default async function handler(
       return;
     }
 
-    const { dbConfigured } = await import('../_lib/db');
     if (!dbConfigured()) {
       res.status(200).json({
         ok: true,
         authenticated: false,
         reason: 'no_db',
         hint:
-          'Neon not visible to the function. Link Neon on Vercel (POSTGRES_URL) or set DATABASE_URL, run sql/001_auth_slots.sql, redeploy.',
+          'Neon URL not found (expect dunjunz_POSTGRES_URL). Redeploy after linking Storage.',
       });
       return;
     }
 
-    // Lazy-load DB stack only when configured
-    const { resolveAuth, listSlotSummaries } = await import('../_lib/auth');
     const auth = await resolveAuth(req);
     if (!auth) {
       res.status(200).json({ ok: true, authenticated: false });
@@ -53,6 +48,10 @@ export default async function handler(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[auth/me]', msg);
-    res.status(500).json({ ok: false, error: 'Server error.', detail: msg.slice(0, 240) });
+    res.status(500).json({
+      ok: false,
+      error: 'Server error.',
+      detail: msg.slice(0, 240),
+    });
   }
 }

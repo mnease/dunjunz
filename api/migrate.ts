@@ -8,7 +8,7 @@ import {
   dbConfigured,
   getSql,
   resolveDatabaseUrlSource,
-} from './_lib/db';
+} from './lib/db';
 
 export default async function handler(
   req: VercelRequest,

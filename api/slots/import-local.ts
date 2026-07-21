@@ -4,9 +4,9 @@ import {
   listSlotSummaries,
   resolveAuth,
   summarizeSave,
-} from '../_lib/auth';
-import { dbConfigured, getSql } from '../_lib/db';
-import { methodGuard, readJson } from '../_lib/http';
+} from '../lib/auth';
+import { dbConfigured, getSql } from '../lib/db';
+import { methodGuard, readJson } from '../lib/http';
 
 export default async function handler(
   req: VercelRequest,

@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { resolveAuth, summarizeSave } from '../_lib/auth';
-import { dbConfigured, getSql } from '../_lib/db';
-import { methodGuard, readJson } from '../_lib/http';
-import { rateLimit } from '../_lib/rate-limit';
-import { defaultSaveJson } from '../_lib/default-save';
+import { resolveAuth, summarizeSave } from '../lib/auth';
+import { dbConfigured, getSql } from '../lib/db';
+import { methodGuard, readJson } from '../lib/http';
+import { rateLimit } from '../lib/rate-limit';
+import { defaultSaveJson } from '../lib/default-save';
 
 export default async function handler(
   req: VercelRequest,
