@@ -94,11 +94,12 @@ export class TitleScene extends Phaser.Scene {
     }
 
     const prompt = this.add
-      .text(GAME_W / 2, 470, '', {
+      .text(GAME_W / 2, 465, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '11px',
         color: '#ffffff',
         align: 'center',
+        lineSpacing: 14,
       })
       .setOrigin(0.5);
 
@@ -127,7 +128,7 @@ export class TitleScene extends Phaser.Scene {
         setCloudSyncEnabled(true);
         this.renderCloudSlots();
         prompt.setText(
-          '↑↓ SELECT SLOT   ENTER LOAD/NEW   R WIPE SLOT\nFOOTER: ACCOUNT FOR GUEST / MAGIC LINK',
+          '↑↓ SELECT SLOT   ENTER LOAD/NEW   R WIPE SLOT\nTOP BAR: ACCOUNT FOR GUEST / MAGIC LINK',
         );
       } else {
         this.cloudMode = false;
@@ -142,8 +143,8 @@ export class TitleScene extends Phaser.Scene {
           (save.landsCleared?.length ?? 0) > 0;
         prompt.setText(
           hasProgress
-            ? 'ENTER - CONTINUE    R - NEW GAME\nOR OPEN ACCOUNT (FOOTER) FOR CLOUD SLOTS'
-            : 'PRESS ENTER TO START (LOCAL)\nOR ACCOUNT (FOOTER) FOR CLOUD',
+            ? 'ENTER - CONTINUE    R - NEW GAME\nOR OPEN ACCOUNT (TOP BAR) FOR CLOUD SLOTS'
+            : 'PRESS ENTER TO START (LOCAL)\nOR ACCOUNT (TOP BAR) FOR CLOUD',
         );
       }
     };
