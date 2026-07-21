@@ -204,4 +204,6 @@ export interface SaveData {
   activeQuestId: string | null;
   /** Completed champion quest ids (beyond main rescue / best bud). */
   questsCompleted: string[];
+  /** Unlocked brag (achievement) ids. */
+  achievementsUnlocked: string[];
 }

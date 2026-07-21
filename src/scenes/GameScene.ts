@@ -116,6 +116,7 @@ import { playMusic, playSfx, type MusicId } from '../systems/audio';
 import { loadSettings } from '../systems/settings';
 import { loadSave, writeSave } from '../systems/save';
 import { threatForRoom } from '../systems/threat';
+import { syncAchievements } from '../systems/achievements';
 import type {
   AttrId,
   EntityDef,
@@ -356,6 +357,7 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-R', () => this.cycleEquip('ring'));
     kb.on('keydown-K', () => this.cycleEquip('key'));
     kb.on('keydown-Y', this.onGearTargetToggle, this);
+    kb.on('keydown-J', this.onJournalKey, this);
     kb.on('keydown-M', this.onMapzKey, this);
     kb.on('keydown-TAB', this.onMapzKey, this);
     kb.on('keydown-OPEN_BRACKET', () => this.onMapzNav('floor-prev'));
@@ -658,13 +660,17 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('toast', result.reason);
       return;
     }
-    this.save = result.save;
+    this.save = {
+      ...result.save,
+      flags: { ...result.save.flags, forjed_once: true },
+    };
     writeSave(this.save);
     this.emitHud();
     this.refreshPlayerAppearance();
     this.game.events.emit('toast', result.message);
     this.game.events.emit('forjing-refresh', this.save);
     this.game.events.emit('inventory-refresh', this.save);
+    this.flushAchievements();
   }
 
   private navForjing(dir: 'up' | 'down' | 'left' | 'right'): void {
@@ -720,6 +726,26 @@ export class GameScene extends Phaser.Scene {
   private onWeaponEquipKey = (): void => {
     this.cycleEquip('weapon');
   };
+
+  private onJournalKey = (): void => {
+    if (this.paused) return;
+    // HTML journal modal (quests + brags)
+    document.getElementById('journal-open')?.click();
+  };
+
+  /** Unlock brags; toast any new ones (bard energy, not corporate). */
+  private flushAchievements(): void {
+    const { save, newly } = syncAchievements(this.save);
+    this.save = save;
+    if (!newly.length) return;
+    writeSave(this.save);
+    newly.forEach((a, i) => {
+      this.time.delayedCall(i * 400, () => {
+        playSfx('success');
+        this.game.events.emit('toast', `NEW BRAG: ${a.title}`);
+      });
+    });
+  }
 
   private onGearTargetToggle = (): void => {
     if (!this.inventoryOpen || this.paused) return;
@@ -1041,6 +1067,7 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
     writeSave(this.save);
     this.syncCompanion();
+    this.flushAchievements();
 
     if (resolved === 'b2_boss' && !this.save.bossDefeated && !this.bossIntroShown) {
       this.bossIntroShown = true;
@@ -1722,7 +1749,12 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(100, () => {
       this.save.hp = this.save.maxHp;
       this.save.roomId = 'overworld';
+      this.save = {
+        ...this.save,
+        flags: { ...this.save.flags, died_once: true },
+      };
       writeSave(this.save);
+      this.flushAchievements();
     });
     this.time.delayedCall(2500, () => {
       this.dialogLocked = false;
@@ -1868,6 +1900,7 @@ export class GameScene extends Phaser.Scene {
     actor.sprite.destroy();
     writeSave(this.save);
     this.emitHud();
+    this.flushAchievements();
   }
 
   /** Talk path: boots of apology (once). Cube stays until killed. */
@@ -2300,7 +2333,10 @@ export class GameScene extends Phaser.Scene {
       }
       return;
     }
-    this.save = result.save;
+    this.save = {
+      ...result.save,
+      flags: { ...result.save.flags, shop_traded: true },
+    };
     writeSave(this.save);
     this.emitHud();
     playSfx('coin');
@@ -2310,6 +2346,7 @@ export class GameScene extends Phaser.Scene {
     );
     this.game.events.emit('shop-refresh', this.save);
     this.game.events.emit('inventory-refresh', this.save);
+    this.flushAchievements();
   }
 
   private sellSelectedBagItem(): void {
@@ -2328,7 +2365,10 @@ export class GameScene extends Phaser.Scene {
       }
       return;
     }
-    this.save = result.save;
+    this.save = {
+      ...result.save,
+      flags: { ...result.save.flags, shop_traded: true },
+    };
     writeSave(this.save);
     this.emitHud();
     const bag = listPlayerSellables(this.save, this.shopId);
@@ -2342,6 +2382,7 @@ export class GameScene extends Phaser.Scene {
     );
     this.game.events.emit('shop-refresh', this.save);
     this.game.events.emit('inventory-refresh', this.save);
+    this.flushAchievements();
     this.game.events.emit('shop-select', {
       pane: 'bag',
       index: this.shopBagSelected,

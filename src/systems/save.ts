@@ -46,6 +46,7 @@ export function defaultSave(): SaveData {
     budEquipped: emptyEquipped(),
     activeQuestId: null,
     questsCompleted: [],
+    achievementsUnlocked: [],
   };
 }
 
@@ -77,6 +78,9 @@ function withV5Fields(s: SaveData): SaveData {
     },
     activeQuestId: s.activeQuestId ?? null,
     questsCompleted: Array.isArray(s.questsCompleted) ? s.questsCompleted : [],
+    achievementsUnlocked: Array.isArray(s.achievementsUnlocked)
+      ? s.achievementsUnlocked
+      : [],
   };
 }
 
@@ -152,6 +156,11 @@ export function loadSave(): SaveData {
       activeQuestId: (parsed as SaveData).activeQuestId ?? null,
       questsCompleted: Array.isArray((parsed as SaveData).questsCompleted)
         ? (parsed as SaveData).questsCompleted!
+        : [],
+      achievementsUnlocked: Array.isArray(
+        (parsed as SaveData).achievementsUnlocked,
+      )
+        ? (parsed as SaveData).achievementsUnlocked!
         : [],
     });
     next.level = levelFromXp(next.xp);

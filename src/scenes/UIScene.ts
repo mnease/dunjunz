@@ -2009,6 +2009,7 @@ export class UIScene extends Phaser.Scene {
             : '';
     const hints = [
       '[I] BAG',
+      '[J] LOG',
       (save.discoveredMapz?.length ?? 0) > 0 ? '[M] MAP' : null,
       quest || null,
     ]

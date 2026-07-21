@@ -40,6 +40,9 @@
           </p>
           <div class="legal-actions">
             <span id="auth-status" class="auth-status">Local play</span>
+            <button type="button" id="journal-open" class="feedback-btn ghost-btn">
+              Journal
+            </button>
             <button type="button" id="settings-open" class="feedback-btn ghost-btn">
               Settings
             </button>
@@ -52,6 +55,67 @@
           </div>
         </div>
       </footer>
+    </div>
+
+    <div
+      id="journal-modal"
+      class="feedback-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="journal-title"
+      aria-hidden="true"
+    >
+      <div class="feedback-panel journal-panel">
+        <header class="feedback-header">
+          <h2 id="journal-title">Journal</h2>
+          <button
+            type="button"
+            class="feedback-x"
+            data-journal-close
+            aria-label="Close journal"
+          >
+            ×
+          </button>
+        </header>
+        <p class="feedback-blurb">
+          Quests, progress, and brags. The bard is taking notes. Press
+          <strong>J</strong> anytime.
+        </p>
+        <div class="journal-tabs" role="tablist" aria-label="Journal sections">
+          <button
+            type="button"
+            id="journal-tab-quests"
+            class="journal-tab is-active"
+            role="tab"
+            aria-selected="true"
+            aria-controls="journal-body"
+          >
+            Quests
+          </button>
+          <button
+            type="button"
+            id="journal-tab-brags"
+            class="journal-tab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="journal-body"
+          >
+            Brags
+          </button>
+        </div>
+        <p id="journal-summary" class="journal-summary" aria-live="polite"></p>
+        <div
+          id="journal-body"
+          class="journal-body"
+          role="tabpanel"
+          tabindex="0"
+        ></div>
+        <div class="feedback-actions">
+          <button type="button" class="btn primary" data-journal-close>
+            Done
+          </button>
+        </div>
+      </div>
     </div>
 
     <div

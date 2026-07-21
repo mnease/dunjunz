@@ -8,6 +8,7 @@ import { UIScene } from './scenes/UIScene';
 import { installAudioUnlock } from './systems/audio';
 import { initAuthUi } from './ui/auth';
 import { initFeedbackUi } from './ui/feedback';
+import { initJournalUi } from './ui/journal';
 import { initSettingsUi } from './ui/settings';
 
 const config: Phaser.Types.Core.GameConfig = {
@@ -34,8 +35,9 @@ const config: Phaser.Types.Core.GameConfig = {
 // eslint-disable-next-line no-new
 new Phaser.Game(config);
 
-// Page chrome: settings (audio) + account + feedback
+// Page chrome: journal (quests/brags) + settings + account + feedback
 installAudioUnlock();
+initJournalUi();
 initSettingsUi();
 initAuthUi();
 initFeedbackUi();

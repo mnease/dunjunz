@@ -286,6 +286,9 @@ export function migrateEquipment(save: SaveData & Record<string, unknown>): Save
       questsCompleted: Array.isArray(save.questsCompleted)
         ? save.questsCompleted
         : [],
+      achievementsUnlocked: Array.isArray(save.achievementsUnlocked)
+        ? save.achievementsUnlocked
+        : [],
     };
     return autoEquipEmptySlots(syncDerivedStats(next));
   }
@@ -335,6 +338,7 @@ export function migrateEquipment(save: SaveData & Record<string, unknown>): Save
     budEquipped: emptyEquipped(),
     activeQuestId: null,
     questsCompleted: [],
+    achievementsUnlocked: [],
   };
 
   const inv = legacy.inventory ?? {};

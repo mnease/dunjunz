@@ -224,6 +224,125 @@ body {
   box-shadow: 1px 1px 0 #0a0c10;
 }
 
+/* —— Journal (quests + brags) —— */
+.journal-panel {
+  width: min(100%, 520px);
+  max-height: min(90vh, 640px);
+  display: flex;
+  flex-direction: column;
+}
+
+.journal-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.55rem;
+}
+
+.journal-tab {
+  font-family: inherit;
+  font-size: 0.42rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  background: #0a0c10;
+  border: 2px solid #2a3448;
+  border-radius: 4px;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+}
+
+.journal-tab.is-active {
+  color: var(--bg);
+  background: var(--neon);
+  border-color: #3a9a68;
+}
+
+.journal-tab:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+.journal-summary {
+  margin: 0 0 0.5rem;
+  font-size: 0.38rem;
+  color: var(--amber);
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}
+
+.journal-body {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 48vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-right: 0.25rem;
+  margin-bottom: 0.65rem;
+}
+
+.journal-row {
+  border: 2px solid #2a3448;
+  border-radius: 4px;
+  padding: 0.5rem 0.55rem;
+  background: #0a0c10;
+}
+
+.journal-row.is-active {
+  border-color: var(--amber);
+}
+
+.journal-row.is-done {
+  border-color: #3a6a50;
+}
+
+.journal-row.is-locked {
+  opacity: 0.72;
+}
+
+.journal-row-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-bottom: 0.3rem;
+}
+
+.journal-status {
+  color: var(--neon);
+  font-size: 0.45rem;
+  flex-shrink: 0;
+}
+
+.journal-title {
+  margin: 0;
+  flex: 1;
+  font-size: 0.42rem;
+  color: #e8ecf5;
+  letter-spacing: 0.04em;
+  line-height: 1.45;
+  font-weight: normal;
+}
+
+.journal-progress {
+  font-size: 0.36rem;
+  color: var(--amber);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.journal-blurb {
+  margin: 0;
+  font-size: 0.38rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.journal-meta {
+  margin: 0.3rem 0 0;
+  font-size: 0.34rem;
+  color: #5c6578;
+  letter-spacing: 0.05em;
+}
+
 /* —— Settings form —— */
 .settings-form {
   display: flex;

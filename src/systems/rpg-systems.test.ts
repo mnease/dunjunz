@@ -940,6 +940,50 @@ describe('champion quests + kingdom', () => {
   });
 });
 
+describe('quest log + brags', () => {
+  it('lists main and champion quests with statuses', async () => {
+    const { listQuests, countQuestProgress } = await import('./quest-log');
+    let s = defaultSave();
+    let list = listQuests(s);
+    expect(list.some((q) => q.id === 'main-dunjunz' && q.status === 'active')).toBe(
+      true,
+    );
+    expect(list.some((q) => q.id === 'champ-best-bud' && q.status === 'locked')).toBe(
+      true,
+    );
+    s = {
+      ...s,
+      princessSaved: true,
+      bossDefeated: true,
+      landsCleared: ['dunjunz', 'dezertz'],
+      bestBudStage: 'complete',
+      bestBudId: 'gloop',
+    };
+    list = listQuests(s);
+    expect(list.find((q) => q.id === 'main-dunjunz')?.status).toBe('done');
+    expect(list.find((q) => q.id === 'champ-best-bud')?.status).toBe('done');
+    const sewer = list.find((q) => q.id === 'champ-sewerz-goose');
+    expect(sewer?.status).toBe('available');
+    const prog = countQuestProgress(s);
+    expect(prog.done).toBeGreaterThan(0);
+    expect(prog.total).toBe(list.length);
+  });
+
+  it('syncAchievements unlocks brags from save state', async () => {
+    const { syncAchievements, ACHIEVEMENTS } = await import('./achievements');
+    let s = defaultSave();
+    s.killed = ['slime-1'];
+    let r = syncAchievements(s);
+    expect(r.newly.some((a) => a.id === 'brag-first-bonk')).toBe(true);
+    s = r.save;
+    s.princessSaved = true;
+    s.killed.push('sand-wraith');
+    r = syncAchievements(s);
+    expect(r.save.achievementsUnlocked).toContain('brag-rescue');
+    expect(ACHIEVEMENTS.length).toBeGreaterThanOrEqual(12);
+  });
+});
+
 describe('best bud gear + XP', () => {
   it('grants bud XP and levels; gear boosts strike damage', async () => {
     const {
