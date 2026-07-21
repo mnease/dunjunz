@@ -81,7 +81,19 @@ export default async function handler(
 
     res.status(200).json({ ok: true });
   } catch (err) {
-    console.error('[auth/magic-link]', err);
-    res.status(500).json({ ok: false, error: 'Server error.' });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[auth/magic-link]', msg);
+    // Common: relation "users" does not exist → migration not run
+    const hint = /relation .* does not exist/i.test(msg)
+      ? 'Run sql/001_auth_slots.sql in your Neon SQL editor.'
+      : /DATABASE_URL/i.test(msg)
+        ? 'Set DATABASE_URL on Vercel and redeploy.'
+        : undefined;
+    res.status(500).json({
+      ok: false,
+      error: 'Server error.',
+      detail: msg.slice(0, 240),
+      hint,
+    });
   }
 }

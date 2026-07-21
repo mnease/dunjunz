@@ -105,14 +105,33 @@ export function initAuthUi(): void {
     const email = String(fd.get('email') || '');
     setMsg('Sending magic link…', 'idle');
     try {
-      const r = await requestMagicLink(email);
-      if (!r.ok) {
-        setMsg(r.error || 'Could not send link', 'err');
+      const res = await fetch('/api/auth/magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const r = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        detail?: string;
+        hint?: string;
+        message?: string;
+      };
+      if (!res.ok || !r.ok) {
+        const bits = [
+          r.message || r.error || `HTTP ${res.status}`,
+          r.hint,
+          r.detail,
+        ].filter(Boolean);
+        setMsg(bits.join(' — ') || 'Could not send link', 'err');
         return;
       }
       setMsg('Check your email for the sign-in link (15 min).', 'ok');
-    } catch {
-      setMsg('Network error.', 'err');
+    } catch (err) {
+      setMsg(
+        `Network error${err instanceof Error ? `: ${err.message}` : ''}`,
+        'err',
+      );
     }
   });
 

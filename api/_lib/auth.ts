@@ -17,13 +17,14 @@ const SESSION_COOKIE = 'dunjunz_session';
 export async function resolveAuth(
   req: VercelRequest,
 ): Promise<AuthContext | null> {
-  const sql = getSql();
   const cookies = parseCookies(req);
   const bearer = extractBearer(req);
 
   // 1) Session cookie
-  const sessionRaw = cookies[SESSION_COOKIE] || (bearer?.startsWith('sess_') ? bearer : null);
+  const sessionRaw =
+    cookies[SESSION_COOKIE] || (bearer?.startsWith('sess_') ? bearer : null);
   if (sessionRaw) {
+    const sql = getSql();
     const h = hashToken(sessionRaw);
     const rows = await sql`
       SELECT s.user_id, u.email, u.email_verified_at
@@ -55,6 +56,7 @@ export async function resolveAuth(
   // 2) Guest bearer
   const guestRaw = bearer && !bearer.startsWith('sess_') ? bearer : null;
   if (guestRaw) {
+    const sql = getSql();
     const h = hashToken(guestRaw);
     const rows = await sql`
       SELECT g.user_id, u.email, u.email_verified_at
