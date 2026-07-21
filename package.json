@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "nodemailer": "^9.0.3",
-    "phaser": "^3.90.0"
+    "phaser": "^3.90.0",
+    "resend": "^6.17.2"
   },
   "devDependencies": {
     "@types/node": "^25.0.3",

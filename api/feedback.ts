@@ -1,17 +1,27 @@
 /**
  * Vercel serverless: POST /api/feedback
- * Sends player feedback to support@neasemedia.com via SMTP.
+ * Sends player feedback to support@neasemedia.com.
  *
- * Required env (Vercel project → Settings → Environment Variables):
- *   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
- * Optional:
- *   SMTP_FROM, FEEDBACK_TO (default support@neasemedia.com)
+ * Preferred (NeaseMedia): Resend
+ *   RESEND_API_KEY   (required for Resend path)
+ *   RESEND_FROM      e.g. "DUNJUNZ <feedback@your-verified-domain.com>"
+ *   FEEDBACK_TO      default support@neasemedia.com
+ *
+ * Fallback: classic SMTP via nodemailer
+ *   SMTP_HOST, SMTP_USER, SMTP_PASS (+ optional SMTP_PORT, SMTP_FROM, SMTP_SECURE)
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const FEEDBACK_TO = process.env.FEEDBACK_TO?.trim() || 'support@neasemedia.com';
+/** Must be a verified domain/sender in the NeaseMedia Resend account. */
+const RESEND_FROM =
+  process.env.RESEND_FROM?.trim() ||
+  process.env.SMTP_FROM?.trim() ||
+  'DUNJUNZ Feedback <onboarding@resend.dev>';
+
 const MAX_NAME = 120;
 const MAX_EMAIL = 200;
 const MAX_MESSAGE = 4000;
@@ -31,7 +41,6 @@ export function validateFeedback(body: FeedbackBody): {
   message: string;
 } | { ok: false; error: string } {
   if (body.website && String(body.website).trim() !== '') {
-    // Silent success path for bots — handled by caller
     return { ok: false, error: 'honeypot' };
   }
   const name = String(body.name ?? '').trim();
@@ -41,7 +50,11 @@ export function validateFeedback(body: FeedbackBody): {
   if (!name || name.length > MAX_NAME) {
     return { ok: false, error: 'Name is required (max 120 chars).' };
   }
-  if (!email || email.length > MAX_EMAIL || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (
+    !email ||
+    email.length > MAX_EMAIL ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ) {
     return { ok: false, error: 'A valid email is required.' };
   }
   if (!message || message.length < 5) {
@@ -53,6 +66,10 @@ export function validateFeedback(body: FeedbackBody): {
   return { ok: true, name, email, message };
 }
 
+function resendConfigured(): boolean {
+  return !!process.env.RESEND_API_KEY?.trim();
+}
+
 function smtpConfigured(): boolean {
   return !!(
     process.env.SMTP_HOST &&
@@ -61,7 +78,57 @@ function smtpConfigured(): boolean {
   );
 }
 
-function createTransport() {
+function buildBodies(name: string, email: string, message: string) {
+  const subject = `[DUNJUNZ Feedback] ${name.slice(0, 40)}`;
+  const text = [
+    'DUNJUNZ player feedback',
+    '======================',
+    `From: ${name} <${email}>`,
+    `To: ${FEEDBACK_TO}`,
+    `When: ${new Date().toISOString()}`,
+    '',
+    message,
+    '',
+    '---',
+    'Sent via /api/feedback (NeaseMedia)',
+  ].join('\n');
+
+  const html = `
+    <div style="font-family:system-ui,sans-serif;line-height:1.5;color:#111">
+      <h2 style="margin:0 0 12px">DUNJUNZ player feedback</h2>
+      <p><strong>From:</strong> ${escapeHtml(name)} &lt;${escapeHtml(email)}&gt;</p>
+      <p><strong>When:</strong> ${escapeHtml(new Date().toISOString())}</p>
+      <hr />
+      <pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(message)}</pre>
+      <hr />
+      <p style="color:#666;font-size:12px">Sent via /api/feedback → ${escapeHtml(FEEDBACK_TO)}</p>
+    </div>
+  `;
+  return { subject, text, html };
+}
+
+async function sendViaResend(
+  name: string,
+  email: string,
+  message: string,
+): Promise<{ id?: string }> {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { subject, text, html } = buildBodies(name, email, message);
+  const { data, error } = await resend.emails.send({
+    from: RESEND_FROM,
+    to: [FEEDBACK_TO],
+    replyTo: `${name} <${email}>`,
+    subject,
+    text,
+    html,
+  });
+  if (error) {
+    throw new Error(error.message || JSON.stringify(error));
+  }
+  return { id: data?.id };
+}
+
+function createSmtpTransport() {
   const port = Number(process.env.SMTP_PORT || 587);
   const secure =
     process.env.SMTP_SECURE === '1' ||
@@ -76,18 +143,41 @@ function createTransport() {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    // Timeouts so serverless doesn't hang forever
     connectionTimeout: 12_000,
     greetingTimeout: 12_000,
     socketTimeout: 20_000,
   });
 }
 
+async function sendViaSmtp(
+  name: string,
+  email: string,
+  message: string,
+): Promise<{ id?: string }> {
+  const from =
+    process.env.SMTP_FROM?.trim() ||
+    process.env.SMTP_USER ||
+    'noreply@neasemedia.com';
+  const { subject, text, html } = buildBodies(name, email, message);
+  const transport = createSmtpTransport();
+  if (process.env.VERBOSE_SMTP === '1') {
+    await transport.verify();
+  }
+  const info = await transport.sendMail({
+    from: `DUNJUNZ Feedback <${from}>`,
+    to: FEEDBACK_TO,
+    replyTo: `${name} <${email}>`,
+    subject,
+    text,
+    html,
+  });
+  return { id: info.messageId };
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
 ): Promise<void> {
-  // CORS: same-origin preferred; allow simple POSTs from the game origin
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') {
@@ -114,7 +204,6 @@ export default async function handler(
   const parsed = validateFeedback(body);
   if (!parsed.ok) {
     if (parsed.error === 'honeypot') {
-      // Pretend success so bots leave
       res.status(200).json({ ok: true });
       return;
     }
@@ -122,8 +211,12 @@ export default async function handler(
     return;
   }
 
-  if (!smtpConfigured()) {
-    console.error('[feedback] SMTP not configured (need SMTP_HOST, SMTP_USER, SMTP_PASS)');
+  const useResend = resendConfigured();
+  const useSmtp = smtpConfigured();
+  if (!useResend && !useSmtp) {
+    console.error(
+      '[feedback] No mail transport: set RESEND_API_KEY (preferred) or SMTP_*',
+    );
     res.status(503).json({
       ok: false,
       error:
@@ -132,57 +225,22 @@ export default async function handler(
     return;
   }
 
-  const from =
-    process.env.SMTP_FROM?.trim() ||
-    process.env.SMTP_USER ||
-    'noreply@neasemedia.com';
-
   const { name, email, message } = parsed;
-  const subject = `[DUNJUNZ Feedback] ${name.slice(0, 40)}`;
-  const text = [
-    'DUNJUNZ player feedback',
-    '======================',
-    `From: ${name} <${email}>`,
-    `To: ${FEEDBACK_TO}`,
-    `When: ${new Date().toISOString()}`,
-    '',
-    message,
-    '',
-    '---',
-    'Sent via dunjunz.vercel.app /api/feedback',
-  ].join('\n');
-
-  const html = `
-    <div style="font-family:system-ui,sans-serif;line-height:1.5;color:#111">
-      <h2 style="margin:0 0 12px">DUNJUNZ player feedback</h2>
-      <p><strong>From:</strong> ${escapeHtml(name)} &lt;${escapeHtml(email)}&gt;</p>
-      <p><strong>When:</strong> ${escapeHtml(new Date().toISOString())}</p>
-      <hr />
-      <pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(message)}</pre>
-      <hr />
-      <p style="color:#666;font-size:12px">Sent via /api/feedback → ${escapeHtml(FEEDBACK_TO)}</p>
-    </div>
-  `;
 
   try {
-    const transport = createTransport();
-    // Verify connection when VERBOSE_SMTP=1 (optional debug on Vercel logs)
-    if (process.env.VERBOSE_SMTP === '1') {
-      await transport.verify();
-    }
-    const info = await transport.sendMail({
-      from: `DUNJUNZ Feedback <${from}>`,
-      to: FEEDBACK_TO,
-      replyTo: `${name} <${email}>`,
-      subject,
-      text,
-      html,
-    });
-    console.log('[feedback] sent', info.messageId);
+    // Prefer Resend (NeaseMedia account) when key is present
+    const result = useResend
+      ? await sendViaResend(name, email, message)
+      : await sendViaSmtp(name, email, message);
+    console.log(
+      '[feedback] sent via',
+      useResend ? 'resend' : 'smtp',
+      result.id ?? '',
+    );
     res.status(200).json({ ok: true });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('[feedback] SMTP error', msg);
+    console.error('[feedback] send error', msg);
     res.status(502).json({
       ok: false,
       error:

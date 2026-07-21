@@ -100,23 +100,26 @@ Dunjunz has an **isolated Hive Mind silo** (domain-scoped MCP token on Forge):
 
 This is separate from the primary Elastic Hive operator memory so game sessions stay free of platform clutter.
 
-## Feedback + SMTP
+## Feedback + email (Resend)
 
-The page footer includes **© 2026 NeaseMedia** and a **Feedback** button. The modal posts to **`/api/feedback`**, a Vercel serverless function that sends mail with **nodemailer** to **support@neasemedia.com**.
+The page footer includes **© 2026 NeaseMedia** and a **Feedback** button. The modal posts to **`/api/feedback`**, which emails **support@neasemedia.com**.
 
-Set these in **Vercel → Project → Settings → Environment Variables** (Production + Preview):
+**Preferred transport: [Resend](https://resend.com)** (NeaseMedia account). SMTP remains a fallback if no Resend key is set.
+
+### Vercel env vars
+
+**Project → Settings → Environment Variables** (Production + Preview), then redeploy:
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `SMTP_HOST` | yes | e.g. `smtp.gmail.com`, `smtp.sendgrid.net`, workspace host |
-| `SMTP_PORT` | no | default `587` |
-| `SMTP_USER` | yes | SMTP username |
-| `SMTP_PASS` | yes | SMTP password / app password |
-| `SMTP_FROM` | no | defaults to `SMTP_USER` |
-| `SMTP_SECURE` | no | `true` for port 465 |
+| `RESEND_API_KEY` | **yes** (preferred) | API key from Resend dashboard |
+| `RESEND_FROM` | recommended | e.g. `DUNJUNZ Feedback <feedback@verified-domain>` — domain must be verified in Resend |
 | `FEEDBACK_TO` | no | default `support@neasemedia.com` |
+| `SMTP_*` | no | Fallback only if Resend key is absent (see `.env.example`) |
 
-See [`.env.example`](./.env.example). After setting env vars, redeploy so the function picks them up. Local `vite` does not run `/api/*` — use `vercel dev` or test on Preview.
+Until a custom domain is verified, Resend may only allow sending from their test sender to your own account email — verify **neasemedia.com** (or your game domain) in Resend for production.
+
+See [`.env.example`](./.env.example). Local `vite` does not run `/api/*` — use `vercel dev` or a Preview deploy to test.
 
 ## Deploy (NeaseMedia)
 

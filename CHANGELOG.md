@@ -14,8 +14,9 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 ### Added
 
 - **Footer copyright** — © 2026 NeaseMedia
-- **Feedback form** modal → `POST /api/feedback` → **support@neasemedia.com** via SMTP (nodemailer)
-- Env template: `.env.example` (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FEEDBACK_TO`)
+- **Feedback form** modal → `POST /api/feedback` → **support@neasemedia.com**
+- Mail: **Resend** preferred (`RESEND_API_KEY` / `RESEND_FROM`); SMTP nodemailer fallback
+- Env template: `.env.example`
 
 ### Planned
 
