@@ -6,6 +6,7 @@ import { TitleScene } from './scenes/TitleScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { VillageScene } from './scenes/VillageScene';
+import { ArmyScene } from './scenes/ArmyScene';
 import { installAudioUnlock } from './systems/audio';
 import { initAuthUi } from './ui/auth';
 import { initFeedbackUi } from './ui/feedback';
@@ -31,7 +32,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, TitleScene, GameScene, UIScene, VillageScene],
+  scene: [BootScene, TitleScene, GameScene, UIScene, VillageScene, ArmyScene],
 };
 
 // eslint-disable-next-line no-new

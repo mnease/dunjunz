@@ -16,10 +16,13 @@ import {
   writeHumanzSave,
   type GameModeId,
 } from '../systems/humanz-save';
+import { loadArmySave, armySize } from '../systems/army';
 import { defaultCampaign } from '../systems/village-battle';
 import { clearSave, loadSave, writeSave } from '../systems/save';
 import type { SaveData } from '../types';
 import { getLastAuthMe } from '../ui/auth';
+
+const MODE_COUNT = 3;
 
 type TitlePhase = 'main' | 'modeSelect';
 
@@ -82,10 +85,10 @@ export class TitleScene extends Phaser.Scene {
         GAME_W / 2,
         175,
         [
-          'SAVE PRIZELLA · FIND YOUR BEST BUD',
-          'OR PLAY THE DRAGON. EAT THE LOOTERS.',
+          'SAVE PRIZELLA · TOAST THE TOWN',
+          'GRADUATE HEROES INTO AN UNLIMITED ARMY',
           '',
-          'TWO MODES. ONE BAD ATTITUDE.',
+          'THREE MODES. ZERO CHILL.',
         ].join('\n'),
         {
           fontFamily: '"Press Start 2P", monospace',
@@ -119,14 +122,14 @@ export class TitleScene extends Phaser.Scene {
     }
 
     // Mode select lines (hidden until phase)
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < MODE_COUNT; i++) {
       const t = this.add
-        .text(GAME_W / 2, 300 + i * 48, '', {
+        .text(GAME_W / 2, 275 + i * 42, '', {
           fontFamily: '"Press Start 2P", monospace',
-          fontSize: '12px',
+          fontSize: '11px',
           color: '#c5cde0',
           align: 'center',
-          lineSpacing: 6,
+          lineSpacing: 5,
         })
         .setOrigin(0.5)
         .setVisible(false);
@@ -211,7 +214,7 @@ export class TitleScene extends Phaser.Scene {
     };
     const onUp = () => {
       if (this.phase === 'modeSelect') {
-        this.modeCursor = (this.modeCursor + 1) % 2;
+        this.modeCursor = (this.modeCursor + MODE_COUNT - 1) % MODE_COUNT;
         playSfx('ui_click');
         this.renderModeSelect();
         return;
@@ -223,7 +226,7 @@ export class TitleScene extends Phaser.Scene {
     };
     const onDown = () => {
       if (this.phase === 'modeSelect') {
-        this.modeCursor = (this.modeCursor + 1) % 2;
+        this.modeCursor = (this.modeCursor + 1) % MODE_COUNT;
         playSfx('ui_click');
         this.renderModeSelect();
         return;
@@ -249,14 +252,14 @@ export class TitleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-S', onDown);
     this.input.keyboard?.on('keydown-LEFT', () => {
       if (this.phase === 'modeSelect') {
-        this.modeCursor = 0;
+        this.modeCursor = (this.modeCursor + MODE_COUNT - 1) % MODE_COUNT;
         playSfx('ui_click');
         this.renderModeSelect();
       }
     });
     this.input.keyboard?.on('keydown-RIGHT', () => {
       if (this.phase === 'modeSelect') {
-        this.modeCursor = 1;
+        this.modeCursor = (this.modeCursor + 1) % MODE_COUNT;
         playSfx('ui_click');
         this.renderModeSelect();
       }
@@ -270,6 +273,12 @@ export class TitleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-TWO', () => {
       if (this.phase === 'modeSelect') {
         this.modeCursor = 1;
+        this.confirmMode();
+      }
+    });
+    this.input.keyboard?.on('keydown-THREE', () => {
+      if (this.phase === 'modeSelect') {
+        this.modeCursor = 2;
         this.confirmMode();
       }
     });
@@ -296,14 +305,17 @@ export class TitleScene extends Phaser.Scene {
     for (const t of this.slotTexts) t.setText('');
     const d = this.hasDunjunzProgress();
     const h = hasHumanzProgress();
+    const a = armySize(loadArmySave()) > 0;
     const last = getLastMode();
-    if (d || h) {
+    if (d || h || a) {
+      const lastLabel =
+        last === 'humanz' ? 'HUMANZ' : last === 'army' ? 'ARMY' : 'DUNJUNZ';
       this.prompt?.setText(
-        `ENTER - CONTINUE (${last === 'humanz' ? 'HUMANZ' : 'DUNJUNZ'})\nR - NEW GAME (PICK MODE)   LAST: ${last.toUpperCase()}`,
+        `ENTER - CONTINUE (${lastLabel})\nR - NEW GAME / MODE SELECT   LAST: ${last.toUpperCase()}`,
       );
     } else {
       this.prompt?.setText(
-        'ENTER OR R — CHOOSE MODE\nDUNJUNZ CRAWL  ·  HUMANZ & VILLAGEZ',
+        'ENTER OR R — CHOOSE MODE\nDUNJUNZ · HUMANZ · ARMY',
       );
     }
   }
@@ -335,15 +347,15 @@ export class TitleScene extends Phaser.Scene {
     );
     this.blurbText?.setText(
       [
-        'DUNJUNZ: classic crawl. Real-time. Swords.',
-        'HUMANZ & VILLAGEZ: you are the dragon.',
-        'Turn-based. Guard the gold. Toast the town.',
+        'DUNJUNZ: crawl · real-time · classes',
+        'HUMANZ: dragon vs town · turn-based',
+        'ARMY: graduate L20+ · unlimited roster',
       ].join('\n'),
     );
     for (const t of this.modeLines) t.setVisible(true);
     this.renderModeSelect();
     this.prompt?.setText(
-      '↑↓ OR 1/2 SELECT    ENTER CONFIRM    ESC/R BACK',
+      '↑↓ OR 1/2/3 SELECT    ENTER CONFIRM    ESC/R BACK',
     );
   }
 
@@ -354,10 +366,10 @@ export class TitleScene extends Phaser.Scene {
     for (const t of this.slotTexts) t.setVisible(true);
     this.blurbText?.setText(
       [
-        'SAVE PRIZELLA · FIND YOUR BEST BUD',
-        'OR PLAY THE DRAGON. EAT THE LOOTERS.',
+        'SAVE PRIZELLA · TOAST THE TOWN',
+        'GRADUATE HEROES INTO AN UNLIMITED ARMY',
         '',
-        'TWO MODES. ONE BAD ATTITUDE.',
+        'THREE MODES. ZERO CHILL.',
       ].join('\n'),
     );
     this.renderLocalMode();
@@ -375,6 +387,11 @@ export class TitleScene extends Phaser.Scene {
         title: '2  HUMANZ & VILLAGEZ',
         sub: 'Dragon vs villagers · turn-based',
       },
+      {
+        id: 'army',
+        title: '3  ARMY MODE',
+        sub: 'Unlimited party · L20+ graduates · mass level',
+      },
     ];
     modes.forEach((m, i) => {
       const sel = i === this.modeCursor;
@@ -384,7 +401,8 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private confirmMode(): void {
-    const mode: GameModeId = this.modeCursor === 0 ? 'dunjunz' : 'humanz';
+    const modes: GameModeId[] = ['dunjunz', 'humanz', 'army'];
+    const mode = modes[this.modeCursor] ?? 'dunjunz';
     playSfx('success');
     if (mode === 'humanz') {
       if (this.wantFresh) {
@@ -395,6 +413,11 @@ export class TitleScene extends Phaser.Scene {
       }
       setLastMode('humanz');
       this.scene.start('Village');
+      return;
+    }
+    if (mode === 'army') {
+      setLastMode('army');
+      this.scene.start('Army');
       return;
     }
     // Dunjunz
@@ -409,13 +432,18 @@ export class TitleScene extends Phaser.Scene {
   private onLocalEnter(): void {
     const d = this.hasDunjunzProgress();
     const h = hasHumanzProgress();
-    if (!d && !h) {
+    const a = armySize(loadArmySave()) > 0;
+    if (!d && !h && !a) {
       this.wantFresh = true;
       this.openModeSelect();
       return;
     }
-    // Continue last mode if it has progress; else the one that exists
     const last = getLastMode();
+    if (last === 'army') {
+      setLastMode('army');
+      this.scene.start('Army');
+      return;
+    }
     if (last === 'humanz' && h) {
       setLastMode('humanz');
       this.scene.start('Village');
@@ -425,6 +453,11 @@ export class TitleScene extends Phaser.Scene {
       setLastMode('dunjunz');
       if (this.scene.isActive('UI')) this.game.events.emit('ui-reset');
       this.scene.start('Game');
+      return;
+    }
+    if (a) {
+      setLastMode('army');
+      this.scene.start('Army');
       return;
     }
     if (h && !d) {

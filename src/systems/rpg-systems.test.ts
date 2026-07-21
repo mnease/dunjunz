@@ -1486,3 +1486,107 @@ describe('humanz village battle', () => {
     expect(allVillagersDown(b)).toBe(true);
   });
 });
+
+// ── Army mode ───────────────────────────────────────────
+import {
+  ARMY_MIN_LEVEL,
+  canGraduateToArmy,
+  defaultArmySave,
+  graduateHeroToArmy,
+  memberPower,
+} from './army';
+import { applyAutoPackage, levelEntireArmy, levelMemberOnce } from './army-level';
+import { startArmyBattle, resolveArmyRound, countLiving } from './army-battle';
+import { xpToReachLevel } from './progression';
+
+describe('army mode', () => {
+  it('blocks graduation under level 20', () => {
+    const save = defaultSave();
+    save.level = 19;
+    save.xp = xpToReachLevel(19);
+    expect(canGraduateToArmy(save)).toBe(false);
+    const r = graduateHeroToArmy(defaultArmySave(), save);
+    expect(r.ok).toBe(false);
+  });
+
+  it('graduates L20 hero with personality and grows roster without cap', () => {
+    let army = defaultArmySave();
+    const save = defaultSave();
+    save.level = 20;
+    save.xp = xpToReachLevel(20);
+    save.primaryClass = 'barbarian';
+    save.attrs = { str: 10, dex: 4, vit: 8, int: 2, lck: 3 };
+    for (let i = 0; i < 5; i++) {
+      save.runSeed = 1000 + i;
+      const r = graduateHeroToArmy(army, save, { name: `Barb${i}` });
+      expect(r.ok).toBe(true);
+      if (r.ok) army = r.army;
+    }
+    expect(army.members.length).toBe(5);
+    expect(army.members.every((m) => m.level >= ARMY_MIN_LEVEL)).toBe(true);
+    expect(memberPower(army.members[0]!)).toBeGreaterThan(20);
+  });
+
+  it('auto package boosts lowest stats; 5th level uses focus', () => {
+    const attrs = { str: 5, dex: 2, vit: 4, int: 9, lck: 3 };
+    const a1 = applyAutoPackage(attrs, 21, 'str', 'vit', () => 0.1);
+    // lowest is dex=2 → +2, 2nd lowest lck=3 → +1
+    expect(a1.attrs.dex).toBe(4);
+    expect(a1.attrs.lck).toBe(4);
+
+    const a5 = applyAutoPackage(attrs, 25, 'str', 'int', () => 0.5);
+    expect(a5.attrs.str).toBe(7);
+    expect(a5.attrs.int).toBe(10);
+    expect(a5.note).toMatch(/FOCUS/);
+  });
+
+  it('mass level-up auto advances entire roster', () => {
+    let army = defaultArmySave();
+    const save = defaultSave();
+    save.level = 20;
+    save.xp = xpToReachLevel(20);
+    const g = graduateHeroToArmy(army, save, { name: 'One' });
+    expect(g.ok).toBe(true);
+    if (!g.ok) return;
+    army = g.army;
+    const before = army.members[0]!.level;
+    const r = levelEntireArmy(army, 'auto', undefined, () => 0.2);
+    expect('army' in r).toBe(true);
+    if ('army' in r) {
+      expect(r.army.members[0]!.level).toBe(before + 1);
+    }
+  });
+
+  it('army battle deploys all members vs scaled horde', () => {
+    let army = defaultArmySave();
+    const save = defaultSave();
+    save.level = 22;
+    save.xp = xpToReachLevel(22);
+    for (let i = 0; i < 3; i++) {
+      save.runSeed = i + 50;
+      const g = graduateHeroToArmy(army, save, { name: `U${i}` });
+      if (g.ok) army = g.army;
+    }
+    const b = startArmyBattle(army, 1, () => 0.3);
+    expect('error' in b).toBe(false);
+    if ('error' in b) return;
+    expect(b.army.length).toBe(3);
+    expect(b.horde.length).toBeGreaterThanOrEqual(3);
+    const mid = resolveArmyRound(b, army.members, () => 0.4);
+    expect(countLiving(mid.army) + countLiving(mid.horde)).toBeGreaterThan(0);
+  });
+
+  it('levelMemberOnce manual requires distinct stats', () => {
+    const save = defaultSave();
+    save.level = 20;
+    save.xp = xpToReachLevel(20);
+    const g = graduateHeroToArmy(defaultArmySave(), save, { name: 'X' });
+    expect(g.ok).toBe(true);
+    if (!g.ok) return;
+    const m = g.member;
+    const bad = levelMemberOnce(m, 'manual', { major: 'str', minor: 'str' });
+    expect('error' in bad).toBe(true);
+    const ok = levelMemberOnce(m, 'manual', { major: 'str', minor: 'dex' });
+    expect('member' in ok).toBe(true);
+  });
+});

@@ -8,12 +8,12 @@ import { defaultCampaign } from './village-battle';
 export const HUMANZ_SAVE_KEY = 'dunjunz-humanz-save-v1';
 export const LAST_MODE_KEY = 'dunjunz-last-mode';
 
-export type GameModeId = 'dunjunz' | 'humanz';
+export type GameModeId = 'dunjunz' | 'humanz' | 'army';
 
 export function getLastMode(): GameModeId {
   try {
     const m = localStorage.getItem(LAST_MODE_KEY);
-    if (m === 'humanz' || m === 'dunjunz') return m;
+    if (m === 'humanz' || m === 'dunjunz' || m === 'army') return m;
   } catch {
     /* ignore */
   }

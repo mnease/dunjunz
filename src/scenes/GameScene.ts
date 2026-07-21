@@ -46,6 +46,13 @@ import {
   spendAttrPoint,
 } from '../systems/attributes';
 import {
+  ARMY_MIN_LEVEL,
+  canGraduateToArmy,
+  graduateHeroToArmy,
+  loadArmySave,
+  writeArmySave,
+} from '../systems/army';
+import {
   resolveEnemyContactDamage,
   resolveEnemyHp,
 } from '../systems/enemies';
@@ -406,6 +413,7 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-R', () => this.cycleEquip('ring'));
     kb.on('keydown-K', () => this.cycleEquip('key'));
     kb.on('keydown-Y', this.onGearTargetToggle, this);
+    kb.on('keydown-P', this.onGraduateArmyKey, this);
     kb.on('keydown-J', this.onJournalKey, this);
     kb.on('keydown-M', this.onMapzKey, this);
     kb.on('keydown-TAB', this.onMapzKey, this);
@@ -623,6 +631,42 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.game.events.emit('inventory-toggle', this.save);
+  };
+
+  /** P — graduate this hero into Army Mode (needs Lv20+). Keep crawling for more. */
+  private onGraduateArmyKey = (): void => {
+    if (this.dialogLocked || this.paused || this.panelOpen()) return;
+    if (!canGraduateToArmy(this.save)) {
+      playSfx('error');
+      this.game.events.emit(
+        'toast',
+        `ARMY NEEDS LV${ARMY_MIN_LEVEL}+ (YOU: ${this.save.level})`,
+      );
+      return;
+    }
+    const army = loadArmySave();
+    const r = graduateHeroToArmy(army, this.save);
+    if (!r.ok) {
+      playSfx('error');
+      this.game.events.emit('toast', r.reason);
+      return;
+    }
+    writeArmySave(r.army);
+    playSfx('success');
+    this.game.events.emit('dialog-show', [
+      'ARMY RECRUITMENT OFFICE (PORTABLE)',
+      `${r.member.name} ${r.member.title}`,
+      `PERSONALITY: ${r.member.personality.toUpperCase()}`,
+      r.member.originNote,
+      '',
+      `ROSTER SIZE: ${r.army.members.length} (NO PARTY CAP)`,
+      'THIS SAVE STAYS — TRAIN ANOTHER PERSONALITY!',
+      'TITLE → MODE 3 / ARMY TO COMMAND THEM.',
+    ]);
+    this.game.events.emit(
+      'toast',
+      `ENLISTED ${r.member.name} · ARMY ${r.army.members.length}`,
+    );
   };
 
   private onMapzKey = (event?: KeyboardEvent): void => {
