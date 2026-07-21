@@ -41,7 +41,10 @@ import {
   ATTR_IDS,
   spendAttrPoint,
 } from '../systems/attributes';
-import { resolveEnemyHp } from '../systems/enemies';
+import {
+  resolveEnemyContactDamage,
+  resolveEnemyHp,
+} from '../systems/enemies';
 import {
   autoEquipEmptySlots,
   computePlayerDamage,
@@ -1066,8 +1069,8 @@ export class GameScene extends Phaser.Scene {
     // Peaceful cube (not yet hit) does not damage — walk up and press E
     if (from.kind === 'cube' && !from.aggressive) return;
 
-    // Base hit is 2 hearts; armor reduces damage (min 1) so gear matters
-    const baseDmg = 2;
+    // Kind contact damage; armor reduces (min 1) so gear matters
+    const baseDmg = resolveEnemyContactDamage(from.kind);
     const dmg = Math.max(1, baseDmg - this.save.armor);
     this.save.hp = Math.max(0, this.save.hp - dmg);
     this.invuln = 900;

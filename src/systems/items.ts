@@ -62,6 +62,42 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     kind: 'consumable',
     stackable: true,
   },
+  /** Creature parts — occasional enemy drops (blacksmith salvage later). */
+  slime_gel: {
+    id: 'slime_gel',
+    name: 'SLIME GEL',
+    blurb: 'Wobbly. Stickier than pride.',
+    kind: 'consumable',
+    stackable: true,
+  },
+  bone: {
+    id: 'bone',
+    name: 'BONE',
+    blurb: 'Skeleton spare. Still rattles.',
+    kind: 'consumable',
+    stackable: true,
+  },
+  wolf_pelt: {
+    id: 'wolf_pelt',
+    name: 'WOLF PELT',
+    blurb: 'Warm. Smells like woodz.',
+    kind: 'consumable',
+    stackable: true,
+  },
+  cactus_spine: {
+    id: 'cactus_spine',
+    name: 'CACTUS SPINE',
+    blurb: 'Pointy. Do not sit on it.',
+    kind: 'consumable',
+    stackable: true,
+  },
+  ensign_badge: {
+    id: 'ensign_badge',
+    name: 'ENSIGN BADGE',
+    blurb: 'Redshirt memorabilia. Tragic chic.',
+    kind: 'consumable',
+    stackable: true,
+  },
   mild_sword: {
     id: 'mild_sword',
     name: 'SWORD OF MILD ENTHUSIASM',

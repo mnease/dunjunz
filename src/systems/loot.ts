@@ -172,7 +172,49 @@ export function openChest(
 }
 
 /**
- * Enemy death drops — mostly coins; sometimes gear (shield/ring/weapon/armor/amulet).
+ * Creature-specific parts — each enemy kind can drop its signature mat.
+ * Blacksmith salvage/craft recipes can consume these later.
+ */
+export interface SpeciesLootDef {
+  stackId: string;
+  label: string;
+  /** Base chance before LCK bonus. */
+  chance: number;
+  countMin?: number;
+  countMax?: number;
+}
+
+export const ENEMY_SPECIES_LOOT: Record<string, SpeciesLootDef> = {
+  slime: { stackId: 'slime_gel', label: 'SLIME GEL', chance: 0.42 },
+  skeleton: { stackId: 'bone', label: 'BONE', chance: 0.48, countMax: 2 },
+  wolf: { stackId: 'wolf_pelt', label: 'WOLF PELT', chance: 0.45 },
+  cactus: {
+    stackId: 'cactus_spine',
+    label: 'CACTUS SPINE',
+    chance: 0.45,
+    countMax: 2,
+  },
+  redshirt: { stackId: 'ensign_badge', label: 'ENSIGN BADGE', chance: 0.38 },
+  cube: { stackId: 'slime_gel', label: 'CUBE GOO', chance: 0.55, countMax: 2 },
+  boss: {
+    stackId: 'ore_spark',
+    label: 'SPARK ORE',
+    chance: 0.7,
+    countMin: 1,
+    countMax: 2,
+  },
+};
+
+/** Optional land / biome mats on top of species parts. */
+const ENEMY_BONUS_MAT: Partial<Record<string, string>> = {
+  wolf: 'wood_shard',
+  cactus: 'sand_crystal',
+  skeleton: 'ore_iron',
+  slime: 'ore_spark',
+};
+
+/**
+ * Enemy death drops — coins, occasional gear, and kind-specific parts.
  * LCK increases chance of non-coin loot slightly.
  */
 export function rollEnemyLoot(
@@ -184,19 +226,40 @@ export function rollEnemyLoot(
   const luck = Math.max(0, lck - 1);
 
   const coinBase: Record<string, [number, number]> = {
-    redshirt: [1, 3],
-    slime: [2, 6],
-    skeleton: [4, 10],
-    wolf: [5, 12],
-    cactus: [5, 12],
-    cube: [10, 22],
-    boss: [25, 50],
+    redshirt: [1, 4],
+    slime: [3, 8],
+    skeleton: [5, 12],
+    wolf: [7, 16],
+    cactus: [7, 16],
+    cube: [12, 26],
+    boss: [30, 60],
   };
   const [lo, hi] = coinBase[kind] ?? [2, 8];
   // ~80% coin drop
   if (rng() < 0.82) {
     const coins = lo + Math.floor(rng() * (hi - lo + 1));
     drops.push({ kind: 'coins', label: `${coins} COINS`, coins });
+  }
+
+  // Signature creature part (skeletons → bones, wolves → pelts, …)
+  const species = ENEMY_SPECIES_LOOT[kind];
+  if (species) {
+    const chance = Math.min(0.85, species.chance + luck * 0.03);
+    if (rng() < chance) {
+      const cMin = species.countMin ?? 1;
+      const cMax = species.countMax ?? cMin;
+      const stackCount =
+        cMin + Math.floor(rng() * (Math.max(cMax, cMin) - cMin + 1));
+      drops.push({
+        kind: 'treasure',
+        label:
+          stackCount > 1
+            ? `${species.label} x${stackCount}`
+            : species.label,
+        stackId: species.stackId,
+        stackCount,
+      });
+    }
   }
 
   // Gear chance scales with threat + LCK
@@ -234,16 +297,10 @@ export function rollEnemyLoot(
     });
   }
 
-  // Small material chance
-  if (rng() < 0.1 + luck * 0.02) {
+  // Small extra biome / ore chance (on top of species parts)
+  if (rng() < 0.12 + luck * 0.02) {
     const mat =
-      kind === 'wolf'
-        ? 'wood_shard'
-        : kind === 'cactus'
-          ? 'sand_crystal'
-          : rng() < 0.5
-            ? 'ore_iron'
-            : 'ore_spark';
+      ENEMY_BONUS_MAT[kind] ?? (rng() < 0.5 ? 'ore_iron' : 'ore_spark');
     drops.push({
       kind: 'treasure',
       label: mat.toUpperCase().replace(/_/g, ' '),

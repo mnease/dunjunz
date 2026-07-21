@@ -244,6 +244,15 @@ export function sellUnitPrice(templateId: string, shopId = 'tinkerer'): number {
   if (t.kind === 'key') return 8;
   if (t.baseAtk) return Math.max(4, t.baseAtk * 6);
   if (t.baseDef) return Math.max(4, t.baseDef * 8);
+  // Creature parts — tinkerer buys cheap for "research"
+  const partPrices: Record<string, number> = {
+    slime_gel: 3,
+    bone: 4,
+    wolf_pelt: 6,
+    cactus_spine: 5,
+    ensign_badge: 2,
+  };
+  if (partPrices[templateId] != null) return partPrices[templateId];
   if (t.kind === 'consumable') return 4;
   return 3;
 }

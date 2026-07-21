@@ -10,6 +10,7 @@ import {
 } from './progression';
 import {
   applyLootToSave,
+  ENEMY_SPECIES_LOOT,
   openChest,
   mulberry32,
   rollEnemyLoot,
@@ -128,6 +129,36 @@ describe('loot multi-type', () => {
     // forced low rng → coins + high gear chance path
     expect(d.length).toBeGreaterThan(0);
   });
+
+  it('each creep kind has a signature species part', () => {
+    expect(ENEMY_SPECIES_LOOT.skeleton.stackId).toBe('bone');
+    expect(ENEMY_SPECIES_LOOT.wolf.stackId).toBe('wolf_pelt');
+    expect(ENEMY_SPECIES_LOOT.cactus.stackId).toBe('cactus_spine');
+    expect(ENEMY_SPECIES_LOOT.slime.stackId).toBe('slime_gel');
+    expect(ENEMY_SPECIES_LOOT.redshirt.stackId).toBe('ensign_badge');
+  });
+
+  it('rollEnemyLoot can drop species parts for skeletons and wolves', () => {
+    let boneHits = 0;
+    let peltHits = 0;
+    for (let i = 0; i < 80; i++) {
+      const sk = rollEnemyLoot('skeleton', mulberry32(i * 3 + 7), 3);
+      if (sk.some((x) => x.stackId === 'bone')) boneHits += 1;
+      const wf = rollEnemyLoot('wolf', mulberry32(i * 5 + 11), 3);
+      if (wf.some((x) => x.stackId === 'wolf_pelt')) peltHits += 1;
+    }
+    expect(boneHits).toBeGreaterThan(15);
+    expect(peltHits).toBeGreaterThan(15);
+  });
+
+  it('species parts apply as stacks', () => {
+    const next = applyLootToSave(
+      defaultSave(),
+      [{ kind: 'treasure', label: 'BONE', stackId: 'bone', stackCount: 2 }],
+      () => 0.1,
+    );
+    expect(next.stacks.bone).toBe(2);
+  });
 });
 
 describe('shield and ring slots', () => {
@@ -148,8 +179,9 @@ describe('shield and ring slots', () => {
 });
 
 describe('enemy HP tiers', () => {
-  it('cube has more HP than slime and skeleton', () => {
-    expect(ENEMY_BASE_HP.cube).toBeGreaterThan(ENEMY_BASE_HP.skeleton);
+  it('land creeps out-tough dungeon trash and redshirts', () => {
+    expect(ENEMY_BASE_HP.wolf).toBeGreaterThan(ENEMY_BASE_HP.skeleton);
+    expect(ENEMY_BASE_HP.cactus).toBeGreaterThan(ENEMY_BASE_HP.slime);
     expect(ENEMY_BASE_HP.skeleton).toBeGreaterThan(ENEMY_BASE_HP.slime);
     expect(ENEMY_BASE_HP.slime).toBeGreaterThan(ENEMY_BASE_HP.redshirt);
   });
@@ -159,10 +191,11 @@ describe('enemy HP tiers', () => {
     expect(resolveEnemyHp('cube')).toBe(ENEMY_BASE_HP.cube);
   });
 
-  it('mild sword (~2 dmg) cannot one-shot a slime', () => {
+  it('mild sword (~2 dmg) cannot one-shot a slime or land creep', () => {
     // computePlayerDamage mild + str1 = 1+1+0 = 2
     const mildDmg = 2;
-    expect(ENEMY_BASE_HP.slime).toBeGreaterThan(mildDmg);
+    expect(ENEMY_BASE_HP.slime).toBeGreaterThan(mildDmg * 3);
+    expect(ENEMY_BASE_HP.wolf).toBeGreaterThan(mildDmg * 8);
     expect(ENEMY_BASE_HP.cube).toBeGreaterThan(mildDmg * 5);
   });
 });

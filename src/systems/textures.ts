@@ -171,12 +171,22 @@ function drawItemIcon(
     itemId === 'ore_iron' ||
     itemId === 'ore_spark' ||
     itemId === 'wood_shard' ||
-    itemId === 'sand_crystal'
+    itemId === 'sand_crystal' ||
+    itemId === 'slime_gel' ||
+    itemId === 'bone' ||
+    itemId === 'wolf_pelt' ||
+    itemId === 'cactus_spine' ||
+    itemId === 'ensign_badge'
   ) {
     if (itemId === 'ore_iron') ctx.fillStyle = '#8a9098';
     else if (itemId === 'ore_spark') ctx.fillStyle = '#7dffb3';
     else if (itemId === 'wood_shard') ctx.fillStyle = '#8b5a2b';
-    else ctx.fillStyle = '#e8c070';
+    else if (itemId === 'sand_crystal') ctx.fillStyle = '#e8c070';
+    else if (itemId === 'slime_gel') ctx.fillStyle = '#5ad45a';
+    else if (itemId === 'bone') ctx.fillStyle = '#e8e0d0';
+    else if (itemId === 'wolf_pelt') ctx.fillStyle = '#6a5a4a';
+    else if (itemId === 'cactus_spine') ctx.fillStyle = '#3a8f4a';
+    else ctx.fillStyle = '#c0392b'; // ensign_badge
     ctx.fillRect(7, 7, 10, 10);
     ctx.fillStyle = '#fff3a0';
     ctx.fillRect(9, 9, 3, 3);
@@ -483,6 +493,11 @@ export function generateTextures(scene: Phaser.Scene): void {
     'ore_spark',
     'wood_shard',
     'sand_crystal',
+    'slime_gel',
+    'bone',
+    'wolf_pelt',
+    'cactus_spine',
+    'ensign_badge',
   ];
   for (const id of iconIds) {
     canvasTex(scene, `icon_${id}`, 24, 24, (ctx) => drawItemIcon(ctx, id));
