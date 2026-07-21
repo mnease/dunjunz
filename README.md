@@ -57,6 +57,8 @@ Progress is stored in `localStorage` (`dunjunz-save-v1`). Save **v5** adds mapz,
 3. **Woodz** (trail north) — wolves, Wolf Lord, forje, wood shardz; **Best Bud Hollow** east after Prizella
 4. **Dezertz** (trail south) — cacti, forje, Sand Wraith, **Princesz Prizella**
 5. **Champion job #1** — find your randomized non-human **Best Bud**, report back to Prizella
+6. **Kingdomz** (trail east after rescue) — throne hub; Prizella assigns more jobs
+7. **Sewerz** (Job #2) — Royal Goose, meaner creeps, Honk Blade
 
 Intentional spellings: Dunjunz, woodz, dezertz, mapz, forjing, Princesz Prizella.
 
