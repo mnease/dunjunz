@@ -47,7 +47,11 @@ import {
 } from './weapon-visuals';
 import { effectivePrimary } from './rarity';
 import { defaultSave, loadSave } from './save';
-import { mintItem } from './items';
+import {
+  compareToEquipped,
+  equipCompareDetailLine,
+  mintItem,
+} from './items';
 import { entryFromOpposite, spawnInsideEntryEdge } from './map-spawn';
 import {
   discoverMapz,
@@ -530,6 +534,44 @@ describe('bud anim poses', () => {
     expect(budPoseTextureKey('stretch')).toBe('best_bud_stretch');
     expect(budPoseTextureKey('grab')).toBe('best_bud_grab');
     expect(budPoseTextureKey('idle')).toBe('best_bud');
+  });
+});
+
+describe('equip compare arrows', () => {
+  it('marks stronger weapon as up and weaker as down', () => {
+    let save = grantMildSword(defaultSave());
+    // mild sword is equipped (atk 1)
+    const mildUid = save.equipped.weapon!;
+    const mild = save.bag.find((b) => b.uid === mildUid)!;
+    expect(compareToEquipped(save, mild).dir).toBe('same');
+
+    const iron = mintItem(save, 'iron_blade', 'common', 0);
+    save = iron.save;
+    const up = compareToEquipped(save, iron.instance);
+    expect(up.dir).toBe('up');
+    expect(up.stat).toBe('ATK');
+    expect(up.arrow).toBe('▲');
+    expect(up.delta).toBeGreaterThan(0);
+    expect(equipCompareDetailLine(up)).toContain('▲');
+
+    // equip iron, mild should be down
+    save = {
+      ...save,
+      equipped: { ...save.equipped, weapon: iron.instance.uid },
+    };
+    const down = compareToEquipped(save, mild);
+    expect(down.dir).toBe('down');
+    expect(down.arrow).toBe('▼');
+  });
+
+  it('armor compares DEF; empty slot is an upgrade', () => {
+    let save = defaultSave();
+    const leather = mintItem(save, 'leather_armor', 'common', 0);
+    save = leather.save;
+    const cmp = compareToEquipped(save, leather.instance);
+    expect(cmp.dir).toBe('up');
+    expect(cmp.stat).toBe('DEF');
+    expect(cmp.equipped).toBe(0);
   });
 });
 

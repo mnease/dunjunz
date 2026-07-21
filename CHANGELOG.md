@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Equip compare arrows** — bag gear shows **green ▲** if ATK/DEF beats the piece in that slot (hero or buddy mode), **red ▼** if worse. Detail line: e.g. `ATK 4 ▲ (+2 vs equipped 2)`.
 - **4× dungeon depth** — each dunjun land is much deeper: **Dunjunz B1–B8** (throne on B8), **Woodz / Dezertz B1–B3** under deep/tower, **Sewerz B1–B4** (goose on B4). Stairs chain + mapz floors; old `b2_boss` saves alias to `b8_boss`.
 - **16-bit graphics pass** — art resolution **32×32** (was 16×16) with shading, outlines, dither, and gradients across tiles, avatar gear layers, inventory icons, enemies, props, and buddies. World layout unchanged (`SPRITE_SCALE` keeps footprint); inventory doll scaled up to show detail.
 - **Dungeon fills 16:9** — live room grid is **26×13** tiles (was 16×11 view), expanding authored maps at load so the playfield fills under the HUD. Edge doors/openings grow corridors to the outer rim; entities offset correctly.

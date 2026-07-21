@@ -9,7 +9,13 @@ import {
   nextInventorySortMode,
   type InventorySortMode,
 } from '../systems/inventory';
-import { ALL_EQUIP_SLOTS, displayItemName, findInBag } from '../systems/items';
+import {
+  ALL_EQUIP_SLOTS,
+  compareToEquipped,
+  displayItemName,
+  equipCompareDetailLine,
+  findInBag,
+} from '../systems/items';
 import { getBestBud, isCompanionActive } from '../systems/best-bud';
 import {
   budArmorDef,
@@ -2068,6 +2074,22 @@ export class UIScene extends Phaser.Scene {
           .setScrollFactor(0);
         this.invBagLayer!.add(tag);
         this.invBagPieces.push(tag);
+      } else if (item.uid && item.slot && item.slot !== 'key') {
+        // ▲ / ▼ vs currently equipped in this slot (hero or buddy gear mode)
+        const inst = findInBag(save, item.uid);
+        const cmp = compareToEquipped(save, inst, this.gearTarget);
+        if (cmp.dir === 'up' || cmp.dir === 'down') {
+          const arrow = this.add
+            .text(x + 16, y - 16, cmp.arrow, {
+              fontFamily: '"Press Start 2P", monospace',
+              fontSize: '8px',
+              color: cmp.dir === 'up' ? '#7dffb3' : '#ff6b6b',
+            })
+            .setOrigin(0.5)
+            .setScrollFactor(0);
+          this.invBagLayer!.add(arrow);
+          this.invBagPieces.push(arrow);
+        }
       }
     }
 
@@ -2143,10 +2165,35 @@ export class UIScene extends Phaser.Scene {
         sel.name + (sel.count > 1 ? ` x${sel.count}` : ''),
         sel.blurb,
       ];
-      if (sel.equipped) bits.push('[EQUIPPED]');
-      else if (sel.usable) bits.push('CLICK AGAIN / U TO USE');
-      else if (sel.slot) bits.push(`CLICK TO EQUIP · SLOT ${sel.slot.toUpperCase()}`);
+      if (sel.equipped) {
+        bits.push('[EQUIPPED]');
+        if (sel.uid) {
+          const inst = findInBag(save, sel.uid);
+          const cmp = compareToEquipped(save, inst, this.gearTarget);
+          if (cmp.stat) bits.push(`${cmp.stat} ${cmp.candidate}`);
+        }
+      } else if (sel.usable) {
+        bits.push('CLICK AGAIN / U TO USE');
+      } else if (sel.slot && sel.uid) {
+        const inst = findInBag(save, sel.uid);
+        const cmp = compareToEquipped(save, inst, this.gearTarget);
+        const line = equipCompareDetailLine(cmp);
+        if (line) bits.push(line);
+        bits.push(`CLICK TO EQUIP · SLOT ${sel.slot.toUpperCase()}`);
+      } else if (sel.slot) {
+        bits.push(`CLICK TO EQUIP · SLOT ${sel.slot.toUpperCase()}`);
+      }
       this.invBagDetail?.setText(bits.join('\n'));
+      // Color detail hint line via full text color (Phaser Text is single color)
+      if (sel.uid && sel.slot && !sel.equipped) {
+        const inst = findInBag(save, sel.uid);
+        const cmp = compareToEquipped(save, inst, this.gearTarget);
+        if (cmp.dir === 'up') this.invBagDetail?.setColor('#7dffb3');
+        else if (cmp.dir === 'down') this.invBagDetail?.setColor('#ff8a8a');
+        else this.invBagDetail?.setColor('#c5cde0');
+      } else {
+        this.invBagDetail?.setColor('#c5cde0');
+      }
     }
   }
 

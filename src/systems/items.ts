@@ -404,6 +404,137 @@ export function instanceDef(inst: ItemInstance): number {
   return effectivePrimary(t.baseDef ?? 0, inst.rarity, inst.enhancement);
 }
 
+/** Heal bonus from amulet templates (not rarity-scaled). */
+export function instanceHealBonus(inst: ItemInstance): number {
+  return getTemplate(inst.templateId).potionHealBonus ?? 0;
+}
+
+/**
+ * Compare candidate gear vs currently equipped in the same slot.
+ * Weapons use ATK; armor/accessories use DEF (heal bonus breaks DEF ties).
+ */
+export type EquipCompareDir = 'up' | 'down' | 'same' | 'none';
+
+export interface EquipCompareResult {
+  dir: EquipCompareDir;
+  /** ATK or DEF (or empty for non-gear). */
+  stat: 'ATK' | 'DEF' | '';
+  candidate: number;
+  equipped: number;
+  /** candidate - equipped (positive = upgrade). */
+  delta: number;
+  /** Short glyph for UI: ▲ / ▼ / = / '' */
+  arrow: string;
+}
+
+export function equipCompareArrow(dir: EquipCompareDir): string {
+  if (dir === 'up') return '▲';
+  if (dir === 'down') return '▼';
+  if (dir === 'same') return '=';
+  return '';
+}
+
+/**
+ * Primary combat score for an instance in its slot.
+ * Weapon → ATK. Other equip slots with def/heal → DEF (heal as tie-break via +0.01).
+ */
+export function gearPrimaryScore(inst: ItemInstance): {
+  stat: 'ATK' | 'DEF' | '';
+  value: number;
+  display: number;
+} {
+  const t = getTemplate(inst.templateId);
+  if (!t.slot || t.slot === 'key') {
+    return { stat: '', value: 0, display: 0 };
+  }
+  if (t.slot === 'weapon') {
+    const atk = instanceAtk(inst);
+    return { stat: 'ATK', value: atk, display: atk };
+  }
+  const def = instanceDef(inst);
+  const heal = instanceHealBonus(inst);
+  // DEF dominates; tiny heal weight so +heal alone can still show ▲ vs equal DEF
+  return { stat: 'DEF', value: def + heal * 0.01, display: def };
+}
+
+/**
+ * Compare bag item to equipped piece in the same slot on hero or buddy.
+ * Already-equipped items return `same`. Stacks / non-gear → `none`.
+ */
+export function compareToEquipped(
+  save: SaveData,
+  inst: ItemInstance | undefined,
+  target: 'hero' | 'bud' = 'hero',
+): EquipCompareResult {
+  const empty: EquipCompareResult = {
+    dir: 'none',
+    stat: '',
+    candidate: 0,
+    equipped: 0,
+    delta: 0,
+    arrow: '',
+  };
+  if (!inst) return empty;
+  const t = getTemplate(inst.templateId);
+  if (!t.slot || t.slot === 'key') return empty;
+
+  const cand = gearPrimaryScore(inst);
+  if (!cand.stat) return empty;
+
+  const equipMap = target === 'bud' ? save.budEquipped : save.equipped;
+  const eqUid = equipMap?.[t.slot] ?? null;
+  if (eqUid === inst.uid) {
+    return {
+      dir: 'same',
+      stat: cand.stat,
+      candidate: cand.display,
+      equipped: cand.display,
+      delta: 0,
+      arrow: '=',
+    };
+  }
+
+  let eqScore = 0;
+  let eqDisplay = 0;
+  if (eqUid) {
+    const eqInst = findInBag(save, eqUid);
+    if (eqInst) {
+      const s = gearPrimaryScore(eqInst);
+      eqScore = s.value;
+      eqDisplay = s.display;
+    }
+  }
+
+  const deltaScore = cand.value - eqScore;
+  const deltaDisplay = cand.display - eqDisplay;
+  let dir: EquipCompareDir = 'same';
+  if (deltaScore > 1e-6) dir = 'up';
+  else if (deltaScore < -1e-6) dir = 'down';
+
+  return {
+    dir,
+    stat: cand.stat,
+    candidate: cand.display,
+    equipped: eqDisplay,
+    delta: deltaDisplay,
+    arrow: equipCompareArrow(dir),
+  };
+}
+
+/** One-line blurb for inventory detail, e.g. "ATK 5 ▲ (+2 vs equipped)". */
+export function equipCompareDetailLine(cmp: EquipCompareResult): string {
+  if (cmp.dir === 'none' || !cmp.stat) return '';
+  if (cmp.dir === 'same') {
+    return `${cmp.stat} ${cmp.candidate}  =  EQUIPPED`;
+  }
+  const sign = cmp.delta > 0 ? '+' : '';
+  const vs =
+    cmp.equipped === 0 && cmp.dir === 'up'
+      ? 'empty slot'
+      : `equipped ${cmp.equipped}`;
+  return `${cmp.stat} ${cmp.candidate}  ${cmp.arrow}  (${sign}${cmp.delta} vs ${vs})`;
+}
+
 export function mintItem(
   save: SaveData,
   templateId: string,
