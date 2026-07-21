@@ -724,16 +724,18 @@ export const ROOMS: Record<string, RoomDef> = {
     mapX: 2,
     mapY: 1,
     west: 'woodz_edge',
+    // Open den: west mouth + walkable center (old map sealed a pen at 8,5 —
+    // continue-save default spawn softlocked you inside).
     tiles: [
       '################',
       '#gg..........gg#',
-      '#g....####....g#',
-      '#g...#....#...g#',
-      '#g...#....#...g#',
-      '.....#..~~#...g#',
-      '#g...#....#...g#',
-      '#g...#....#...g#',
-      '#g....####....g#',
+      '#g..##....##..g#',
+      '#g............g#',
+      '#g....~~~~....g#',
+      '...............#',
+      '#g....~~~~....g#',
+      '#g............g#',
+      '#g..##....##..g#',
       '#gg..........gg#',
       '################',
     ],
@@ -752,8 +754,9 @@ export const ROOMS: Record<string, RoomDef> = {
       {
         kind: 'best_bud',
         id: 'best-bud-den',
+        // Walkable grass/floor north of the pond — not inside walls
         x: 8,
-        y: 5,
+        y: 3,
         dialog: [
           '...A WEIRD CREATURE LOOKS UP.',
           '(TALK WITH E.)',
@@ -762,7 +765,7 @@ export const ROOMS: Record<string, RoomDef> = {
       {
         kind: 'heart',
         id: 'hollow-heart',
-        x: 4,
+        x: 3,
         y: 7,
       },
     ],

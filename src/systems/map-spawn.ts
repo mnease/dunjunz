@@ -117,3 +117,87 @@ export function entryFromOpposite(
   if (exitDir === 'east') return 'west';
   return 'east';
 }
+
+export function isWalkableTile(kind: string | undefined): boolean {
+  return isWalkable(kind);
+}
+
+/**
+ * Safe continue/load spawn: prefer a room entrance, never land on solids.
+ * Fixes softlocks like woodz_hollow default (8,5) inside a sealed pen.
+ */
+export function spawnForContinue(
+  grid: WalkGrid,
+  room: {
+    id?: string;
+    north?: string;
+    south?: string;
+    east?: string;
+    west?: string;
+  },
+): { tx: number; ty: number } {
+  const h = grid.length || VIEW_TILES_H;
+  const w = grid[0]?.length || VIEW_TILES_W;
+
+  if (room.id === 'overworld') {
+    if (isWalkable(grid[4]?.[8])) return { tx: 8, ty: 4 };
+  }
+
+  // Prefer walking in through a linked edge (matches how you got here)
+  if (room.west) {
+    const s = spawnInsideEntryEdge(grid, 'west');
+    if (isWalkable(grid[s.ty]?.[s.tx])) return s;
+  }
+  if (room.south) {
+    const s = spawnInsideEntryEdge(grid, 'south');
+    if (isWalkable(grid[s.ty]?.[s.tx])) return s;
+  }
+  if (room.north) {
+    const s = spawnInsideEntryEdge(grid, 'north');
+    if (isWalkable(grid[s.ty]?.[s.tx])) return s;
+  }
+  if (room.east) {
+    const s = spawnInsideEntryEdge(grid, 'east');
+    if (isWalkable(grid[s.ty]?.[s.tx])) return s;
+  }
+
+  // Stairs if any
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const k = grid[y]?.[x];
+      if (k === 'stairs_up') {
+        const ty = Math.min(h - 2, y + 1);
+        if (isWalkable(grid[ty]?.[x])) return { tx: x, ty };
+      }
+      if (k === 'stairs') {
+        const ty = Math.max(1, y - 1);
+        if (isWalkable(grid[ty]?.[x])) return { tx: x, ty };
+      }
+    }
+  }
+
+  // Prefer open mid-room walkables (avoid edges/corners)
+  const preferred: [number, number][] = [
+    [2, 5],
+    [3, 5],
+    [4, 5],
+    [1, 5],
+    [8, 3],
+    [8, 7],
+    [6, 5],
+    [7, 4],
+    [8, 5],
+    [Math.floor(w / 2), Math.floor(h / 2)],
+  ];
+  for (const [tx, ty] of preferred) {
+    if (isWalkable(grid[ty]?.[tx])) return { tx, ty };
+  }
+
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      if (isWalkable(grid[y]?.[x])) return { tx: x, ty: y };
+    }
+  }
+
+  return { tx: 1, ty: Math.floor(h / 2) };
+}

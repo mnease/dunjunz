@@ -948,4 +948,28 @@ describe('best bud quest', () => {
     expect(ROOMS.woodz_hollow.west).toBe('woodz_edge');
     expect(ROOMS.woodz_hollow.land).toBe('woodz');
   });
+
+  it('woodz_hollow continue spawn is walkable and not sealed', async () => {
+    const { spawnForContinue, isWalkableTile } = await import('./map-spawn');
+    const room = ROOMS.woodz_hollow;
+    // Parse room tiles the same way GameScene does
+    const CHAR: Record<string, string> = {
+      '#': 'wall',
+      '.': 'floor',
+      g: 'grass',
+      '~': 'water',
+      ' ': 'void',
+      D: 'door',
+    };
+    const grid = room.tiles.map((row) =>
+      row.split('').map((c) => CHAR[c] ?? 'floor'),
+    );
+    const spawn = spawnForContinue(grid, room);
+    expect(isWalkableTile(grid[spawn.ty]?.[spawn.tx])).toBe(true);
+    // Should prefer west entrance corridor, not center pond
+    expect(spawn.tx).toBeLessThan(6);
+    // Map must have a continuous open west mouth (row with leading dots)
+    const openWest = room.tiles.some((row) => row.startsWith('....'));
+    expect(openWest).toBe(true);
+  });
 });

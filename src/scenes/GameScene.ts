@@ -12,7 +12,11 @@ import {
   VIEW_TILES_W,
 } from '../config';
 import { ROOMS, resolveRoomId } from '../data/world';
-import { entryFromOpposite, spawnInsideEntryEdge } from '../systems/map-spawn';
+import {
+  entryFromOpposite,
+  spawnForContinue,
+  spawnInsideEntryEdge,
+} from '../systems/map-spawn';
 import {
   enemyXpReward,
   grantXp,
@@ -1230,16 +1234,11 @@ export class GameScene extends Phaser.Scene {
       return spawnInsideEntryEdge(this.tileGrid, entryFrom);
     }
 
-    // Default / continue: meadow center or nearest stairs / mid
+    // Default / continue: entrance-aware walkable (never sealed pens / water)
     if (fromSave || !entryFrom) {
-      if (this.room.id === 'overworld') return { tx: 8, ty: 4 };
-      const up = this.findTile('stairs_up');
-      if (up) return { tx: up.tx, ty: Math.min(VIEW_TILES_H - 2, up.ty + 1) };
-      const down = this.findTile('stairs');
-      if (down) return { tx: down.tx, ty: Math.max(1, down.ty - 1) };
-      return { tx: 8, ty: 5 };
+      return spawnForContinue(this.tileGrid, this.room);
     }
-    return { tx: 8, ty: 5 };
+    return spawnForContinue(this.tileGrid, this.room);
   }
 
   private spawnEntity(def: EntityDef): void {
