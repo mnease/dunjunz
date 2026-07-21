@@ -14,6 +14,10 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 ### Added
 
 - **Boss exit portal** — after clearing a land boss, a cyan portal appears in the arena; step on it (or E) to zip back to that dungeon's mouth (`b1_entrance` / Woodz Edge / Dezertz Edge)
+
+### Fixed
+
+- **Dezertz Sand Tower seal** — north link to Edge existed but top row was solid wall and south door had no exit; you could not leave after rescuing Prizella. North door restored; portal near north exit.
 - **Game settings** (footer **Settings** modal, `localStorage`)
   - Master mute, music/SFX toggles + volume sliders
   - Reduce motion (skips camera shake)

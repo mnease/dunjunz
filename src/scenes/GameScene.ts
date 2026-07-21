@@ -78,6 +78,7 @@ import {
   shouldSpawnDenBud,
 } from '../systems/best-bud';
 import {
+  markLandCleared,
   princessChampionDialog,
   questHint,
   rewardDezertzClear,
@@ -1187,7 +1188,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** After land clear, ensure a walk-on portal exists in the boss arena. */
-  private ensureBossExitPortal(): void {
+  private ensureBossExitPortal(announce = false): void {
     if (
       !shouldSpawnBossExitPortal(
         this.save,
@@ -1200,9 +1201,22 @@ export class GameScene extends Phaser.Scene {
     const already = this.actors.some(
       (a) => a.alive && a.kind === 'portal' && a.id.startsWith('exit-portal-'),
     );
-    if (already) return;
+    if (already) {
+      if (announce) {
+        this.game.events.emit('toast', 'EXIT PORTAL READY — STEP ON IT');
+      }
+      return;
+    }
     const def = bossExitPortalDef(this.room.id, this.room.land);
-    if (def) this.spawnEntity(def);
+    if (!def) return;
+    this.spawnEntity(def);
+    playSfx('success');
+    this.game.events.emit(
+      'toast',
+      announce
+        ? 'EXIT PORTAL OPEN — STEP ON CYAN RING'
+        : 'EXIT PORTAL OPEN',
+    );
   }
 
   private usePortal(actor: Actor): void {
@@ -1219,8 +1233,8 @@ export class GameScene extends Phaser.Scene {
     this.transitionLock = true;
     playSfx('stairs');
     this.game.events.emit('toast', 'PORTAL WHOOSH — DUNJUN MOUTH!');
-    // Close any open dialog so UI does not stick across rooms
-    this.game.events.emit('dialog-state', false);
+    // Force UI dialog closed so the panel cannot stick across rooms
+    this.game.events.emit('ui-reset');
     this.dialogLocked = false;
     this.loadRoom(resolved, false);
   }
@@ -1530,7 +1544,7 @@ export class GameScene extends Phaser.Scene {
       ) {
         this.spawnEntity(chestDef);
       }
-      this.ensureBossExitPortal();
+      this.ensureBossExitPortal(true);
       return;
     }
     if (actor.id === 'wolf-lord') {
@@ -1541,7 +1555,7 @@ export class GameScene extends Phaser.Scene {
       } else {
         this.game.events.emit('toast', 'WOLF LORD DOWN — EXIT PORTAL OPEN');
       }
-      this.ensureBossExitPortal();
+      this.ensureBossExitPortal(true);
       return;
     }
     if (actor.id === 'sand-wraith') {
@@ -1552,7 +1566,7 @@ export class GameScene extends Phaser.Scene {
       } else {
         this.game.events.emit('toast', 'SAND WRAITH DOWN — EXIT PORTAL OPEN');
       }
-      this.ensureBossExitPortal();
+      this.ensureBossExitPortal(true);
       return;
     }
     // Generic boss fallback
@@ -1561,7 +1575,7 @@ export class GameScene extends Phaser.Scene {
       'A BOSS FALLS!',
       'NICE WORK. THAT WAS RAD.',
     ]);
-    this.ensureBossExitPortal();
+    this.ensureBossExitPortal(true);
   }
 
   private collectItem(actor: Actor): void {
@@ -1694,17 +1708,23 @@ export class GameScene extends Phaser.Scene {
       if (this.save.princessSaved || this.save.landsCleared.includes('dezertz')) {
         // Champion quests: Best Bud stages via pure helper
         this.save = ensureRunSeed(this.save);
+        // Safety: rescue talk without boss reward still unlocks portal/exit
+        if (!this.save.landsCleared.includes('dezertz')) {
+          this.save = markLandCleared(this.save, 'dezertz');
+        }
         const talk = prizellaChampionTalk(this.save);
         this.save = talk.save;
         writeSave(this.save);
         this.game.events.emit('dialog-show', talk.dialog);
         this.syncCompanion();
+        this.ensureBossExitPortal(true);
       } else if (this.save.killed.includes('sand-wraith')) {
         this.save = {
           ...this.save,
           princessSaved: true,
           flags: { ...this.save.flags, princess_saved: true },
         };
+        this.save = markLandCleared(this.save, 'dezertz');
         this.save = ensureRunSeed(this.save);
         writeSave(this.save);
         // First freedom talk: kingdom duty, then Best Bud on next E
@@ -1714,8 +1734,10 @@ export class GameScene extends Phaser.Scene {
           '',
           ...princessChampionDialog(),
           '',
+          'CYAN PORTAL BY THE NORTH DOOR — OR WALK NORTH.',
           'TALK TO ME AGAIN FOR CHAMPION JOB #1.',
         ]);
+        this.ensureBossExitPortal(true);
       } else {
         this.game.events.emit('dialog-show', best.dialog ?? [
           'PRIZELLA: BONK THE WRAITH FIRST!',

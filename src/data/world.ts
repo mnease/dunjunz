@@ -907,9 +907,10 @@ export const ROOMS: Record<string, RoomDef> = {
     floor: 0,
     mapX: 1,
     mapY: -2,
+    // Edge is north of the tower — door must open north (was sealed wall + dead-end south D).
     north: 'dezertz_edge',
     tiles: [
-      '################',
+      '########D#######',
       '#dd..........dd#',
       '#d....####....d#',
       '#d...#....#...d#',
@@ -919,7 +920,7 @@ export const ROOMS: Record<string, RoomDef> = {
       '#d...#....#...d#',
       '#d....####....d#',
       '#dd..........dd#',
-      '########D#######',
+      '################',
     ],
     entities: [
       {

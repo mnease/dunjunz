@@ -12,22 +12,35 @@ export const DUNGEON_ENTRANCE: Partial<Record<LandId, string>> = {
   dezertz: 'dezertz_edge',
 };
 
-/** Boss arena room ids. */
-export const BOSS_ROOMS: ReadonlySet<string> = new Set([
-  'b2_boss',
-  'woodz_deep',
-  'dezertz_tower',
-]);
+/** Boss arena room → land + kill id (for portal eligibility). */
+export const BOSS_ROOM_META: Record<
+  string,
+  { land: LandId; killId: string }
+> = {
+  b2_boss: { land: 'dunjunz', killId: 'dungeon-master' },
+  woodz_deep: { land: 'woodz', killId: 'wolf-lord' },
+  dezertz_tower: { land: 'dezertz', killId: 'sand-wraith' },
+};
 
-/** Tile coords for the portal in each boss room (walkable floor). */
+/** Boss arena room ids. */
+export const BOSS_ROOMS: ReadonlySet<string> = new Set(
+  Object.keys(BOSS_ROOM_META),
+);
+
+/** Tile coords for the portal in each boss room (walkable floor, near exit). */
 const PORTAL_TILE: Record<string, { x: number; y: number }> = {
   b2_boss: { x: 8, y: 8 },
-  woodz_deep: { x: 8, y: 5 },
-  dezertz_tower: { x: 6, y: 5 },
+  woodz_deep: { x: 8, y: 8 },
+  // Near north door out to Dezertz Edge
+  dezertz_tower: { x: 8, y: 1 },
 };
 
 export function isBossRoom(roomId: string): boolean {
   return BOSS_ROOMS.has(roomId);
+}
+
+export function landForBossRoom(roomId: string): LandId | null {
+  return BOSS_ROOM_META[roomId]?.land ?? null;
 }
 
 export function dungeonEntranceForLand(land: LandId | undefined): string | null {
@@ -36,8 +49,8 @@ export function dungeonEntranceForLand(land: LandId | undefined): string | null 
 }
 
 /**
- * True when the player has cleared this land's boss and is standing
- * in that boss arena — portal should exist.
+ * True when the player has beaten this room's boss (or land-clear flags)
+ * and should see a quick exit portal.
  */
 export function shouldSpawnBossExitPortal(
   save: SaveData,
@@ -45,8 +58,15 @@ export function shouldSpawnBossExitPortal(
   land?: LandId,
 ): boolean {
   if (!isBossRoom(roomId)) return false;
-  if (!land || land === 'surface') return false;
-  return save.landsCleared.includes(land);
+  const meta = BOSS_ROOM_META[roomId];
+  if (!meta) return false;
+  const effectiveLand = land ?? meta.land;
+  if (save.killed.includes(meta.killId)) return true;
+  if (save.landsCleared.includes(effectiveLand)) return true;
+  // Dezertz rescue flag (talk path / older saves)
+  if (roomId === 'dezertz_tower' && save.princessSaved) return true;
+  if (roomId === 'b2_boss' && save.bossDefeated) return true;
+  return false;
 }
 
 /** Build the portal entity for a boss room (or null if not applicable). */
@@ -54,12 +74,14 @@ export function bossExitPortalDef(
   roomId: string,
   land: LandId | undefined,
 ): EntityDef | null {
-  const target = dungeonEntranceForLand(land);
-  if (!target || !isBossRoom(roomId)) return null;
+  if (!isBossRoom(roomId)) return null;
+  const effectiveLand = land ?? landForBossRoom(roomId) ?? undefined;
+  const target = dungeonEntranceForLand(effectiveLand);
+  if (!target || !effectiveLand) return null;
   const pos = PORTAL_TILE[roomId] ?? { x: 8, y: 7 };
   return {
     kind: 'portal',
-    id: `exit-portal-${land}`,
+    id: `exit-portal-${effectiveLand}`,
     x: pos.x,
     y: pos.y,
     portalTarget: target,

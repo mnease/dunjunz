@@ -124,15 +124,11 @@ export function rewardDezertzClear(save: SaveData): {
     dialog: [
       'THE SAND WRAITH GOES *POOF* — SANDY POOF.',
       `${PRINCESS_NAME} STEPS OUT, BRUSHING DUNES OFF HER CROWN.`,
-      '',
       'PRIZELLA: YOU CAME. THAT RULES.',
-      'I WAS THIS CLOSE TO ESCAPING WITH A',
-      'GRAPH SPREADSHEET AND A BAD ATTITUDE.',
-      '',
       'YOU GOT: SAND SABER. SHINY. HISSY.',
-      'EXIT PORTAL: ZIP TO DEZERTZ EDGE.',
-      '',
-      ...princessChampionDialog(),
+      'CYAN EXIT PORTAL — STEP ON IT FOR EDGE.',
+      'OR WALK NORTH OUT THE DOOR.',
+      'TALK TO ME FOR CHAMPION JOB STUFF.',
     ],
   };
 }

@@ -680,6 +680,31 @@ describe('boss exit portals', () => {
     expect(shouldSpawnBossExitPortal(save, 'b1_entrance', 'dunjunz')).toBe(
       false,
     );
+
+    // Kill flag alone is enough (even without landsCleared)
+    const killedOnly = defaultSave();
+    killedOnly.killed.push('sand-wraith');
+    expect(
+      shouldSpawnBossExitPortal(killedOnly, 'dezertz_tower', 'dezertz'),
+    ).toBe(true);
+    expect(
+      bossExitPortalDef('dezertz_tower', undefined)?.portalTarget,
+    ).toBe('dezertz_edge');
+
+    // Princess rescue flag (talk path / stuck save recovery)
+    const rescued = defaultSave();
+    rescued.princessSaved = true;
+    expect(
+      shouldSpawnBossExitPortal(rescued, 'dezertz_tower', 'dezertz'),
+    ).toBe(true);
+  });
+
+  it('dezertz tower has a north door matching north link', async () => {
+    const { ROOMS } = await import('../data/world');
+    const tower = ROOMS.dezertz_tower;
+    expect(tower?.north).toBe('dezertz_edge');
+    expect(tower?.tiles[0]?.includes('D')).toBe(true);
+    expect(tower?.tiles[tower.tiles.length - 1]?.includes('D')).toBe(false);
   });
 });
 
