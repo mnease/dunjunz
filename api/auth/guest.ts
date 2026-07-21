@@ -1,5 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createHash, randomBytes } from 'node:crypto';
+import {
+  clientIpFromReq,
+  notifySupportNewPlayer,
+} from '../lib/mail';
 
 function hashToken(raw: string): string {
   return createHash('sha256').update(raw, 'utf8').digest('hex');
@@ -81,6 +85,7 @@ export default async function handler(
       }
 
       let userId: string;
+      let isNewPlayer = false;
       if (existing.length) {
         userId = existing[0].id as string;
       } else {
@@ -88,6 +93,7 @@ export default async function handler(
           INSERT INTO users (email) VALUES (${email}) RETURNING id
         `;
         userId = created[0].id as string;
+        isNewPlayer = true;
       }
 
       for (let i = 0; i < 3; i++) {
@@ -114,6 +120,17 @@ export default async function handler(
       `;
 
       await sql.end({ timeout: 2 });
+
+      // Ops ping — only on first-ever users row (never blocks signup)
+      if (isNewPlayer) {
+        void notifySupportNewPlayer({
+          email,
+          userId,
+          kind: 'guest',
+          requestIp: clientIpFromReq(req.headers),
+        });
+      }
+
       res.status(200).json({
         ok: true,
         mode: 'guest',

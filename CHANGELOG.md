@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **New-player email to support** — when a brand-new account is created (guest or first magic-link), Resend notifies `support@neasemedia.com` (or `SIGNUP_NOTIFY_TO`). Signup never fails if mail is down.
 - **Creep respawn clock** — common creeps return after ~55–75s a bit tougher (scales with player level + respawn generation). Bosses/quest kills stay permanent.
 - **Auto vs manual stats** — Settings → Level-up stats: auto-assign packages (+2 lowest / +1 2nd-lowest; class focus every 5 levels) or keep manual inventory spend.
 - **Google Analytics** (`G-P8ZG98HDSC`) on landing + play via deferred `/analytics.js` (idle load; play page delays so Phaser boots first; beacon transport). Not ads.

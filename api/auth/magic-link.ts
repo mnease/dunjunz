@@ -1,6 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createHash, randomBytes } from 'node:crypto';
 import { Resend } from 'resend';
+import {
+  clientIpFromReq,
+  notifySupportNewPlayer,
+} from '../lib/mail';
 
 function hashToken(raw: string): string {
   return createHash('sha256').update(raw, 'utf8').digest('hex');
@@ -68,6 +72,7 @@ export default async function handler(
     try {
       const norm = email.toLowerCase();
       let userId: string;
+      let isNewPlayer = false;
       const existing = await sql`
         SELECT id FROM users WHERE email_normalized = ${norm} LIMIT 1
       `;
@@ -78,6 +83,7 @@ export default async function handler(
           INSERT INTO users (email) VALUES (${email}) RETURNING id
         `;
         userId = created[0].id as string;
+        isNewPlayer = true;
       }
 
       // Ensure 3 empty slots
@@ -118,6 +124,16 @@ export default async function handler(
           subject: 'Your DUNJUNZ sign-in link',
           text: `Sign in to DUNJUNZ (expires in 15 minutes):\n\n${link}\n\nIf you did not request this, ignore this email.`,
           html: `<p>Sign in to DUNJUNZ (15 min):</p><p><a href="${link}">${link}</a></p>`,
+        });
+      }
+
+      // Ops ping — only when users row was just created
+      if (isNewPlayer) {
+        void notifySupportNewPlayer({
+          email,
+          userId,
+          kind: 'magic_link',
+          requestIp: clientIpFromReq(req.headers) ?? ip,
         });
       }
 
