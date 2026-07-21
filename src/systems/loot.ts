@@ -378,10 +378,13 @@ export const ENEMY_SPECIES_LOOT: Record<string, SpeciesLootDef> = {
   cactus: {
     stackId: 'cactus_spine',
     label: 'CACTUS SPINE',
-    chance: 0.45,
+    chance: 0.5,
     countMax: 2,
   },
   redshirt: { stackId: 'ensign_badge', label: 'ENSIGN BADGE', chance: 0.38 },
+  scorpion: { stackId: 'cactus_spine', label: 'SCORPION STINGER', chance: 0.4 },
+  tarantula: { stackId: 'wolf_pelt', label: 'SPIDER FLUFF', chance: 0.38 },
+  hornet: { stackId: 'cactus_spine', label: 'HORNET STINGER', chance: 0.42 },
   cube: { stackId: 'slime_gel', label: 'CUBE GOO', chance: 0.55, countMax: 2 },
   boss: {
     stackId: 'ore_spark',
@@ -396,6 +399,9 @@ export const ENEMY_SPECIES_LOOT: Record<string, SpeciesLootDef> = {
 const ENEMY_BONUS_MAT: Partial<Record<string, string>> = {
   wolf: 'wood_shard',
   cactus: 'sand_crystal',
+  scorpion: 'sand_crystal',
+  tarantula: 'sand_crystal',
+  hornet: 'sand_crystal',
   skeleton: 'ore_iron',
   slime: 'ore_spark',
 };

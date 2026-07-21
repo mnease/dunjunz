@@ -93,9 +93,17 @@ export function enemyBobScale(
     const s = Math.sin(phase * 5) * 0.03;
     return { sx: SCALE * (1 + s), sy: SCALE };
   }
-  if (kind === 'wolf' || kind === 'cactus') {
+  if (kind === 'wolf' || kind === 'cactus' || kind === 'tarantula') {
     const s = Math.sin(phase * 2.2) * 0.05;
     return { sx: SCALE, sy: SCALE * (1 + s * 0.4) };
+  }
+  if (kind === 'hornet') {
+    const s = Math.sin(phase * 8) * 0.06;
+    return { sx: SCALE * (1 + s * 0.3), sy: SCALE * (1 - s * 0.5) };
+  }
+  if (kind === 'scorpion') {
+    const s = Math.sin(phase * 3) * 0.04;
+    return { sx: SCALE * (1 + s), sy: SCALE };
   }
   const s = Math.sin(phase * 2) * 0.04;
   return { sx: SCALE * (1 + s * 0.3), sy: SCALE * (1 - s * 0.2) };

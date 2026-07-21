@@ -72,7 +72,7 @@ export class TitleScene extends Phaser.Scene {
       .setShadow(4, 4, '#0d3d28', 0, false, true);
 
     this.add
-      .text(GAME_W / 2, 118, 'AN EPIC OF QUESTIONABLE QUESTING', {
+      .text(GAME_W / 2, 118, 'THE ULTIMATE TOP DOWN RPG', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '10px',
         color: '#ffc857',
@@ -80,15 +80,24 @@ export class TitleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    this.add
+      .text(GAME_W / 2, 138, 'NO ADS EVER', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
+        color: '#7dffb3',
+        align: 'center',
+      })
+      .setOrigin(0.5);
+
     this.blurbText = this.add
       .text(
         GAME_W / 2,
-        175,
+        185,
         [
           'SAVE PRIZELLA · TOAST THE TOWN',
           'GRADUATE HEROES INTO AN UNLIMITED ARMY',
           '',
-          'THREE MODES. ZERO CHILL.',
+          'THREE MODES. ZERO CHILL. NO ADS.',
         ].join('\n'),
         {
           fontFamily: '"Press Start 2P", monospace',
@@ -101,7 +110,7 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.statusText = this.add
-      .text(GAME_W / 2, 250, '', {
+      .text(GAME_W / 2, 255, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '9px',
         color: '#7dffb3',

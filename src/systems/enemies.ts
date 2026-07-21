@@ -12,7 +12,10 @@ export const ENEMY_BASE_HP: Record<string, number> = {
   slime: 12, // trail + halls — several hits even with mid gear
   skeleton: 18, // dungeon mid-tier
   wolf: 26, // woodz — post-dunjun threat
-  cactus: 28, // dezertz — tanky spines
+  cactus: 22, // stationary plant — spiky but not a tank boss
+  scorpion: 20, // dezertz — stingy mid
+  tarantula: 24, // dezertz — fuzzy threat
+  hornet: 14, // dezertz — glass cannon flyer
   cube: 30, // gelatinous tank
   boss: 48, // default land-boss floor if room omits hp
 };
@@ -23,7 +26,10 @@ export const ENEMY_CONTACT_DAMAGE: Record<string, number> = {
   slime: 2,
   skeleton: 2,
   wolf: 3,
-  cactus: 3,
+  cactus: 2, // bump spines
+  scorpion: 3,
+  tarantula: 3,
+  hornet: 2,
   cube: 3,
   boss: 4,
 };
@@ -68,6 +74,12 @@ export function enemyTierLabel(kind: string): string {
       return 'WOLF';
     case 'cactus':
       return 'CACTUS';
+    case 'scorpion':
+      return 'SCORPION';
+    case 'tarantula':
+      return 'TARANTULA';
+    case 'hornet':
+      return 'HORNET';
     case 'boss':
       return 'BOSS';
     default:

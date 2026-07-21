@@ -40,7 +40,10 @@ export const ENEMY_XP: Record<string, number> = {
   redshirt: 2,
   cube: 8,
   wolf: 6,
-  cactus: 7,
+  cactus: 4,
+  scorpion: 6,
+  tarantula: 7,
+  hornet: 5,
   boss: 40,
 };
 

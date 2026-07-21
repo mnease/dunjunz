@@ -32,7 +32,15 @@ export type EntityKind =
   | 'cactus'
   | 'wolf'
   | 'best_bud'
-  | 'portal';
+  | 'portal'
+  /** Woodz prop — solid scenery. */
+  | 'tree'
+  /** Dezertz prop — drifts; no damage. */
+  | 'tumbleweed'
+  /** Dezertz fauna. */
+  | 'scorpion'
+  | 'tarantula'
+  | 'hornet';
 
 /** Non-human best friend companion (randomized per playthrough). */
 export type BestBudId =

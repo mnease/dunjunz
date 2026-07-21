@@ -240,7 +240,27 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   wolf: 'wolf',
   best_bud: 'best_bud',
   portal: 'portal',
+  tree: 'tree',
+  tumbleweed: 'tumbleweed',
+  scorpion: 'scorpion',
+  tarantula: 'tarantula',
+  hornet: 'hornet',
 };
+
+const MOBILE_HOSTILES = [
+  'slime',
+  'skeleton',
+  'redshirt',
+  'cube',
+  'boss',
+  'wolf',
+  'scorpion',
+  'tarantula',
+  'hornet',
+] as const;
+
+/** Contact damage hostiles (includes stationary cactus). */
+const CONTACT_HOSTILES = [...MOBILE_HOSTILES, 'cactus'] as const;
 
 export class GameScene extends Phaser.Scene {
   private save!: SaveData;
@@ -1646,15 +1666,15 @@ export class GameScene extends Phaser.Scene {
       sprite.setTint(0xffe08a);
     }
 
-    const hostile = [
-      'slime',
-      'skeleton',
-      'redshirt',
-      'cube',
-      'boss',
-      'wolf',
-      'cactus',
-    ].includes(def.kind);
+    const contactHostile = (CONTACT_HOSTILES as readonly string[]).includes(
+      def.kind,
+    );
+    const mobileHostile = (MOBILE_HOSTILES as readonly string[]).includes(
+      def.kind,
+    );
+    const isTree = def.kind === 'tree';
+    const isTumbleweed = def.kind === 'tumbleweed';
+    const isCactusPlant = def.kind === 'cactus';
     const interactive = [
       'npc',
       'merchant',
@@ -1671,21 +1691,41 @@ export class GameScene extends Phaser.Scene {
       'portal',
     ].includes(def.kind);
 
-    // Pickups / talkers: immovable, fat talk hitbox
-    // Hostiles: collidable with walls; hitbox from frame size (cube is 20px, not 16)
-    if (hostile) {
+    // Mobile hostiles: chase + walls. Cactus: rooted hazard. Tree: solid prop.
+    // Tumbleweed: drifts, no combat.
+    if (mobileHostile) {
       sprite.setImmovable(false);
       sprite.setCollideWorldBounds(true);
       const body = sprite.body as Phaser.Physics.Arcade.Body;
       const fw = sprite.frame.width;
       const fh = sprite.frame.height;
-      // Generous combat hitbox so sword/player overlap works on large sprites
       const bw = Math.max(10, Math.floor(fw * 0.85));
       const bh = Math.max(10, Math.floor(fh * 0.85));
       body.setSize(bw, bh);
       body.setOffset((fw - bw) / 2, (fh - bh) / 2);
       body.setBounce(0, 0);
-      body.setMaxVelocity(120, 120);
+      body.setMaxVelocity(def.kind === 'hornet' ? 140 : 120, 140);
+      body.enable = true;
+      this.physics.add.collider(sprite, this.walls);
+    } else if (isCactusPlant || isTree) {
+      sprite.setImmovable(true);
+      const body = sprite.body as Phaser.Physics.Arcade.Body;
+      body.moves = false;
+      body.enable = true;
+      body.setSize(12, 14);
+      body.setOffset(2, 1);
+      // Trees block the hero; cactus is overlap-only (spines)
+      if (isTree) {
+        this.physics.add.collider(this.player, sprite);
+      }
+    } else if (isTumbleweed) {
+      sprite.setImmovable(false);
+      sprite.setCollideWorldBounds(true);
+      const body = sprite.body as Phaser.Physics.Arcade.Body;
+      body.setSize(12, 12);
+      body.setOffset(2, 2);
+      body.setBounce(1, 1);
+      body.setMaxVelocity(60, 60);
       body.enable = true;
       this.physics.add.collider(sprite, this.walls);
     } else {
@@ -1712,8 +1752,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     const threat = threatForRoom(this.room, this.save);
-    const hp = resolveEnemyHp(def.kind, def.hp, threat);
-    const contactDamage = resolveEnemyContactDamage(def.kind, threat);
+    const hp =
+      isTree || isTumbleweed
+        ? 1
+        : resolveEnemyHp(def.kind, def.hp, threat);
+    const contactDamage = contactHostile
+      ? resolveEnemyContactDamage(def.kind, threat)
+      : 0;
 
     const actor: Actor = {
       sprite,
@@ -1723,7 +1768,7 @@ export class GameScene extends Phaser.Scene {
       maxHp: hp,
       dialog: def.dialog,
       hurtCooldown: 0,
-      aiTimer: 0,
+      aiTimer: Phaser.Math.Between(0, 400),
       alive: true,
       interactive: interactive || !!def.dialog || !!def.shopId,
       chestTable: def.chestTable,
@@ -1731,14 +1776,15 @@ export class GameScene extends Phaser.Scene {
       mapzId: def.mapzId,
       portalTarget: def.portalTarget,
       contactDamage,
-      // Cube is peaceful until struck
+      // Cube is peaceful until struck; cactus is always "aggressive" for contact
       aggressive: def.kind === 'cube' ? false : true,
     };
 
-    if (hostile) {
+    if (contactHostile) {
       this.physics.add.overlap(this.player, sprite, () =>
         this.hurtPlayer(actor),
       );
+      // Cactus can still be chopped for spines; trees/tumbleweeds are not targets
       this.physics.add.overlap(this.swordHit, sprite, () =>
         this.hitEnemy(actor),
       );
@@ -2129,9 +2175,15 @@ export class GameScene extends Phaser.Scene {
             ? 0x9a9ab0
             : actor.kind === 'cactus'
               ? 0x5ab878
-              : actor.kind === 'boss'
-                ? 0xff6b9d
-                : 0xffc857;
+              : actor.kind === 'scorpion'
+                ? 0xc07040
+                : actor.kind === 'tarantula'
+                  ? 0x4a3030
+                  : actor.kind === 'hornet'
+                    ? 0xffc857
+                    : actor.kind === 'boss'
+                      ? 0xff6b9d
+                      : 0xffc857;
     const colors = [kindTint, 0xffc857, 0xffffff, kindTint];
     for (let i = 0; i < count; i++) {
       const p = this.add.image(px, py, i % 2 === 0 ? 'particle' : 'particle-hit');
@@ -2393,7 +2445,17 @@ export class GameScene extends Phaser.Scene {
     for (const a of this.actors) {
       if (!a.alive || !a.interactive) continue;
       if (
-        ['slime', 'skeleton', 'redshirt', 'boss', 'wolf', 'cactus'].includes(
+        [
+          'slime',
+          'skeleton',
+          'redshirt',
+          'boss',
+          'wolf',
+          'cactus',
+          'scorpion',
+          'tarantula',
+          'hornet',
+        ].includes(
           a.kind,
         )
       ) {
@@ -2821,9 +2883,7 @@ export class GameScene extends Phaser.Scene {
     for (const a of this.actors) {
       if (!a.alive) continue;
       if (
-        !['slime', 'skeleton', 'redshirt', 'cube', 'boss', 'wolf', 'cactus'].includes(
-          a.kind,
-        )
+        !(CONTACT_HOSTILES as readonly string[]).includes(a.kind)
       ) {
         continue;
       }
@@ -3001,15 +3061,31 @@ export class GameScene extends Phaser.Scene {
       a.aiTimer -= delta;
       a.shootCooldown = Math.max(0, (a.shootCooldown ?? 0) - delta);
 
-      const hostile = [
-        'slime',
-        'skeleton',
-        'redshirt',
-        'cube',
-        'boss',
-        'wolf',
-        'cactus',
-      ].includes(a.kind);
+      // Tumbleweeds just drift (not hostile)
+      if (a.kind === 'tumbleweed') {
+        if (a.aiTimer <= 0) {
+          a.aiTimer = Phaser.Math.Between(600, 1400);
+          const body = a.sprite.body as Phaser.Physics.Arcade.Body;
+          if (body) {
+            body.setVelocity(
+              Phaser.Math.Between(-40, 40),
+              Phaser.Math.Between(-40, 40),
+            );
+          }
+          a.sprite.setAngle(a.sprite.angle + Phaser.Math.Between(-20, 20));
+        }
+        continue;
+      }
+
+      // Stationary cactus / trees: no chase
+      if (a.kind === 'cactus' || a.kind === 'tree') {
+        if (a.sprite.body) {
+          (a.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+        }
+        continue;
+      }
+
+      const hostile = (MOBILE_HOSTILES as readonly string[]).includes(a.kind);
       if (!hostile || this.dialogLocked || this.paused || this.panelOpen()) {
         if (a.sprite.body) {
           (a.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
@@ -3035,15 +3111,19 @@ export class GameScene extends Phaser.Scene {
             ? 70
             : a.kind === 'wolf'
               ? 65
-              : a.kind === 'cactus'
-                ? 30
-                : a.kind === 'skeleton'
-                  ? 55
-                  : a.kind === 'redshirt'
-                    ? 80
-                    : a.kind === 'cube'
-                      ? 28
-                      : 40;
+              : a.kind === 'hornet'
+                ? 90
+                : a.kind === 'scorpion'
+                  ? 50
+                  : a.kind === 'tarantula'
+                    ? 45
+                    : a.kind === 'skeleton'
+                      ? 55
+                      : a.kind === 'redshirt'
+                        ? 80
+                        : a.kind === 'cube'
+                          ? 28
+                          : 40;
         // Prefer cardinal moves so wall colliders behave cleanly
         const dx = this.player.x - a.sprite.x;
         const dy = this.player.y - a.sprite.y;
@@ -3356,9 +3436,7 @@ export class GameScene extends Phaser.Scene {
         if (!a.alive || !a.sprite?.active) continue;
         if (a.hurtCooldown > 0) continue;
         if (
-          !['slime', 'skeleton', 'redshirt', 'cube', 'boss', 'wolf', 'cactus'].includes(
-            a.kind,
-          )
+          !(CONTACT_HOSTILES as readonly string[]).includes(a.kind)
         ) {
           continue;
         }

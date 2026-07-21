@@ -17,7 +17,8 @@ import type { RoomDef } from '../types';
  *
  * SURFACE (floor 0)
  *   (0,0) overworld --E-- (1,0) overworld_east
- *           | S down
+ *           | S down               | N woodz_path → woodz_edge → deep
+ *                                  | S dezertz_dunes → edge → tower
  *
  * B1 (floor -1)
  *              (0,3) b1_descent  S down to B2
@@ -120,8 +121,8 @@ export const ROOMS: Record<string, RoomDef> = {
     mapX: 1,
     mapY: 0,
     west: 'overworld',
-    north: 'woodz_edge',
-    south: 'dezertz_edge',
+    north: 'woodz_path',
+    south: 'dezertz_dunes',
     // East → kingdom (gated in GameScene until princessSaved)
     east: 'kingdom_gate',
     // Rows must be 16 wide. West corridor open for meadow; east mouth is
@@ -148,7 +149,8 @@ export const ROOMS: Record<string, RoomDef> = {
         dialog: [
           '♪ PRIZELLA LOST, THE BALLAD OF DUST ♪',
           '...sorry, still workshopping the chorus.',
-          'NORTH: WOODZ. SOUTH: HOT DEZERTZ.',
+          'NORTH: WOODZ PATH (TREES. HOWLS.).',
+          'SOUTH: DEZERTZ DUNES (CACTI. BUGS.).',
           'WEST: MEADOW + THOSE SPOOKY STAIRS.',
           'EAST: HER KINGDOM. AFTER YOU SAVE HER.',
           'MAPZ HELP. IF YOU, Y\'KNOW, FIND THEM.',
@@ -662,14 +664,100 @@ export const ROOMS: Record<string, RoomDef> = {
   },
 
   // ─── WOODZ ───────────────────────────────────────────────
+  /** Forest approach between trail and deeper woodz. */
+  woodz_path: {
+    id: 'woodz_path',
+    title: 'PINEY APPROACH · WOODZ',
+    land: 'woodz',
+    floor: 0,
+    mapX: 1,
+    mapY: 1,
+    south: 'overworld_east',
+    north: 'woodz_edge',
+    tiles: [
+      '########D#######',
+      '#gg..........gg#',
+      '#g..##....##..g#',
+      '#g............g#',
+      '#g..##....##..g#',
+      '#g............g#',
+      '#g..##....##..g#',
+      '#g............g#',
+      '#g..##....##..g#',
+      '#gg..........gg#',
+      '########D#######',
+    ],
+    entities: [
+      {
+        kind: 'tree',
+        id: 'path-tree-1',
+        x: 3,
+        y: 3,
+      },
+      {
+        kind: 'tree',
+        id: 'path-tree-2',
+        x: 12,
+        y: 3,
+      },
+      {
+        kind: 'tree',
+        id: 'path-tree-3',
+        x: 4,
+        y: 7,
+      },
+      {
+        kind: 'tree',
+        id: 'path-tree-4',
+        x: 11,
+        y: 7,
+      },
+      {
+        kind: 'tree',
+        id: 'path-tree-5',
+        x: 2,
+        y: 5,
+      },
+      {
+        kind: 'tree',
+        id: 'path-tree-6',
+        x: 13,
+        y: 5,
+      },
+      {
+        kind: 'wolf',
+        id: 'path-wolf-1',
+        x: 8,
+        y: 4,
+      },
+      {
+        kind: 'sign',
+        id: 'path-woodz-sign',
+        x: 8,
+        y: 2,
+        dialog: [
+          'WOODZ AHEAD — ACTUAL TREES. SHOCKING.',
+          'NORTH: DEEPER. HOWLS. BEST BUDSish.',
+          'SOUTH: BACK TO THE SAFE-ISH TRAIL.',
+        ],
+      },
+      {
+        kind: 'heart',
+        id: 'path-heart',
+        x: 8,
+        y: 8,
+      },
+    ],
+  },
+
   woodz_edge: {
     id: 'woodz_edge',
     title: 'WOODZ EDGE',
     land: 'woodz',
     floor: 0,
     mapX: 1,
-    mapY: 1,
-    south: 'overworld_east',
+    mapY: 2,
+    south: 'woodz_path',
     north: 'woodz_deep',
     east: 'woodz_hollow',
     tiles: [
@@ -686,6 +774,42 @@ export const ROOMS: Record<string, RoomDef> = {
       '########D#######',
     ],
     entities: [
+      {
+        kind: 'tree',
+        id: 'woodz-tree-1',
+        x: 2,
+        y: 2,
+      },
+      {
+        kind: 'tree',
+        id: 'woodz-tree-2',
+        x: 13,
+        y: 2,
+      },
+      {
+        kind: 'tree',
+        id: 'woodz-tree-3',
+        x: 3,
+        y: 8,
+      },
+      {
+        kind: 'tree',
+        id: 'woodz-tree-4',
+        x: 12,
+        y: 8,
+      },
+      {
+        kind: 'tree',
+        id: 'woodz-tree-5',
+        x: 6,
+        y: 3,
+      },
+      {
+        kind: 'tree',
+        id: 'woodz-tree-6',
+        x: 9,
+        y: 7,
+      },
       {
         kind: 'wolf',
         id: 'woodz-wolf-1',
@@ -707,7 +831,7 @@ export const ROOMS: Record<string, RoomDef> = {
           'THE WOODZ — TREES, HOWLING, VIBES',
           'NORTH: WOLF LORD (HE THINKS HE OWNS THIS)',
           'EAST: BEST BUD HOLLOW (PROBABLY)',
-          'SOUTH: BACK TO THE TRAIL. SMART.',
+          'SOUTH: PINEY APPROACH → TRAIL.',
         ],
       },
       {
@@ -726,7 +850,7 @@ export const ROOMS: Record<string, RoomDef> = {
     land: 'woodz',
     floor: 0,
     mapX: 2,
-    mapY: 1,
+    mapY: 2,
     west: 'woodz_edge',
     // Open den: west mouth + walkable center (old map sealed a pen at 8,5 —
     // continue-save default spawn softlocked you inside).
@@ -744,6 +868,30 @@ export const ROOMS: Record<string, RoomDef> = {
       '################',
     ],
     entities: [
+      {
+        kind: 'tree',
+        id: 'hollow-tree-1',
+        x: 2,
+        y: 2,
+      },
+      {
+        kind: 'tree',
+        id: 'hollow-tree-2',
+        x: 13,
+        y: 2,
+      },
+      {
+        kind: 'tree',
+        id: 'hollow-tree-3',
+        x: 2,
+        y: 8,
+      },
+      {
+        kind: 'tree',
+        id: 'hollow-tree-4',
+        x: 13,
+        y: 8,
+      },
       {
         kind: 'sign',
         id: 'hollow-sign',
@@ -781,7 +929,7 @@ export const ROOMS: Record<string, RoomDef> = {
     land: 'woodz',
     floor: 0,
     mapX: 1,
-    mapY: 2,
+    mapY: 3,
     south: 'woodz_edge',
     tiles: [
       '################',
@@ -797,6 +945,30 @@ export const ROOMS: Record<string, RoomDef> = {
       '########D#######',
     ],
     entities: [
+      {
+        kind: 'tree',
+        id: 'deep-tree-1',
+        x: 2,
+        y: 2,
+      },
+      {
+        kind: 'tree',
+        id: 'deep-tree-2',
+        x: 13,
+        y: 2,
+      },
+      {
+        kind: 'tree',
+        id: 'deep-tree-3',
+        x: 2,
+        y: 8,
+      },
+      {
+        kind: 'tree',
+        id: 'deep-tree-4',
+        x: 13,
+        y: 8,
+      },
       {
         kind: 'boss',
         id: 'wolf-lord',
@@ -836,14 +1008,101 @@ export const ROOMS: Record<string, RoomDef> = {
   },
 
   // ─── DEZERTZ ─────────────────────────────────────────────
+  /** Sandy approach between trail and deep dezertz. */
+  dezertz_dunes: {
+    id: 'dezertz_dunes',
+    title: 'WINDY DUNES · DEZERTZ',
+    land: 'dezertz',
+    floor: 0,
+    mapX: 1,
+    mapY: -1,
+    north: 'overworld_east',
+    south: 'dezertz_edge',
+    tiles: [
+      '########D#######',
+      '#dd..........dd#',
+      '#d............d#',
+      '#d..##....##..d#',
+      '#d............d#',
+      '#d............d#',
+      '#d............d#',
+      '#d..##....##..d#',
+      '#d............d#',
+      '#dd..........dd#',
+      '########D#######',
+    ],
+    entities: [
+      {
+        kind: 'cactus',
+        id: 'dune-cactus-1',
+        x: 3,
+        y: 3,
+      },
+      {
+        kind: 'cactus',
+        id: 'dune-cactus-2',
+        x: 12,
+        y: 3,
+      },
+      {
+        kind: 'cactus',
+        id: 'dune-cactus-3',
+        x: 4,
+        y: 8,
+      },
+      {
+        kind: 'cactus',
+        id: 'dune-cactus-4',
+        x: 11,
+        y: 8,
+      },
+      {
+        kind: 'tumbleweed',
+        id: 'dune-weed-1',
+        x: 6,
+        y: 5,
+      },
+      {
+        kind: 'tumbleweed',
+        id: 'dune-weed-2',
+        x: 10,
+        y: 6,
+      },
+      {
+        kind: 'scorpion',
+        id: 'dune-scorp-1',
+        x: 8,
+        y: 4,
+      },
+      {
+        kind: 'hornet',
+        id: 'dune-hornet-1',
+        x: 5,
+        y: 7,
+      },
+      {
+        kind: 'sign',
+        id: 'dune-sign',
+        x: 8,
+        y: 2,
+        dialog: [
+          'DEZERTZ DUNES — TUMBLEWEEDS HAVE RIGHT OF WAY.',
+          'CACTI DO NOT MOVE. YOU MOVE INTO THEM. OUCH.',
+          'SOUTH: DEEPER SAND. SCORPIONS. REGRET.',
+          'NORTH: THE TRAIL (SHADE. RELATIVELY).',
+        ],
+      },
+    ],
+  },
+
   dezertz_edge: {
     id: 'dezertz_edge',
     title: 'DEZERTZ EDGE',
     land: 'dezertz',
     floor: 0,
     mapX: 1,
-    mapY: -1,
-    north: 'overworld_east',
+    mapY: -2,
+    north: 'dezertz_dunes',
     south: 'dezertz_tower',
     tiles: [
       '########D#######',
@@ -862,14 +1121,68 @@ export const ROOMS: Record<string, RoomDef> = {
       {
         kind: 'cactus',
         id: 'dez-cactus-1',
-        x: 5,
-        y: 5,
+        x: 3,
+        y: 2,
       },
       {
         kind: 'cactus',
         id: 'dez-cactus-2',
+        x: 12,
+        y: 2,
+      },
+      {
+        kind: 'cactus',
+        id: 'dez-cactus-3',
+        x: 5,
+        y: 8,
+      },
+      {
+        kind: 'cactus',
+        id: 'dez-cactus-4',
+        x: 10,
+        y: 8,
+      },
+      {
+        kind: 'tumbleweed',
+        id: 'dez-weed-1',
+        x: 7,
+        y: 5,
+      },
+      {
+        kind: 'tumbleweed',
+        id: 'dez-weed-2',
+        x: 9,
+        y: 3,
+      },
+      {
+        kind: 'scorpion',
+        id: 'dez-scorp-1',
+        x: 4,
+        y: 5,
+      },
+      {
+        kind: 'scorpion',
+        id: 'dez-scorp-2',
         x: 11,
         y: 5,
+      },
+      {
+        kind: 'tarantula',
+        id: 'dez-tara-1',
+        x: 8,
+        y: 6,
+      },
+      {
+        kind: 'hornet',
+        id: 'dez-hornet-1',
+        x: 6,
+        y: 3,
+      },
+      {
+        kind: 'hornet',
+        id: 'dez-hornet-2',
+        x: 10,
+        y: 7,
       },
       {
         kind: 'sign',
@@ -879,7 +1192,8 @@ export const ROOMS: Record<string, RoomDef> = {
         dialog: [
           'DEZERTZ — HOT. SANDY. DRAMATIC.',
           'SOUTH: SAND TOWER. VERY TOWER.',
-          'PRIZELLA\'S PROBABLY THERE. BRING WATER.',
+          'NORTH: DUNES (MORE BUGS. FEWER FRIENDS).',
+          'PRIZELLA\'S PROBABLY IN THE TOWER. BRING WATER.',
         ],
       },
       {
@@ -913,7 +1227,7 @@ export const ROOMS: Record<string, RoomDef> = {
     land: 'dezertz',
     floor: 0,
     mapX: 1,
-    mapY: -2,
+    mapY: -3,
     // Edge is north of the tower — door must open north (was sealed wall + dead-end south D).
     north: 'dezertz_edge',
     tiles: [
@@ -930,6 +1244,30 @@ export const ROOMS: Record<string, RoomDef> = {
       '################',
     ],
     entities: [
+      {
+        kind: 'cactus',
+        id: 'tower-cactus-1',
+        x: 3,
+        y: 8,
+      },
+      {
+        kind: 'cactus',
+        id: 'tower-cactus-2',
+        x: 12,
+        y: 8,
+      },
+      {
+        kind: 'scorpion',
+        id: 'tower-scorp-1',
+        x: 5,
+        y: 5,
+      },
+      {
+        kind: 'tarantula',
+        id: 'tower-tara-1',
+        x: 11,
+        y: 5,
+      },
       {
         kind: 'boss',
         id: 'sand-wraith',

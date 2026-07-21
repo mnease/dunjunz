@@ -1,10 +1,10 @@
 # DUNJUNZ
 
-**An epic of questionable questing.**
+**The ultimate top down RPG.**
 
-A humorous retro top-down dungeon crawler in the spirit of the original *Legend of Zelda*, stuffed with affectionate parody of classic dungeon tropes, D&D table energy, original *Star Trek* away-team misfortune, and fantasy door riddles that were never subtle.
+A free, humorous retro top-down RPG in the spirit of the original *Legend of Zelda*, stuffed with affectionate parody of classic dungeon tropes, D&D table energy, original *Star Trek* away-team misfortune, and fantasy door riddles that were never subtle.
 
-Built for the browser. Hosted under **NeaseMedia**.
+**No ads ever.** Built for the browser. Hosted under **NeaseMedia**.
 
 - **Landing:** [https://dunjunz.com](https://dunjunz.com)
 - **Play free:** [https://dunjunz.com/play](https://dunjunz.com/play)
@@ -27,7 +27,7 @@ npm run preview
 
 ## Support
 
-Dunjunz is free. Optional tips: [Ko-fi](https://ko-fi.com/neasemedia) (“Tip the bard”). Tips never buy power. Bugs & vibes: support@neasemedia.com.
+Dunjunz is free. **No ads ever.** Optional tips: [Ko-fi](https://ko-fi.com/neasemedia) (“Tip the bard”). Tips never buy power. Bugs & vibes: support@neasemedia.com.
 
 ## Controls
 

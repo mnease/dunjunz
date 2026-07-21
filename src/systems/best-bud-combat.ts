@@ -138,7 +138,18 @@ export function budCanBlockHit(
 }
 
 export function hostileEntityKinds(): readonly string[] {
-  return ['slime', 'skeleton', 'redshirt', 'cube', 'boss', 'wolf', 'cactus'];
+  return [
+    'slime',
+    'skeleton',
+    'redshirt',
+    'cube',
+    'boss',
+    'wolf',
+    'cactus',
+    'scorpion',
+    'tarantula',
+    'hornet',
+  ];
 }
 
 export function isHostileKind(kind: string): boolean {

@@ -953,7 +953,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(12, 9, 3, 2);
   });
 
-  // Dezertz cactus
+  // Dezertz cactus (stationary hazard plant)
   canvasTex(scene, 'cactus', TILE, TILE, (ctx) => {
     ctx.fillStyle = '#3d8b5a';
     ctx.fillRect(6, 3, 4, 11);
@@ -962,9 +962,93 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillStyle = '#2a6a40';
     ctx.fillRect(7, 4, 1, 2);
     ctx.fillRect(9, 8, 1, 2);
+    // spines
     ctx.fillStyle = '#f0e8c0';
     ctx.fillRect(5, 2, 1, 1);
     ctx.fillRect(10, 4, 1, 1);
+    ctx.fillRect(4, 6, 1, 1);
+    ctx.fillRect(11, 9, 1, 1);
+    ctx.fillRect(7, 1, 1, 1);
+  });
+
+  // Woodz tree (solid scenery)
+  canvasTex(scene, 'tree', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#5a3a22';
+    ctx.fillRect(7, 9, 2, 6);
+    ctx.fillStyle = '#2f6b45';
+    ctx.beginPath();
+    ctx.ellipse(8, 7, 6, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3a8f5a';
+    ctx.beginPath();
+    ctx.ellipse(6, 6, 3, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#1e4a30';
+    ctx.fillRect(5, 8, 1, 1);
+    ctx.fillRect(10, 5, 1, 1);
+  });
+
+  // Tumbleweed (dezertz prop)
+  canvasTex(scene, 'tumbleweed', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#8a6a40';
+    ctx.beginPath();
+    ctx.ellipse(8, 9, 5, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#6a5030';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(8, 9, 3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#a08050';
+    ctx.fillRect(6, 7, 1, 1);
+    ctx.fillRect(10, 10, 1, 1);
+  });
+
+  // Scorpion
+  canvasTex(scene, 'scorpion', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#8a5030';
+    ctx.fillRect(4, 7, 8, 4);
+    ctx.fillRect(10, 5, 3, 3);
+    // claws
+    ctx.fillRect(2, 6, 3, 2);
+    ctx.fillRect(2, 10, 3, 2);
+    // tail
+    ctx.fillStyle = '#6a3820';
+    ctx.fillRect(11, 3, 2, 4);
+    ctx.fillRect(12, 2, 2, 2);
+    ctx.fillStyle = '#ff3344';
+    ctx.fillRect(13, 1, 1, 1);
+  });
+
+  // Tarantula
+  canvasTex(scene, 'tarantula', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#3a2a28';
+    ctx.fillRect(5, 6, 6, 5);
+    ctx.fillStyle = '#2a1a18';
+    ctx.fillRect(3, 5, 2, 1);
+    ctx.fillRect(3, 8, 2, 1);
+    ctx.fillRect(3, 11, 2, 1);
+    ctx.fillRect(11, 5, 2, 1);
+    ctx.fillRect(11, 8, 2, 1);
+    ctx.fillRect(11, 11, 2, 1);
+    ctx.fillStyle = '#ff3344';
+    ctx.fillRect(6, 7, 1, 1);
+    ctx.fillRect(9, 7, 1, 1);
+  });
+
+  // Hornet
+  canvasTex(scene, 'hornet', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#ffc857';
+    ctx.fillRect(5, 7, 6, 4);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(6, 7, 1, 4);
+    ctx.fillRect(9, 7, 1, 4);
+    // wings
+    ctx.fillStyle = 'rgba(200,220,255,0.7)';
+    ctx.fillRect(4, 4, 3, 3);
+    ctx.fillRect(9, 4, 3, 3);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(11, 8, 3, 1);
   });
 
   // Best Bud base silhouette — tinted per species (never human)

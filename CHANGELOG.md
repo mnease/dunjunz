@@ -11,6 +11,11 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ## [Unreleased]
 
+### Changed
+
+- **Slogan** — "The ultimate top down RPG" · **No ads ever** (landing, play shell, title).
+- **World between dungeons** — woodz path full of trees; dezertz dunes with tumbleweeds, stationary spine cacti (bump = ouch), scorpions, tarantulas, hornets.
+
 ### Added
 
 - **Army Mode** — graduate crawl heroes at **Lv20+** (`P` in-game or barracks `G`) into an **unlimited roster** (party size = how many you develop). Personalities (berserk, polite murder, sleepy…). Barracks mass level-up: **AUTO** (+2 lowest / +1 2nd-lowest; every 5th level uses focus stats) or **MANUAL** (+2/+1 you pick). Deploy the whole army in over-the-top wave brawls. Title mode **3**.
