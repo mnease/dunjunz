@@ -1,7 +1,7 @@
 {
   "name": "dunjunz",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.6.0",
   "type": "module",
   "description": "DUNJUNZ — a humorous retro Zelda-like dungeon crawler",
   "scripts": {

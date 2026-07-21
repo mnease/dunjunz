@@ -6,6 +6,8 @@ A humorous retro top-down dungeon crawler in the spirit of the original *Legend 
 
 Built for the browser. Hosted under **NeaseMedia** on Vercel.
 
+**Changelog:** see [`CHANGELOG.md`](./CHANGELOG.md) (kept on GitHub with every notable ship).
+
 ## Play
 
 ```bash
@@ -27,36 +29,38 @@ npm run preview
 | Arrow keys / WASD | Move |
 | Space / Z | Attack (after you have the sword) |
 | E | Talk / read / open chest / mapz / forje / princesz |
-| E (near tinkerer) | Open graphic shop grid |
-| Arrows / WASD | *(shop open)* Move selection |
-| Enter / B | *(shop open)* Buy selected item |
+| E (near tinkerer) | Open dual-pane shop (buy left / sell right) |
+| Arrows / WASD | *(shop / forje open)* Move selection |
+| Tab | *(shop open)* Switch buy/sell pane |
+| Enter / B | *(shop open)* Buy or sell; *(forje open)* craft |
 | B (near merchant) | Open shop (same as E) |
 | I | Open / close inventory + character sheet |
 | M / Tab | Open / close **graphic mapz** (current land; needs discovered mapz) |
 | `[` `]` | *(mapz open)* Switch floor (e.g. B1 / B2 in Dunjunz) |
 | `,` `.` | *(mapz open)* Cycle discovered lands |
-| F | Open **forjing** when standing near a forje (inventory open: shoes slot) |
+| F / E | Open **forje grid** when near a forje (inventory open: F = shoes) |
 | U | Use a healing potion from the bag |
 | W O H C L F G N R K | *(inventory open)* Cycle equip (weapon, shield, armor…, ring, key) |
 | 1–5 | *(inventory open)* Spend STR DEX VIT INT LCK |
-| 1–6 | *(forjing open)* Enhance / imbue / craft recipes |
+| 1–9 | *(forje open)* Quick-pick recipe and forge |
 | Enter / Space | Advance dialog (does not re-open) |
 | Esc | Close inventory / mapz / forjing, or pause |
 | M (while paused) | Return to title |
 | R (on title) | New game (clears save) |
 
-Progress is stored in `localStorage` (`dunjunz-save-v1`). Save **v5** adds mapz, visited rooms, princesz quest, land clears.
+Progress is stored in `localStorage` (`dunjunz-save-v1`). Save **v5** adds mapz, visited rooms, princesz quest, land clears, best bud fields.
 
-## Quest (v0.5)
+## Quest (v0.6)
 
 1. **Meadow** — old man, starter sword, surface mapz
 2. **Dunjunz** (stairs in meadow) — beat the Dunjun Master for **great loot** (Dunjun Cleaver + mapz of woodz/dezertz)
-3. **Woodz** (trail north) — wolves, Wolf Lord, forje, wood shardz
+3. **Woodz** (trail north) — wolves, Wolf Lord, forje, wood shardz; **Best Bud Hollow** east after Prizella
 4. **Dezertz** (trail south) — cacti, forje, Sand Wraith, **Princesz Prizella**
+5. **Champion job #1** — find your randomized non-human **Best Bud**, report back to Prizella
 
 Intentional spellings: Dunjunz, woodz, dezertz, mapz, forjing, Princesz Prizella.
 
-## RPG systems (v0.5)
+## RPG systems (v0.6)
 
 - **XP curve** — formula `6 + 4L + 0.5L²` per level band; harder as you climb; **no level-10 cap**
 - **Attributes** — STR DEX VIT INT LCK; **+2 points per level**; spend in inventory with **1–5**
@@ -73,9 +77,10 @@ Intentional spellings: Dunjunz, woodz, dezertz, mapz, forjing, Princesz Prizella
 - Title screen + continue / new game
 - Surface meadow + trope trail
 - Dunjunz multi-floor (B1–B2): cube, speak-friend key, redshirts, Dunjun Master
-- Woodz + Wolf Lord + forje
+- Woodz + Wolf Lord + forje + Best Bud Hollow
 - Dezertz + Sand Wraith + Princesz Prizella
-- Chests, tinkerer merchants, hearts, lava, transporter pads
+- Best Bud companion (6 randomized non-human friends)
+- Chests, dual-pane tinkerer, graphic forje, hearts, lava, pads
 - CRT chrome UI, procedural pixel textures (no external sprite pack)
 
 ## Stack
