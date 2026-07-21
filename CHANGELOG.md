@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Class-weighted weapon loot** — once a class is set, enemy drops and chests bias weapons toward that class (and secondary at multiclass), not always — e.g. wizard → staves, ranger → bows, fighter → blades.
 - **Level-up stats** — each level grants one package: **+2 to one stat of your choice**, then **+1 to a different stat** (inventory 1–5). No hard cap on level or stat totals.
 
 ### Fixed

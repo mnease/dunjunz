@@ -167,6 +167,51 @@ describe('loot multi-type', () => {
     expect(peltHits).toBeGreaterThan(15);
   });
 
+  it('class biases weapon picks without locking them', async () => {
+    const { pickWeapon, CLASS_WEAPON_PREFS } = await import('./loot');
+    let staff = 0;
+    let swordish = 0;
+    const n = 200;
+    for (let i = 0; i < n; i++) {
+      const w = pickWeapon(mulberry32(i * 17 + 3), {
+        primaryClass: 'wizard',
+      });
+      if (w === 'wizard_staff') staff += 1;
+      if (CLASS_WEAPON_PREFS.fighter.weapons.includes(w)) swordish += 1;
+    }
+    // Wizard bias ~0.72 — expect staff often but not always
+    expect(staff).toBeGreaterThan(n * 0.45);
+    expect(staff).toBeLessThan(n);
+    // Still sometimes off-class
+    expect(staff + swordish).toBeLessThanOrEqual(n);
+
+    let bows = 0;
+    for (let i = 0; i < n; i++) {
+      const w = pickWeapon(mulberry32(i * 19 + 5), {
+        primaryClass: 'ranger',
+      });
+      if (w === 'short_bow') bows += 1;
+    }
+    expect(bows).toBeGreaterThan(n * 0.25);
+
+    // No class → any weapon from pool is fine
+    const open = pickWeapon(mulberry32(42), {});
+    expect(typeof open).toBe('string');
+  });
+
+  it('openChest with wizard class can roll staff over many trials', () => {
+    let staffHits = 0;
+    for (let i = 0; i < 120; i++) {
+      const d = openChest('dungeon', mulberry32(i * 11 + 2), {
+        primaryClass: 'wizard',
+        secondaryClass: null,
+      });
+      if (d.some((x) => x.templateId === 'wizard_staff')) staffHits += 1;
+    }
+    // Chests often give potions not gear — just ensure staff appears sometimes
+    expect(staffHits).toBeGreaterThan(0);
+  });
+
   it('species parts apply as stacks', () => {
     const next = applyLootToSave(
       defaultSave(),

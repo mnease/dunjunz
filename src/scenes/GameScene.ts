@@ -2043,6 +2043,7 @@ export class GameScene extends Phaser.Scene {
         actor.kind,
         Math.random,
         this.save.attrs.lck,
+        this.save,
       );
       if (drops.length) {
         this.save = applyLootToSave(this.save, drops);
@@ -2162,7 +2163,12 @@ export class GameScene extends Phaser.Scene {
 
   /** Kill path: gelatinous core amulet + some coins (not the boots). */
   private rewardCubeKill(): void {
-    const drops = rollEnemyLoot('cube', Math.random, this.save.attrs.lck);
+    const drops = rollEnemyLoot(
+      'cube',
+      Math.random,
+      this.save.attrs.lck,
+      this.save,
+    );
     // Guarantee the unique kill reward if not already owned
     const hasCore = this.save.bag.some((b) => b.templateId === 'cube_core');
     if (!hasCore) {
@@ -2483,7 +2489,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     const table = actor.chestTable ?? 'dungeon';
-    const drops = openChest(table);
+    const drops = openChest(table, Math.random, this.save);
     this.save = applyLootToSave(this.save, drops);
     this.save.collected.push(actor.id);
     actor.alive = false;
