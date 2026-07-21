@@ -16,19 +16,19 @@ export default async function handler(
       return;
     }
 
-    if (!process.env.DATABASE_URL?.trim()) {
+    const { dbConfigured, getSql } = await import('../_lib/db');
+    if (!dbConfigured()) {
       res.status(503).json({
         ok: false,
         error: 'no_db',
         message:
-          'Cloud accounts need DATABASE_URL. Add Neon connection string in Vercel env, run sql/001_auth_slots.sql, redeploy.',
+          'Cloud accounts need a Neon URL (POSTGRES_URL from Vercel Storage, or DATABASE_URL). Run sql/001_auth_slots.sql, redeploy.',
       });
       return;
     }
 
     const { ensureThreeEmptySlots } = await import('../_lib/auth');
     const { hashToken, isValidEmail, randomToken } = await import('../_lib/crypto');
-    const { getSql } = await import('../_lib/db');
     const { clientIp, readJson } = await import('../_lib/http');
     const { sendMagicLinkEmail } = await import('../_lib/mail');
     const { rateLimit } = await import('../_lib/rate-limit');

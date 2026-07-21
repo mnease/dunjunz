@@ -21,12 +21,14 @@ export default async function handler(
       return;
     }
 
-    if (!process.env.DATABASE_URL?.trim()) {
+    const { dbConfigured } = await import('../_lib/db');
+    if (!dbConfigured()) {
       res.status(200).json({
         ok: true,
         authenticated: false,
         reason: 'no_db',
-        hint: 'Set DATABASE_URL (Neon) on Vercel and run sql/001_auth_slots.sql',
+        hint:
+          'Neon not visible to the function. Link Neon on Vercel (POSTGRES_URL) or set DATABASE_URL, run sql/001_auth_slots.sql, redeploy.',
       });
       return;
     }

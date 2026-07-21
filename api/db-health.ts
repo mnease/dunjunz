@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
+import { resolveDatabaseUrl, resolveDatabaseUrlSource } from './_lib/db';
 
 /** Probe Neon connectivity + users table. */
 export default async function handler(
@@ -7,9 +8,14 @@ export default async function handler(
   res: VercelResponse,
 ): Promise<void> {
   try {
-    const url = process.env.DATABASE_URL?.trim();
+    const url = resolveDatabaseUrl();
+    const source = resolveDatabaseUrlSource();
     if (!url) {
-      res.status(503).json({ ok: false, error: 'DATABASE_URL missing' });
+      res.status(503).json({
+        ok: false,
+        error: 'DATABASE_URL / POSTGRES_URL missing',
+        hint: 'Vercel Neon storage usually sets POSTGRES_URL — redeploy after linking.',
+      });
       return;
     }
     const sql = neon(url);
@@ -28,6 +34,7 @@ export default async function handler(
       select1: one,
       usersTable,
       usersDetail,
+      databaseUrlSource: source,
       node: process.version,
     });
   } catch (e) {

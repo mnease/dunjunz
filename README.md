@@ -112,17 +112,20 @@ Local play needs **no account**. Optional cloud identity:
 
 **Setup**
 
-1. Create a [Neon](https://neon.tech) Postgres database.
-2. Run [`sql/001_auth_slots.sql`](./sql/001_auth_slots.sql) in the Neon SQL editor.
-3. Vercel env (Production + Preview), then redeploy:
+1. **Vercel → Storage → Create Database → Neon** (or link existing).  
+   Integration injects `POSTGRES_URL` (and related keys). The app accepts  
+   `DATABASE_URL` **or** `POSTGRES_URL` / `POSTGRES_PRISMA_URL` / etc.
+2. Run [`sql/001_auth_slots.sql`](./sql/001_auth_slots.sql) in the **Neon SQL editor**.
+3. Also set (Production + Preview), then **redeploy**:
 
 | Key | Value |
 | --- | --- |
-| `DATABASE_URL` | Neon connection string |
-| `AUTH_BASE_URL` | `https://dunjunz.vercel.app` (no trailing slash) |
+| `AUTH_BASE_URL` | `https://dunjunz.com` (or your primary domain, no trailing slash) |
 | `RESEND_API_KEY` | already used for feedback; also sends magic links |
 
-4. Footer **Account** → guest or magic link; title screen **↑↓** select slot, **Enter** load/new, **R** wipe.
+4. Confirm: `/api/health` shows `"hasDatabaseUrl": true` and `"databaseUrlSource": "POSTGRES_URL"` (or similar).  
+   `/api/db-health` should show `"usersTable": true`.
+5. Footer **Account** → guest or magic link; title screen **↑↓** select slot, **Enter** load/new, **R** wipe.
 
 Design notes: [`docs/auth-slots-design.md`](./docs/auth-slots-design.md).
 
