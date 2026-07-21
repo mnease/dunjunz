@@ -101,13 +101,23 @@ export async function logoutCloud(): Promise<void> {
   localStorage.removeItem(GUEST_TOKEN_KEY);
 }
 
+async function readJsonSafe<T>(res: Response): Promise<T | null> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    console.error('[auth-client] non-JSON', res.status, text.slice(0, 120));
+    return null;
+  }
+}
+
 export async function listSlots(): Promise<SlotSummary[]> {
   const res = await fetch('/api/slots', {
     credentials: 'include',
     headers: authHeaders(),
   });
-  const data = (await res.json()) as { ok?: boolean; slots?: SlotSummary[] };
-  return data.slots ?? [];
+  const data = await readJsonSafe<{ ok?: boolean; slots?: SlotSummary[] }>(res);
+  return data?.slots ?? [];
 }
 
 export async function loadSlot(id: string): Promise<Record<string, unknown> | null> {
@@ -116,12 +126,12 @@ export async function loadSlot(id: string): Promise<Record<string, unknown> | nu
     headers: authHeaders(),
   });
   if (!res.ok) return null;
-  const data = (await res.json()) as {
+  const data = await readJsonSafe<{
     ok?: boolean;
     slot?: { data?: Record<string, unknown>; id?: string };
-  };
-  if (data.slot?.id) localStorage.setItem(ACTIVE_SLOT_KEY, data.slot.id);
-  return data.slot?.data ?? null;
+  }>(res);
+  if (data?.slot?.id) localStorage.setItem(ACTIVE_SLOT_KEY, data.slot.id);
+  return data?.slot?.data ?? null;
 }
 
 export async function saveSlot(
@@ -149,10 +159,16 @@ export async function startSlot(
     headers: authHeaders(),
     body: JSON.stringify({ slotIndex, name, data }),
   });
-  const body = (await res.json()) as {
+  const body = await readJsonSafe<{
     ok?: boolean;
     slot?: SlotSummary;
-  };
+    detail?: string;
+    error?: string;
+  }>(res);
+  if (!res.ok || !body?.ok) {
+    console.error('[startSlot]', res.status, body?.error, body?.detail);
+    return null;
+  }
   if (body.slot?.id) localStorage.setItem(ACTIVE_SLOT_KEY, body.slot.id);
   return body.slot ?? null;
 }
