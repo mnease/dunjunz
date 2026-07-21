@@ -1,4 +1,5 @@
 import type { AttrId, Attributes, SaveData } from '../types';
+import { effectiveAttrs } from './hero-identity';
 import { findInBag, getTemplate, instanceAtk } from './items';
 
 export const ATTR_IDS: AttrId[] = ['str', 'dex', 'vit', 'int', 'lck'];
@@ -48,24 +49,42 @@ export function spendAttrPoint(save: SaveData, attr: AttrId): SpendResult {
   };
 }
 
-/** Player melee damage including weapon + STR + forjing imbues. */
+/** Player damage including weapon + STR/DEX/INT (by style) + class/race + imbues. */
 export function computePlayerDamage(save: SaveData): number {
   let weaponAtk = 0;
   let imbueStr = 0;
+  let imbueDex = 0;
+  let imbueInt = 0;
+  let style: 'melee' | 'ranged' | 'magic' = 'melee';
   const wUid = save.equipped.weapon;
   if (wUid) {
     const inst = findInBag(save, wUid);
     if (inst) {
       weaponAtk = instanceAtk(inst);
       imbueStr = inst.attrBonuses?.str ?? 0;
+      imbueDex = inst.attrBonuses?.dex ?? 0;
+      imbueInt = inst.attrBonuses?.int ?? 0;
+      const t = getTemplate(inst.templateId);
+      style = t.weaponStyle ?? 'melee';
     }
   }
-  const totalStr = save.attrs.str + imbueStr;
+  const eff = effectiveAttrs(save);
+  if (style === 'ranged') {
+    const dex = eff.dex + imbueDex;
+    const bonus = Math.floor(Math.max(0, dex - 1) / 2);
+    return Math.max(1, 1 + weaponAtk + bonus);
+  }
+  if (style === 'magic') {
+    const intel = eff.int + imbueInt;
+    const bonus = Math.floor(Math.max(0, intel - 1) / 2);
+    return Math.max(1, 1 + weaponAtk + bonus);
+  }
+  const totalStr = eff.str + imbueStr;
   const strBonus = Math.floor(Math.max(0, totalStr - 1) / 2);
   return Math.max(1, 1 + weaponAtk + strBonus);
 }
 
-/** Potion heal including amulet bonus + INT. */
+/** Potion heal including amulet bonus + INT (class/race aware). */
 export function computePotionHeal(save: SaveData, baseHeal: number): number {
   let bonus = 0;
   const aUid = save.equipped.amulet;
@@ -75,6 +94,7 @@ export function computePotionHeal(save: SaveData, baseHeal: number): number {
       bonus += getTemplate(inst.templateId).potionHealBonus ?? 0;
     }
   }
-  bonus += Math.floor(Math.max(0, save.attrs.int - 1) / 2);
+  const eff = effectiveAttrs(save);
+  bonus += Math.floor(Math.max(0, eff.int - 1) / 2);
   return baseHeal + bonus;
 }

@@ -52,13 +52,15 @@ import {
 import {
   autoEquipEmptySlots,
   computePlayerDamage,
+  consumeWeaponAmmo,
+  equippedWeaponIsRanged,
   grantKey,
   grantMildSword,
   hasWeaponEquipped,
   syncDerivedStats,
   useInventoryItem,
 } from '../systems/inventory';
-import { mintItem } from '../systems/items';
+import { findInBag, getTemplate, mintItem } from '../systems/items';
 import {
   discoverMapz,
   landForRoom,
@@ -112,6 +114,26 @@ import {
   bossExitPortalDef,
   shouldSpawnBossExitPortal,
 } from '../systems/portal';
+import {
+  beamMeUpTarget,
+  hardExitPortalDef,
+  hardGatePortalDef,
+  hardProjectileForActor,
+  isHardRunActive,
+  killListForSpawn,
+  parseHardPortalTarget,
+  projectileSpec,
+  recordKill,
+  shouldPromoteCaptain,
+  shouldSpawnHardExit,
+  shouldSpawnHardGate,
+  startHardRun,
+  endHardRun,
+  CAPTAIN_ID,
+  CAPTAIN_HARD_ROOM,
+} from '../systems/hard-mode';
+import { rewardHardCaptain, rewardHardKing } from '../systems/hard-rewards';
+import { pendingHeroPick } from '../systems/hero-identity';
 import { playMusic, playSfx, type MusicId } from '../systems/audio';
 import { loadSettings } from '../systems/settings';
 import { loadSave, writeSave } from '../systems/save';
@@ -155,6 +177,8 @@ interface Actor {
   contactDamage?: number;
   /** Cube stays peaceful until the player hits it. */
   aggressive?: boolean;
+  /** Hard-mode shoot cooldown (ms). */
+  shootCooldown?: number;
 }
 
 const SOLID: TileKind[] = ['wall', 'water', 'void', 'locked'];
@@ -271,6 +295,16 @@ export class GameScene extends Phaser.Scene {
     [];
   private animTime = 0;
   private ambientFrame = 0;
+  /** Enemy + player projectiles (hard mode / ranged weapons). */
+  private projectiles: {
+    img: Phaser.GameObjects.Image;
+    vx: number;
+    vy: number;
+    dmg: number;
+    life: number;
+    fromPlayer: boolean;
+  }[] = [];
+  private rangedCd = 0;
 
   constructor() {
     super('Game');
@@ -451,6 +485,11 @@ export class GameScene extends Phaser.Scene {
 
     this.loadRoom(this.save.roomId, true);
     this.emitHud();
+    this.time.delayedCall(500, () => this.checkHeroPick());
+    window.addEventListener('dunjunz-save-updated', () => {
+      this.save = loadSave();
+      this.emitHud();
+    });
   }
 
   private onMapzNav(
@@ -720,8 +759,12 @@ export class GameScene extends Phaser.Scene {
 
   private onUseItemKey = (): void => {
     if (this.dialogLocked || this.paused) return;
-    // Use potion from bag (works with inventory open or closed)
-    const result = useInventoryItem(this.save, 'potion');
+    // U = potion first; if none, Beam Me Up if owned
+    let result = useInventoryItem(this.save, 'potion');
+    if (!result.ok && (this.save.stacks.beam_me_up ?? 0) > 0) {
+      this.activateBeamMeUp();
+      return;
+    }
     if (!result.ok) {
       playSfx('error');
       this.game.events.emit('toast', result.reason);
@@ -734,6 +777,29 @@ export class GameScene extends Phaser.Scene {
     this.game.events.emit('inventory-refresh', this.save);
     this.game.events.emit('toast', result.message);
   };
+
+  private activateBeamMeUp(): void {
+    const result = useInventoryItem(this.save, 'beam_me_up');
+    if (!result.ok) {
+      playSfx('error');
+      this.game.events.emit('toast', result.reason);
+      return;
+    }
+    this.save = result.save;
+    writeSave(this.save);
+    this.emitHud();
+    playSfx('stairs');
+    this.game.events.emit('inventory-refresh', this.save);
+    this.game.events.emit('toast', result.message);
+    const dest = beamMeUpTarget(this.room.land);
+    this.transitionLock = true;
+    this.game.events.emit('ui-reset');
+    this.dialogLocked = false;
+    this.loadRoom(dest, false);
+    this.time.delayedCall(200, () => {
+      this.transitionLock = false;
+    });
+  }
 
   private onWeaponEquipKey = (): void => {
     this.cycleEquip('weapon');
@@ -787,6 +853,10 @@ export class GameScene extends Phaser.Scene {
   }): void => {
     if (!this.inventoryOpen || this.paused) return;
     if (payload.usable) {
+      if (payload.templateId === 'beam_me_up') {
+        this.activateBeamMeUp();
+        return;
+      }
       const result = useInventoryItem(this.save, payload.templateId);
       if (!result.ok) {
         playSfx('error');
@@ -935,6 +1005,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private clearRoomObjects(): void {
+    for (const p of this.projectiles) p.img.destroy();
+    this.projectiles = [];
     this.walls.clear(true, true);
     for (const a of this.actors) {
       // Kill ambient pulses before destroy so room transitions leave no ghosts
@@ -1059,9 +1131,18 @@ export class GameScene extends Phaser.Scene {
     this.player.setActive(true).setVisible(true);
 
     // Entities
+    const kills = killListForSpawn(this.save, room.land);
     for (const def of room.entities ?? []) {
-      if (def.id && this.save.killed.includes(def.id)) continue;
+      if (def.id && kills.includes(def.id)) continue;
       if (def.id && this.save.collected.includes(def.id)) continue;
+      // Hard mode: skip friendly captain until redshirts cleared (promote later)
+      if (
+        def.id === CAPTAIN_ID &&
+        isHardRunActive(this.save, room.land) &&
+        room.id === CAPTAIN_HARD_ROOM
+      ) {
+        continue;
+      }
       // Boss chest waits until the DM is defeated
       if (
         def.kind === 'chest' &&
@@ -1084,7 +1165,14 @@ export class GameScene extends Phaser.Scene {
 
     // Quick exit portal after land boss is cleared
     this.ensureBossExitPortal();
+    this.ensureHardModeGates();
+    this.maybePromoteCaptain();
     this.startRoomAmbience();
+    if (isHardRunActive(this.save, room.land)) {
+      this.time.delayedCall(120, () => {
+        this.game.events.emit('toast', 'HARD MODE — CREEPS SHOOT · STAY ALERT');
+      });
+    }
 
     this.emitHud();
     writeSave(this.save);
@@ -1662,6 +1750,30 @@ export class GameScene extends Phaser.Scene {
     if (this.transitionLock || this.paused) return;
     if (!actor.alive || actor.kind !== 'portal') return;
     const target = actor.portalTarget;
+
+    const hard = parseHardPortalTarget(target);
+    if (hard) {
+      this.transitionLock = true;
+      playSfx('stairs');
+      this.game.events.emit('ui-reset');
+      this.dialogLocked = false;
+      if (hard.kind === 'start') {
+        this.save = startHardRun(this.save, hard.land);
+        writeSave(this.save);
+        this.game.events.emit('toast', `HARD MODE: ${hard.land.toUpperCase()}`);
+        this.loadRoom(this.room.id, false);
+      } else {
+        this.save = endHardRun(this.save);
+        writeSave(this.save);
+        this.game.events.emit('toast', 'HARD MODE OFF — NORMAL CREEPS');
+        this.loadRoom(this.room.id, false);
+      }
+      this.time.delayedCall(200, () => {
+        this.transitionLock = false;
+      });
+      return;
+    }
+
     const resolved = resolveRoomId(target ?? '');
     if (!target || !ROOMS[resolved]) {
       this.game.events.emit('toast', 'PORTAL FLICKERS… NO SIGNAL');
@@ -1869,7 +1981,7 @@ export class GameScene extends Phaser.Scene {
 
   private killActor(actor: Actor): void {
     actor.alive = false;
-    this.save.killed.push(actor.id);
+    this.save = recordKill(this.save, actor.id, this.room.land);
 
     // XP + level from pure progression module (threat-scaled)
     const xpGain = enemyXpReward(
@@ -1893,6 +2005,7 @@ export class GameScene extends Phaser.Scene {
         'toast',
         `LEVEL UP! LV ${prog.level} +${prog.attrPointsGained} ATTR (I TO SPEND)`,
       );
+      this.time.delayedCall(400, () => this.checkHeroPick());
     } else {
       this.game.events.emit('toast', `+${xpGain} XP`);
     }
@@ -1933,8 +2046,21 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    if (actor.kind === 'boss' || actor.id === 'dungeon-master') {
+    if (
+      actor.kind === 'boss' ||
+      actor.id === 'dungeon-master' ||
+      actor.id === CAPTAIN_ID ||
+      actor.id === 'captain-hard'
+    ) {
       this.applyBossReward(actor);
+    }
+    // After hard redshirt wipe, promote captain
+    if (
+      isHardRunActive(this.save, this.room.land) &&
+      actor.kind === 'redshirt' &&
+      this.room.id === CAPTAIN_HARD_ROOM
+    ) {
+      this.time.delayedCall(250, () => this.maybePromoteCaptain());
     }
 
     // Death particles — kind-tinted, richer when motion allowed
@@ -2058,7 +2184,31 @@ export class GameScene extends Phaser.Scene {
   }
 
   private applyBossReward(actor: Actor): void {
+    if (actor.id === CAPTAIN_ID || actor.id === 'captain-hard') {
+      if (!this.save.flags['hard_captain_loot']) {
+        const r = rewardHardCaptain(this.save);
+        this.save = r.save;
+        this.game.events.emit('dialog-show', r.dialog);
+      } else {
+        this.game.events.emit('toast', 'CAPTAIN DOWN — AGAIN. STILL RAD.');
+      }
+      return;
+    }
     if (actor.id === 'dungeon-master' || this.room.id === 'b2_boss') {
+      if (isHardRunActive(this.save, 'dunjunz')) {
+        if (!this.save.flags['hard_king_loot']) {
+          const r = rewardHardKing(this.save);
+          this.save = r.save;
+          this.game.events.emit('dialog-show', r.dialog);
+        } else {
+          this.game.events.emit('dialog-show', [
+            'HARD KING DOWN AGAIN. THE DICE STILL HATE HIM.',
+            'EXIT PORTAL READY.',
+          ]);
+        }
+        this.ensureBossExitPortal(true);
+        return;
+      }
       if (!this.save.landsCleared.includes('dunjunz')) {
         const r = rewardDunjunzClear(this.save);
         this.save = r.save;
@@ -2554,6 +2704,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (equippedWeaponIsRanged(this.save)) {
+      this.tryRangedAttack();
+      return;
+    }
+
     this.attacking = true;
     playSfx('attack');
     // Hip sheathe vanishes while the blade is out in front
@@ -2786,6 +2941,7 @@ export class GameScene extends Phaser.Scene {
       if (!a.alive) continue;
       a.hurtCooldown = Math.max(0, a.hurtCooldown - delta);
       a.aiTimer -= delta;
+      a.shootCooldown = Math.max(0, (a.shootCooldown ?? 0) - delta);
 
       const hostile = [
         'slime',
@@ -2852,6 +3008,15 @@ export class GameScene extends Phaser.Scene {
           next.vx,
           next.vy,
         );
+      }
+
+      // Hard mode: skeletons/redshirts/bosses shoot
+      if (
+        isHardRunActive(this.save, this.room.land) &&
+        (a.shootCooldown ?? 0) <= 0 &&
+        !this.dialogLocked
+      ) {
+        this.tryEnemyShoot(a);
       }
     }
   }
@@ -3049,6 +3214,8 @@ export class GameScene extends Phaser.Scene {
     this.checkRoomExit();
     this.updateCompanionCombat(delta);
     this.updateEnemies(delta);
+    this.updateProjectiles(delta);
+    this.rangedCd = Math.max(0, this.rangedCd - delta);
     this.updateVisualMotion(delta, vx !== 0 || vy !== 0);
   }
 
@@ -3162,4 +3329,254 @@ export class GameScene extends Phaser.Scene {
       }
     }
   }
+  private checkHeroPick(): void {
+    const kind = pendingHeroPick(this.save);
+    if (!kind) return;
+    // HTML modal — class / multiclass / race
+    window.dispatchEvent(
+      new CustomEvent('dunjunz-hero-pick', { detail: { kind } }),
+    );
+  }
+
+  private ensureHardModeGates(): void {
+    const land = this.room.land;
+    if (!land) return;
+    if (shouldSpawnHardGate(this.save, this.room.id, land)) {
+      const def = hardGatePortalDef(land);
+      if (def && !this.actors.some((a) => a.id === def.id)) {
+        this.spawnEntity(def);
+      }
+    }
+    if (shouldSpawnHardExit(this.save, this.room.id, land)) {
+      const def = hardExitPortalDef(land);
+      if (!this.actors.some((a) => a.id === def.id)) {
+        this.spawnEntity(def);
+      }
+    }
+  }
+
+  /** Hard trek: after ensigns die, captain becomes a boss. */
+  private maybePromoteCaptain(): void {
+    if (!shouldPromoteCaptain(this.save, this.room.id)) return;
+    if (this.actors.some((a) => a.alive && (a.id === CAPTAIN_ID || a.id === 'captain-hard'))) {
+      return;
+    }
+    const def: EntityDef = {
+      kind: 'boss',
+      id: CAPTAIN_ID,
+      x: 8,
+      y: 5,
+      hp: 40,
+      dialog: [
+        'CAPTAIN: ENSIGNS DOWN. GOLD SHIRT ENGAGED.',
+        'PHASERS TO MAXIMUM. BEAM-OUT IS FOR QUITTERS.',
+        'ENGAGE!',
+      ],
+    };
+    this.spawnEntity(def);
+    playSfx('success');
+    this.game.events.emit('toast', 'CAPTAIN ENTERS COMBAT — HARD BOSS!');
+    this.game.events.emit('dialog-show', def.dialog ?? []);
+  }
+
+  private tryRangedAttack(): void {
+    if (this.rangedCd > 0 || this.attacking) return;
+    const ammo = consumeWeaponAmmo(this.save);
+    if (!ammo.ok) {
+      playSfx('error');
+      this.game.events.emit('toast', ammo.reason);
+      return;
+    }
+    this.save = ammo.save;
+    writeSave(this.save);
+    this.emitHud();
+
+    this.attacking = true;
+    this.rangedCd = 320;
+    playSfx('attack');
+    this.refreshPlayerAppearance();
+
+    const uid = this.save.equipped.weapon!;
+    const inst = findInBag(this.save, uid);
+    const tmpl = inst ? getTemplate(inst.templateId) : null;
+    const projKind = tmpl?.projectile ?? 'bolt';
+    const tex =
+      projKind === 'arrow'
+        ? 'proj-arrow'
+        : projKind === 'phaser'
+          ? 'proj-phaser'
+          : projKind === 'fireball'
+            ? 'proj-fireball'
+            : 'proj-bolt';
+    const dmg = computePlayerDamage(this.save);
+    const dir = this.facingVector();
+    const speed = projKind === 'phaser' ? 240 : projKind === 'arrow' ? 200 : 180;
+    this.spawnProjectile(
+      this.player.x + dir.x * 20,
+      this.player.y + dir.y * 20,
+      dir.x * speed,
+      dir.y * speed,
+      dmg,
+      tex,
+      true,
+      900,
+    );
+    sparkBurst(this, this.player.x + dir.x * 16, this.player.y + dir.y * 16, 0x7dffb3, 2);
+    this.time.delayedCall(180, () => {
+      this.attacking = false;
+      this.refreshPlayerAppearance();
+    });
+  }
+
+  private facingVector(): { x: number; y: number } {
+    if (this.facing === 'up') return { x: 0, y: -1 };
+    if (this.facing === 'down') return { x: 0, y: 1 };
+    if (this.facing === 'left') return { x: -1, y: 0 };
+    return { x: 1, y: 0 };
+  }
+
+  private tryEnemyShoot(a: Actor): void {
+    const pk = hardProjectileForActor(a.kind, a.id);
+    if (!pk) return;
+    const threat = threatForRoom(this.room, this.save);
+    const spec = projectileSpec(pk, threat);
+    const dist = Phaser.Math.Distance.Between(
+      a.sprite.x,
+      a.sprite.y,
+      this.player.x,
+      this.player.y,
+    );
+    if (dist > spec.range || dist < 28) return;
+    const ang = Phaser.Math.Angle.Between(
+      a.sprite.x,
+      a.sprite.y,
+      this.player.x,
+      this.player.y,
+    );
+    a.shootCooldown = spec.cooldownMs;
+    this.spawnProjectile(
+      a.sprite.x,
+      a.sprite.y,
+      Math.cos(ang) * spec.speed,
+      Math.sin(ang) * spec.speed,
+      spec.damage,
+      spec.texture,
+      false,
+      1200,
+    );
+  }
+
+  private spawnProjectile(
+    x: number,
+    y: number,
+    vx: number,
+    vy: number,
+    dmg: number,
+    texture: string,
+    fromPlayer: boolean,
+    life: number,
+  ): void {
+    const key = this.textures.exists(texture) ? texture : 'particle-hit';
+    const img = this.add.image(x, y, key).setDepth(14).setScale(SCALE * 0.85);
+    this.projectiles.push({ img, vx, vy, dmg, life, fromPlayer });
+  }
+
+  private updateProjectiles(delta: number): void {
+    const dt = delta / 1000;
+    const next: typeof this.projectiles = [];
+    for (const p of this.projectiles) {
+      p.life -= delta;
+      p.img.x += p.vx * dt;
+      p.img.y += p.vy * dt;
+      let dead = p.life <= 0;
+
+      // Wall / bounds
+      const tx = Math.floor((p.img.x - this.roomOriginX) / (TILE * SCALE));
+      const ty = Math.floor((p.img.y - this.roomOriginY) / (TILE * SCALE));
+      if (this.isSolidTile(tx, ty)) dead = true;
+
+      if (!dead && p.fromPlayer) {
+        for (const a of this.actors) {
+          if (!a.alive || !a.sprite?.active) continue;
+          if (!isHostileKind(a.kind) && a.kind !== 'boss') continue;
+          if (a.kind === 'cube' && !a.aggressive) continue;
+          const d = Phaser.Math.Distance.Between(
+            p.img.x,
+            p.img.y,
+            a.sprite.x,
+            a.sprite.y,
+          );
+          if (d < 22) {
+            this.hitEnemyWithDamage(a, p.dmg);
+            dead = true;
+            break;
+          }
+        }
+      } else if (!dead && !p.fromPlayer && this.player?.active) {
+        const d = Phaser.Math.Distance.Between(
+          p.img.x,
+          p.img.y,
+          this.player.x,
+          this.player.y,
+        );
+        if (d < 20 && this.invuln <= 0) {
+          this.hurtPlayerFromProjectile(p.dmg);
+          dead = true;
+        }
+      }
+
+      if (dead) p.img.destroy();
+      else next.push(p);
+    }
+    this.projectiles = next;
+  }
+
+  private hitEnemyWithDamage(actor: Actor, dmg: number): void {
+    if (!actor.alive || actor.hurtCooldown > 0) return;
+    if (actor.kind === 'cube' && !actor.aggressive) {
+      actor.aggressive = true;
+      this.game.events.emit('toast', 'THE CUBE IS MAD NOW');
+    }
+    actor.hurtCooldown = 200;
+    actor.hp -= dmg;
+    playSfx('hit_enemy');
+    actor.sprite.setTint(0xffffff);
+    sparkBurst(this, actor.sprite.x, actor.sprite.y, 0xffffff, 3);
+    this.time.delayedCall(80, () => {
+      if (actor.alive) actor.sprite.clearTint();
+    });
+    if (actor.hp <= 0) this.killActor(actor);
+    else {
+      this.game.events.emit(
+        'toast',
+        `${actor.kind.toUpperCase()} ${actor.hp}/${actor.maxHp}`,
+      );
+    }
+  }
+
+  private hurtPlayerFromProjectile(dmg: number): void {
+    if (this.invuln > 0 || this.dialogLocked || this.paused) return;
+    if (
+      isCompanionActive(this.save) &&
+      budCanBlockHit(this.save.bestBudId, this.budBlockCd)
+    ) {
+      this.budBlockCd = BUD_BLOCK_COOLDOWN_MS;
+      this.invuln = 500;
+      playSfx('success');
+      this.game.events.emit('toast', 'PEBBO BLOCKED A SHOT!');
+      return;
+    }
+    const final = Math.max(1, dmg - this.save.armor);
+    this.save.hp = Math.max(0, this.save.hp - final);
+    this.invuln = 700;
+    this.emitHud();
+    writeSave(this.save);
+    playSfx('hit_player');
+    this.game.events.emit('toast', `HIT BY SHOT -${final}`);
+    if (!loadSettings().reduceMotion) {
+      this.cameras.main.shake(80, 0.006);
+    }
+    if (this.save.hp <= 0) this.die();
+  }
+
 }

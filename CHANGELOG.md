@@ -13,6 +13,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Hard mode dungeons** — after clearing a land, step on the **hard gate** at the dungeon mouth to replay with tougher shooting creeps (skeletons→arrows, redshirts→phasers, Dungeon Master→fireballs). Soft exit portal to leave hard mode.
+- **Hard captain boss** — clear hard redshirts in USS Plot Hole; the Captain engages. Rewards: **Phaser** + **Beam Me Up** (teleport to mouth).
+- **Hard king loot** — beat the Dungeon Master on hard for **Short Bow**, **Arrows**, and **Wizard Staff** (ranged / magic combat).
+- **Classes & races (D&D)** — at **Lv 5** pick a class; **Lv 15** multiclass; **Lv 25** choose a common race. Bonuses feed damage/armor/HP.
 - **Graphics motion pass (EMA)** — richer tiles (floor grout, brick walls, water/lava 2-frame shimmer, forje embers, portal sparkles, bud silhouette); player/companion idle & walk bob; enemy squash/wobble + 2-frame slime; sword slash arc + hit sparks; kind-tinted death particles; portal/forje ambient pulse; companion combat accents (heal/block/blink/strike). All decorative motion gated by Settings → Reduce motion.
 - **Landing page at /** — welcome, what/how/why, support (Ko-fi tip jar); game at **`/play`** (MPA Vite + Vercel rewrites). Live: [dunjunz.com](https://dunjunz.com) · [dunjunz.com/play](https://dunjunz.com/play)
 - **Journal (J / top bar)** — quest list with progress (main path, champion jobs, side bits) + **Brags** achievement board (22 unlocks, `NEW BRAG:` toasts). Tone stays bard-weird, not corporate.

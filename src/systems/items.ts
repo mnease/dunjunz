@@ -1,6 +1,8 @@
 import type { EquipSlot, ItemInstance, Rarity, SaveData } from '../types';
 import { effectivePrimary, rarityLabel } from './rarity';
 
+export type WeaponStyle = 'melee' | 'ranged' | 'magic';
+
 export interface ItemTemplate {
   id: string;
   name: string;
@@ -15,6 +17,12 @@ export interface ItemTemplate {
   /** Appearance fragment for layered draw. */
   look?: string;
   stackable?: boolean;
+  /** Melee swing (default), ranged bolt, or magic bolt. */
+  weaponStyle?: WeaponStyle;
+  /** Stack template consumed per ranged shot (e.g. arrows). */
+  ammoId?: string;
+  /** Projectile visual key for player shots. */
+  projectile?: 'arrow' | 'phaser' | 'fireball' | 'bolt';
 }
 
 export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
@@ -142,6 +150,58 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     slot: 'weapon',
     baseAtk: 4,
     look: 'sword',
+  },
+  /** Hard-mode captain reward — redshirt sidearm. */
+  phaser: {
+    id: 'phaser',
+    name: 'PHASER',
+    blurb: 'Set to fun. Space/Z fires a beam. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 3,
+    look: 'phaser',
+    weaponStyle: 'ranged',
+    projectile: 'phaser',
+  },
+  /** Hard-mode captain reward — emergency teleport. */
+  beam_me_up: {
+    id: 'beam_me_up',
+    name: 'BEAM ME UP',
+    blurb: 'Scotty energy. [U] from inventory or assign use. Teleports to dunjun mouth.',
+    kind: 'consumable',
+    usable: true,
+    stackable: true,
+  },
+  /** Hard-mode king (Dungeon Master) reward. */
+  short_bow: {
+    id: 'short_bow',
+    name: 'SHORT BOW',
+    blurb: 'Needs ARROWS. Space/Z looses a shot. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 3,
+    look: 'bow',
+    weaponStyle: 'ranged',
+    ammoId: 'arrows',
+    projectile: 'arrow',
+  },
+  arrows: {
+    id: 'arrows',
+    name: 'ARROWS',
+    blurb: 'Pointy sticks. Ammo for bows.',
+    kind: 'consumable',
+    stackable: true,
+  },
+  wizard_staff: {
+    id: 'wizard_staff',
+    name: 'WIZARD STAFF',
+    blurb: 'INT-powered sparkles. Space/Z casts. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 2,
+    look: 'staff',
+    weaponStyle: 'magic',
+    projectile: 'bolt',
   },
   leather_helmet: {
     id: 'leather_helmet',

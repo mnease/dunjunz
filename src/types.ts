@@ -150,11 +150,10 @@ export interface RoomDef {
 }
 
 /**
- * Save v5 — multi-land quest, mapz, forjing, best bud.
- * loadSave migrates ≤4; best-bud fields backfilled on load.
+ * Save v6 — hard mode, class/race identity (migrates from ≤5).
  */
 export interface SaveData {
-  version: 5;
+  version: 5 | 6;
   roomId: string;
   hp: number;
   maxHp: number;
@@ -206,4 +205,45 @@ export interface SaveData {
   questsCompleted: string[];
   /** Unlocked brag (achievement) ids. */
   achievementsUnlocked: string[];
+  // ── v6: hard mode + identity ─────────────────────────────
+  /** Land currently being replayed on hard (null = normal). */
+  hardRunLand?: LandId | null;
+  /** Entity ids killed during the active hard run (rooms re-fill each run). */
+  hardKilled?: string[];
+  /** Lands whose hard boss / hard clear has been completed. */
+  hardLandsCleared?: LandId[];
+  /** Primary class (chosen at L5). */
+  primaryClass?: ClassId | null;
+  /** Secondary multiclass (chosen at L15). */
+  secondaryClass?: ClassId | null;
+  /** Ancestry (default human; choosable at L25). */
+  race?: RaceId;
+  /** True after the L25 race pick is spent. */
+  raceChosen?: boolean;
 }
+
+/** Re-export identity ids for SaveData (defined in systems to avoid cycles). */
+export type ClassId =
+  | 'fighter'
+  | 'wizard'
+  | 'rogue'
+  | 'cleric'
+  | 'ranger'
+  | 'barbarian'
+  | 'paladin'
+  | 'bard'
+  | 'monk'
+  | 'warlock'
+  | 'sorcerer'
+  | 'druid';
+
+export type RaceId =
+  | 'human'
+  | 'elf'
+  | 'dwarf'
+  | 'halfling'
+  | 'half_orc'
+  | 'half_elf'
+  | 'gnome'
+  | 'dragonborn'
+  | 'tiefling';

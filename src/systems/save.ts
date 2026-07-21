@@ -12,7 +12,7 @@ import { ensureBudProgress } from './best-bud-gear';
 export function defaultSave(): SaveData {
   const attrs = defaultAttrs();
   return {
-    version: 5,
+    version: 6,
     roomId: START_ROOM,
     hp: 6,
     maxHp: recomputeMaxHp(attrs),
@@ -47,6 +47,13 @@ export function defaultSave(): SaveData {
     activeQuestId: null,
     questsCompleted: [],
     achievementsUnlocked: [],
+    hardRunLand: null,
+    hardKilled: [],
+    hardLandsCleared: [],
+    primaryClass: null,
+    secondaryClass: null,
+    race: 'human',
+    raceChosen: false,
   };
 }
 
@@ -59,7 +66,7 @@ function withV5Fields(s: SaveData): SaveData {
   const budXp = typeof s.budXp === 'number' ? Math.max(0, s.budXp) : 0;
   return {
     ...s,
-    version: 5,
+    version: 6,
     discoveredMapz: s.discoveredMapz?.length
       ? s.discoveredMapz
       : (['surface'] as LandId[]),
@@ -81,6 +88,15 @@ function withV5Fields(s: SaveData): SaveData {
     achievementsUnlocked: Array.isArray(s.achievementsUnlocked)
       ? s.achievementsUnlocked
       : [],
+    hardRunLand: s.hardRunLand ?? null,
+    hardKilled: Array.isArray(s.hardKilled) ? s.hardKilled : [],
+    hardLandsCleared: Array.isArray(s.hardLandsCleared)
+      ? s.hardLandsCleared
+      : [],
+    primaryClass: s.primaryClass ?? null,
+    secondaryClass: s.secondaryClass ?? null,
+    race: s.race ?? 'human',
+    raceChosen: !!s.raceChosen,
   };
 }
 
@@ -92,7 +108,7 @@ export function loadSave(): SaveData {
       version?: number;
       inventory?: Record<string, number>;
     };
-    if (parsed.version != null && parsed.version > 5) return defaultSave();
+    if (parsed.version != null && parsed.version > 6) return defaultSave();
 
     const base = defaultSave();
     if ((parsed.version ?? 1) < 4 || !Array.isArray(parsed.bag)) {
@@ -115,7 +131,7 @@ export function loadSave(): SaveData {
     let next: SaveData = withV5Fields({
       ...base,
       ...parsed,
-      version: 5,
+      version: 6,
       flags: { ...base.flags, ...(parsed.flags ?? {}) },
       killed: Array.isArray(parsed.killed) ? parsed.killed : base.killed,
       collected: Array.isArray(parsed.collected)
@@ -180,7 +196,7 @@ export function loadSave(): SaveData {
 export function writeSave(data: SaveData): void {
   const toStore = syncDerivedStats({
     ...data,
-    version: 5,
+    version: 6,
     level: levelFromXp(data.xp),
   });
   localStorage.setItem(SAVE_KEY, JSON.stringify(toStore));

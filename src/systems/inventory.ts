@@ -7,6 +7,7 @@ import {
   recomputeMaxHp,
   computePotionHeal,
 } from './attributes';
+import { effectiveAttrs } from './hero-identity';
 import {
   ALL_EQUIP_SLOTS,
   DEF_SLOTS,
@@ -38,7 +39,7 @@ export function computeArmor(save: SaveData): number {
     const inst = findInBag(save, uid);
     if (inst) def += instanceDef(inst);
   }
-  const dex = save.attrs.dex + weaponAttrBonus(save, 'dex');
+  const dex = effectiveAttrs(save).dex + weaponAttrBonus(save, 'dex');
   def += Math.floor(Math.max(0, dex - 1) / 4);
   return def;
 }
@@ -56,7 +57,8 @@ export function hasKeyEquipped(save: SaveData): boolean {
 }
 
 export function syncDerivedStats(save: SaveData): SaveData {
-  const vit = save.attrs.vit + weaponAttrBonus(save, 'vit');
+  const eff = effectiveAttrs(save);
+  const vit = eff.vit + weaponAttrBonus(save, 'vit');
   const maxHp = recomputeMaxHp({ ...save.attrs, vit });
   return {
     ...save,
@@ -154,7 +156,48 @@ export function useInventoryItem(
       message: `USED POTION (+${hp - save.hp} HP)`,
     };
   }
+  if (templateId === 'beam_me_up') {
+    // Scene handles actual teleport; we only consume stack here when requested.
+    const stacks = { ...save.stacks };
+    stacks.beam_me_up = count - 1;
+    if (stacks.beam_me_up <= 0) delete stacks.beam_me_up;
+    return {
+      ok: true,
+      save: syncDerivedStats({ ...save, stacks }),
+      message: 'BEAM ME UP — ENERGIZE!',
+    };
+  }
   return { ok: false, save, reason: 'UNKNOWN ITEM' };
+}
+
+/** True if equipped weapon fires projectiles instead of sword swing. */
+export function equippedWeaponIsRanged(save: SaveData): boolean {
+  const uid = save.equipped.weapon;
+  if (!uid) return false;
+  const inst = findInBag(save, uid);
+  if (!inst) return false;
+  const t = getTemplate(inst.templateId);
+  return t.weaponStyle === 'ranged' || t.weaponStyle === 'magic';
+}
+
+/** Consume one ammo if weapon requires it. */
+export function consumeWeaponAmmo(
+  save: SaveData,
+): { ok: true; save: SaveData } | { ok: false; reason: string; save: SaveData } {
+  const uid = save.equipped.weapon;
+  if (!uid) return { ok: true, save };
+  const inst = findInBag(save, uid);
+  if (!inst) return { ok: true, save };
+  const t = getTemplate(inst.templateId);
+  if (!t.ammoId) return { ok: true, save };
+  const have = save.stacks[t.ammoId] ?? 0;
+  if (have <= 0) {
+    return { ok: false, save, reason: `OUT OF ${t.ammoId.toUpperCase()}` };
+  }
+  const stacks = { ...save.stacks };
+  stacks[t.ammoId] = have - 1;
+  if (stacks[t.ammoId]! <= 0) delete stacks[t.ammoId];
+  return { ok: true, save: { ...save, stacks } };
 }
 
 export function equipUid(save: SaveData, uid: string): EquipResult {

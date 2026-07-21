@@ -8,6 +8,7 @@ import { UIScene } from './scenes/UIScene';
 import { installAudioUnlock } from './systems/audio';
 import { initAuthUi } from './ui/auth';
 import { initFeedbackUi } from './ui/feedback';
+import { initHeroPickUi } from './ui/hero-pick';
 import { initJournalUi } from './ui/journal';
 import { initSettingsUi } from './ui/settings';
 
@@ -38,6 +39,7 @@ new Phaser.Game(config);
 // Page chrome: journal (quests/brags) + settings + account + feedback
 installAudioUnlock();
 initJournalUi();
+initHeroPickUi();
 initSettingsUi();
 initAuthUi();
 initFeedbackUi();

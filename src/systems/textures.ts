@@ -150,7 +150,8 @@ function drawItemIcon(
     itemId === 'mild_sword' ||
     itemId === 'iron_blade' ||
     itemId === 'sand_saber' ||
-    itemId === 'dunjun_cleaver'
+    itemId === 'dunjun_cleaver' ||
+    itemId === 'honk_blade'
   ) {
     ctx.fillStyle =
       itemId === 'dunjun_cleaver'
@@ -159,12 +160,52 @@ function drawItemIcon(
           ? '#e8c070'
           : itemId === 'iron_blade'
             ? '#a0b0c0'
-            : '#dfe6f0';
+            : itemId === 'honk_blade'
+              ? '#ffe08a'
+              : '#dfe6f0';
     ctx.fillRect(11, 4, 2, 14);
     ctx.fillStyle = '#c9a227';
     ctx.fillRect(8, 14, 8, 2);
     ctx.fillStyle = '#8b5a2b';
     ctx.fillRect(11, 16, 2, 4);
+    return;
+  }
+  if (itemId === 'phaser') {
+    ctx.fillStyle = '#444';
+    ctx.fillRect(6, 10, 12, 4);
+    ctx.fillStyle = '#ff3344';
+    ctx.fillRect(14, 11, 6, 2);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(4, 11, 3, 2);
+    return;
+  }
+  if (itemId === 'short_bow') {
+    ctx.strokeStyle = '#8b5a2b';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(12, 12, 8, -1.2, 1.2);
+    ctx.stroke();
+    ctx.strokeStyle = '#ddd';
+    ctx.beginPath();
+    ctx.moveTo(12, 4);
+    ctx.lineTo(12, 20);
+    ctx.stroke();
+    return;
+  }
+  if (itemId === 'wizard_staff') {
+    ctx.fillStyle = '#6b4423';
+    ctx.fillRect(11, 4, 2, 16);
+    ctx.fillStyle = '#7dffb3';
+    ctx.beginPath();
+    ctx.arc(12, 5, 3, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  if (itemId === 'beam_me_up' || itemId === 'arrows') {
+    ctx.fillStyle = itemId === 'arrows' ? '#c8b090' : '#4ecdc4';
+    ctx.fillRect(7, 7, 10, 10);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(9, 9, 6, 2);
     return;
   }
   if (
@@ -990,6 +1031,37 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(2, 0, 2, 6);
     ctx.fillRect(0, 2, 6, 2);
     ctx.fillStyle = hex(COLORS.green);
+    ctx.fillRect(2, 2, 2, 2);
+  });
+
+  // Projectiles (hard mode + player ranged)
+  canvasTex(scene, 'proj-arrow', 8, 4, (ctx) => {
+    ctx.fillStyle = '#c8b090';
+    ctx.fillRect(0, 1, 6, 2);
+    ctx.fillStyle = '#e8e0d0';
+    ctx.fillRect(5, 0, 3, 4);
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(0, 1, 2, 2);
+  });
+  canvasTex(scene, 'proj-phaser', 8, 4, (ctx) => {
+    ctx.fillStyle = '#ff3344';
+    ctx.fillRect(0, 1, 8, 2);
+    ctx.fillStyle = '#ffaaaa';
+    ctx.fillRect(2, 0, 4, 4);
+  });
+  canvasTex(scene, 'proj-fireball', 8, 8, (ctx) => {
+    ctx.fillStyle = '#ff8a4c';
+    ctx.beginPath();
+    ctx.arc(4, 4, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffe08a';
+    ctx.fillRect(3, 3, 2, 2);
+  });
+  canvasTex(scene, 'proj-bolt', 6, 6, (ctx) => {
+    ctx.fillStyle = '#7dffb3';
+    ctx.fillRect(2, 0, 2, 6);
+    ctx.fillRect(0, 2, 6, 2);
+    ctx.fillStyle = '#fff';
     ctx.fillRect(2, 2, 2, 2);
   });
 }

@@ -751,9 +751,9 @@ describe('princess quest land clears', () => {
     expect(questHint(save).join(' ')).toMatch(/BUD|CHAMPION|WOODZ/i);
   });
 
-  it('defaultSave is v5 with mapz surface seed', () => {
+  it('defaultSave is v6 with mapz surface seed + identity fields', () => {
     const s = defaultSave();
-    expect(s.version).toBe(5);
+    expect(s.version).toBe(6);
     expect(s.discoveredMapz).toContain('surface');
     expect(s.visitedRooms).toEqual([]);
     expect(s.princessSaved).toBe(false);
@@ -761,9 +761,12 @@ describe('princess quest land clears', () => {
     expect(typeof s.runSeed).toBe('number');
     expect(s.bestBudId).toBeNull();
     expect(s.bestBudStage).toBe('none');
+    expect(s.hardRunLand).toBeNull();
+    expect(s.primaryClass).toBeNull();
+    expect(s.race).toBe('human');
   });
 
-  it('loadSave without storage returns default v5', () => {
+  it('loadSave without storage returns default v6', () => {
     const store: Record<string, string> = {};
     // minimal localStorage shim for node vitest
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -777,7 +780,7 @@ describe('princess quest land clears', () => {
       },
     };
     const loaded = loadSave();
-    expect(loaded.version).toBe(5);
+    expect(loaded.version).toBe(6);
     expect(loaded.discoveredMapz).toContain('surface');
 
     store['dunjunz-save-v1'] = JSON.stringify({
@@ -812,9 +815,10 @@ describe('princess quest land clears', () => {
       armor: 0,
     });
     const migrated = loadSave();
-    expect(migrated.version).toBe(5);
+    expect(migrated.version).toBe(6);
     expect(migrated.landsCleared).toContain('dunjunz');
     expect(migrated.princessSaved).toBe(false);
+    expect(migrated.hardKilled).toEqual([]);
   });
 });
 
@@ -1157,5 +1161,161 @@ describe('best bud quest', () => {
     // Map must have a continuous open west mouth (row with leading dots)
     const openWest = room.tiles.some((row) => row.startsWith('....'));
     expect(openWest).toBe(true);
+  });
+});
+
+// ── Hard mode + identity ─────────────────────────────────
+import {
+  hardModeUnlocked,
+  hardThreatBonus,
+  isHardRunActive,
+  killListForSpawn,
+  parseHardPortalTarget,
+  projectileSpec,
+  recordKill,
+  shouldPromoteCaptain,
+  startHardRun,
+  hardProjectileForActor,
+  HARD_THREAT_BONUS,
+} from './hard-mode';
+import {
+  canPickPrimaryClass,
+  classBonusAttrs,
+  pickPrimaryClass,
+  pickSecondaryClass,
+  CLASS_UNLOCK_LEVEL,
+  MULTICLASS_UNLOCK_LEVEL,
+} from './classes';
+import {
+  canChangeRace,
+  pickRace,
+  raceBonusAttrs,
+  RACE_UNLOCK_LEVEL,
+} from './races';
+import { effectiveAttrs, pendingHeroPick } from './hero-identity';
+import { rewardHardCaptain, rewardHardKing } from './hard-rewards';
+import { threatForRoom } from './threat';
+
+describe('hard mode', () => {
+  it('unlocks after land clear / boss flag', () => {
+    const s = defaultSave();
+    expect(hardModeUnlocked(s, 'dunjunz')).toBe(false);
+    s.bossDefeated = true;
+    expect(hardModeUnlocked(s, 'dunjunz')).toBe(true);
+    s.landsCleared = ['woodz'];
+    expect(hardModeUnlocked(s, 'woodz')).toBe(true);
+  });
+
+  it('uses separate kill list on hard run', () => {
+    let s = defaultSave();
+    s.bossDefeated = true;
+    s.killed = ['ensign-1'];
+    s = startHardRun(s, 'dunjunz');
+    expect(isHardRunActive(s, 'dunjunz')).toBe(true);
+    expect(killListForSpawn(s, 'dunjunz')).toEqual([]);
+    s = recordKill(s, 'ensign-1', 'dunjunz');
+    expect(s.hardKilled).toContain('ensign-1');
+    expect(s.killed).toContain('ensign-1'); // original untouched until record on normal
+  });
+
+  it('parses hard portal targets', () => {
+    expect(parseHardPortalTarget('__HARD__dunjunz')).toEqual({
+      kind: 'start',
+      land: 'dunjunz',
+    });
+    expect(parseHardPortalTarget('__HARD_EXIT__')).toEqual({ kind: 'exit' });
+    expect(parseHardPortalTarget('b1_entrance')).toBeNull();
+  });
+
+  it('maps shooters and projectile specs', () => {
+    expect(hardProjectileForActor('skeleton', 'x')).toBe('arrow');
+    expect(hardProjectileForActor('redshirt', 'x')).toBe('phaser');
+    expect(hardProjectileForActor('boss', 'dungeon-master')).toBe('fireball');
+    expect(projectileSpec('arrow').damage).toBeGreaterThan(0);
+  });
+
+  it('promotes captain after hard trek redshirts', () => {
+    let s = startHardRun(defaultSave(), 'dunjunz');
+    s.hardKilled = ['ensign-1', 'ensign-2', 'ensign-3'];
+    expect(shouldPromoteCaptain(s, 'b1_trek')).toBe(true);
+    expect(shouldPromoteCaptain(s, 'b1_hall')).toBe(false);
+  });
+
+  it('adds hard threat bonus', () => {
+    let s = startHardRun(defaultSave(), 'dunjunz');
+    expect(hardThreatBonus(s, 'dunjunz')).toBe(HARD_THREAT_BONUS);
+    const room = { land: 'dunjunz' as const, floor: -1 };
+    const tHard = threatForRoom(room, s);
+    const tNorm = threatForRoom(room, defaultSave());
+    expect(tHard).toBeGreaterThan(tNorm);
+  });
+});
+
+describe('classes and races', () => {
+  it('gates class pick at level 5', () => {
+    const s = defaultSave();
+    expect(canPickPrimaryClass(s)).toBe(false);
+    s.level = CLASS_UNLOCK_LEVEL;
+    expect(canPickPrimaryClass(s)).toBe(true);
+    const r = pickPrimaryClass(s, 'fighter');
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.save.primaryClass).toBe('fighter');
+      expect(canPickPrimaryClass(r.save)).toBe(false);
+    }
+  });
+
+  it('multiclass at 15 half bonuses', () => {
+    let s = defaultSave();
+    s.level = MULTICLASS_UNLOCK_LEVEL;
+    s.primaryClass = 'fighter';
+    const r = pickSecondaryClass(s, 'wizard');
+    expect(r.ok).toBe(true);
+    const b = classBonusAttrs('fighter', 'wizard');
+    expect(b.str).toBe(2);
+    expect(b.int).toBe(1); // half of 3
+  });
+
+  it('race pick at 25 applies bonuses', () => {
+    let s = defaultSave();
+    s.level = RACE_UNLOCK_LEVEL;
+    expect(canChangeRace(s)).toBe(true);
+    expect(raceBonusAttrs('elf', false)).toEqual({});
+    const r = pickRace(s, 'elf');
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.save.raceChosen).toBe(true);
+      const eff = effectiveAttrs(r.save);
+      expect(eff.dex).toBeGreaterThan(r.save.attrs.dex);
+    }
+  });
+
+  it('pending pick order class → multiclass → race', () => {
+    let s = defaultSave();
+    s.level = 5;
+    expect(pendingHeroPick(s)).toBe('class');
+    s.primaryClass = 'rogue';
+    s.level = 15;
+    expect(pendingHeroPick(s)).toBe('multiclass');
+    s.secondaryClass = 'wizard';
+    s.level = 25;
+    expect(pendingHeroPick(s)).toBe('race');
+  });
+});
+
+describe('hard rewards', () => {
+  it('grants captain phaser + beams', () => {
+    const r = rewardHardCaptain(defaultSave());
+    expect(r.save.bag.some((b) => b.templateId === 'phaser')).toBe(true);
+    expect(r.save.stacks.beam_me_up).toBeGreaterThanOrEqual(3);
+    expect(r.save.flags.hard_captain_loot).toBe(true);
+  });
+
+  it('grants king bow staff arrows', () => {
+    const r = rewardHardKing(defaultSave());
+    expect(r.save.bag.some((b) => b.templateId === 'short_bow')).toBe(true);
+    expect(r.save.bag.some((b) => b.templateId === 'wizard_staff')).toBe(true);
+    expect(r.save.stacks.arrows).toBeGreaterThanOrEqual(20);
+    expect(r.save.hardLandsCleared).toContain('dunjunz');
   });
 });

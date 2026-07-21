@@ -4,6 +4,7 @@
  */
 
 import type { LandId, RoomDef, SaveData } from '../types';
+import { hardThreatBonus } from './hard-mode';
 
 /** Base land danger (0 = meadow tutorial). */
 export const LAND_THREAT: Record<LandId, number> = {
@@ -39,7 +40,8 @@ export function threatForRoom(
   const floor = room?.floor ?? 0;
   const depth = floor < 0 ? Math.abs(floor) : Math.max(0, floor);
   const progress = Math.floor(threatFromSave(save) / 2);
-  return landTier + depth + progress;
+  const hard = hardThreatBonus(save, land);
+  return landTier + depth + progress + hard;
 }
 
 /** Scale base HP by threat. Room overrides are treated as base too. */
