@@ -1,14 +1,14 @@
 import type Phaser from 'phaser';
 import { COLORS, TILE } from '../config';
 import {
-  AMULET_LOOKS,
-  BREAST_LOOKS,
-  HELMET_LOOKS,
+  BARE_APPEARANCE,
   playerTextureKey,
   type AppearanceSpec,
+  type WeaponLook,
+  type ShieldLook,
   type AmuletLook,
-  type BreastLook,
-  type HelmetLook,
+  type RingLook,
+  type ShoesLook,
 } from './appearance';
 
 function canvasTex(
@@ -32,17 +32,235 @@ function hex(n: number): string {
   return `#${n.toString(16).padStart(6, '0')}`;
 }
 
-/** Draw hero at 16x16 with breastplate / helmet / amulet / weapon / key. */
-function drawPlayerLook(
+/** Draw unique hip / hand weapon silhouette (right side). */
+function drawWeapon(
   ctx: CanvasRenderingContext2D,
-  spec: AppearanceSpec,
+  look: WeaponLook,
 ): void {
-  // Legs / boots
+  if (look === 'none') return;
+
+  if (look === 'bow') {
+    // Compact recurve on right hip
+    ctx.fillStyle = '#6b4423';
+    ctx.fillRect(13, 6, 1, 7);
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(14, 7, 1, 5);
+    ctx.fillStyle = '#d0d8e0';
+    ctx.fillRect(13, 7, 1, 1);
+    ctx.fillRect(13, 11, 1, 1);
+    return;
+  }
+  if (look === 'staff') {
+    ctx.fillStyle = '#6b4423';
+    ctx.fillRect(13, 4, 2, 9);
+    ctx.fillStyle = '#7dffb3';
+    ctx.fillRect(13, 3, 2, 2);
+    ctx.fillStyle = '#c9ffe0';
+    ctx.fillRect(13, 3, 1, 1);
+    return;
+  }
+  if (look === 'phaser') {
+    ctx.fillStyle = '#3a3a48';
+    ctx.fillRect(12, 8, 3, 3);
+    ctx.fillStyle = '#ff3344';
+    ctx.fillRect(14, 9, 2, 1);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(12, 9, 1, 1);
+    return;
+  }
+  if (look === 'cleaver') {
+    ctx.fillStyle = '#ff6b9d';
+    ctx.fillRect(12, 6, 3, 5);
+    ctx.fillStyle = '#c04070';
+    ctx.fillRect(14, 6, 1, 5);
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(12, 11, 2, 2);
+    return;
+  }
+  if (look === 'honk') {
+    // Gold blade + green goose accent
+    ctx.fillStyle = '#ffe08a';
+    ctx.fillRect(13, 5, 2, 7);
+    ctx.fillStyle = '#5ad45a';
+    ctx.fillRect(13, 5, 2, 2);
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(12, 11, 3, 1);
+    return;
+  }
+  if (look === 'saber') {
+    // Curved sand-gold edge
+    ctx.fillStyle = '#e8c070';
+    ctx.fillRect(13, 5, 1, 7);
+    ctx.fillRect(14, 6, 1, 5);
+    ctx.fillStyle = '#c9a227';
+    ctx.fillRect(12, 11, 3, 1);
+    return;
+  }
+  if (look === 'iron') {
+    ctx.fillStyle = '#8a98a8';
+    ctx.fillRect(13, 5, 2, 7);
+    ctx.fillStyle = '#5a6878';
+    ctx.fillRect(14, 5, 1, 7);
+    ctx.fillStyle = '#6a5a40';
+    ctx.fillRect(12, 11, 4, 1);
+    return;
+  }
+  // default mild sword — bright steel short blade
+  ctx.fillStyle = '#dfe6f0';
+  ctx.fillRect(13, 6, 2, 6);
+  ctx.fillStyle = '#c9a227';
+  ctx.fillRect(12, 11, 4, 1);
+  ctx.fillStyle = '#8b5a2b';
+  ctx.fillRect(13, 12, 2, 1);
+}
+
+/** Draw unique left-arm shield. */
+function drawShield(
+  ctx: CanvasRenderingContext2D,
+  look: ShieldLook,
+): void {
+  if (look === 'none') return;
+  if (look === 'tower') {
+    ctx.fillStyle = '#4a5568';
+    ctx.fillRect(0, 5, 4, 8);
+    ctx.fillStyle = '#2a3548';
+    ctx.fillRect(0, 5, 1, 8);
+    ctx.fillStyle = hex(COLORS.gold);
+    ctx.fillRect(1, 7, 2, 1);
+    ctx.fillStyle = '#7a8898';
+    ctx.fillRect(1, 5, 2, 1);
+    return;
+  }
+  if (look === 'iron') {
+    ctx.fillStyle = '#8a98a8';
+    ctx.fillRect(1, 6, 3, 6);
+    ctx.fillStyle = '#5a6878';
+    ctx.fillRect(1, 6, 1, 6);
+    ctx.fillStyle = '#c0c8d0';
+    ctx.fillRect(2, 8, 1, 2);
+    return;
+  }
+  // wood
+  ctx.fillStyle = '#8b6914';
+  ctx.fillRect(1, 7, 3, 5);
+  ctx.fillStyle = '#c9a227';
+  ctx.fillRect(1, 8, 3, 1);
+  ctx.fillStyle = '#5a4510';
+  ctx.fillRect(2, 9, 1, 2);
+}
+
+function drawAmulet(
+  ctx: CanvasRenderingContext2D,
+  look: AmuletLook,
+): void {
+  if (look === 'none') return;
+  if (look === 'cube') {
+    // Gelatinous cube core — lime + bounce highlight
+    ctx.fillStyle = '#5ad45a';
+    ctx.fillRect(6, 6, 4, 3);
+    ctx.fillStyle = '#9ef09e';
+    ctx.fillRect(7, 6, 2, 1);
+    ctx.fillStyle = '#2a8a2a';
+    ctx.fillRect(6, 8, 4, 1);
+    return;
+  }
+  if (look === 'bauble') {
+    ctx.fillStyle = hex(COLORS.pink);
+    ctx.fillRect(7, 6, 2, 1);
+    ctx.fillRect(6, 7, 4, 2);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(7, 7, 1, 1);
+    return;
+  }
+  // gold trinket
+  ctx.fillStyle = hex(COLORS.gold);
+  ctx.fillRect(7, 6, 2, 1);
+  ctx.fillRect(7, 7, 2, 2);
+  ctx.fillStyle = '#fff3a0';
+  ctx.fillRect(7, 7, 1, 1);
+}
+
+function drawRing(
+  ctx: CanvasRenderingContext2D,
+  look: RingLook,
+): void {
+  if (look === 'none') return;
+  // Sparkle on right hand / hip
+  if (look === 'luck') {
+    ctx.fillStyle = '#7dffb3';
+    ctx.fillRect(11, 10, 2, 1);
+    ctx.fillRect(12, 9, 1, 3);
+    return;
+  }
+  if (look === 'silver') {
+    ctx.fillStyle = '#d0d8e8';
+    ctx.fillRect(11, 10, 2, 2);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(11, 10, 1, 1);
+    return;
+  }
+  // copper
+  ctx.fillStyle = '#c07040';
+  ctx.fillRect(11, 10, 2, 2);
+  ctx.fillStyle = '#e09060';
+  ctx.fillRect(11, 10, 1, 1);
+}
+
+function drawShoes(
+  ctx: CanvasRenderingContext2D,
+  look: ShoesLook,
+): void {
+  if (look === 'apology') {
+    // Minty cube-gift boots
+    ctx.fillStyle = '#5ad4a0';
+    ctx.fillRect(4, 13, 3, 3);
+    ctx.fillRect(9, 13, 3, 3);
+    ctx.fillStyle = '#9ef0c8';
+    ctx.fillRect(4, 13, 3, 1);
+    ctx.fillRect(9, 13, 3, 1);
+    return;
+  }
+  if (look === 'leather') {
+    ctx.fillStyle = '#6b4423';
+    ctx.fillRect(4, 13, 3, 3);
+    ctx.fillRect(9, 13, 3, 3);
+    ctx.fillStyle = '#3d2b1f';
+    ctx.fillRect(4, 15, 3, 1);
+    ctx.fillRect(9, 15, 3, 1);
+    return;
+  }
+  // bare brown boots
   ctx.fillStyle = '#3d2b1f';
   ctx.fillRect(5, 13, 2, 2);
   ctx.fillRect(9, 13, 2, 2);
+}
 
-  // Torso
+/**
+ * Draw hero at 16×16 with every equip slot uniquely readable.
+ * Layer order: greaves → shoes → torso → gloves → head/helm →
+ * amulet → ring → shield → weapon → key.
+ */
+export function drawPlayerLook(
+  ctx: CanvasRenderingContext2D,
+  spec: AppearanceSpec,
+): void {
+  // —— Legs / greaves ——
+  if (spec.greaves === 'leather') {
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(5, 11, 2, 3);
+    ctx.fillRect(9, 11, 2, 3);
+    ctx.fillStyle = '#5a3d1a';
+    ctx.fillRect(5, 12, 2, 1);
+    ctx.fillRect(9, 12, 2, 1);
+  } else {
+    ctx.fillStyle = '#2a4a9a';
+    ctx.fillRect(5, 12, 2, 2);
+    ctx.fillRect(9, 12, 2, 2);
+  }
+
+  drawShoes(ctx, spec.shoes);
+
+  // —— Torso / breastplate ——
   let body = '#2d6cdf';
   if (spec.breastplate === 'leather') body = '#8b5a2b';
   if (spec.breastplate === 'reinforced') body = '#5c4030';
@@ -54,22 +272,49 @@ function drawPlayerLook(
     ctx.fillRect(5, 7, 6, 2);
     ctx.fillStyle = '#5a3d1a';
     ctx.fillRect(4, 10, 8, 1);
-  }
-  if (spec.breastplate === 'reinforced') {
+    ctx.fillRect(5, 8, 1, 2);
+    ctx.fillRect(10, 8, 1, 2);
+  } else if (spec.breastplate === 'reinforced') {
     ctx.fillStyle = '#8a7a60';
     ctx.fillRect(5, 7, 6, 3);
     ctx.fillStyle = hex(COLORS.gold);
     ctx.fillRect(7, 8, 2, 2);
     ctx.fillStyle = '#3a2a18';
     ctx.fillRect(4, 11, 8, 1);
+    ctx.fillStyle = '#c0b090';
+    ctx.fillRect(4, 6, 1, 5);
+    ctx.fillRect(11, 6, 1, 5);
+  } else {
+    // Cloth tunic detail
+    ctx.fillStyle = '#3d7cef';
+    ctx.fillRect(5, 7, 6, 2);
+    ctx.fillStyle = '#1a4aaf';
+    ctx.fillRect(7, 9, 2, 3);
   }
 
-  // Head
+  // —— Gloves / arms ——
+  if (spec.gloves === 'leather') {
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(3, 8, 2, 3);
+    ctx.fillRect(11, 8, 2, 3);
+    ctx.fillStyle = '#5a3d1a';
+    ctx.fillRect(3, 10, 2, 1);
+    ctx.fillRect(11, 10, 2, 1);
+  } else {
+    ctx.fillStyle = '#f0c8a4';
+    ctx.fillRect(3, 9, 1, 2);
+    ctx.fillRect(12, 9, 1, 2);
+  }
+
+  // —— Head ——
   ctx.fillStyle = '#f0c8a4';
   ctx.fillRect(5, 2, 6, 5);
   ctx.fillStyle = '#1a1a2e';
   ctx.fillRect(6, 3, 1, 1);
   ctx.fillRect(9, 3, 1, 1);
+  // mouth hint
+  ctx.fillStyle = '#d09080';
+  ctx.fillRect(7, 5, 2, 1);
 
   // Helmet or hair
   if (spec.helmet === 'leather') {
@@ -77,49 +322,46 @@ function drawPlayerLook(
     ctx.fillRect(4, 1, 8, 3);
     ctx.fillRect(3, 3, 2, 2);
     ctx.fillRect(11, 3, 2, 2);
+    ctx.fillStyle = '#5a3d1a';
+    ctx.fillRect(5, 1, 6, 1);
   } else {
+    // Blond mop
     ctx.fillStyle = '#c9a227';
     ctx.fillRect(4, 1, 8, 2);
+    ctx.fillStyle = '#e8c050';
+    ctx.fillRect(5, 1, 6, 1);
   }
 
-  // Amulet
-  if (spec.amulet === 'gold') {
+  drawAmulet(ctx, spec.amulet);
+  drawRing(ctx, spec.ring);
+  drawShield(ctx, spec.shield);
+  drawWeapon(ctx, spec.weapon);
+
+  // Key on belt (left hip)
+  if (spec.key === 'key') {
     ctx.fillStyle = hex(COLORS.gold);
-    ctx.fillRect(7, 6, 2, 1);
-    ctx.fillRect(7, 7, 2, 2);
+    ctx.fillRect(3, 11, 2, 3);
+    ctx.fillRect(2, 11, 1, 2);
+    ctx.fillStyle = '#fff3a0';
+    ctx.fillRect(3, 11, 1, 1);
   }
-  if (spec.amulet === 'bauble') {
-    ctx.fillStyle = hex(COLORS.pink);
-    ctx.fillRect(7, 6, 2, 1);
-    ctx.fillRect(6, 7, 4, 2);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(7, 7, 1, 1);
-  }
+}
 
-  // Weapon on hip (right)
-  if (spec.weapon) {
-    ctx.fillStyle = '#dfe6f0';
-    ctx.fillRect(12, 8, 2, 5);
-    ctx.fillStyle = '#c9a227';
-    ctx.fillRect(11, 12, 4, 1);
+/**
+ * Ensure a canvas texture exists for this loadout (on-demand; avoids
+ * combinatorial explosion at boot).
+ */
+export function ensurePlayerTexture(
+  scene: Phaser.Scene,
+  spec: AppearanceSpec,
+): string {
+  const key = playerTextureKey(spec);
+  if (!scene.textures.exists(key)) {
+    canvasTex(scene, key, TILE, TILE, (ctx) => {
+      drawPlayerLook(ctx, spec);
+    });
   }
-
-  // Shield on left arm
-  if (spec.shield) {
-    ctx.fillStyle = '#8b6914';
-    ctx.fillRect(1, 7, 3, 5);
-    ctx.fillStyle = '#c9a227';
-    ctx.fillRect(1, 8, 3, 1);
-    ctx.fillStyle = '#5a4510';
-    ctx.fillRect(2, 9, 1, 2);
-  }
-
-  // Key on belt
-  if (spec.key) {
-    ctx.fillStyle = hex(COLORS.gold);
-    ctx.fillRect(3, 10, 2, 3);
-    ctx.fillRect(2, 10, 2, 2);
-  }
+  return key;
 }
 
 function drawItemIcon(
@@ -519,41 +761,13 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(7, 7, 2, 2);
   });
 
-  // Default player + layered combos (breast × helm × amulet × weapon × shield × key)
-  const bare: AppearanceSpec = {
-    breastplate: 'none',
-    helmet: 'none',
-    amulet: 'none',
-    weapon: false,
-    shield: false,
-    key: false,
-  };
+  // Default bare hero + keyed loadout texture (full combos generated on demand)
   canvasTex(scene, 'player', TILE, TILE, (ctx) => {
-    drawPlayerLook(ctx, bare);
+    drawPlayerLook(ctx, BARE_APPEARANCE);
   });
-  for (const breastplate of BREAST_LOOKS) {
-    for (const helmet of HELMET_LOOKS) {
-      for (const amulet of AMULET_LOOKS) {
-        for (const weapon of [false, true]) {
-          for (const shield of [false, true]) {
-            for (const key of [false, true]) {
-              const spec: AppearanceSpec = {
-                breastplate: breastplate as BreastLook,
-                helmet: helmet as HelmetLook,
-                amulet: amulet as AmuletLook,
-                weapon,
-                shield,
-                key,
-              };
-              canvasTex(scene, playerTextureKey(spec), TILE, TILE, (ctx) => {
-                drawPlayerLook(ctx, spec);
-              });
-            }
-          }
-        }
-      }
-    }
-  }
+  canvasTex(scene, playerTextureKey(BARE_APPEARANCE), TILE, TILE, (ctx) => {
+    drawPlayerLook(ctx, BARE_APPEARANCE);
+  });
 
   const iconIds = [
     'empty',

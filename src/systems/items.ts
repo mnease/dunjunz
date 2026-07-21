@@ -122,7 +122,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     kind: 'gear',
     slot: 'weapon',
     baseAtk: 2,
-    look: 'sword',
+    look: 'iron',
   },
   sand_saber: {
     id: 'sand_saber',
@@ -131,7 +131,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     kind: 'gear',
     slot: 'weapon',
     baseAtk: 3,
-    look: 'sword',
+    look: 'saber',
   },
   dunjun_cleaver: {
     id: 'dunjun_cleaver',
@@ -140,7 +140,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     kind: 'gear',
     slot: 'weapon',
     baseAtk: 4,
-    look: 'sword',
+    look: 'cleaver',
   },
   honk_blade: {
     id: 'honk_blade',
@@ -149,7 +149,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     kind: 'gear',
     slot: 'weapon',
     baseAtk: 4,
-    look: 'sword',
+    look: 'honk',
   },
   /** Hard-mode captain reward — redshirt sidearm. */
   phaser: {
@@ -255,7 +255,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     kind: 'gear',
     slot: 'shoes',
     baseDef: 2,
-    look: 'leather',
+    look: 'apology',
   },
   cube_core: {
     id: 'cube_core',
@@ -265,7 +265,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     slot: 'amulet',
     baseDef: 2,
     potionHealBonus: 1,
-    look: 'bauble',
+    look: 'cube',
   },
   leather_gloves: {
     id: 'leather_gloves',

@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Unique equipped gear on avatar** — every slot paints a distinct look on the hero (and inventory doll): swords vs iron vs saber vs cleaver vs honk, phaser / bow / staff, wood / iron / tower shields, leather vs reinforced armor, greaves, boots of apology, gloves, gold / bauble / cube amulets, copper / silver / luck rings, key on belt. Loadout textures generate on demand.
 - **16:9 canvas** — game is now **1280×720** (was 768×576 / 4:3). Shell aspect-ratio + max width updated so the playfield fills widescreen without letterbox crush.
 - **UI anti-overlap** — HUD vitals reflow after hearts; room title wraps short of hints; dialog docked to bottom; inventory paper-doll / bag / pager / detail / help stacked with fixed bands; title/Army/Village use height-relative layout.
 - **Inventory bag sort + pagination** — **T** or **SORT:** cycles DEFAULT → NAME → TYPE → EQUIPPED → RARITY; 8×3 pages with **◀ PREV / NEXT ▶**, wheel, **[ ]** / **PgUp/PgDn**.

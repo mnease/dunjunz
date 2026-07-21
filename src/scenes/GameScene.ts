@@ -39,8 +39,9 @@ import {
 } from '../systems/shop';
 import {
   appearanceFromSave,
-  playerTextureKey,
+  withHiddenWeapon,
 } from '../systems/appearance';
+import { ensurePlayerTexture } from '../systems/textures';
 import {
   ATTR_IDS,
   spendAttrPoint,
@@ -1958,16 +1959,11 @@ export class GameScene extends Phaser.Scene {
    */
   private refreshPlayerAppearance(): void {
     if (!this.player) return;
-    const spec = appearanceFromSave(this.save);
-    if (this.attacking) {
-      spec.weapon = false;
-    }
-    const key = playerTextureKey(spec);
-    if (this.textures.exists(key)) {
-      this.player.setTexture(key);
-    } else if (this.textures.exists('player')) {
-      this.player.setTexture('player');
-    }
+    let spec = appearanceFromSave(this.save);
+    // Hide hip weapon while the swing FX is out
+    if (this.attacking) spec = withHiddenWeapon(spec);
+    const key = ensurePlayerTexture(this, spec);
+    this.player.setTexture(key);
   }
 
   private hurtPlayer(from: Actor): void {

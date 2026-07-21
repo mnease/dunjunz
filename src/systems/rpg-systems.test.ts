@@ -440,14 +440,47 @@ describe('attributes', () => {
 });
 
 describe('appearance + key on doll', () => {
-  it('texture key includes weapon and key flags', () => {
+  it('texture key encodes unique weapon + key looks', () => {
     let save = grantMildSword(defaultSave());
     save = grantKey(save);
     const key = playerTextureKeyFromSave(save);
-    expect(key).toContain('_w_');
-    expect(key.endsWith('_k')).toBe(true);
+    expect(key).toContain('_sword_');
+    expect(key.endsWith('_key')).toBe(true);
     const bare = playerTextureKeyFromSave(defaultSave());
-    expect(bare).toBe('player_none_none_none_n_n_n');
+    expect(bare).toBe(
+      'player_none_none_none_none_none_none_none_none_none_none',
+    );
+  });
+
+  it('maps distinct weapons and amulets to unique looks', () => {
+    let save = defaultSave();
+    // equip iron blade + gold trinket via bag
+    const iron = {
+      uid: 't-iron',
+      templateId: 'iron_blade',
+      rarity: 'common' as const,
+      enhancement: 0,
+    };
+    const gold = {
+      uid: 't-gold',
+      templateId: 'gold_trinket',
+      rarity: 'common' as const,
+      enhancement: 0,
+    };
+    save = {
+      ...save,
+      bag: [...save.bag, iron, gold],
+      equipped: {
+        ...save.equipped,
+        weapon: iron.uid,
+        amulet: gold.uid,
+      },
+    };
+    const spec = appearanceFromSave(save);
+    expect(spec.weapon).toBe('iron');
+    expect(spec.amulet).toBe('gold');
+    expect(playerTextureKeyFromSave(save)).toContain('_iron_');
+    expect(playerTextureKeyFromSave(save)).toContain('_gold_');
   });
 });
 
