@@ -13,6 +13,7 @@ Live build: [dunjunz.vercel.app](https://dunjunz.vercel.app) · Repo: [mnease/du
 
 ### Added
 
+- **Boss exit portal** — after clearing a land boss, a cyan portal appears in the arena; step on it (or E) to zip back to that dungeon's mouth (`b1_entrance` / Woodz Edge / Dezertz Edge)
 - **Game settings** (footer **Settings** modal, `localStorage`)
   - Master mute, music/SFX toggles + volume sliders
   - Reduce motion (skips camera shake)

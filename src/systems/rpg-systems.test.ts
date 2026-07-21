@@ -651,6 +651,38 @@ describe('forjing craft enhance imbue', () => {
   });
 });
 
+describe('boss exit portals', () => {
+  it('maps each land boss room to dungeon mouth', async () => {
+    const {
+      bossExitPortalDef,
+      dungeonEntranceForLand,
+      shouldSpawnBossExitPortal,
+      isBossRoom,
+    } = await import('./portal');
+    expect(isBossRoom('b2_boss')).toBe(true);
+    expect(isBossRoom('woodz_deep')).toBe(true);
+    expect(isBossRoom('dezertz_tower')).toBe(true);
+    expect(isBossRoom('b1_entrance')).toBe(false);
+    expect(dungeonEntranceForLand('dunjunz')).toBe('b1_entrance');
+    expect(dungeonEntranceForLand('woodz')).toBe('woodz_edge');
+    expect(dungeonEntranceForLand('dezertz')).toBe('dezertz_edge');
+    expect(dungeonEntranceForLand('surface')).toBeNull();
+
+    const def = bossExitPortalDef('b2_boss', 'dunjunz');
+    expect(def?.kind).toBe('portal');
+    expect(def?.portalTarget).toBe('b1_entrance');
+    expect(def?.id).toBe('exit-portal-dunjunz');
+
+    let save = defaultSave();
+    expect(shouldSpawnBossExitPortal(save, 'b2_boss', 'dunjunz')).toBe(false);
+    save = rewardDunjunzClear(save).save;
+    expect(shouldSpawnBossExitPortal(save, 'b2_boss', 'dunjunz')).toBe(true);
+    expect(shouldSpawnBossExitPortal(save, 'b1_entrance', 'dunjunz')).toBe(
+      false,
+    );
+  });
+});
+
 describe('princess quest land clears', () => {
   it('rewardDunjunzClear mints cleaver and mapz', () => {
     const r = rewardDunjunzClear(defaultSave());
@@ -662,6 +694,7 @@ describe('princess quest land clears', () => {
       true,
     );
     expect(r.dialog.some((l) => l.includes('PRIZELLA'))).toBe(true);
+    expect(r.dialog.join(' ')).toMatch(/PORTAL/i);
   });
 
   it('rewardDezertzClear sets princessSaved', () => {

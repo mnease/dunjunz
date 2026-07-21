@@ -844,6 +844,26 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(9, 13, 2, 2);
   });
 
+  // Boss exit portal — cyan ring + gem (step-on warp)
+  canvasTex(scene, 'portal', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#0a1220';
+    ctx.fillRect(0, 0, TILE, TILE);
+    ctx.strokeStyle = '#4ecdc4';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(8, 8, 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = '#7dffb3';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(8, 8, 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#ffc857';
+    ctx.fillRect(7, 6, 2, 2);
+    ctx.fillStyle = '#4ecdc4';
+    ctx.fillRect(6, 9, 4, 1);
+  });
+
   canvasTex(scene, 'particle', 4, 4, (ctx) => {
     ctx.fillStyle = hex(COLORS.gold);
     ctx.fillRect(0, 0, 4, 4);

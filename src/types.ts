@@ -31,7 +31,8 @@ export type EntityKind =
   | 'princess'
   | 'cactus'
   | 'wolf'
-  | 'best_bud';
+  | 'best_bud'
+  | 'portal';
 
 /** Non-human best friend companion (randomized per playthrough). */
 export type BestBudId =
@@ -114,6 +115,8 @@ export interface EntityDef {
   shopId?: string;
   /** Which mapz this pickup discovers. */
   mapzId?: LandId;
+  /** Room id for portal entities (boss exit → dungeon mouth). */
+  portalTarget?: string;
 }
 
 export interface RoomDef {

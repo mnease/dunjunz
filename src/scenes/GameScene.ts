@@ -84,6 +84,10 @@ import {
   rewardDunjunzClear,
   rewardWoodzClear,
 } from '../systems/quest';
+import {
+  bossExitPortalDef,
+  shouldSpawnBossExitPortal,
+} from '../systems/portal';
 import { playMusic, playSfx, type MusicId } from '../systems/audio';
 import { loadSettings } from '../systems/settings';
 import { loadSave, writeSave } from '../systems/save';
@@ -112,6 +116,8 @@ interface Actor {
   chestTable?: string;
   shopId?: string;
   mapzId?: LandId;
+  /** Destination room for portal entities. */
+  portalTarget?: string;
   /** Cube stays peaceful until the player hits it. */
   aggressive?: boolean;
 }
@@ -167,6 +173,7 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   cactus: 'cactus',
   wolf: 'wolf',
   best_bud: 'best_bud',
+  portal: 'portal',
 };
 
 export class GameScene extends Phaser.Scene {
@@ -904,6 +911,9 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // Quick exit portal after land boss is cleared
+    this.ensureBossExitPortal();
+
     this.emitHud();
     writeSave(this.save);
     this.syncCompanion();
@@ -1087,6 +1097,7 @@ export class GameScene extends Phaser.Scene {
       'forje',
       'princess',
       'best_bud',
+      'portal',
     ].includes(def.kind);
 
     // Pickups / talkers: immovable, fat talk hitbox
@@ -1121,6 +1132,7 @@ export class GameScene extends Phaser.Scene {
           'forje',
           'princess',
           'best_bud',
+          'portal',
         ].includes(def.kind)
       ) {
         sprite.setSize(14, 14);
@@ -1144,6 +1156,7 @@ export class GameScene extends Phaser.Scene {
       chestTable: def.chestTable,
       shopId: def.shopId,
       mapzId: def.mapzId,
+      portalTarget: def.portalTarget,
       // Cube is peaceful until struck
       aggressive: def.kind === 'cube' ? false : true,
     };
@@ -1164,9 +1177,52 @@ export class GameScene extends Phaser.Scene {
       this.physics.add.overlap(this.player, sprite, () =>
         this.collectItem(actor),
       );
+    } else if (def.kind === 'portal') {
+      this.physics.add.overlap(this.player, sprite, () =>
+        this.usePortal(actor),
+      );
     }
 
     this.actors.push(actor);
+  }
+
+  /** After land clear, ensure a walk-on portal exists in the boss arena. */
+  private ensureBossExitPortal(): void {
+    if (
+      !shouldSpawnBossExitPortal(
+        this.save,
+        this.room.id,
+        this.room.land,
+      )
+    ) {
+      return;
+    }
+    const already = this.actors.some(
+      (a) => a.alive && a.kind === 'portal' && a.id.startsWith('exit-portal-'),
+    );
+    if (already) return;
+    const def = bossExitPortalDef(this.room.id, this.room.land);
+    if (def) this.spawnEntity(def);
+  }
+
+  private usePortal(actor: Actor): void {
+    // Allow while dialog open so you can leave mid-victory speech if you want;
+    // still block mid-room-transition / pause.
+    if (this.transitionLock || this.paused) return;
+    if (!actor.alive || actor.kind !== 'portal') return;
+    const target = actor.portalTarget;
+    const resolved = resolveRoomId(target ?? '');
+    if (!target || !ROOMS[resolved]) {
+      this.game.events.emit('toast', 'PORTAL FLICKERS… NO SIGNAL');
+      return;
+    }
+    this.transitionLock = true;
+    playSfx('stairs');
+    this.game.events.emit('toast', 'PORTAL WHOOSH — DUNJUN MOUTH!');
+    // Close any open dialog so UI does not stick across rooms
+    this.game.events.emit('dialog-state', false);
+    this.dialogLocked = false;
+    this.loadRoom(resolved, false);
   }
 
   private emitHud(): void {
@@ -1463,6 +1519,7 @@ export class GameScene extends Phaser.Scene {
           'THE DUNJUN MASTER FALLS... AGAIN?',
           'DEJA VU, BUT WITH MORE LOOT MAYBE.',
           'CHECK THE CHEST. BE THOROUGH.',
+          'EXIT PORTAL STILL HUMS SOUTH OF HERE.',
         ]);
       }
       const chestDef = this.room.entities?.find((e) => e.id === 'boss-chest');
@@ -1473,6 +1530,7 @@ export class GameScene extends Phaser.Scene {
       ) {
         this.spawnEntity(chestDef);
       }
+      this.ensureBossExitPortal();
       return;
     }
     if (actor.id === 'wolf-lord') {
@@ -1481,8 +1539,9 @@ export class GameScene extends Phaser.Scene {
         this.save = r.save;
         this.game.events.emit('dialog-show', r.dialog);
       } else {
-        this.game.events.emit('toast', 'WOLF LORD DOWN');
+        this.game.events.emit('toast', 'WOLF LORD DOWN — EXIT PORTAL OPEN');
       }
+      this.ensureBossExitPortal();
       return;
     }
     if (actor.id === 'sand-wraith') {
@@ -1491,8 +1550,9 @@ export class GameScene extends Phaser.Scene {
         this.save = r.save;
         this.game.events.emit('dialog-show', r.dialog);
       } else {
-        this.game.events.emit('toast', 'SAND WRAITH DOWN');
+        this.game.events.emit('toast', 'SAND WRAITH DOWN — EXIT PORTAL OPEN');
       }
+      this.ensureBossExitPortal();
       return;
     }
     // Generic boss fallback
@@ -1501,6 +1561,7 @@ export class GameScene extends Phaser.Scene {
       'A BOSS FALLS!',
       'NICE WORK. THAT WAS RAD.',
     ]);
+    this.ensureBossExitPortal();
   }
 
   private collectItem(actor: Actor): void {
@@ -1600,6 +1661,11 @@ export class GameScene extends Phaser.Scene {
       best.kind === 'mapz'
     ) {
       this.collectItem(best);
+      return;
+    }
+
+    if (best.kind === 'portal') {
+      this.usePortal(best);
       return;
     }
 
