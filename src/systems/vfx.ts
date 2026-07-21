@@ -5,7 +5,7 @@
 
 import type Phaser from 'phaser';
 import { loadSettings } from './settings';
-import { SCALE } from '../config';
+import { SCALE, SPRITE_SCALE } from '../config';
 
 export function motionAllowed(): boolean {
   return !loadSettings().reduceMotion;
@@ -69,13 +69,14 @@ export function bobScale(
   timeSec: number,
   moving: boolean,
 ): { sx: number; sy: number } {
-  if (!motionAllowed()) return { sx: SCALE, sy: SCALE };
+  const base = SPRITE_SCALE;
+  if (!motionAllowed()) return { sx: base, sy: base };
   if (moving) {
     const w = Math.sin(timeSec * 14) * 0.07;
-    return { sx: SCALE * (1 + w * 0.25), sy: SCALE * (1 - w * 0.45) };
+    return { sx: base * (1 + w * 0.25), sy: base * (1 - w * 0.45) };
   }
   const b = Math.sin(timeSec * 3.2) * 0.035;
-  return { sx: SCALE * (1 + b * 0.2), sy: SCALE * (1 - b) };
+  return { sx: base * (1 + b * 0.2), sy: base * (1 - b) };
 }
 
 export function enemyBobScale(
@@ -83,28 +84,29 @@ export function enemyBobScale(
   kind: string,
   seed: number,
 ): { sx: number; sy: number } {
-  if (!motionAllowed()) return { sx: SCALE, sy: SCALE };
+  const base = SPRITE_SCALE;
+  if (!motionAllowed()) return { sx: base, sy: base };
   const phase = timeSec * 3 + seed;
   if (kind === 'slime' || kind === 'cube') {
     const s = Math.sin(phase * 1.4) * 0.1;
-    return { sx: SCALE * (1 + s), sy: SCALE * (1 - s * 0.9) };
+    return { sx: base * (1 + s), sy: base * (1 - s * 0.9) };
   }
   if (kind === 'skeleton') {
     const s = Math.sin(phase * 5) * 0.03;
-    return { sx: SCALE * (1 + s), sy: SCALE };
+    return { sx: base * (1 + s), sy: base };
   }
   if (kind === 'wolf' || kind === 'cactus' || kind === 'tarantula') {
     const s = Math.sin(phase * 2.2) * 0.05;
-    return { sx: SCALE, sy: SCALE * (1 + s * 0.4) };
+    return { sx: base, sy: base * (1 + s * 0.4) };
   }
   if (kind === 'hornet') {
     const s = Math.sin(phase * 8) * 0.06;
-    return { sx: SCALE * (1 + s * 0.3), sy: SCALE * (1 - s * 0.5) };
+    return { sx: base * (1 + s * 0.3), sy: base * (1 - s * 0.5) };
   }
   if (kind === 'scorpion') {
     const s = Math.sin(phase * 3) * 0.04;
-    return { sx: SCALE * (1 + s), sy: SCALE };
+    return { sx: base * (1 + s), sy: base };
   }
   const s = Math.sin(phase * 2) * 0.04;
-  return { sx: SCALE * (1 + s * 0.3), sy: SCALE * (1 - s * 0.2) };
+  return { sx: base * (1 + s * 0.3), sy: base * (1 - s * 0.2) };
 }

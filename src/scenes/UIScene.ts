@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_W, GAME_H, HUD_H, SCALE } from '../config';
+import { COLORS, GAME_W, GAME_H, HUD_H, SPRITE_SCALE } from '../config';
 import { ROOMS } from '../data/world';
 import { appearanceFromSave, itemIconKey } from '../systems/appearance';
 import { ensurePlayerTexture } from '../systems/textures';
@@ -615,7 +615,7 @@ export class UIScene extends Phaser.Scene {
 
     this.invAvatar = this.add
       .image(dollX, dollY - 6, 'player')
-      .setScale(SCALE * 2.6)
+      .setScale(SPRITE_SCALE * 3.2)
       .setScrollFactor(0)
       .setDepth(d + 2);
 

@@ -7,6 +7,7 @@ import {
   MAP_PIXEL_H,
   MAP_PIXEL_W,
   SCALE,
+  SPRITE_SCALE,
   TILE,
   VIEW_TILES_H,
   VIEW_TILES_W,
@@ -513,7 +514,7 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-NINE', () => this.onDigitKey(9));
 
     this.player = this.physics.add.sprite(0, 0, 'player');
-    this.player.setScale(SCALE);
+    this.player.setScale(SPRITE_SCALE);
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(10);
     // Body size in source pixels (texture is 16x16); Phaser scales with the sprite
@@ -523,7 +524,7 @@ export class GameScene extends Phaser.Scene {
     // Keep sword GO + body ALWAYS active. Disabling the body between swings
     // breaks Arcade overlap vs some enemies (notably oversized cube/boss frames).
     this.swordHit = this.physics.add.image(-999, -999, 'sword-swing');
-    this.swordHit.setScale(SCALE);
+    this.swordHit.setScale(SPRITE_SCALE);
     this.swordHit.setDepth(15);
     this.swordHit.setVisible(false);
     this.swordHit.setActive(true);
@@ -1250,7 +1251,7 @@ export class GameScene extends Phaser.Scene {
         const pos = this.tileToWorld(x, y);
         const img = this.add
           .image(pos.x, pos.y, TEX[kind])
-          .setScale(SCALE)
+          .setScale(SPRITE_SCALE)
           .setDepth(0);
         img.setData('mapTile', true);
         if (kind === 'water' || kind === 'lava') {
@@ -1446,7 +1447,7 @@ export class GameScene extends Phaser.Scene {
       const px = this.player.x - 22;
       const py = this.player.y + 4;
       this.companionSprite = this.physics.add.sprite(px, py, 'best_bud');
-      this.companionSprite.setScale(SCALE).setDepth(4);
+      this.companionSprite.setScale(SPRITE_SCALE).setDepth(4);
       this.companionSprite.setImmovable(true);
       const body = this.companionSprite.body as Phaser.Physics.Arcade.Body;
       // Follow/fight via manual position — body off so they don't shove the hero
@@ -1792,7 +1793,7 @@ export class GameScene extends Phaser.Scene {
     );
     const pos = this.tileToWorld(placed.x, placed.y);
     const sprite = this.physics.add.sprite(pos.x, pos.y, tex);
-    sprite.setScale(SCALE);
+    sprite.setScale(SPRITE_SCALE);
     sprite.setDepth(5);
 
     if (def.kind === 'best_bud') {
@@ -2181,8 +2182,8 @@ export class GameScene extends Phaser.Scene {
     if (motionAllowed() && actor.sprite.active) {
       this.tweens.add({
         targets: actor.sprite,
-        scaleX: SCALE * 1.15,
-        scaleY: SCALE * 0.85,
+        scaleX: SPRITE_SCALE * 1.15,
+        scaleY: SPRITE_SCALE * 0.85,
         duration: 60,
         yoyo: true,
       });
@@ -3023,7 +3024,7 @@ export class GameScene extends Phaser.Scene {
     this.swordHit.setVisible(true);
     this.swordHit.setActive(true);
     this.swordHit.setDepth(15);
-    this.swordHit.setScale(SCALE * 0.85);
+    this.swordHit.setScale(SPRITE_SCALE * 0.85);
     this.swordHit.setAlpha(1);
     const body = this.swordHit.body as Phaser.Physics.Arcade.Body;
     body.enable = true;
@@ -3037,7 +3038,7 @@ export class GameScene extends Phaser.Scene {
       this.tweens.add({
         targets: this.swordHit,
         angle: angle + 28,
-        scale: SCALE * 1.25,
+        scale: SPRITE_SCALE * 1.25,
         duration: 90,
         yoyo: true,
         ease: 'Quad.easeOut',
@@ -3125,7 +3126,7 @@ export class GameScene extends Phaser.Scene {
         const pos = this.tileToWorld(x, y);
         const img = this.add
           .image(pos.x, pos.y, TEX[kind])
-          .setScale(SCALE)
+          .setScale(SPRITE_SCALE)
           .setDepth(0);
         img.setData('mapTile', true);
         if (SOLID.includes(kind)) {
@@ -3582,7 +3583,7 @@ export class GameScene extends Phaser.Scene {
       const b = bobScale(t, playerMoving);
       this.player.setScale(b.sx, b.sy);
     } else if (this.player?.active && !this.attacking) {
-      this.player.setScale(SCALE);
+      this.player.setScale(SPRITE_SCALE);
     }
 
     // Companion bob when parked (not mid stretch/grab/strike tween)

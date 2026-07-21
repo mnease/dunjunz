@@ -4,7 +4,7 @@
  */
 
 import Phaser from 'phaser';
-import { GAME_H, GAME_W, SCALE } from '../config';
+import { GAME_H, GAME_W, SPRITE_SCALE } from '../config';
 import { playMusic, playSfx, unlockAudio } from '../systems/audio';
 import {
   clearHumanzSave,
@@ -65,12 +65,12 @@ export class VillageScene extends Phaser.Scene {
 
     this.goldPile = this.add
       .image(GAME_W / 2, GAME_H - 160, 'hoard-gold')
-      .setScale(SCALE * 1.5)
+      .setScale(SPRITE_SCALE * 1.5)
       .setDepth(2);
 
     this.dragonSprite = this.add
       .image(GAME_W / 2, GAME_H - 220, 'dragon')
-      .setScale(SCALE * 2)
+      .setScale(SPRITE_SCALE * 2)
       .setDepth(5);
 
     this.add
@@ -175,7 +175,7 @@ export class VillageScene extends Phaser.Scene {
               ? 'villager-thief'
               : 'villager';
       const key = this.textures.exists(tex) ? tex : 'villager';
-      const img = this.add.image(x, y, key).setScale(SCALE).setDepth(4);
+      const img = this.add.image(x, y, key).setScale(SPRITE_SCALE).setDepth(4);
       const label = this.add
         .text(x, y + 36, '', {
           fontFamily: '"Press Start 2P", monospace',
@@ -248,7 +248,7 @@ export class VillageScene extends Phaser.Scene {
     });
 
     // Gold pile scale with gold
-    const gScale = SCALE * (1.2 + Math.min(1.5, b.gold / 100));
+    const gScale = SPRITE_SCALE * (1.2 + Math.min(1.5, b.gold / 100));
     this.goldPile.setScale(gScale);
     this.dragonSprite.setTint(b.dragonHp < b.dragonMaxHp * 0.3 ? 0xff8888 : 0xffffff);
   }
@@ -324,7 +324,7 @@ export class VillageScene extends Phaser.Scene {
     if (loadSettings().reduceMotion) return;
     this.tweens.add({
       targets: this.dragonSprite,
-      scale: SCALE * 2.2,
+      scale: SPRITE_SCALE * 2.2,
       duration: 80,
       yoyo: true,
     });

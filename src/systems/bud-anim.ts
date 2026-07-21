@@ -5,7 +5,7 @@
  */
 
 import type Phaser from 'phaser';
-import { SCALE } from '../config';
+import { SPRITE_SCALE } from '../config';
 import type { BudAttackStyle } from './best-bud-combat';
 import { motionAllowed, sparkBurst } from './vfx';
 
@@ -108,7 +108,7 @@ export function playBuddyAttackAnim(
   setBuddyPose(scene, sprite, pose);
 
   if (!motionAllowed()) {
-    sprite.setScale(SCALE);
+    sprite.setScale(SPRITE_SCALE);
     sprite.setAngle(0);
     opts.onComplete?.();
     scene.time.delayedCall(BUD_POSE_MS[pose] || 120, () => {
@@ -157,13 +157,13 @@ export function playBuddyAttackAnim(
   sprite.setOrigin(originX, 0.55);
 
   // Wind-up squash
-  sprite.setScale(SCALE * 0.85, SCALE * 1.15);
+  sprite.setScale(SPRITE_SCALE * 0.85, SPRITE_SCALE * 1.15);
   sprite.setAngle(ang * 0.12);
 
   scene.tweens.add({
     targets: sprite,
-    scaleX: SCALE * stretchAmt,
-    scaleY: SCALE * (opts.style === 'stretch' ? 0.72 : 0.9),
+    scaleX: SPRITE_SCALE * stretchAmt,
+    scaleY: SPRITE_SCALE * (opts.style === 'stretch' ? 0.72 : 0.9),
     x: opts.fromX + nx * Math.min(28, dist * 0.22),
     y: opts.fromY + ny * Math.min(28, dist * 0.22),
     angle: opts.style === 'slash' ? ang * 0.25 : ang * 0.08,
@@ -191,8 +191,8 @@ export function playBuddyAttackAnim(
       // Snap-back
       scene.tweens.add({
         targets: sprite,
-        scaleX: SCALE,
-        scaleY: SCALE,
+        scaleX: SPRITE_SCALE,
+        scaleY: SPRITE_SCALE,
         x: opts.fromX,
         y: opts.fromY,
         angle: 0,
@@ -201,7 +201,7 @@ export function playBuddyAttackAnim(
         onComplete: () => {
           if (!sprite.active) return;
           sprite.setOrigin(0.5, 0.5);
-          sprite.setScale(SCALE);
+          sprite.setScale(SPRITE_SCALE);
           sprite.setAngle(0);
           setBuddyPose(scene, sprite, 'idle');
           opts.onComplete?.();
@@ -237,7 +237,7 @@ function spawnStretchGhost(
   if (key === 'bud_stretch_limb') {
     limb.setDisplaySize(Math.max(12, dist * 0.92), 10);
   } else {
-    limb.setScale(Math.max(2, dist / 8), SCALE * 0.45);
+    limb.setScale(Math.max(2, dist / 8), SPRITE_SCALE * 0.45);
   }
   scene.tweens.add({
     targets: limb,
@@ -283,8 +283,8 @@ export function playBuddyGrabAnim(
 
   scene.tweens.add({
     targets: sprite,
-    scaleX: SCALE * Math.min(2.2, 1.3 + dist / 100),
-    scaleY: SCALE * 0.78,
+    scaleX: SPRITE_SCALE * Math.min(2.2, 1.3 + dist / 100),
+    scaleY: SPRITE_SCALE * 0.78,
     x: fromX + nx * Math.min(22, dist * 0.3),
     y: fromY + ny * Math.min(22, dist * 0.3),
     duration: 140,
@@ -294,8 +294,8 @@ export function playBuddyGrabAnim(
       sparkBurst(scene, toX, toY, tint, 3);
       scene.tweens.add({
         targets: sprite,
-        scaleX: SCALE,
-        scaleY: SCALE,
+        scaleX: SPRITE_SCALE,
+        scaleY: SPRITE_SCALE,
         x: fromX,
         y: fromY,
         duration: 160,
@@ -329,15 +329,15 @@ export function playBuddyHealAnim(
   scene.tweens.killTweensOf(sprite);
   scene.tweens.add({
     targets: sprite,
-    scaleX: SCALE * 1.15,
-    scaleY: SCALE * 1.25,
+    scaleX: SPRITE_SCALE * 1.15,
+    scaleY: SPRITE_SCALE * 1.25,
     y: sprite.y - 6,
     duration: 180,
     yoyo: true,
     ease: 'Sine.easeInOut',
     onComplete: () => {
       if (!sprite.active) return;
-      sprite.setScale(SCALE);
+      sprite.setScale(SPRITE_SCALE);
       setBuddyPose(scene, sprite, 'idle');
     },
   });
@@ -360,15 +360,15 @@ export function playBuddyGuardAnim(
   scene.tweens.killTweensOf(sprite);
   scene.tweens.add({
     targets: sprite,
-    scaleX: SCALE * 1.35,
-    scaleY: SCALE * 0.85,
+    scaleX: SPRITE_SCALE * 1.35,
+    scaleY: SPRITE_SCALE * 0.85,
     duration: 90,
     yoyo: true,
     repeat: 1,
     ease: 'Quad.easeOut',
     onComplete: () => {
       if (!sprite.active) return;
-      sprite.setScale(SCALE);
+      sprite.setScale(SPRITE_SCALE);
       setBuddyPose(scene, sprite, 'idle');
     },
   });
@@ -387,11 +387,11 @@ export function playBuddyBlinkTrail(
     return;
   }
   const ghost = scene.add.image(fromX, fromY, 'best_bud_blink');
-  ghost.setScale(SCALE).setTint(tint).setAlpha(0.55).setDepth(3);
+  ghost.setScale(SPRITE_SCALE).setTint(tint).setAlpha(0.55).setDepth(3);
   scene.tweens.add({
     targets: ghost,
     alpha: 0,
-    scale: SCALE * 0.6,
+    scale: SPRITE_SCALE * 0.6,
     duration: 200,
     ease: 'Quad.easeOut',
     onComplete: () => ghost.destroy(),
@@ -415,14 +415,14 @@ export function maybeBuddyIdleStretch(
   setBuddyPose(scene, sprite, 'stretch');
   scene.tweens.add({
     targets: sprite,
-    scaleX: SCALE * 1.35,
-    scaleY: SCALE * 0.82,
+    scaleX: SPRITE_SCALE * 1.35,
+    scaleY: SPRITE_SCALE * 0.82,
     duration: 220,
     yoyo: true,
     ease: 'Sine.easeInOut',
     onComplete: () => {
       if (!sprite.active) return;
-      sprite.setScale(SCALE * 0.95);
+      sprite.setScale(SPRITE_SCALE * 0.95);
       setBuddyPose(scene, sprite, 'idle');
     },
   });
