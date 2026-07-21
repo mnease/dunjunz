@@ -3226,6 +3226,8 @@ export class GameScene extends Phaser.Scene {
       }
       // Enemies still move while inventory is open so the world is not frozen unfairly
       this.updateEnemies(delta);
+      this.updateProjectiles(delta);
+      this.rangedCd = Math.max(0, this.rangedCd - delta);
       this.updateVisualMotion(delta, false);
       return;
     }
@@ -3451,7 +3453,7 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
 
     this.attacking = true;
-    this.rangedCd = 320;
+    this.rangedCd = 280;
     playSfx('attack');
     this.refreshPlayerAppearance();
 
@@ -3467,21 +3469,39 @@ export class GameScene extends Phaser.Scene {
           : projKind === 'fireball'
             ? 'proj-fireball'
             : 'proj-bolt';
-    const dmg = computePlayerDamage(this.save);
+    // Never allow 0 / NaN damage on ranged shots
+    const dmg = Math.max(1, computePlayerDamage(this.save) | 0);
     const dir = this.facingVector();
-    const speed = projKind === 'phaser' ? 240 : projKind === 'arrow' ? 200 : 180;
+    // Phaser beams a bit faster; keep speeds hittable (no tunneling)
+    const speed =
+      projKind === 'phaser' ? 220 : projKind === 'arrow' ? 200 : 180;
+    const angle =
+      dir.x === 0 && dir.y === -1
+        ? -90
+        : dir.x === 0 && dir.y === 1
+          ? 90
+          : dir.x === -1
+            ? 180
+            : 0;
     this.spawnProjectile(
-      this.player.x + dir.x * 20,
-      this.player.y + dir.y * 20,
+      this.player.x + dir.x * 22,
+      this.player.y + dir.y * 22,
       dir.x * speed,
       dir.y * speed,
       dmg,
       tex,
       true,
-      900,
+      1100,
+      angle,
     );
-    sparkBurst(this, this.player.x + dir.x * 16, this.player.y + dir.y * 16, 0x7dffb3, 2);
-    this.time.delayedCall(180, () => {
+    sparkBurst(
+      this,
+      this.player.x + dir.x * 16,
+      this.player.y + dir.y * 16,
+      projKind === 'phaser' ? 0xff3344 : 0x7dffb3,
+      3,
+    );
+    this.time.delayedCall(160, () => {
       this.attacking = false;
       this.refreshPlayerAppearance();
     });
@@ -3534,54 +3554,87 @@ export class GameScene extends Phaser.Scene {
     texture: string,
     fromPlayer: boolean,
     life: number,
+    angleDeg = 0,
   ): void {
     const key = this.textures.exists(texture) ? texture : 'particle-hit';
-    const img = this.add.image(x, y, key).setDepth(14).setScale(SCALE * 0.85);
-    this.projectiles.push({ img, vx, vy, dmg, life, fromPlayer });
+    const img = this.add.image(x, y, key).setDepth(14).setScale(SCALE * 0.95);
+    if (angleDeg) img.setAngle(angleDeg);
+    this.projectiles.push({
+      img,
+      vx,
+      vy,
+      dmg: Math.max(1, dmg | 0),
+      life,
+      fromPlayer,
+    });
+  }
+
+  /** Generous hit radius — sprites are TILE*SCALE (~48px); 22px was missing almost everything. */
+  private projectileHitRadius(fromPlayer: boolean): number {
+    return fromPlayer ? TILE * SCALE * 0.72 : TILE * SCALE * 0.55;
   }
 
   private updateProjectiles(delta: number): void {
-    const dt = delta / 1000;
+    const dt = Math.min(0.05, delta / 1000); // clamp so lag spikes don't tunnel
     const next: typeof this.projectiles = [];
     for (const p of this.projectiles) {
       p.life -= delta;
-      p.img.x += p.vx * dt;
-      p.img.y += p.vy * dt;
       let dead = p.life <= 0;
 
-      // Wall / bounds
-      const tx = Math.floor((p.img.x - this.roomOriginX) / (TILE * SCALE));
-      const ty = Math.floor((p.img.y - this.roomOriginY) / (TILE * SCALE));
-      if (this.isSolidTile(tx, ty)) dead = true;
+      // Sub-step motion so fast beams can't skip past creep centers
+      const steps = Math.max(1, Math.ceil((Math.hypot(p.vx, p.vy) * dt) / 12));
+      const stepDt = dt / steps;
+      for (let s = 0; s < steps && !dead; s++) {
+        const prevX = p.img.x;
+        const prevY = p.img.y;
+        p.img.x += p.vx * stepDt;
+        p.img.y += p.vy * stepDt;
 
-      if (!dead && p.fromPlayer) {
-        for (const a of this.actors) {
-          if (!a.alive || !a.sprite?.active) continue;
-          if (!isHostileKind(a.kind) && a.kind !== 'boss') continue;
-          if (a.kind === 'cube' && !a.aggressive) continue;
-          const d = Phaser.Math.Distance.Between(
+        // Hit creeps first (so a shot that grazes wall+creep still counts)
+        if (p.fromPlayer) {
+          for (const a of this.actors) {
+            if (!a.alive || !a.sprite?.active) continue;
+            if (!isHostileKind(a.kind) && a.kind !== 'boss') continue;
+            if (a.kind === 'cube' && !a.aggressive) continue;
+            const hitR = this.projectileHitRadius(true);
+            // Segment vs point: nearest distance along this step
+            const d = this.distPointToSegment(
+              a.sprite.x,
+              a.sprite.y,
+              prevX,
+              prevY,
+              p.img.x,
+              p.img.y,
+            );
+            if (d <= hitR) {
+              const applied = this.hitEnemyWithDamage(a, p.dmg, true);
+              if (applied) {
+                dead = true;
+                break;
+              }
+            }
+          }
+        } else if (this.player?.active) {
+          const hitR = this.projectileHitRadius(false);
+          const d = this.distPointToSegment(
+            this.player.x,
+            this.player.y,
+            prevX,
+            prevY,
             p.img.x,
             p.img.y,
-            a.sprite.x,
-            a.sprite.y,
           );
-          if (d < 22) {
-            this.hitEnemyWithDamage(a, p.dmg);
+          if (d <= hitR && this.invuln <= 0) {
+            this.hurtPlayerFromProjectile(p.dmg);
             dead = true;
-            break;
           }
         }
-      } else if (!dead && !p.fromPlayer && this.player?.active) {
-        const d = Phaser.Math.Distance.Between(
-          p.img.x,
-          p.img.y,
-          this.player.x,
-          this.player.y,
-        );
-        if (d < 20 && this.invuln <= 0) {
-          this.hurtPlayerFromProjectile(p.dmg);
-          dead = true;
-        }
+
+        if (dead) break;
+
+        const tx = Math.floor((p.img.x - this.roomOriginX) / (TILE * SCALE));
+        const ty = Math.floor((p.img.y - this.roomOriginY) / (TILE * SCALE));
+        if (this.isSolidTile(tx, ty)) dead = true;
       }
 
       if (dead) p.img.destroy();
@@ -3590,17 +3643,56 @@ export class GameScene extends Phaser.Scene {
     this.projectiles = next;
   }
 
-  private hitEnemyWithDamage(actor: Actor, dmg: number): void {
-    if (!actor.alive || actor.hurtCooldown > 0) return;
+  /** Distance from point to line segment AB. */
+  private distPointToSegment(
+    px: number,
+    py: number,
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+  ): number {
+    const abx = bx - ax;
+    const aby = by - ay;
+    const len2 = abx * abx + aby * aby;
+    if (len2 < 0.0001) return Math.hypot(px - ax, py - ay);
+    let t = ((px - ax) * abx + (py - ay) * aby) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const cx = ax + t * abx;
+    const cy = ay + t * aby;
+    return Math.hypot(px - cx, py - cy);
+  }
+
+  /**
+   * Apply damage to a creep. Returns true if the hit landed.
+   * Projectiles use a short hurt window so beams aren't hard-gated by melee i-frames.
+   */
+  private hitEnemyWithDamage(
+    actor: Actor,
+    dmg: number,
+    fromProjectile = false,
+  ): boolean {
+    if (!actor.alive) return false;
+    // Melee multi-hit guard; projectiles only skip if still in brief i-frames
+    if (actor.hurtCooldown > 0 && !fromProjectile) return false;
+    if (fromProjectile && actor.hurtCooldown > 120) return false;
+
     if (actor.kind === 'cube' && !actor.aggressive) {
       actor.aggressive = true;
       this.game.events.emit('toast', 'THE CUBE IS MAD NOW');
     }
-    actor.hurtCooldown = 200;
-    actor.hp -= dmg;
+    const amount = Math.max(1, dmg | 0);
+    actor.hurtCooldown = fromProjectile ? 140 : 200;
+    actor.hp -= amount;
     playSfx('hit_enemy');
-    actor.sprite.setTint(0xffffff);
-    sparkBurst(this, actor.sprite.x, actor.sprite.y, 0xffffff, 3);
+    actor.sprite.setTint(fromProjectile ? 0xff6688 : 0xffffff);
+    sparkBurst(
+      this,
+      actor.sprite.x,
+      actor.sprite.y,
+      fromProjectile ? 0xff3344 : 0xffffff,
+      fromProjectile ? 5 : 3,
+    );
     this.time.delayedCall(80, () => {
       if (actor.alive) actor.sprite.clearTint();
     });
@@ -3611,6 +3703,7 @@ export class GameScene extends Phaser.Scene {
         `${actor.kind.toUpperCase()} ${actor.hp}/${actor.maxHp}`,
       );
     }
+    return true;
   }
 
   private hurtPlayerFromProjectile(dmg: number): void {
