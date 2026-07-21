@@ -8,6 +8,7 @@ import { levelFromXp } from './progression';
 import { reconcileMapzFromCollected } from './mapz';
 import { queueCloudSave } from './cloud-save';
 import { ensureBudProgress } from './best-bud-gear';
+import { setLastMode } from './humanz-save';
 
 export function defaultSave(): SaveData {
   const attrs = defaultAttrs();
@@ -200,6 +201,7 @@ export function writeSave(data: SaveData): void {
     level: levelFromXp(data.xp),
   });
   localStorage.setItem(SAVE_KEY, JSON.stringify(toStore));
+  setLastMode('dunjunz');
   queueCloudSave(toStore);
 }
 

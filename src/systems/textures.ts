@@ -1064,4 +1064,89 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillStyle = '#fff';
     ctx.fillRect(2, 2, 2, 2);
   });
+
+  // ── Humanz & Villagez ──────────────────────────────────
+  canvasTex(scene, 'dragon', 32, 24, (ctx) => {
+    ctx.fillStyle = '#3d8b5a';
+    ctx.fillRect(8, 8, 18, 10);
+    ctx.fillRect(4, 6, 8, 6);
+    ctx.fillRect(22, 10, 8, 4);
+    // wing
+    ctx.fillStyle = '#2a6a40';
+    ctx.fillRect(10, 2, 10, 6);
+    ctx.fillRect(12, 0, 6, 4);
+    // eye
+    ctx.fillStyle = '#ffc857';
+    ctx.fillRect(6, 7, 2, 2);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(7, 8, 1, 1);
+    // belly
+    ctx.fillStyle = '#7dffb3';
+    ctx.fillRect(12, 12, 10, 4);
+  });
+
+  canvasTex(scene, 'hoard-gold', 16, 12, (ctx) => {
+    ctx.fillStyle = '#ffc857';
+    ctx.fillRect(2, 4, 12, 6);
+    ctx.fillRect(4, 2, 8, 4);
+    ctx.fillStyle = '#ffe08a';
+    ctx.fillRect(5, 3, 2, 2);
+    ctx.fillRect(9, 5, 2, 2);
+    ctx.fillStyle = '#c9a227';
+    ctx.fillRect(3, 8, 10, 2);
+  });
+
+  canvasTex(scene, 'villager', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#c0392b';
+    ctx.fillRect(5, 7, 6, 6);
+    ctx.fillStyle = '#f0c8a4';
+    ctx.fillRect(6, 3, 4, 4);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(7, 4, 1, 1);
+    ctx.fillRect(9, 4, 1, 1);
+    ctx.fillStyle = '#4a3a28';
+    ctx.fillRect(5, 13, 2, 2);
+    ctx.fillRect(9, 13, 2, 2);
+  });
+
+  canvasTex(scene, 'villager-thief', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#2a2438';
+    ctx.fillRect(5, 7, 6, 6);
+    ctx.fillStyle = '#f0c8a4';
+    ctx.fillRect(6, 3, 4, 4);
+    ctx.fillStyle = '#7dffb3';
+    ctx.fillRect(4, 5, 8, 2);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(7, 4, 1, 1);
+    ctx.fillRect(9, 4, 1, 1);
+  });
+
+  canvasTex(scene, 'villager-knight', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#8a9098';
+    ctx.fillRect(5, 6, 6, 7);
+    ctx.fillStyle = '#c0c8d0';
+    ctx.fillRect(6, 2, 4, 4);
+    ctx.fillStyle = '#ffc857';
+    ctx.fillRect(12, 6, 2, 6);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(7, 4, 1, 1);
+    ctx.fillRect(9, 4, 1, 1);
+  });
+
+  canvasTex(scene, 'villager-mage', TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#4a3a78';
+    ctx.fillRect(5, 7, 6, 6);
+    ctx.fillStyle = '#f0c8a4';
+    ctx.fillRect(6, 4, 4, 3);
+    ctx.fillStyle = '#6a4aaa';
+    ctx.fillRect(5, 1, 6, 3);
+    ctx.fillRect(7, 0, 2, 2);
+    ctx.fillStyle = '#7dffb3';
+    ctx.fillRect(12, 8, 2, 2);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(7, 5, 1, 1);
+    ctx.fillRect(9, 5, 1, 1);
+  });
+
+
 }

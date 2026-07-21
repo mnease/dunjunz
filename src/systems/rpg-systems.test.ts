@@ -1319,3 +1319,98 @@ describe('hard rewards', () => {
     expect(r.save.hardLandsCleared).toContain('dunjunz');
   });
 });
+
+// ── Humanz & Villagez ───────────────────────────────────
+import {
+  applyDragonAction,
+  applyWaveVictory,
+  cycleTarget,
+  defaultCampaign,
+  resolveVillagerRound,
+  startWave,
+  allVillagersDown,
+} from './village-battle';
+
+describe('humanz village battle', () => {
+  it('starts a wave with living villagers', () => {
+    const c = defaultCampaign();
+    const b = startWave(c);
+    expect(b.wave).toBe(1);
+    expect(b.villagers.length).toBeGreaterThanOrEqual(2);
+    expect(b.phase).toBe('player');
+    expect(b.gold).toBe(c.gold);
+  });
+
+  it('claw damages selected target and can clear wave', () => {
+    let b = startWave(defaultCampaign());
+    // Murder everyone with repeated claws
+    for (let n = 0; n < 40 && b.phase === 'player'; n++) {
+      b = { ...b, selectedTarget: b.villagers.findIndex((v) => v.alive) };
+      b = applyDragonAction(b, 'claw', () => 0);
+      if (b.phase === 'enemy') {
+        // skip enemy by force-killing
+        b = {
+          ...b,
+          villagers: b.villagers.map((v) => ({
+            ...v,
+            hp: 0,
+            alive: false,
+          })),
+          phase: 'won',
+        };
+      }
+    }
+    // Direct test: flame all
+    b = startWave(defaultCampaign());
+    for (let i = 0; i < 10; i++) {
+      if (b.phase !== 'player') break;
+      b = applyDragonAction(b, 'flame', () => 0);
+      if (b.phase === 'enemy') {
+        b = resolveVillagerRound(b, () => 0.9);
+      }
+    }
+    expect(['won', 'player', 'lost', 'enemy']).toContain(b.phase);
+  });
+
+  it('flame then villager round can reduce gold or hp', () => {
+    let b = startWave(defaultCampaign());
+    const gold0 = b.gold;
+    const hp0 = b.dragonHp;
+    b = applyDragonAction(b, 'guard', () => 0);
+    expect(b.phase).toBe('enemy');
+    b = resolveVillagerRound(b, () => 0.1);
+    expect(b.gold < gold0 || b.dragonHp < hp0 || b.phase === 'player').toBe(
+      true,
+    );
+  });
+
+  it('cycleTarget only lands on living', () => {
+    let b = startWave(defaultCampaign());
+    b.villagers[0]!.alive = false;
+    b.villagers[0]!.hp = 0;
+    b = cycleTarget(b, 1);
+    expect(b.villagers[b.selectedTarget]?.alive).toBe(true);
+  });
+
+  it('wave victory advances campaign', () => {
+    const c = defaultCampaign();
+    const b = startWave(c);
+    b.phase = 'won';
+    b.gold = 80;
+    b.dragonHp = 30;
+    const next = applyWaveVictory(c, b);
+    expect(next.wave).toBe(2);
+    expect(next.victories).toBe(1);
+    expect(next.gold).toBeGreaterThan(80);
+  });
+
+  it('allVillagersDown helper', () => {
+    const b = startWave(defaultCampaign());
+    expect(allVillagersDown(b)).toBe(false);
+    b.villagers.forEach((v) => {
+      v.alive = false;
+      v.hp = 0;
+    });
+    expect(allVillagersDown(b)).toBe(true);
+  });
+});

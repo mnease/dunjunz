@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Humanz & Villagez mode** — at new game, pick **Dunjunz** (classic crawl) or **Humanz & Villagez** (you are the dragon; villagers loot your gold). Turn-based waves: Claw / Flame / Roar / Guard / Hoard. Progress saves separately; title Continue uses last mode.
 - **Hard mode dungeons** — after clearing a land, step on the **hard gate** at the dungeon mouth to replay with tougher shooting creeps (skeletons→arrows, redshirts→phasers, Dungeon Master→fireballs). Soft exit portal to leave hard mode.
 - **Hard captain boss** — clear hard redshirts in USS Plot Hole; the Captain engages. Rewards: **Phaser** + **Beam Me Up** (teleport to mouth).
 - **Hard king loot** — beat the Dungeon Master on hard for **Short Bow**, **Arrows**, and **Wizard Staff** (ranged / magic combat).
