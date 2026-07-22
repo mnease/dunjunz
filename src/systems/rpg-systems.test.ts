@@ -2897,6 +2897,7 @@ import {
   lightBurnMs,
   lightTierRank,
   roomIsDark,
+  roomNeedsCarriedLight,
   tickLightFuel,
   visionDarkAlpha,
 } from './lighting';
@@ -2944,15 +2945,19 @@ describe('lighting model', () => {
     expect(lightTierRank('lantern')).toBeGreaterThan(lightTierRank('torch'));
   });
 
-  it('dark vision alpha is worse without light', () => {
+  it('dark vision alpha is worse without light; wall torches fully light', () => {
     const bare = defaultSave();
     const lit = igniteLight(defaultSave(), 'torch');
     const a0 = visionDarkAlpha(bare, { darkRoom: true, wallTorchCount: 0 });
     const a1 = visionDarkAlpha(lit, { darkRoom: true, wallTorchCount: 0 });
     expect(a0).toBeGreaterThan(a1);
+    // Wall torches mean the room is ambient-lit — no carried light required
     const aWall = visionDarkAlpha(bare, { darkRoom: true, wallTorchCount: 2 });
-    expect(aWall).toBeLessThan(a0);
+    expect(aWall).toBe(0);
     expect(visionDarkAlpha(bare, { darkRoom: false })).toBe(0);
+    expect(roomNeedsCarriedLight({ floor: -2 }, 0)).toBe(true);
+    expect(roomNeedsCarriedLight({ floor: -2 }, 1)).toBe(false);
+    expect(roomNeedsCarriedLight({ floor: -1 }, 0)).toBe(false);
   });
 
   it('useInventoryItem torch consumes stack and ignites', () => {
@@ -3159,21 +3164,46 @@ describe('world P0–P1 packs and side roles', () => {
     expect(dk.includes('skeleton')).toBe(false);
   });
 
-  it('side roles rotate and deep rooms have wall torches + dark flag', () => {
+  it('side roles rotate; dark rooms have no wall torches; lit B1 may', () => {
     expect(sideRoleForDepth(1)).toBe('vault');
     expect(sideRoleForDepth(2)).toBe('combat');
     expect(sideRoleForDepth(3)).toBe('quiet');
     const side = ROOMS.b2_side;
     expect(side?.sideRole).toBeDefined();
     expect(side?.dark).toBe(true);
+    // Dark rooms must NOT have wall torches — player needs carried light
     expect(
       (side?.entities ?? []).some((e) => e.kind === 'torch_wall'),
-    ).toBe(true);
+    ).toBe(false);
+    // Shallow/lit basements (B1 woodz) may have wall torches
+    const litSide = ROOMS.woodz_b1_side;
+    expect(litSide?.dark).toBe(false);
     // quiet sides may skip combat chest density
     const roles = [ROOMS.b2_side, ROOMS.b3_side, ROOMS.b4_side, ROOMS.b5_side]
       .map((r) => r?.sideRole)
       .filter(Boolean);
     expect(new Set(roles).size).toBeGreaterThan(1);
+  });
+
+  it('invariant: every dark room has zero torch_wall; lit deep floors may have them', () => {
+    const darkRooms = Object.values(ROOMS).filter(
+      (r) => r.dark === true || ((r.floor ?? 0) <= -2 && r.dark !== false),
+    );
+    expect(darkRooms.length).toBeGreaterThan(5);
+    for (const room of darkRooms) {
+      const walls = (room.entities ?? []).filter((e) => e.kind === 'torch_wall');
+      expect(
+        walls,
+        `${room.id} is dark but has wall torches`,
+      ).toEqual([]);
+    }
+    // Lit B1 basement foyers keep wall torches
+    const litFoyer = ROOMS.woodz_b1_foyer;
+    expect(litFoyer).toBeDefined();
+    expect(litFoyer?.dark).toBe(false);
+    expect(
+      (litFoyer?.entities ?? []).some((e) => e.kind === 'torch_wall'),
+    ).toBe(true);
   });
 });
 

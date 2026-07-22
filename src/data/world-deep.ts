@@ -649,21 +649,30 @@ function makeBasementFloor(opts: {
   const dark = floor <= -2;
   const sideRole = sideRoleForDepth(depth);
 
-  // P3 foyer quiet law: threshold only (signs/torches/heart) — no combat packs
+  // P3 foyer quiet law: threshold only (signs/heart; wall torches only when lit)
+  // Invariant: dark rooms never get torch_wall — player must carry light.
   const foyerEnts: EntityDef[] = [
     sign(`${prefix}-foyer-sign`, 12, 8, [
       `${flabel}: ${flavor}.`,
       `${titleTag} — DEEPER STILL AWAITS.`,
       dark ? 'DARK. CARRY A TORCH. U = UP. N = HALL.' : 'U = STAIRS UP. N = HALL.',
     ]),
-    wallTorch(`${prefix}-foyer-torch-a`, 2, 2),
-    wallTorch(`${prefix}-foyer-torch-b`, 13, 2),
+    ...(dark
+      ? []
+      : [
+          wallTorch(`${prefix}-foyer-torch-a`, 2, 2),
+          wallTorch(`${prefix}-foyer-torch-b`, 13, 2),
+        ]),
     heart(`${prefix}-foyer-heart`, 8, 8),
   ];
 
   const hallEnts: EntityDef[] = [
-    wallTorch(`${prefix}-hall-torch-a`, 2, 3),
-    wallTorch(`${prefix}-hall-torch-b`, 13, 3),
+    ...(dark
+      ? []
+      : [
+          wallTorch(`${prefix}-hall-torch-a`, 2, 3),
+          wallTorch(`${prefix}-hall-torch-b`, 13, 3),
+        ]),
     ...creepsForDepth(
       hostiles,
       `${prefix}-hall`,
@@ -680,11 +689,11 @@ function makeBasementFloor(opts: {
 
   // Side role variety (P0)
   let sideEnts: EntityDef[] = [
-    wallTorch(`${prefix}-side-torch`, 2, 2),
+    ...(dark ? [] : [wallTorch(`${prefix}-side-torch`, 2, 2)]),
     sign(`${prefix}-side-sign`, 3, 8, [
       `SIDE · ${sideRole.toUpperCase()} · ${flabel}.`,
       depth >= 5 ? 'DARKER. MEANER. OPTIONAL.' : 'OPTIONAL. WEST = HALL.',
-      dark ? 'TORCHES HELP. YOURS BURN OUT.' : 'WEST BACK TO THE HALL.',
+      dark ? 'NO WALL LIGHTS. CARRY YOUR OWN TORCH.' : 'WEST BACK TO THE HALL.',
     ]),
   ];
   if (sideRole === 'quiet') {
@@ -723,7 +732,7 @@ function makeBasementFloor(opts: {
   }
 
   const descentEnts: EntityDef[] = [
-    wallTorch(`${prefix}-descent-torch`, 2, 2),
+    ...(dark ? [] : [wallTorch(`${prefix}-descent-torch`, 2, 2)]),
     sign(`${prefix}-descent-sign`, 3, 8, [
       `YOU ARE ON ${flabel} — ${flavor}.`,
       dark ? 'S = DEEPER. BRING LIGHT.' : 'S = STAIRS DEEPER.',
@@ -979,10 +988,9 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
       entities: [
         sign('b5-secret-sign', 3, 8, [
           'SECRET CACHE. NOT ON THE MAPZ… YET.',
-          'LOOT. WEST BACK. STAIRS STILL FREE.',
+          'DARK. CARRY A TORCH. LOOT. WEST BACK.',
         ]),
         chest('b5-secret-chest', 8, 5, 'dungeon'),
-        wallTorch('b5-secret-torch', 2, 2),
         heart('b5-secret-heart', 11, 5),
       ],
     };
@@ -1571,7 +1579,6 @@ export function buildSewerzDeep(): Record<string, RoomDef> {
           ],
         },
         chest('sewerz-bilge-chest', 11, 3, 'dungeon'),
-        wallTorch('sewerz-bilge-torch', 2, 2),
       ],
     };
   }

@@ -1,6 +1,6 @@
 /**
  * Carried light + dark-room vision (pure helpers).
- * Torches/lanterns/flashlights burn finite fuel; wall torches ease ambient dark.
+ * Torches/lanterns/flashlights burn finite fuel; wall torches fully light a room.
  */
 
 import type { SaveData } from '../types';
@@ -38,6 +38,9 @@ export function isLightItemId(id: string): id is LightTier {
 /**
  * Deep basements (B2+) are dark unless room.dark === false.
  * Surface / B1 stay lit by default.
+ *
+ * Invariant (world data): dark rooms must have zero torch_wall entities;
+ * wall torches only appear in lit rooms (player needs no carried light).
  */
 export function roomIsDark(room: {
   floor?: number;
@@ -48,6 +51,14 @@ export function roomIsDark(room: {
   if (room.dark === false) return false;
   const f = room.floor ?? 0;
   return f <= -2;
+}
+
+/** True when the room is dark and has no ambient wall torches — needs carried light. */
+export function roomNeedsCarriedLight(
+  room: { floor?: number; dark?: boolean; land?: string },
+  wallTorchCount = 0,
+): boolean {
+  return roomIsDark(room) && wallTorchCount <= 0;
 }
 
 export function lightBurnMs(tier: LightTier): number {
@@ -69,23 +80,19 @@ export function hasActiveCarriedLight(save: SaveData): boolean {
 
 /**
  * Vision darkness alpha for a dark room.
- * wallTorchCount eases ambient; carried light is primary.
+ * Wall torches fully light the room (no carried light required).
+ * Carried light is primary when walls are absent.
  */
 export function visionDarkAlpha(
   save: SaveData,
   opts: { darkRoom: boolean; wallTorchCount?: number },
 ): number {
   if (!opts.darkRoom) return 0;
-  const tier = activeLightTier(save);
-  let a = LIGHT_DARK_ALPHA[tier];
   const walls = Math.max(0, opts.wallTorchCount ?? 0);
-  if (walls > 0) {
-    a = Math.max(
-      LIGHT_DARK_ALPHA.flashlight,
-      a - WALL_TORCH_ALPHA_REDUCTION * Math.min(3, walls),
-    );
-  }
-  return a;
+  // Ambient wall torches mean the room is lit — do not require carried light.
+  if (walls > 0) return 0;
+  const tier = activeLightTier(save);
+  return LIGHT_DARK_ALPHA[tier];
 }
 
 /** Ignite a light tier (does not consume stacks — caller consumes). */

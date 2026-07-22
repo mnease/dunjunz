@@ -117,6 +117,7 @@ import {
 } from '../systems/forjing';
 import {
   roomIsDark,
+  roomNeedsCarriedLight,
   tickLightFuel,
   visionDarkAlpha,
 } from '../systems/lighting';
@@ -1712,7 +1713,10 @@ export class GameScene extends Phaser.Scene {
         this.game.events.emit('toast', 'HARD MODE — CREEPS SHOOT · STAY ALERT');
       });
     }
-    if (roomIsDark(room) && !(this.save.lightFuelMs ?? 0)) {
+    if (
+      roomNeedsCarriedLight(room, this.wallTorchCount) &&
+      !(this.save.lightFuelMs ?? 0)
+    ) {
       this.time.delayedCall(280, () => {
         this.game.events.emit(
           'toast',
@@ -3984,7 +3988,7 @@ export class GameScene extends Phaser.Scene {
 
     // Light fuel + combat buffs (dark rooms burn carried light)
     if (!this.paused && !this.dialogLocked && !this.panelOpen()) {
-      const dark = roomIsDark(this.room);
+      const dark = roomNeedsCarriedLight(this.room, this.wallTorchCount);
       const lit = tickLightFuel(this.save, delta, dark);
       this.save = lit.save;
       if (lit.expired) {
