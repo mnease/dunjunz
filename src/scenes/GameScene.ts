@@ -230,16 +230,18 @@ import {
   GUILD_MASTER_ID,
   guildMasterDialog,
   guildMasterIntroDialog,
+  isTrainingWeaponTaken,
   isTutorialComplete,
   markTutorialIntroSeen,
   needsTutorialIntro,
   nextTutorialWeapon,
   rackDialog,
+  rackTextureKey,
+  rackWeaponFromId,
   recordDummyHit,
   stairsBlockedToast,
   tutorialWeaponFromEquip,
   type TutorialWeapon,
-  TRAINING_TEMPLATES,
 } from '../systems/tutorial';
 import { loadSave, writeSave } from '../systems/save';
 import {
@@ -2749,15 +2751,15 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Captain gets gold command tunic (Kirk), not generic purple NPC
+    // Racks: show weapon until taken into bag, then empty stand
+    const rackWeapon =
+      def.kind === 'rack' ? rackWeaponFromId(def.id) : null;
     const rackTex =
-      def.kind === 'rack'
-        ? def.id === 'rack-axe'
-          ? 'rack_axe'
-          : def.id === 'rack-bow'
-            ? 'rack_bow'
-            : def.id === 'rack-staff'
-              ? 'rack_staff'
-              : 'rack_sword'
+      rackWeapon != null
+        ? rackTextureKey(
+            rackWeapon,
+            isTrainingWeaponTaken(this.save, rackWeapon),
+          )
         : null;
     const tex =
       def.id === 'captain' && this.textures.exists('captain')
@@ -3831,28 +3833,50 @@ export class GameScene extends Phaser.Scene {
   }
 
   private useWeaponRack(actor: Actor): void {
-    const id = actor.id ?? '';
-    const map: Record<string, TutorialWeapon> = {
-      'rack-sword': 'sword',
-      'rack-axe': 'axe',
-      'rack-bow': 'bow',
-      'rack-staff': 'staff',
-    };
-    const w = map[id];
+    const w = rackWeaponFromId(actor.id);
     if (!w) {
       this.game.events.emit('toast', 'EMPTY RACK');
       return;
     }
+    const alreadyTaken = isTrainingWeaponTaken(this.save, w);
     this.save = equipTrainingWeapon(this.save, w);
     writeSave(this.save);
     this.emitHud();
+    // Force hip weapon onto avatar (emitHud already refreshes; re-apply after equip)
     this.refreshPlayerAppearance();
+    // Weapon leaves the rack — empty stand
+    this.syncWeaponRackSprites();
     playSfx('success');
-    this.game.events.emit('dialog-show', rackDialog(w));
+    // Small pickup flash on the stand
+    if (actor.sprite?.active) {
+      actor.sprite.setTint(0xffffff);
+      this.time.delayedCall(120, () => {
+        if (actor.sprite?.active) actor.sprite.clearTint();
+      });
+    }
+    this.game.events.emit(
+      'dialog-show',
+      rackDialog(w, { alreadyTaken }),
+    );
     this.game.events.emit(
       'toast',
-      `EQUIPPED ${TRAINING_TEMPLATES[w].replace(/_/g, ' ').toUpperCase()}`,
+      alreadyTaken
+        ? `RE-EQUIPPED ${w.toUpperCase()}`
+        : `TOOK ${w.toUpperCase()} — ON YOUR HIP`,
     );
+  }
+
+  /** Empty stands for training weapons already in the bag. */
+  private syncWeaponRackSprites(): void {
+    for (const a of this.actors) {
+      if (!a.alive || a.kind !== 'rack') continue;
+      const w = rackWeaponFromId(a.id);
+      if (!w) continue;
+      const key = rackTextureKey(w, isTrainingWeaponTaken(this.save, w));
+      if (this.textures.exists(key) && a.sprite.texture.key !== key) {
+        a.sprite.setTexture(key);
+      }
+    }
   }
 
   /**

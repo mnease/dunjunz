@@ -181,6 +181,51 @@ export function equipTrainingWeapon(
   return syncDerivedStats(next);
 }
 
+/** Map rack actor id → tutorial weapon family. */
+export function rackWeaponFromId(id: string | undefined): TutorialWeapon | null {
+  switch (id) {
+    case 'rack-sword':
+      return 'sword';
+    case 'rack-axe':
+      return 'axe';
+    case 'rack-bow':
+      return 'bow';
+    case 'rack-staff':
+      return 'staff';
+    default:
+      return null;
+  }
+}
+
+/** True once the training weapon has been taken into the bag. */
+export function isTrainingWeaponTaken(
+  save: SaveData,
+  weapon: TutorialWeapon,
+): boolean {
+  const tid = TRAINING_TEMPLATES[weapon];
+  return save.bag.some((b) => b.templateId === tid);
+}
+
+/**
+ * Rack canvas texture: full weapon stand, or empty peg after pickup.
+ */
+export function rackTextureKey(
+  weapon: TutorialWeapon,
+  taken: boolean,
+): string {
+  if (taken) return 'rack_empty';
+  switch (weapon) {
+    case 'sword':
+      return 'rack_sword';
+    case 'axe':
+      return 'rack_axe';
+    case 'bow':
+      return 'rack_bow';
+    case 'staff':
+      return 'rack_staff';
+  }
+}
+
 export function stairsBlockedToast(): string {
   return 'STAIRS LOCKED — FINISH GUILD TRAINING';
 }
@@ -276,17 +321,27 @@ export function dummyHitToast(
   return 'DUMMY THUDS. TRY AGAIN.';
 }
 
-export function rackDialog(weapon: TutorialWeapon): string[] {
+export function rackDialog(
+  weapon: TutorialWeapon,
+  opts?: { alreadyTaken?: boolean },
+): string[] {
   const names: Record<TutorialWeapon, string> = {
     sword: 'SWORD OF MILD ENTHUSIASM',
     axe: 'TRAINING AXE',
     bow: 'SHORT BOW (+ ARROWS)',
     staff: 'WIZARD STAFF',
   };
+  if (opts?.alreadyTaken) {
+    return [
+      'EMPTY STAND. YOU ALREADY TOOK THIS ONE.',
+      `${names[weapon]} — RE-EQUIPPED.`,
+      'FACE A DUMMY. SPACE / Z TO ATTACK.',
+    ];
+  }
   return [
-    `WEAPON RACK: ${names[weapon]}.`,
-    'EQUIPPED. FACE A DUMMY.',
-    'SPACE / Z TO ATTACK.',
+    `YOU TAKE THE ${names[weapon]}.`,
+    'IT LEAVES THE RACK AND RIDES YOUR HIP.',
+    'FACE A DUMMY. SPACE / Z TO ATTACK.',
   ];
 }
 

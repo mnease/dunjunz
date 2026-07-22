@@ -1476,6 +1476,13 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#6b4423', 14, 18, 4, 10);
     fill(ctx, '#8b5a2b', 15, 18, 2, 9);
   };
+  // Empty stand after the hero takes that training weapon
+  canvasTex(scene, 'rack_empty', ART_RES, ART_RES, (ctx) => {
+    drawRackStand(ctx);
+    // faint peg where the weapon hung
+    fill(ctx, '#4a3018', 13, 16, 6, 2);
+    fill(ctx, '#2a1a0c', 14, 15, 4, 1);
+  });
   canvasTex(scene, 'rack_sword', ART_RES, ART_RES, (ctx) => {
     drawRackStand(ctx);
     // vertical blade
