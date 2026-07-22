@@ -94,6 +94,27 @@ const SLOT_KEYS: Record<EquipSlot, string> = {
   key: 'K',
 };
 
+/** Short equip chrome (1 line) — full slot words overflow Press Start rows. */
+const SLOT_SHORT: Record<EquipSlot, string> = {
+  weapon: 'WPN',
+  shield: 'SHD',
+  helmet: 'HELM',
+  breastplate: 'CHEST',
+  greaves: 'LEGS',
+  shoes: 'FEET',
+  gloves: 'GLV',
+  amulet: 'AMU',
+  ring: 'RING',
+  key: 'KEY',
+};
+
+/** Press Start 2P ~7px/char at 8px — hard-cap equip name line. */
+function truncateInvName(name: string, maxChars: number): string {
+  if (name.length <= maxChars) return name;
+  if (maxChars <= 1) return '…';
+  return `${name.slice(0, maxChars - 1)}…`;
+}
+
 /**
  * HUD + dialog + multi-slot inventory paper-doll.
  */
@@ -125,10 +146,15 @@ export class UIScene extends Phaser.Scene {
   private invTitle: Phaser.GameObjects.Text | null = null;
   /** Character zone plate (doll + equip + stats). */
   private invCharPlate: Phaser.GameObjects.Rectangle | null = null;
+  /** Optional stats inset well. */
+  private invStatsPlate: Phaser.GameObjects.Rectangle | null = null;
   /** Bag zone plate (grid + pager). */
   private invBagPlate: Phaser.GameObjects.Rectangle | null = null;
   /** Inspect card plate (selected item detail). */
   private invDetailPlate: Phaser.GameObjects.Rectangle | null = null;
+  private invDetailHeader: Phaser.GameObjects.Text | null = null;
+  private invDetailIconWell: Phaser.GameObjects.Rectangle | null = null;
+  private invDetailIcon: Phaser.GameObjects.Image | null = null;
   private invAvatar: Phaser.GameObjects.Image | null = null;
   private invAvatarPlate: Phaser.GameObjects.Rectangle | null = null;
   private invYouLabel: Phaser.GameObjects.Text | null = null;
@@ -159,23 +185,34 @@ export class UIScene extends Phaser.Scene {
   private static readonly BAG_ICON_SCALE = 2.05;
 
   /**
-   * Inventory layout (Comb UX + Pollen visual council).
-   * Top: character strip (doll | equip | stats).
-   * Bottom: left bag grid + right inspect card — kills the old centered-void.
+   * Inventory layout (Comb + Pollen pass-2).
+   * Top: character strip. Bottom: bag | inspect (flush siblings, 14px gutter).
    */
   private static readonly INV_DOLL_X = 100;
   private static readonly INV_DOLL_Y = 190;
   private static readonly INV_EQUIP_X0 = 210;
   private static readonly INV_EQUIP_Y0 = HUD_H + 36;
-  private static readonly INV_EQUIP_COL_W = 200;
+  private static readonly INV_EQUIP_COL_W = 210;
   private static readonly INV_EQUIP_ROW_H = 36;
+  /** Max chars for equip name line (Press Start ~7px @ 8px). */
+  private static readonly INV_EQUIP_NAME_CHARS = 22;
   private static readonly INV_STATS_X = 640;
   private static readonly INV_BAG_LEFT = 48;
-  private static readonly INV_BAG_TITLE_Y = 308;
+  /** Content inset under bag plate top (plate top = 308). */
+  private static readonly INV_BAG_TITLE_Y = 324;
   private static readonly INV_BAG_ORIGIN_Y = 348;
-  private static readonly INV_DETAIL_X = 700;
-  private static readonly INV_DETAIL_Y = 340;
-  private static readonly INV_DETAIL_W = 520;
+  /**
+   * Inspect plate: bag R=708 + 14 gutter → L=722; same H as bag (324).
+   * Content inset 16 → text X=738, wrap 486.
+   */
+  private static readonly INV_DETAIL_PLATE_L = 722;
+  private static readonly INV_DETAIL_PLATE_W = 518;
+  private static readonly INV_DETAIL_PLATE_H = 324;
+  private static readonly INV_DETAIL_PLATE_TOP = 308;
+  private static readonly INV_DETAIL_X = 738;
+  private static readonly INV_DETAIL_HEADER_Y = 324;
+  private static readonly INV_DETAIL_BODY_Y = 360;
+  private static readonly INV_DETAIL_W = 486;
   private static readonly INV_HELP_Y = 688;
   /** Stat spend buttons must stay above bag band. */
   private static readonly INV_STAT_BTN_MAX_Y = 292;
@@ -777,12 +814,19 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(d + 1);
 
-    // Zone plates: Character (top strip) + Bag (left bottom) + Inspect (right bottom)
-    // Pollen hierarchy: green secondary character, gold primary bag, muted detail well.
+    // Zone plates: Character (top) + Bag|Inspect siblings (bottom, 14px gutter)
+    // Pollen: gold bag primary; inspect same fill, quieter stroke; green character.
     const charCy = 188;
     this.invCharPlate = this.add
       .rectangle(GAME_W / 2, charCy, GAME_W - 48, 196, 0x12161f, 1)
       .setStrokeStyle(2, COLORS.green)
+      .setScrollFactor(0)
+      .setDepth(d + 1);
+
+    // Stats inset well (tertiary group inside character strip)
+    this.invStatsPlate = this.add
+      .rectangle(928, 180, 600, 160, 0x0c0e14, 1)
+      .setStrokeStyle(1, 0x3a3150)
       .setScrollFactor(0)
       .setDepth(d + 1);
 
@@ -792,23 +836,54 @@ export class UIScene extends Phaser.Scene {
       UIScene.BAG_COLS * bagCell + (UIScene.BAG_COLS - 1) * bagGap;
     const gridH =
       UIScene.BAG_ROWS * bagCell + (UIScene.BAG_ROWS - 1) * bagGap;
-    const bagPlateW = gridW + 40;
-    const bagPlateH = gridH + 96;
-    const bagPlateCx = UIScene.INV_BAG_LEFT + bagPlateW / 2 - 8;
-    const bagPlateCy = UIScene.INV_BAG_ORIGIN_Y + gridH / 2 + 8;
+    const bagPlateW = gridW + 40; // 668
+    const bagPlateH = gridH + 96; // 324
+    const bagPlateCx = UIScene.INV_BAG_LEFT + bagPlateW / 2 - 8; // 374
+    const bagPlateCy = UIScene.INV_BAG_ORIGIN_Y + gridH / 2 + 8; // 470
     this.invBagPlate = this.add
       .rectangle(bagPlateCx, bagPlateCy, bagPlateW, bagPlateH, 0x161a24, 1)
       .setStrokeStyle(2, COLORS.gold)
       .setScrollFactor(0)
       .setDepth(d + 1);
 
-    const detailCx = UIScene.INV_DETAIL_X + UIScene.INV_DETAIL_W / 2;
-    const detailCy = UIScene.INV_DETAIL_Y + 110;
+    // Inspect: bag-height sibling (not a short purple void)
+    const detailCx =
+      UIScene.INV_DETAIL_PLATE_L + UIScene.INV_DETAIL_PLATE_W / 2; // 981
+    const detailCy = bagPlateCy; // 470 — flush top/bottom with bag
     this.invDetailPlate = this.add
-      .rectangle(detailCx, detailCy, UIScene.INV_DETAIL_W + 24, 240, 0x0c0e14, 1)
-      .setStrokeStyle(2, 0x5c4d7a)
+      .rectangle(
+        detailCx,
+        detailCy,
+        UIScene.INV_DETAIL_PLATE_W,
+        UIScene.INV_DETAIL_PLATE_H,
+        0x161a24,
+        1,
+      )
+      .setStrokeStyle(1, 0x8a7340)
       .setScrollFactor(0)
       .setDepth(d + 1);
+
+    this.invDetailHeader = this.add
+      .text(UIScene.INV_DETAIL_X, UIScene.INV_DETAIL_HEADER_Y, 'INSPECT', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '10px',
+        color: '#ffc857',
+      })
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(d + 2);
+
+    this.invDetailIconWell = this.add
+      .rectangle(UIScene.INV_DETAIL_X + 28, 392, 56, 56, 0x0c0e14, 1)
+      .setStrokeStyle(1, 0x3a3150)
+      .setScrollFactor(0)
+      .setDepth(d + 2);
+
+    this.invDetailIcon = this.add
+      .image(UIScene.INV_DETAIL_X + 28, 392, 'icon_empty')
+      .setScale(UIScene.BAG_ICON_SCALE * 0.85)
+      .setScrollFactor(0)
+      .setDepth(d + 3);
 
     // Paper-doll (left of character strip)
     const dollX = UIScene.INV_DOLL_X;
@@ -857,13 +932,19 @@ export class UIScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(d + 3);
       this.invSlotLabels[slot] = this.add
-        .text(x + 30, y - 8, `${slot.toUpperCase()} [${SLOT_KEYS[slot]}]\n(empty)`, {
-          fontFamily: '"Press Start 2P", monospace',
-          fontSize: '8px',
-          color: '#c5cde0',
-          lineSpacing: 6,
-          wordWrap: { width: colW - 48 },
-        })
+        .text(
+          x + 28,
+          y - 10,
+          `${SLOT_SHORT[slot]} [${SLOT_KEYS[slot]}]\n(empty)`,
+          {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '8px',
+            color: '#c5cde0',
+            // 2 lines only — lineSpacing 2 keeps block ≪ rowH 36
+            lineSpacing: 2,
+            wordWrap: { width: colW - 44 },
+          },
+        )
         .setScrollFactor(0)
         .setDepth(d + 3);
     });
@@ -913,14 +994,14 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(d + 3);
 
-    // Inspect card — right of bag, fills former dead zone
+    // Inspect body — right of icon well; structured in renderBagGrid
     this.invBagDetail = this.add
-      .text(UIScene.INV_DETAIL_X, UIScene.INV_DETAIL_Y, '', {
+      .text(UIScene.INV_DETAIL_X + 64, UIScene.INV_DETAIL_BODY_Y, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '9px',
         color: '#c5cde0',
-        wordWrap: { width: UIScene.INV_DETAIL_W },
-        lineSpacing: 8,
+        wordWrap: { width: UIScene.INV_DETAIL_W - 64 },
+        lineSpacing: 6,
       })
       .setScrollFactor(0)
       .setDepth(d + 2);
@@ -1032,8 +1113,12 @@ export class UIScene extends Phaser.Scene {
     this.setInvPieceVisible(this.invBg, open);
     this.setInvPieceVisible(this.invTitle, open);
     this.setInvPieceVisible(this.invCharPlate, open);
+    this.setInvPieceVisible(this.invStatsPlate, open);
     this.setInvPieceVisible(this.invBagPlate, open);
     this.setInvPieceVisible(this.invDetailPlate, open);
+    this.setInvPieceVisible(this.invDetailHeader, open);
+    this.setInvPieceVisible(this.invDetailIconWell, open);
+    this.setInvPieceVisible(this.invDetailIcon, open);
     this.setInvPieceVisible(this.invAvatarPlate, open);
     this.setInvPieceVisible(this.invAvatar, open);
     this.setInvPieceVisible(this.invYouLabel, open);
@@ -2344,15 +2429,15 @@ export class UIScene extends Phaser.Scene {
         icon.setAlpha(budMode && slot === 'key' ? 0.35 : 1);
       }
       if (label) {
-        const name =
+        const rawName =
           budMode && slot === 'key'
             ? '(n/a)'
             : inst
               ? displayItemName(inst)
               : '(empty)';
-        label.setText(
-          `${slot.toUpperCase()} [${SLOT_KEYS[slot]}]\n${name}`,
-        );
+        // Hard-cap 2 lines: short chrome + ellipsized name (no row collision)
+        const name = truncateInvName(rawName, UIScene.INV_EQUIP_NAME_CHARS);
+        label.setText(`${SLOT_SHORT[slot]} [${SLOT_KEYS[slot]}]\n${name}`);
         label.setAlpha(budMode && slot === 'key' ? 0.4 : 1);
       }
     }
@@ -2530,10 +2615,11 @@ export class UIScene extends Phaser.Scene {
     );
     this.invBagTitle?.setPosition(UIScene.INV_BAG_LEFT, UIScene.INV_BAG_TITLE_Y);
 
-    // Left-aligned bag + right inspect (council layout — no centered void)
+    // Left-aligned bag + right inspect (siblings, 14px gutter, same height)
     const helpY = UIScene.INV_HELP_Y;
-    const detailX = UIScene.INV_DETAIL_X;
-    const detailY = UIScene.INV_DETAIL_Y;
+    const detailBodyX = UIScene.INV_DETAIL_X + 64;
+    const detailBodyY = UIScene.INV_DETAIL_BODY_Y;
+    const detailWrap = UIScene.INV_DETAIL_W - 64;
     const cols = UIScene.BAG_COLS;
     const cell = UIScene.BAG_CELL;
     const gap = UIScene.BAG_GAP;
@@ -2541,21 +2627,48 @@ export class UIScene extends Phaser.Scene {
     const originX = UIScene.INV_BAG_LEFT + cell / 2;
     const originY = UIScene.INV_BAG_ORIGIN_Y + cell / 2;
 
+    const setInspectEmpty = (title: string, body: string): void => {
+      this.invDetailHeader?.setText(title);
+      this.invDetailHeader?.setPosition(
+        UIScene.INV_DETAIL_X,
+        UIScene.INV_DETAIL_HEADER_Y,
+      );
+      this.invDetailIcon?.setTexture('icon_empty');
+      this.invDetailIcon?.setVisible(true);
+      this.invDetailIconWell?.setVisible(true);
+      // Centered empty copy in the inspect plate (not top-left orphan)
+      const plateCx =
+        UIScene.INV_DETAIL_PLATE_L + UIScene.INV_DETAIL_PLATE_W / 2;
+      const plateCy =
+        UIScene.INV_DETAIL_PLATE_TOP + UIScene.INV_DETAIL_PLATE_H / 2;
+      this.invBagDetail?.setOrigin(0.5, 0.5);
+      this.invBagDetail?.setPosition(plateCx, plateCy + 24);
+      this.invBagDetail?.setWordWrapWidth(UIScene.INV_DETAIL_W - 32);
+      this.invBagDetail?.setAlign('center');
+      this.invBagDetail?.setText(body);
+      this.invBagDetail?.setColor('#a8b0c4');
+    };
+
     if (!bag.length) {
       const empty = this.add
-        .text(originX + gridW / 2 - cell / 2, originY + 40, '(empty — loot creeps & chests)', {
-          fontFamily: '"Press Start 2P", monospace',
-          fontSize: '8px',
-          color: '#a8b0c4',
-        })
+        .text(
+          originX + gridW / 2 - cell / 2,
+          originY + 40,
+          '(empty - loot creeps & chests)',
+          {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '8px',
+            color: '#a8b0c4',
+          },
+        )
         .setOrigin(0.5)
         .setScrollFactor(0);
       this.invBagLayer.add(empty);
       this.invBagPieces.push(empty);
-      this.invBagDetail?.setPosition(detailX, detailY);
-      this.invBagDetail?.setWordWrapWidth(UIScene.INV_DETAIL_W);
-      this.invBagDetail?.setText('PICK UP GEAR TO FILL THE BAG GRID.');
-      this.invBagDetail?.setColor('#c5cde0');
+      setInspectEmpty(
+        'INSPECT',
+        'SELECT A BAG ITEM\nor loot creeps & chests',
+      );
       this.invHelp?.setPosition(GAME_W / 2, helpY);
       return;
     }
@@ -2768,19 +2881,44 @@ export class UIScene extends Phaser.Scene {
       () => this.shiftBagPage(1),
     );
 
-    this.invBagDetail?.setPosition(detailX, detailY);
-    this.invBagDetail?.setWordWrapWidth(UIScene.INV_DETAIL_W);
     this.invHelp?.setPosition(GAME_W / 2, helpY);
 
     const sel = bag[this.invBagSelected];
     if (sel) {
-      // One compact detail block (no extra sort/page lines — those have chrome)
-      const bits = [
-        sel.name + (sel.count > 1 ? ` x${sel.count}` : ''),
-        sel.blurb,
-      ];
+      // Structured inspect card (header + icon well + body stack)
+      const headerKind = sel.usable
+        ? 'STACK'
+        : sel.slot
+          ? SLOT_SHORT[sel.slot] ?? sel.slot.toUpperCase()
+          : 'ITEM';
+      this.invDetailHeader?.setText(`INSPECT · ${headerKind}`);
+      this.invDetailHeader?.setPosition(
+        UIScene.INV_DETAIL_X,
+        UIScene.INV_DETAIL_HEADER_Y,
+      );
+
+      const ik = itemIconKey(sel.templateId);
+      this.invDetailIcon?.setTexture(
+        this.textures.exists(ik) ? ik : 'icon_empty',
+      );
+      this.invDetailIcon?.setVisible(true);
+      this.invDetailIconWell?.setVisible(true);
+
+      this.invBagDetail?.setOrigin(0, 0);
+      this.invBagDetail?.setAlign('left');
+      this.invBagDetail?.setPosition(detailBodyX, detailBodyY);
+      this.invBagDetail?.setWordWrapWidth(detailWrap);
+
+      const nameLine =
+        sel.name + (sel.count > 1 ? ` x${sel.count}` : '');
+      const bits: string[] = [nameLine];
+      if (sel.blurb) bits.push(sel.blurb);
+
       const classGate =
-        this.gearTarget !== 'bud' && sel.slot && sel.slot !== 'weapon' && sel.slot !== 'key'
+        this.gearTarget !== 'bud' &&
+        sel.slot &&
+        sel.slot !== 'weapon' &&
+        sel.slot !== 'key'
           ? canHeroEquipGear(save, sel.templateId)
           : { ok: true as const };
 
@@ -2792,18 +2930,22 @@ export class UIScene extends Phaser.Scene {
           if (cmp.stat) bits.push(`${cmp.stat} ${cmp.candidate}`);
         }
       } else if (sel.usable) {
-        bits.push('CLICK AGAIN / U TO USE');
+        bits.push('U OR CLICK TO USE');
       } else if (!classGate.ok) {
         bits.push(classGate.reason);
-        bits.push('GREYED OUT — CANNOT EQUIP ON THIS CLASS');
+        bits.push('GREYED OUT. Wrong class.');
       } else if (sel.slot && sel.uid) {
         const inst = findInBag(save, sel.uid);
         const cmp = compareToEquipped(save, inst, this.gearTarget);
         const line = equipCompareDetailLine(cmp);
         if (line) bits.push(line);
-        bits.push(`CLICK TO EQUIP · SLOT ${sel.slot.toUpperCase()}`);
+        bits.push(
+          `CLICK TO EQUIP · ${SLOT_SHORT[sel.slot] ?? sel.slot.toUpperCase()} [${SLOT_KEYS[sel.slot]}]`,
+        );
       } else if (sel.slot) {
-        bits.push(`CLICK TO EQUIP · SLOT ${sel.slot.toUpperCase()}`);
+        bits.push(
+          `CLICK TO EQUIP · ${SLOT_SHORT[sel.slot] ?? sel.slot.toUpperCase()}`,
+        );
       }
       // D&D-style class proficiency / affinity line
       if (sel.slot && sel.slot !== 'weapon' && sel.slot !== 'key') {
@@ -2825,7 +2967,7 @@ export class UIScene extends Phaser.Scene {
         }
       }
       this.invBagDetail?.setText(bits.join('\n'));
-      // Color detail: red when class-blocked, else compare arrows
+      // Color body by status; name still readable at 9px
       if (!classGate.ok) {
         this.invBagDetail?.setColor('#ff8a8a');
       } else if (sel.uid && sel.slot && !sel.equipped) {
@@ -2837,6 +2979,8 @@ export class UIScene extends Phaser.Scene {
       } else {
         this.invBagDetail?.setColor('#c5cde0');
       }
+    } else {
+      setInspectEmpty('INSPECT', 'SELECT A BAG ITEM');
     }
   }
 
