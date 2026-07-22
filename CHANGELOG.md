@@ -28,6 +28,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Inventory layout (Comb + Pollen council)** — character strip on top (doll | compact equip | stats), bag grid left-aligned, inspect card on the right filling the old dead void. Zone plates (green character / gold bag / muted detail), larger pager hit targets, package spend buttons clamped above the bag band.
 - **Mobile full-screen overlay controls** — game fills the viewport; D-pad (left) and actions (right) sit as a translucent HUD on the playfield (no dock that squishes the canvas).
 - **Mobile contextual pad + talk UX** — pad remaps by mode (explore / dialog NEXT·CLOSE / panel OK·PAGE·CLOSE / pause). Dialog sits mid-screen with **NEXT/CLOSE** hits; ESC/MENU closes talk; bag/shop/mapz use stick + OK. Landscape tries fullscreen + immersive CSS.
 - **Virtual stick + landscape lock** — D-pad replaced by omni joystick (8-way). PWA/manifest forces landscape; portrait shows rotate gate; `orientation.lock` when the browser allows.

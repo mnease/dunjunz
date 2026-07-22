@@ -123,6 +123,12 @@ export class UIScene extends Phaser.Scene {
 
   private invBg: Phaser.GameObjects.Rectangle | null = null;
   private invTitle: Phaser.GameObjects.Text | null = null;
+  /** Character zone plate (doll + equip + stats). */
+  private invCharPlate: Phaser.GameObjects.Rectangle | null = null;
+  /** Bag zone plate (grid + pager). */
+  private invBagPlate: Phaser.GameObjects.Rectangle | null = null;
+  /** Inspect card plate (selected item detail). */
+  private invDetailPlate: Phaser.GameObjects.Rectangle | null = null;
   private invAvatar: Phaser.GameObjects.Image | null = null;
   private invAvatarPlate: Phaser.GameObjects.Rectangle | null = null;
   private invYouLabel: Phaser.GameObjects.Text | null = null;
@@ -151,6 +157,29 @@ export class UIScene extends Phaser.Scene {
   private static readonly BAG_GAP = 12;
   /** Icon display scale (ART_RES 32 → ~66px in cell). */
   private static readonly BAG_ICON_SCALE = 2.05;
+
+  /**
+   * Inventory layout (Comb UX + Pollen visual council).
+   * Top: character strip (doll | equip | stats).
+   * Bottom: left bag grid + right inspect card — kills the old centered-void.
+   */
+  private static readonly INV_DOLL_X = 100;
+  private static readonly INV_DOLL_Y = 190;
+  private static readonly INV_EQUIP_X0 = 210;
+  private static readonly INV_EQUIP_Y0 = HUD_H + 36;
+  private static readonly INV_EQUIP_COL_W = 200;
+  private static readonly INV_EQUIP_ROW_H = 36;
+  private static readonly INV_STATS_X = 640;
+  private static readonly INV_BAG_LEFT = 48;
+  private static readonly INV_BAG_TITLE_Y = 308;
+  private static readonly INV_BAG_ORIGIN_Y = 348;
+  private static readonly INV_DETAIL_X = 700;
+  private static readonly INV_DETAIL_Y = 340;
+  private static readonly INV_DETAIL_W = 520;
+  private static readonly INV_HELP_Y = 688;
+  /** Stat spend buttons must stay above bag band. */
+  private static readonly INV_STAT_BTN_MAX_Y = 292;
+
   private invSlotFrames: Partial<Record<EquipSlot, Phaser.GameObjects.Image>> = {};
   private invSlotIcons: Partial<Record<EquipSlot, Phaser.GameObjects.Image>> = {};
   private invSlotLabels: Partial<Record<EquipSlot, Phaser.GameObjects.Text>> = {};
@@ -739,7 +768,7 @@ export class UIScene extends Phaser.Scene {
       .setDepth(d);
 
     this.invTitle = this.add
-      .text(GAME_W / 2, HUD_H + 14, 'INVENTORY / CHARACTER', {
+      .text(GAME_W / 2, HUD_H + 12, 'INVENTORY / CHARACTER', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '12px',
         color: '#7dffb3',
@@ -748,37 +777,70 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(d + 1);
 
-    // Paper-doll (left column) — fixed band so bag never collides
-    const dollX = 90;
-    const dollY = HUD_H + 110;
-    this.invAvatarPlate = this.add
-      .rectangle(dollX, dollY, 110, 130, 0x12161f, 1)
+    // Zone plates: Character (top strip) + Bag (left bottom) + Inspect (right bottom)
+    // Pollen hierarchy: green secondary character, gold primary bag, muted detail well.
+    const charCy = 188;
+    this.invCharPlate = this.add
+      .rectangle(GAME_W / 2, charCy, GAME_W - 48, 196, 0x12161f, 1)
       .setStrokeStyle(2, COLORS.green)
       .setScrollFactor(0)
       .setDepth(d + 1);
 
-    this.invAvatar = this.add
-      .image(dollX, dollY - 6, 'player')
-      .setScale(SPRITE_SCALE * 3.2)
+    const bagCell = UIScene.BAG_CELL;
+    const bagGap = UIScene.BAG_GAP;
+    const gridW =
+      UIScene.BAG_COLS * bagCell + (UIScene.BAG_COLS - 1) * bagGap;
+    const gridH =
+      UIScene.BAG_ROWS * bagCell + (UIScene.BAG_ROWS - 1) * bagGap;
+    const bagPlateW = gridW + 40;
+    const bagPlateH = gridH + 96;
+    const bagPlateCx = UIScene.INV_BAG_LEFT + bagPlateW / 2 - 8;
+    const bagPlateCy = UIScene.INV_BAG_ORIGIN_Y + gridH / 2 + 8;
+    this.invBagPlate = this.add
+      .rectangle(bagPlateCx, bagPlateCy, bagPlateW, bagPlateH, 0x161a24, 1)
+      .setStrokeStyle(2, COLORS.gold)
+      .setScrollFactor(0)
+      .setDepth(d + 1);
+
+    const detailCx = UIScene.INV_DETAIL_X + UIScene.INV_DETAIL_W / 2;
+    const detailCy = UIScene.INV_DETAIL_Y + 110;
+    this.invDetailPlate = this.add
+      .rectangle(detailCx, detailCy, UIScene.INV_DETAIL_W + 24, 240, 0x0c0e14, 1)
+      .setStrokeStyle(2, 0x5c4d7a)
+      .setScrollFactor(0)
+      .setDepth(d + 1);
+
+    // Paper-doll (left of character strip)
+    const dollX = UIScene.INV_DOLL_X;
+    const dollY = UIScene.INV_DOLL_Y;
+    this.invAvatarPlate = this.add
+      .rectangle(dollX, dollY, 130, 150, 0x0c0e14, 1)
+      .setStrokeStyle(2, COLORS.green)
       .setScrollFactor(0)
       .setDepth(d + 2);
 
+    this.invAvatar = this.add
+      .image(dollX, dollY - 8, 'player')
+      .setScale(SPRITE_SCALE * 3.6)
+      .setScrollFactor(0)
+      .setDepth(d + 3);
+
     this.invYouLabel = this.add
-      .text(dollX, dollY + 62, 'YOU', {
+      .text(dollX, dollY + 72, 'YOU', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#a8b0c4',
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(d + 2);
+      .setDepth(d + 3);
 
-    // Equip slots — 2 wide columns with room for full item names
+    // Equip slots — compact 2 cols (icon + short name) so stats own right half
     const slots: EquipSlot[] = [...ALL_EQUIP_SLOTS];
-    const startX = 220;
-    const startY = HUD_H + 36;
-    const colW = 280;
-    const rowH = 42;
+    const startX = UIScene.INV_EQUIP_X0;
+    const startY = UIScene.INV_EQUIP_Y0;
+    const colW = UIScene.INV_EQUIP_COL_W;
+    const rowH = UIScene.INV_EQUIP_ROW_H;
     slots.forEach((slot, i) => {
       const col = i < 5 ? 0 : 1;
       const row = i % 5;
@@ -786,46 +848,46 @@ export class UIScene extends Phaser.Scene {
       const y = startY + row * rowH;
       this.invSlotFrames[slot] = this.add
         .image(x, y, 'slot_frame')
-        .setScale(1.2)
-        .setScrollFactor(0)
-        .setDepth(d + 1);
-      this.invSlotIcons[slot] = this.add
-        .image(x, y, 'icon_empty')
-        .setScale(1.55)
+        .setScale(1.15)
         .setScrollFactor(0)
         .setDepth(d + 2);
+      this.invSlotIcons[slot] = this.add
+        .image(x, y, 'icon_empty')
+        .setScale(1.5)
+        .setScrollFactor(0)
+        .setDepth(d + 3);
       this.invSlotLabels[slot] = this.add
-        .text(x + 34, y - 8, `${slot.toUpperCase()} [${SLOT_KEYS[slot]}]\n(empty)`, {
+        .text(x + 30, y - 8, `${slot.toUpperCase()} [${SLOT_KEYS[slot]}]\n(empty)`, {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '8px',
           color: '#c5cde0',
-          lineSpacing: 8,
-          wordWrap: { width: colW - 56 },
+          lineSpacing: 6,
+          wordWrap: { width: colW - 48 },
         })
         .setScrollFactor(0)
-        .setDepth(d + 2);
+        .setDepth(d + 3);
     });
 
-    // Stats / attrs in right rail — clear of equip columns and bag
-    const railX = startX + 2 * colW + 24;
+    // Stats / attrs — half-screen rail (aligned with bag/inspect column contract)
+    const railX = UIScene.INV_STATS_X;
     this.invStats = this.add
       .text(railX, startY - 4, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#ffc857',
         lineSpacing: 8,
-        wordWrap: { width: GAME_W - railX - 36 },
+        wordWrap: { width: GAME_W - railX - 40 },
       })
       .setScrollFactor(0)
       .setDepth(d + 2);
 
     this.invAttrs = this.add
-      .text(railX, startY + 100, '', {
+      .text(railX, startY + 88, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#7dffb3',
         lineSpacing: 8,
-        wordWrap: { width: GAME_W - railX - 36 },
+        wordWrap: { width: GAME_W - railX - 40 },
       })
       .setScrollFactor(0)
       .setDepth(d + 2);
@@ -833,32 +895,31 @@ export class UIScene extends Phaser.Scene {
     this.invStatLayer = this.add
       .container(0, 0)
       .setScrollFactor(0)
-      .setDepth(d + 3);
+      .setDepth(d + 4);
 
-    // BAG band: title → grid → pager → detail → help (strict bottom stack)
-    const bagTitleY = HUD_H + 230;
+    // BAG chrome — left-aligned with grid (not centered)
     this.invBagTitle = this.add
-      .text(GAME_W / 2, bagTitleY, 'BAG', {
+      .text(UIScene.INV_BAG_LEFT, UIScene.INV_BAG_TITLE_Y, 'BAG', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '10px',
         color: '#ffc857',
       })
-      .setOrigin(0.5, 0)
+      .setOrigin(0, 0)
       .setScrollFactor(0)
-      .setDepth(d + 1);
+      .setDepth(d + 2);
 
     this.invBagLayer = this.add
       .container(0, 0)
       .setScrollFactor(0)
-      .setDepth(d + 2);
+      .setDepth(d + 3);
 
-    // Detail sits above help; renderBagGrid keeps pager above detail
+    // Inspect card — right of bag, fills former dead zone
     this.invBagDetail = this.add
-      .text(40, GAME_H - 100, '', {
+      .text(UIScene.INV_DETAIL_X, UIScene.INV_DETAIL_Y, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '9px',
         color: '#c5cde0',
-        wordWrap: { width: GAME_W - 80 },
+        wordWrap: { width: UIScene.INV_DETAIL_W },
         lineSpacing: 8,
       })
       .setScrollFactor(0)
@@ -867,8 +928,8 @@ export class UIScene extends Phaser.Scene {
     this.invHelp = this.add
       .text(
         GAME_W / 2,
-        GAME_H - 28,
-        'Y BUDDY · T SORT · [ ] PAGE · WHEEL · EQUIP · U USE · I/ESC',
+        UIScene.INV_HELP_Y,
+        'Y YOU/BUD  ·  CLICK BAG = EQUIP/USE  ·  T SORT  ·  [ ] PAGE  ·  I CLOSE',
         {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '8px',
@@ -970,6 +1031,9 @@ export class UIScene extends Phaser.Scene {
     }
     this.setInvPieceVisible(this.invBg, open);
     this.setInvPieceVisible(this.invTitle, open);
+    this.setInvPieceVisible(this.invCharPlate, open);
+    this.setInvPieceVisible(this.invBagPlate, open);
+    this.setInvPieceVisible(this.invDetailPlate, open);
     this.setInvPieceVisible(this.invAvatarPlate, open);
     this.setInvPieceVisible(this.invAvatar, open);
     this.setInvPieceVisible(this.invYouLabel, open);
@@ -2296,6 +2360,7 @@ export class UIScene extends Phaser.Scene {
     if (budMode) {
       this.clearStatButtons();
       this.invStats?.setText(budGearSummary(s));
+      this.invAttrs?.setPosition(UIScene.INV_STATS_X, UIScene.INV_EQUIP_Y0 + 88);
       this.invAttrs?.setText(
         [
           `STRIKE ${computeBudStrikeDamage(s)}`,
@@ -2318,17 +2383,22 @@ export class UIScene extends Phaser.Scene {
         ? `TAP +1 (not ${s.pendingAttrMajor.toUpperCase()})`
         : s.attrPoints > 0
           ? 'TAP STAT: +2 then +1 other'
-          : 'no packages';
+          : 'NO PKG';
       const touch = isTouchUiPreferred();
+      // When spending, keep attrs compact so buttons fit above bag band
+      this.invAttrs?.setPosition(
+        UIScene.INV_STATS_X,
+        packages ? UIScene.INV_EQUIP_Y0 + 68 : UIScene.INV_EQUIP_Y0 + 88,
+      );
       this.invAttrs?.setText(
         packages
           ? [
               `PKG ${s.attrPoints}${s.pendingAttrMajor ? '*' : ''}`,
               pending,
-              touch ? 'BUTTONS BELOW' : 'OR KEYS 1–5',
+              touch ? 'TAP BELOW' : 'OR KEYS 1–5',
             ].join('\n')
           : [
-              `PKG ${s.attrPoints}`,
+              s.attrPoints > 0 ? `PKG ${s.attrPoints}` : 'PKG 0',
               `STR${s.attrs.str} DEX${s.attrs.dex} VIT${s.attrs.vit}`,
               `INT${s.attrs.int} LCK${s.attrs.lck}`,
             ].join('\n'),
@@ -2347,6 +2417,7 @@ export class UIScene extends Phaser.Scene {
 
   /**
    * Big tappable STR/DEX/VIT/INT/LCK (+ AUTO) when packages remain.
+   * Clamped into character strip (max y ≤ INV_STAT_BTN_MAX_Y) so bag band stays clean.
    * Mobile primary path — keys 1–5 still work on desktop.
    */
   private renderStatSpendButtons(s: SaveData): void {
@@ -2355,14 +2426,19 @@ export class UIScene extends Phaser.Scene {
     const packages = s.attrPoints > 0 || !!s.pendingAttrMajor;
     if (!packages) return;
 
-    const railX = 220 + 2 * 280 + 24; // match buildInventoryPanel rail
-    const startY = HUD_H + 36 + 150;
-    const btnW = Math.min(108, Math.floor((GAME_W - railX - 28) / 3) - 6);
-    const btnH = 40;
-    const gap = 8;
+    const railX = UIScene.INV_STATS_X;
+    // Compact 3+2 grid + AUTO — must stay above bag title (INV_STAT_BTN_MAX_Y)
+    const btnW = Math.min(96, Math.floor((GAME_W - railX - 28) / 3) - 6);
+    const btnH = 28;
+    const gap = 5;
+    const blockH = 12 + 2 * (btnH + gap) + btnH;
+    const startY = Math.min(
+      UIScene.INV_EQUIP_Y0 + 118,
+      UIScene.INV_STAT_BTN_MAX_Y - blockH,
+    );
 
     const title = this.add
-      .text(railX, startY - 18, 'SPEND STAT PKG', {
+      .text(railX, startY - 12, 'SPEND STAT PKG', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#ffc857',
@@ -2375,7 +2451,7 @@ export class UIScene extends Phaser.Scene {
       const col = i % 3;
       const row = Math.floor(i / 3);
       const x = railX + col * (btnW + gap) + btnW / 2;
-      const y = startY + 12 + row * (btnH + gap) + btnH / 2;
+      const y = startY + 8 + row * (btnH + gap) + btnH / 2;
       const blocked =
         !!s.pendingAttrMajor && s.pendingAttrMajor === attr;
       const val = s.attrs[attr];
@@ -2394,10 +2470,10 @@ export class UIScene extends Phaser.Scene {
       const label = this.add
         .text(x, y, `${ATTR_LABELS[attr]}\n${val}`, {
           fontFamily: '"Press Start 2P", monospace',
-          fontSize: '9px',
-          color: blocked ? '#6a738a' : '#7dffb3',
+          fontSize: '8px',
+          color: blocked ? '#8b93a7' : '#7dffb3',
           align: 'center',
-          lineSpacing: 4,
+          lineSpacing: 3,
         })
         .setOrigin(0.5)
         .setScrollFactor(0);
@@ -2414,7 +2490,7 @@ export class UIScene extends Phaser.Scene {
     });
 
     // AUTO fills remaining packages (same as Settings → auto, one-shot)
-    const autoY = startY + 12 + 2 * (btnH + gap) + btnH / 2;
+    const autoY = startY + 8 + 2 * (btnH + gap) + btnH / 2;
     const autoW = Math.min(btnW * 2 + gap, GAME_W - railX - 40);
     const autoBg = this.add
       .rectangle(railX + autoW / 2, autoY, autoW, btnH, 0x3a2810, 0.98)
@@ -2424,7 +2500,7 @@ export class UIScene extends Phaser.Scene {
     const autoLb = this.add
       .text(railX + autoW / 2, autoY, 'AUTO ALL', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '10px',
+        fontSize: '8px',
         color: '#ffc857',
       })
       .setOrigin(0.5)
@@ -2452,36 +2528,34 @@ export class UIScene extends Phaser.Scene {
         ? `BAG (${bag.length})  ·  ${sortTag}  ·  P${this.invBagPage + 1}/${pages}`
         : `BAG (0)  ·  ${sortTag}`,
     );
+    this.invBagTitle?.setPosition(UIScene.INV_BAG_LEFT, UIScene.INV_BAG_TITLE_Y);
 
-    // Vertical band: title → grid → pager → detail → help (no overlap)
-    const bagTitleY = HUD_H + 228;
-    const helpY = GAME_H - 28;
-    const detailY = GAME_H - 100;
-    const pagerReserve = 30;
-    const gridTop = bagTitleY + 20;
+    // Left-aligned bag + right inspect (council layout — no centered void)
+    const helpY = UIScene.INV_HELP_Y;
+    const detailX = UIScene.INV_DETAIL_X;
+    const detailY = UIScene.INV_DETAIL_Y;
     const cols = UIScene.BAG_COLS;
     const cell = UIScene.BAG_CELL;
     const gap = UIScene.BAG_GAP;
-    const gridH = UIScene.BAG_ROWS * cell + (UIScene.BAG_ROWS - 1) * gap;
-    // Keep pager above detail
-    const originY = Math.min(
-      gridTop + cell / 2,
-      detailY - pagerReserve - gridH + cell / 2,
-    );
+    const gridW = cols * cell + (cols - 1) * gap;
+    const originX = UIScene.INV_BAG_LEFT + cell / 2;
+    const originY = UIScene.INV_BAG_ORIGIN_Y + cell / 2;
 
     if (!bag.length) {
       const empty = this.add
-        .text(GAME_W / 2, originY + 40, '(empty — loot creeps & chests)', {
+        .text(originX + gridW / 2 - cell / 2, originY + 40, '(empty — loot creeps & chests)', {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '8px',
-          color: '#6a738a',
+          color: '#a8b0c4',
         })
         .setOrigin(0.5)
         .setScrollFactor(0);
       this.invBagLayer.add(empty);
       this.invBagPieces.push(empty);
-      this.invBagDetail?.setPosition(40, detailY);
+      this.invBagDetail?.setPosition(detailX, detailY);
+      this.invBagDetail?.setWordWrapWidth(UIScene.INV_DETAIL_W);
       this.invBagDetail?.setText('PICK UP GEAR TO FILL THE BAG GRID.');
+      this.invBagDetail?.setColor('#c5cde0');
       this.invHelp?.setPosition(GAME_W / 2, helpY);
       return;
     }
@@ -2497,16 +2571,15 @@ export class UIScene extends Phaser.Scene {
     const start = this.invBagPage * UIScene.BAG_PAGE_SIZE;
     const end = Math.min(bag.length, start + UIScene.BAG_PAGE_SIZE);
 
-    const gridW = cols * cell + (cols - 1) * gap;
-    const originX = GAME_W / 2 - gridW / 2 + cell / 2;
-
-    // Hit zone for wheel scroll over the bag grid
+    // Hit zone for wheel scroll — over bag grid only (left column)
+    const wheelCx = originX + ((cols - 1) * (cell + gap)) / 2;
+    const wheelCy = originY + ((UIScene.BAG_ROWS - 1) * (cell + gap)) / 2;
     const wheelZone = this.add
       .rectangle(
-        GAME_W / 2,
-        originY + ((UIScene.BAG_ROWS - 1) * (cell + gap)) / 2,
-        gridW + 80,
-        UIScene.BAG_ROWS * (cell + gap) + 24,
+        wheelCx,
+        wheelCy,
+        gridW + 24,
+        UIScene.BAG_ROWS * (cell + gap) + 16,
         0x000000,
         0.001,
       )
@@ -2626,44 +2699,59 @@ export class UIScene extends Phaser.Scene {
       }
     }
 
-    // Page + sort controls under the grid (always above detail band)
-    const pagerY = Math.min(
-      originY + UIScene.BAG_ROWS * (cell + gap) - cell / 2 + 18,
-      detailY - 18,
-    );
+    // Pager under left bag grid — large hit pads (≥44×36) for touch/a11y
+    const pagerY =
+      originY + UIScene.BAG_ROWS * (cell + gap) - cell / 2 + 22;
     const canPrev = this.invBagPage > 0;
     const canNext = this.invBagPage < pages - 1;
+    const padW = 88;
+    const padH = 36;
+    const pagerBaseX = UIScene.INV_BAG_LEFT + 4;
 
-    const prevBtn = this.add
-      .text(GAME_W / 2 - 160, pagerY, '◀ PREV', {
-        fontFamily: '"Press Start 2P", monospace',
-        fontSize: '8px',
-        color: canPrev ? '#7dffb3' : '#3a4050',
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0);
-    if (canPrev) {
-      prevBtn.setInteractive({ useHandCursor: true });
-      prevBtn.on('pointerdown', () => this.shiftBagPage(-1));
-    }
-    this.invBagLayer.add(prevBtn);
-    this.invBagPieces.push(prevBtn);
+    const makePagerHit = (
+      cx: number,
+      label: string,
+      color: string,
+      enabled: boolean,
+      onTap: () => void,
+    ): void => {
+      const hit = this.add
+        .rectangle(cx, pagerY, padW, padH, 0x1a2030, enabled ? 0.9 : 0.35)
+        .setStrokeStyle(1, enabled ? 0x5c4d7a : 0x2a3040)
+        .setScrollFactor(0);
+      if (enabled) {
+        hit.setInteractive({ useHandCursor: true });
+        hit.on('pointerdown', onTap);
+      }
+      const txt = this.add
+        .text(cx, pagerY, label, {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '8px',
+          color: enabled ? color : '#3a4050',
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0);
+      this.invBagLayer!.add([hit, txt]);
+      this.invBagPieces.push(hit, txt);
+    };
 
-    const sortBtn = this.add
-      .text(GAME_W / 2 - 20, pagerY, `SORT:${sortTag}`, {
-        fontFamily: '"Press Start 2P", monospace',
-        fontSize: '8px',
-        color: '#ffc857',
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setInteractive({ useHandCursor: true });
-    sortBtn.on('pointerdown', () => this.cycleBagSort());
-    this.invBagLayer.add(sortBtn);
-    this.invBagPieces.push(sortBtn);
-
+    makePagerHit(
+      pagerBaseX + padW / 2,
+      '◀ PREV',
+      '#7dffb3',
+      canPrev,
+      () => this.shiftBagPage(-1),
+    );
+    makePagerHit(
+      pagerBaseX + padW + 8 + padW / 2,
+      `SORT:${sortTag}`,
+      '#ffc857',
+      true,
+      () => this.cycleBagSort(),
+    );
+    const pageCx = pagerBaseX + 2 * (padW + 8) + 40;
     const pageLabel = this.add
-      .text(GAME_W / 2 + 70, pagerY, `${this.invBagPage + 1}/${pages}`, {
+      .text(pageCx, pagerY, `${this.invBagPage + 1}/${pages}`, {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#c5cde0',
@@ -2672,23 +2760,16 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0);
     this.invBagLayer.add(pageLabel);
     this.invBagPieces.push(pageLabel);
+    makePagerHit(
+      pageCx + 48 + padW / 2,
+      'NEXT ▶',
+      '#7dffb3',
+      canNext,
+      () => this.shiftBagPage(1),
+    );
 
-    const nextBtn = this.add
-      .text(GAME_W / 2 + 170, pagerY, 'NEXT ▶', {
-        fontFamily: '"Press Start 2P", monospace',
-        fontSize: '8px',
-        color: canNext ? '#7dffb3' : '#3a4050',
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0);
-    if (canNext) {
-      nextBtn.setInteractive({ useHandCursor: true });
-      nextBtn.on('pointerdown', () => this.shiftBagPage(1));
-    }
-    this.invBagLayer.add(nextBtn);
-    this.invBagPieces.push(nextBtn);
-
-    this.invBagDetail?.setPosition(40, detailY);
+    this.invBagDetail?.setPosition(detailX, detailY);
+    this.invBagDetail?.setWordWrapWidth(UIScene.INV_DETAIL_W);
     this.invHelp?.setPosition(GAME_W / 2, helpY);
 
     const sel = bag[this.invBagSelected];
