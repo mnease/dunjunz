@@ -3039,12 +3039,17 @@ import {
   equipTrainingWeapon,
   guildMasterDialog,
   guildMasterIntroDialog,
+  isRackEmpty,
+  isRackStocked,
   isTrainingWeaponTaken,
   isTutorialComplete,
+  listRackWeaponOptions,
   nextTutorialWeapon,
   rackTextureKey,
   recordDummyDamage,
   recordDummyHit,
+  returnWeaponToRack,
+  takeWeaponFromRack,
   tutorialWeaponFromEquip,
   weaponProgressPct,
 } from './tutorial';
@@ -3134,10 +3139,12 @@ describe('tutorial guild hall', () => {
 
   it('taking a training weapon marks rack empty and equips hip look', () => {
     let save = defaultSave();
+    expect(isRackEmpty(save, 'sword')).toBe(false);
     expect(isTrainingWeaponTaken(save, 'sword')).toBe(false);
     expect(rackTextureKey('sword', false)).toBe('rack_sword');
     expect(rackTextureKey('sword', true)).toBe('rack_empty');
     save = equipTrainingWeapon(save, 'sword');
+    expect(isRackEmpty(save, 'sword')).toBe(true);
     expect(isTrainingWeaponTaken(save, 'sword')).toBe(true);
     expect(save.hasSword).toBe(true);
     const uid = save.equipped.weapon;
@@ -3146,10 +3153,32 @@ describe('tutorial guild hall', () => {
     expect(inst?.templateId).toBe('mild_sword');
     // Axe take leaves sword in bag; axe becomes equipped hip weapon
     save = equipTrainingWeapon(save, 'axe');
-    expect(isTrainingWeaponTaken(save, 'axe')).toBe(true);
-    expect(isTrainingWeaponTaken(save, 'sword')).toBe(true);
+    expect(isRackEmpty(save, 'axe')).toBe(true);
+    expect(isRackEmpty(save, 'sword')).toBe(true);
     const axe = save.bag.find((b) => b.uid === save.equipped.weapon);
     expect(axe?.templateId).toBe('training_axe');
+  });
+
+  it('returns weapon to rack then browse lists family options', () => {
+    let save = equipTrainingWeapon(defaultSave(), 'sword');
+    expect(isRackEmpty(save, 'sword')).toBe(true);
+    expect(save.equipped.weapon).toBeTruthy();
+    const ret = returnWeaponToRack(save, 'sword');
+    expect(ret.ok).toBe(true);
+    expect(ret.unequipped).toBe(true);
+    save = ret.save;
+    expect(isRackStocked(save, 'sword')).toBe(true);
+    expect(save.equipped.weapon).toBeNull();
+    expect(save.hasSword).toBe(false);
+    // Second interact: rack inventory lists at least the training sword
+    const opts = listRackWeaponOptions(save, 'sword');
+    expect(opts.length).toBeGreaterThanOrEqual(1);
+    expect(opts[0]?.templateId).toBe('mild_sword');
+    const take = takeWeaponFromRack(save, 'sword', opts[0]!.uid);
+    expect(take.ok).toBe(true);
+    save = take.save;
+    expect(isRackEmpty(save, 'sword')).toBe(true);
+    expect(save.equipped.weapon).toBe(opts[0]!.uid);
   });
 
   it('intro welcomes to Dunjunz, then guild master, then drills', () => {

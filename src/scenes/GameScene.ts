@@ -225,22 +225,26 @@ import {
   completeTutorial,
   drillDamageRequired,
   dummyHitToast,
-  equipTrainingWeapon,
   eastDoorBlockedToast,
   GUILD_HALL_ID,
   GUILD_MASTER_ID,
   guildMasterDialog,
   guildMasterIntroDialog,
-  isTrainingWeaponTaken,
+  ensureTrainingWeaponInBag,
+  isRackEmpty,
   isTutorialComplete,
+  listRackWeaponOptions,
   markTutorialIntroSeen,
   needsTutorialIntro,
   nextTutorialWeapon,
   rackDialog,
+  rackInventoryDialog,
   rackTextureKey,
   rackWeaponFromId,
   recordDummyDamage,
+  returnWeaponToRack,
   stairsBlockedToast,
+  takeWeaponFromRack,
   tutorialWeaponFromEquip,
   weaponDamageDealt,
   type TutorialWeapon,
@@ -467,6 +471,15 @@ export class GameScene extends Phaser.Scene {
   private shopId: string | null = null;
   private shopSelected = 0;
   private shopBagSelected = 0;
+  /**
+   * Active weapon-rack browser (stocked stand → pick 1-9).
+   * Cleared on pick, Esc, room leave, or walking away.
+   */
+  private rackPicker: {
+    family: TutorialWeapon;
+    uids: string[];
+    rackId: string;
+  } | null = null;
   private shopPane: ShopPane = 'stock';
   private paused = false;
   /** Guards against double goToTitle / mid-update scene tears. */
@@ -1081,6 +1094,10 @@ export class GameScene extends Phaser.Scene {
     this.tryInteract();
   };
 
+  private clearRackPicker(): void {
+    this.rackPicker = null;
+  }
+
   private onBuyKey = (): void => {
     if (this.paused || this.dialogCloseCooldown > 0) return;
     if (this.shopOpen) {
@@ -1191,6 +1208,17 @@ export class GameScene extends Phaser.Scene {
   };
 
   private onDigitKey(n: number): void {
+    // Weapon rack inventory (stocked stand browse) — works mid-dialog
+    if (
+      this.rackPicker &&
+      !this.paused &&
+      !this.inventoryOpen &&
+      !this.shopOpen &&
+      !this.forjingOpen
+    ) {
+      this.confirmRackPick(n - 1);
+      return;
+    }
     if (this.forjingOpen && !this.dialogLocked && !this.paused) {
       // 1–9 pick action slot (1-based)
       const actions = listForjingActions();
@@ -1615,6 +1643,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private clearRoomObjects(): void {
+    this.clearRackPicker();
     for (const p of this.projectiles) p.img.destroy();
     this.projectiles = [];
     this.respawnGen.clear();
@@ -2773,10 +2802,7 @@ export class GameScene extends Phaser.Scene {
       def.kind === 'rack' ? rackWeaponFromId(def.id) : null;
     const rackTex =
       rackWeapon != null
-        ? rackTextureKey(
-            rackWeapon,
-            isTrainingWeaponTaken(this.save, rackWeapon),
-          )
+        ? rackTextureKey(rackWeapon, isRackEmpty(this.save, rackWeapon))
         : null;
     const tex =
       def.id === 'captain' && this.textures.exists('captain')
@@ -3921,45 +3947,111 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('toast', 'EMPTY RACK');
       return;
     }
-    const alreadyTaken = isTrainingWeaponTaken(this.save, w);
-    this.save = equipTrainingWeapon(this.save, w);
-    writeSave(this.save);
-    this.emitHud();
-    // Force hip weapon onto avatar (emitHud already refreshes; re-apply after equip)
-    this.refreshPlayerAppearance();
-    // Weapon leaves the rack — empty stand
-    this.syncWeaponRackSprites();
-    playSfx('success');
-    // Small pickup flash on the stand
-    if (actor.sprite?.active) {
-      actor.sprite.setTint(0xffffff);
-      this.time.delayedCall(120, () => {
-        if (actor.sprite?.active) actor.sprite.clearTint();
-      });
+
+    // E again while this rack's picker is open → take first listed weapon
+    if (this.rackPicker && this.rackPicker.rackId === actor.id) {
+      this.confirmRackPick(0);
+      return;
     }
-    this.game.events.emit(
-      'dialog-show',
-      rackDialog(w, { alreadyTaken }),
-    );
+
+    // Empty stand → return this family's weapon to the rack
+    if (isRackEmpty(this.save, w)) {
+      this.rackPicker = null;
+      const r = returnWeaponToRack(this.save, w);
+      if (!r.ok) {
+        this.game.events.emit('toast', r.reason ?? 'CANNOT RETURN');
+        return;
+      }
+      this.save = r.save;
+      writeSave(this.save);
+      this.emitHud();
+      this.refreshPlayerAppearance();
+      this.syncWeaponRackSprites();
+      this.flashRack(actor);
+      playSfx('success');
+      this.game.events.emit('dialog-show', rackDialog(w, { mode: 'return' }));
+      this.game.events.emit(
+        'toast',
+        r.unequipped
+          ? `${w.toUpperCase()} RETURNED — E TO BROWSE`
+          : `${w.toUpperCase()} RACK STOCKED — E TO BROWSE`,
+      );
+      return;
+    }
+
+    // Stocked stand → open this rack's inventory (1-9 to equip)
+    this.save = ensureTrainingWeaponInBag(this.save, w);
+    const opts = listRackWeaponOptions(this.save, w);
+    if (opts.length === 0) {
+      this.game.events.emit('toast', 'RACK IS BARE');
+      return;
+    }
+    writeSave(this.save);
+    this.rackPicker = {
+      family: w,
+      uids: opts.map((o) => o.uid),
+      rackId: actor.id,
+    };
+    this.game.events.emit('dialog-show', rackInventoryDialog(w, opts));
     this.game.events.emit(
       'toast',
-      alreadyTaken
-        ? `RE-EQUIPPED ${w.toUpperCase()}`
-        : `TOOK ${w.toUpperCase()} — ON YOUR HIP`,
+      opts.length === 1
+        ? 'PRESS 1 OR E TO TAKE'
+        : `PRESS 1-${Math.min(9, opts.length)} TO EQUIP`,
     );
   }
 
-  /** Empty stands for training weapons already in the bag. */
+  private flashRack(actor: Actor): void {
+    if (!actor.sprite?.active) return;
+    actor.sprite.setTint(0xffffff);
+    this.time.delayedCall(120, () => {
+      if (actor.sprite?.active) actor.sprite.clearTint();
+    });
+  }
+
+  /** Empty / stocked stands from save flags. */
   private syncWeaponRackSprites(): void {
     for (const a of this.actors) {
       if (!a.alive || a.kind !== 'rack') continue;
       const w = rackWeaponFromId(a.id);
       if (!w) continue;
-      const key = rackTextureKey(w, isTrainingWeaponTaken(this.save, w));
+      const key = rackTextureKey(w, isRackEmpty(this.save, w));
       if (this.textures.exists(key) && a.sprite.texture.key !== key) {
         a.sprite.setTexture(key);
       }
     }
+  }
+
+  private confirmRackPick(index: number): void {
+    if (!this.rackPicker) return;
+    const { family, uids, rackId } = this.rackPicker;
+    if (index < 0 || index >= uids.length) {
+      this.game.events.emit('toast', 'INVALID SLOT');
+      return;
+    }
+    const uid = uids[index]!;
+    const r = takeWeaponFromRack(this.save, family, uid);
+    if (!r.ok) {
+      this.game.events.emit('toast', r.reason ?? 'CANNOT EQUIP');
+      return;
+    }
+    this.save = r.save;
+    this.rackPicker = null;
+    writeSave(this.save);
+    this.emitHud();
+    this.refreshPlayerAppearance();
+    this.syncWeaponRackSprites();
+    playSfx('success');
+    const actor = this.actors.find((a) => a.id === rackId);
+    if (actor) this.flashRack(actor);
+    this.game.events.emit(
+      'dialog-show',
+      rackDialog(family, { mode: 'take', name: r.name }),
+    );
+    this.game.events.emit(
+      'toast',
+      `TOOK ${r.name ?? family.toUpperCase()} — E TO RETURN`,
+    );
   }
 
   /**
