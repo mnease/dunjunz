@@ -261,6 +261,7 @@ import {
 } from '../systems/crawler-id';
 import { BEACH_START_ID } from '../data/world';
 import { getCombatMode } from '../systems/combat-mode';
+import type { CombatMode } from '../types';
 import {
   enemySeedFromActor,
   type TbEnemySeed,
@@ -764,9 +765,14 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on('inventory-bag-activate', this.onBagActivate, this);
     this.game.events.on('pause-action', this.onPauseAction, this);
     this.game.events.on('turn-battle-ended', this.onTurnBattleEnded, this);
+    this.game.events.on('combat-mode-changed', this.onCombatModeChanged, this);
     this.game.events.on('spend-attr', this.onSpendAttrEvent, this);
     this.game.events.on('auto-stats-flush', this.onAutoStatsFlushEvent, this);
     window.addEventListener('dunjunz-auto-stats-enabled', this.onAutoStatsEnabled);
+    window.addEventListener(
+      'dunjunz-combat-mode',
+      this.onCombatModeWindow as EventListener,
+    );
     window.addEventListener('dunjunz-save-updated', this.onSaveUpdated);
     this.events.once('shutdown', () => {
       window.removeEventListener(
@@ -784,6 +790,11 @@ export class GameScene extends Phaser.Scene {
       this.game.events.off('inventory-bag-activate', this.onBagActivate, this);
       this.game.events.off('pause-action', this.onPauseAction, this);
       this.game.events.off('turn-battle-ended', this.onTurnBattleEnded, this);
+      this.game.events.off('combat-mode-changed', this.onCombatModeChanged, this);
+      window.removeEventListener(
+        'dunjunz-combat-mode',
+        this.onCombatModeWindow as EventListener,
+      );
       this.game.events.off('spend-attr', this.onSpendAttrEvent, this);
       this.game.events.off('auto-stats-flush', this.onAutoStatsFlushEvent, this);
       kb.off('keydown-SPACE', this.onAttackKey, this);
@@ -3305,7 +3316,7 @@ export class GameScene extends Phaser.Scene {
     // Peaceful cube / Rules Lawyer (not yet hit) — walk up and press E
     if (this.isUnprovokedPeaceful(from)) return;
     // Turn-based mode: contact starts a battle instead of real-time damage
-    if (getCombatMode(this.save) === 'turn' && isHostileKind(from.kind)) {
+    if (this.isTurnCombatMode() && isHostileKind(from.kind)) {
       this.startTurnBattle([from]);
       return;
     }
@@ -3411,19 +3422,57 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on('dialog-state', openAfter);
   }
 
+  /** Mirror UI writes localStorage; keep live crawl save in sync. */
+  private onCombatModeChanged = (mode: CombatMode): void => {
+    this.save = { ...this.save, combatMode: mode === 'turn' ? 'turn' : 'live' };
+    writeSave(this.save);
+  };
+
+  private onCombatModeWindow = (ev: Event): void => {
+    const mode = (ev as CustomEvent).detail?.mode as CombatMode | undefined;
+    if (mode === 'live' || mode === 'turn') {
+      this.onCombatModeChanged(mode);
+    } else {
+      // Fallback: re-read disk
+      const disk = loadSave();
+      this.save = {
+        ...this.save,
+        combatMode: getCombatMode(disk),
+      };
+    }
+  };
+
+  /** Effective mode: memory + disk (disk wins if newer toggle). */
+  private isTurnCombatMode(): boolean {
+    const mem = getCombatMode(this.save);
+    if (mem === 'turn') return true;
+    try {
+      return getCombatMode(loadSave()) === 'turn';
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * Enter classic turn-based battle (heroes left, enemies right).
    * Pulls nearby hostiles into the encounter when possible.
+   * Applies to all creeps/hostiles when combatMode is turn.
    */
   private startTurnBattle(seedActors: Actor[]): void {
-    if (this.leavingToTitle || this.dialogLocked || this.paused) return;
-    if (getCombatMode(this.save) !== 'turn') return;
+    if (this.leavingToTitle) return;
+    // Allow entry even mid-dialog-close; don't start while fully paused/panels
+    if (this.paused || this.panelOpen()) return;
+    if (!this.isTurnCombatMode()) return;
+
+    // Sync mode into live save so subsequent checks are consistent
+    this.save = { ...this.save, combatMode: 'turn' };
 
     const seeds: TbEnemySeed[] = [];
     const seen = new Set<string>();
     const add = (a: Actor) => {
       if (!a.alive || seen.has(a.id)) return;
-      if (!isHostileKind(a.kind) || a.kind === 'dummy') return;
+      // All combat creeps (not props / dummies / NPCs)
+      if (!isHostileKind(a.kind)) return;
       if (this.isUnprovokedPeaceful(a)) return;
       seen.add(a.id);
       seeds.push(
@@ -3447,7 +3496,7 @@ export class GameScene extends Phaser.Scene {
           a.sprite.x,
           a.sprite.y,
         );
-        if (d < TILE * SCALE * 4.5) add(a);
+        if (d < TILE * SCALE * 5.5) add(a);
       }
     }
     if (!seeds.length) return;
@@ -3456,6 +3505,7 @@ export class GameScene extends Phaser.Scene {
     if (this.player?.body) {
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     }
+    this.attacking = false;
     writeSave(this.save);
     playSfx('ui_open');
     this.game.events.emit('toast', 'BATTLE!');
@@ -3470,6 +3520,13 @@ export class GameScene extends Phaser.Scene {
     // Sleep crawl + UI so battle owns the canvas
     try {
       if (this.scene.isActive('UI')) this.scene.sleep('UI');
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (this.scene.isActive('TurnBattle')) {
+        this.scene.stop('TurnBattle');
+      }
     } catch {
       /* ignore */
     }
@@ -3600,7 +3657,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Turn-based mode: swinging at a creep opens a classic battle
-    if (getCombatMode(this.save) === 'turn' && isHostileKind(actor.kind)) {
+    if (this.isTurnCombatMode() && isHostileKind(actor.kind)) {
       this.startTurnBattle([actor]);
       return;
     }
@@ -5928,7 +5985,7 @@ export class GameScene extends Phaser.Scene {
       return true;
     }
 
-    if (getCombatMode(this.save) === 'turn' && isHostileKind(actor.kind)) {
+    if (this.isTurnCombatMode() && isHostileKind(actor.kind)) {
       this.startTurnBattle([actor]);
       return true;
     }

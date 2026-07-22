@@ -90,7 +90,7 @@ function openMirror(): void {
 
 function applySelection(): void {
   const checked = document.querySelector(
-    'input[name="combat-mode"]:checked',
+    '#mirror-mode-modal input[name="combat-mode"]:checked',
   ) as HTMLInputElement | null;
   const mode = (checked?.value ?? 'live') as CombatMode;
   if (mode !== 'live' && mode !== 'turn') return;
@@ -100,15 +100,14 @@ function applySelection(): void {
   writeSave(save);
   playSfx('success');
   setOpen(false);
+  // Notify GameScene (in-memory save) + any other listeners
   window.dispatchEvent(
     new CustomEvent('dunjunz-combat-mode', {
       detail: { mode, previous: prev },
     }),
   );
-  // Toast via game bus if present
-  const g = (window as unknown as { __DUNJUNZ_GAME__?: Phaser.Game }).__DUNJUNZ_GAME__;
-  g?.events.emit(
-    'toast',
-    `COMBAT MODE: ${combatModeLabel(mode)}`,
-  );
+  const g = (window as unknown as { __DUNJUNZ_GAME__?: Phaser.Game })
+    .__DUNJUNZ_GAME__;
+  g?.events.emit('combat-mode-changed', mode);
+  g?.events.emit('toast', `COMBAT MODE: ${combatModeLabel(mode)}`);
 }
