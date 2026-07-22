@@ -52,6 +52,11 @@ export class VillageScene extends Phaser.Scene {
 
     // Backdrop
     this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x1a1020);
+    // Soft vignette under UI (depth low so battle text stays readable)
+    this.add
+      .rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x02040a, 0.12)
+      .setDepth(1)
+      .setScrollFactor(0);
     // Sky strip
     this.add.rectangle(GAME_W / 2, 80, GAME_W, 160, 0x2a1840);
     // Ground

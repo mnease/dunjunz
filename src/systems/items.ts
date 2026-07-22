@@ -133,7 +133,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   torch: {
     id: 'torch',
     name: 'TORCH',
-    blurb: 'Stick on fire. ~90s of light in dark rooms. [U]',
+    blurb: 'Stick on fire. [U] carry ~90s. [T] hang forever.',
     kind: 'consumable',
     usable: true,
     stackable: true,
@@ -141,7 +141,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   lantern: {
     id: 'lantern',
     name: 'LANTERN',
-    blurb: 'Glass + oil. Lasts longer than a torch. [U]',
+    blurb: 'Glass + oil. Long carry light. [U] only.',
     kind: 'consumable',
     usable: true,
     stackable: true,
@@ -149,7 +149,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   flashlight: {
     id: 'flashlight',
     name: 'FLASHLIGHT',
-    blurb: 'Electric torch. Bright. Long burn. Forjed science. [U]',
+    blurb: 'Electric. Bright carry. Forjed science. [U]',
     kind: 'consumable',
     usable: true,
     stackable: true,

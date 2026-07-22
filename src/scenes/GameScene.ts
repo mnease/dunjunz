@@ -116,10 +116,32 @@ import {
   runForjingAction,
 } from '../systems/forjing';
 import {
+  activeLightTier,
+  addPlacedTorch,
+  ambientForRoom,
+  ambushAlpha,
+  ambushCanDealContact,
+  AMBUSH,
+  buildLightSources,
+  canPlaceTorch,
+  CELL_PX_DEFAULT,
+  gearLightSpecsFromSave,
+  getPlacedForRoom,
+  hasActiveCarriedLight,
+  inferOutwardFromWalls,
+  placeFailToast,
+  placedEmissionWorld,
   roomIsDark,
   roomNeedsCarriedLight,
+  sampleBrightness,
+  shouldBurnCarriedFuel,
+  stepAmbushState,
   tickLightFuel,
-  visionDarkAlpha,
+  tilesToPx,
+  visionOverlayAlpha,
+  type AmbushState,
+  type LightSource,
+  type PlacedTorch,
 } from '../systems/lighting';
 import { tickCombatBuffs } from '../systems/scrolls';
 import {
@@ -259,6 +281,10 @@ interface Actor {
   shootCooldown?: number;
   /** Soft-respawn generation (0 = first spawn). */
   respawnGen?: number;
+  /** Shadow-ambush AI (dark rooms). */
+  ambush?: AmbushState;
+  /** True if this creep uses shadow hide/reveal. */
+  shadowStalker?: boolean;
 }
 
 const SOLID: TileKind[] = ['wall', 'water', 'void', 'locked'];
@@ -378,8 +404,12 @@ export class GameScene extends Phaser.Scene {
   private forjingOpen = false;
   private forjingSelected = 0;
   private shopOpen = false;
-  /** Dark-room vision overlay (readable darkness, not free sight). */
-  private darkOverlay: Phaser.GameObjects.Rectangle | null = null;
+  /**
+   * Universal positional lighting: dark RT + soft light cookies (erase).
+   * Covers all lands / floors; HUD stays above (depth).
+   */
+  private lightRt: Phaser.GameObjects.RenderTexture | null = null;
+  private lightCookie: Phaser.GameObjects.Image | null = null;
   private wallTorchCount = 0;
 
   private shopId: string | null = null;
@@ -582,7 +612,18 @@ export class GameScene extends Phaser.Scene {
       if (this.shopOpen) this.game.events.emit('shop-page', 1);
     });
     kb.on('keydown-T', () => {
-      if (this.inventoryOpen) this.game.events.emit('inventory-bag-sort');
+      if (this.inventoryOpen) {
+        this.game.events.emit('inventory-bag-sort');
+        return;
+      }
+      if (
+        !this.paused &&
+        !this.dialogLocked &&
+        !this.panelOpen() &&
+        !this.leavingToTitle
+      ) {
+        this.tryPlaceTorch();
+      }
     });
     kb.on('keydown-COMMA', () => this.onMapzNav('land-prev'));
     kb.on('keydown-PERIOD', () => this.onMapzNav('land-next'));
@@ -1502,25 +1543,241 @@ export class GameScene extends Phaser.Scene {
     this.children.list
       .filter((c) => (c as Phaser.GameObjects.Image).getData?.('mapTile'))
       .forEach((c) => c.destroy());
-    // Keep dark overlay GO; alpha refreshed per room
+    // Keep light RT; redrawn every frame / room
   }
 
-  /** Readable darkness overlay — denser without carried light. */
-  private refreshDarkOverlay(): void {
-    if (!this.darkOverlay) {
-      this.darkOverlay = this.add
-        .rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x02040a, 0)
-        .setScrollFactor(0)
-        .setDepth(90)
-        .setVisible(true);
+  /** Build light sources for current room + player (world px). */
+  private collectLightSources(includeCarried = true): {
+    sources: LightSource[];
+    ambient: number;
+  } {
+    const ambient = this.room ? ambientForRoom(this.room) : 1;
+    if (!this.player || !this.room) {
+      return { sources: [], ambient };
     }
-    const dark = this.room ? roomIsDark(this.room) : false;
-    const alpha = visionDarkAlpha(this.save, {
-      darkRoom: dark,
-      wallTorchCount: this.wallTorchCount,
+    const cell = CELL_PX_DEFAULT;
+    const wallFixtures: {
+      id?: string;
+      x: number;
+      y: number;
+      outward?: { x: number; y: number };
+    }[] = [];
+    for (const a of this.actors) {
+      if (!a.alive || a.kind !== 'torch_wall') continue;
+      const { tx, ty } = this.worldToTile(a.sprite.x, a.sprite.y);
+      const outward = inferOutwardFromWalls(tx, ty, (x, y) =>
+        this.isSolidTile(x, y),
+      );
+      // Nudge emission slightly into the room so light sits on floor
+      wallFixtures.push({
+        id: a.id,
+        x: a.sprite.x + outward.x * cell * 0.35,
+        y: a.sprite.y + outward.y * cell * 0.35,
+        outward,
+      });
+    }
+    const placedRaw = getPlacedForRoom(this.save, this.room.id);
+    const placed = placedRaw.map((p) => {
+      const emit = placedEmissionWorld(
+        p.x,
+        p.y,
+        p.dir,
+        this.roomOriginX,
+        this.roomOriginY,
+        cell,
+      );
+      return { id: p.id, x: emit.x, y: emit.y, outward: emit.outward };
     });
-    this.darkOverlay.setFillStyle(0x02040a, alpha);
-    this.darkOverlay.setVisible(alpha > 0.02);
+    const gear = gearLightSpecsFromSave(this.save).map((g) => ({
+      id: g.id,
+      x: this.player.x,
+      y: this.player.y,
+      spec: g.spec,
+    }));
+    const tier = includeCarried ? activeLightTier(this.save) : 'none';
+    const fuel = includeCarried ? (this.save.lightFuelMs ?? 0) : 0;
+    const sources = buildLightSources({
+      darkRoom: roomIsDark(this.room),
+      ambient,
+      player: { x: this.player.x, y: this.player.y },
+      activeTier: tier,
+      fuelMs: fuel,
+      wallFixtures,
+      placed,
+      gear,
+      cell,
+    });
+    return { sources, ambient };
+  }
+
+  /**
+   * Universal soft-cookie lighting for every room (all lands / depths).
+   * Screen-space RT: dark fill at ambient α, erase radial cookies at lights.
+   * Hidden while inventory/shop/mapz/forje/dialog open so modal chrome stays readable.
+   */
+  private refreshLighting(): void {
+    if (!this.lightRt) {
+      this.lightRt = this.add
+        .renderTexture(0, 0, GAME_W, GAME_H)
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setDepth(90);
+    }
+    if (!this.lightCookie && this.textures.exists('light_cookie')) {
+      this.lightCookie = this.add
+        .image(0, 0, 'light_cookie')
+        .setVisible(false)
+        .setScrollFactor(0);
+    }
+
+    // UI modals / dialog: lift veil entirely (Comb/Waggle a11y)
+    if (this.panelOpen() || this.dialogLocked || this.paused) {
+      this.lightRt.clear();
+      this.lightRt.setVisible(false);
+      return;
+    }
+
+    const { sources, ambient } = this.collectLightSources(true);
+
+    // Base veil from ambient alone (surface soft, deep dark heavy)
+    const baseAlpha = visionOverlayAlpha(ambient);
+    this.lightRt.clear();
+    if (baseAlpha < 0.02 && sources.length === 0) {
+      this.lightRt.setVisible(false);
+      return;
+    }
+    this.lightRt.setVisible(true);
+    this.lightRt.fill(0x02040a, baseAlpha);
+
+    const cam = this.cameras.main;
+    const cookie = this.lightCookie;
+    if (!cookie) return;
+
+    for (const s of sources) {
+      if (!Number.isFinite(s.radiusPx) || s.radiusPx <= 0) {
+        // full ambient — clear veil
+        this.lightRt.clear();
+        this.lightRt.setVisible(false);
+        return;
+      }
+      const sx = s.x - cam.scrollX;
+      const sy = s.y - cam.scrollY;
+      // Scale cookie so diameter ≈ 2 * radius
+      const diam = s.radiusPx * 2;
+      const scale = diam / 256;
+      // Intensity: stronger erase near peak
+      cookie.setAlpha(Math.min(1, 0.55 + s.intensity * 0.5));
+      cookie.setScale(scale);
+      this.lightRt.erase(cookie, sx, sy);
+    }
+
+    // Soft hero rim so player never vanishes
+    if (this.player && cookie) {
+      const hx = this.player.x - cam.scrollX;
+      const hy = this.player.y - cam.scrollY;
+      cookie.setAlpha(0.35);
+      cookie.setScale((tilesToPx(1.2) * 2) / 256);
+      this.lightRt.erase(cookie, hx, hy);
+    }
+  }
+
+  /** @deprecated name kept for call sites — redirects to refreshLighting */
+  private refreshDarkOverlay(): void {
+    this.refreshLighting();
+  }
+
+  private facingDirIndex(): 0 | 1 | 2 | 3 {
+    if (this.facing === 'up') return 0;
+    if (this.facing === 'right') return 1;
+    if (this.facing === 'down') return 2;
+    return 3;
+  }
+
+  private tryPlaceTorch(): void {
+    if (!this.room || !this.player) return;
+    const dark = roomIsDark(this.room);
+    const { tx, ty } = this.worldToTile(this.player.x, this.player.y);
+    const existing = getPlacedForRoom(this.save, this.room.id);
+    // Also treat authored wall torches as occupied mounts
+    const occupied = [
+      ...existing.map((e) => ({ x: e.x, y: e.y })),
+      ...this.actors
+        .filter((a) => a.alive && a.kind === 'torch_wall')
+        .map((a) => {
+          const t = this.worldToTile(a.sprite.x, a.sprite.y);
+          return { x: t.tx, y: t.ty };
+        }),
+    ];
+    const result = canPlaceTorch({
+      darkRoom: dark,
+      tx,
+      ty,
+      facing: this.facingDirIndex(),
+      isWall: (x, y) => this.isSolidTile(x, y),
+      isInBounds: (x, y) =>
+        x >= 0 && y >= 0 && x < VIEW_TILES_W && y < VIEW_TILES_H,
+      existing: occupied,
+      torchStacks: this.save.stacks?.torch ?? 0,
+    });
+    if (!result.ok) {
+      this.game.events.emit('toast', placeFailToast(result.reason));
+      return;
+    }
+    const id = `pt-${this.room.id}-${existing.length}-${result.x}-${result.y}`;
+    const torch: PlacedTorch = {
+      id,
+      x: result.x,
+      y: result.y,
+      dir: result.dir,
+    };
+    const first = existing.length === 0 && !this.save.flags?.placed_torch_ever;
+    this.save = addPlacedTorch(this.save, this.room.id, torch);
+    if (first) {
+      this.save = {
+        ...this.save,
+        flags: { ...this.save.flags, placed_torch_ever: true },
+      };
+    }
+    this.spawnPlacedTorchSprite(torch);
+    this.game.events.emit(
+      'toast',
+      first ? 'WALL TORCH SET — STAYS LIT' : 'PLACE TORCH',
+    );
+    writeSave(this.save);
+    this.emitHud();
+    this.refreshLighting();
+  }
+
+  private spawnPlacedTorchSprite(p: PlacedTorch): void {
+    if (!this.room) return;
+    const cell = TILE * SCALE;
+    const wx = this.roomOriginX + (p.x + 0.5) * cell;
+    const wy = this.roomOriginY + (p.y + 0.5) * cell;
+    if (this.actors.some((a) => a.id === p.id)) return;
+    const sprite = this.physics.add.sprite(wx, wy, 'torch_wall');
+    sprite.setScale(SPRITE_SCALE);
+    sprite.setDepth(3);
+    sprite.setImmovable(true);
+    const body = sprite.body as Phaser.Physics.Arcade.Body;
+    body.enable = false;
+    this.actors.push({
+      sprite,
+      kind: 'torch_wall',
+      id: p.id,
+      hp: 1,
+      maxHp: 1,
+      hurtCooldown: 0,
+      aiTimer: 0,
+      alive: true,
+      interactive: false,
+    });
+  }
+
+  private spawnSavedPlacedTorches(): void {
+    if (!this.room) return;
+    for (const p of getPlacedForRoom(this.save, this.room.id)) {
+      this.spawnPlacedTorchSprite(p);
+    }
   }
 
   private musicForRoom(room: RoomDef): MusicId {
@@ -1704,10 +1961,27 @@ export class GameScene extends Phaser.Scene {
     this.ensureHardModeGates();
     this.maybePromoteCaptain();
     this.startRoomAmbience();
-    this.wallTorchCount = (room.entities ?? []).filter(
-      (e) => e.kind === 'torch_wall',
-    ).length;
-    this.refreshDarkOverlay();
+    this.spawnSavedPlacedTorches();
+    this.wallTorchCount =
+      (room.entities ?? []).filter((e) => e.kind === 'torch_wall').length +
+      getPlacedForRoom(this.save, room.id).length;
+    // Shadow stalkers in dark basements (fair hide / telegraph)
+    if (roomIsDark(room)) {
+      for (const a of this.actors) {
+        if (
+          a.alive &&
+          (a.kind === 'skeleton' ||
+            a.kind === 'scorpion' ||
+            a.kind === 'tarantula' ||
+            a.kind === 'slime')
+        ) {
+          a.shadowStalker = true;
+          a.ambush = { phase: 'hidden', phaseMs: 0 };
+          a.sprite.setAlpha(ambushAlpha('hidden'));
+        }
+      }
+    }
+    this.refreshLighting();
     if (isHardRunActive(this.save, room.land)) {
       this.time.delayedCall(120, () => {
         this.game.events.emit('toast', 'HARD MODE — CREEPS SHOOT · STAY ALERT');
@@ -1720,7 +1994,7 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(280, () => {
         this.game.events.emit(
           'toast',
-          'DARK — USE A TORCH (U / BAG) OR FORJE LIGHT',
+          'DARK — [U] CARRY TORCH · [T] PLACE ON WALL',
         );
       });
     }
@@ -2569,6 +2843,10 @@ export class GameScene extends Phaser.Scene {
     if (!from.alive || this.invuln > 0 || this.dialogLocked || this.paused) return;
     // Peaceful cube / Rules Lawyer (not yet hit) — walk up and press E
     if (this.isUnprovokedPeaceful(from)) return;
+    // Shadow stalkers cannot contact-damage while hidden/telegraphing
+    if (from.shadowStalker && from.ambush && !ambushCanDealContact(from.ambush)) {
+      return;
+    }
 
     // Pebbo (guard bud) can eat a hit — magical coil shield
     if (
@@ -2606,12 +2884,20 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Kind contact damage (threat-scaled at spawn); armor reduces (min 1)
-    const baseDmg =
+    let baseDmg =
       from.contactDamage ??
       resolveEnemyContactDamage(
         from.kind,
         threatForRoom(this.room, this.save),
       );
+    // First ambush strike is slightly softer (fairness)
+    if (
+      from.shadowStalker &&
+      from.ambush?.phase === 'revealed' &&
+      (from.ambush.phaseMs ?? 0) < 400
+    ) {
+      baseDmg = Math.max(1, Math.floor(baseDmg * AMBUSH.firstStrikeDamageMul));
+    }
     // Live armor (includes temporary scroll/tome DEF buffs)
     const dmg = Math.max(1, baseDmg - computeArmor(this.save));
     this.save.hp = Math.max(0, this.save.hp - dmg);
@@ -3799,12 +4085,51 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** Step shadow ambush phases + sprite alpha for dark-room stalkers. */
+  private updateShadowAmbush(delta: number): void {
+    if (!this.room || !roomIsDark(this.room) || !this.player) return;
+    const { sources, ambient } = this.collectLightSources(true);
+    for (const a of this.actors) {
+      if (!a.alive || !a.shadowStalker || !a.sprite?.active) continue;
+      const prev = a.ambush ?? { phase: 'hidden' as const, phaseMs: 0 };
+      const B = sampleBrightness(a.sprite.x, a.sprite.y, sources, ambient);
+      const dist = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        a.sprite.x,
+        a.sprite.y,
+      );
+      const next = stepAmbushState(prev, B, dist, delta);
+      if (prev.phase === 'hidden' && next.phase === 'telegraph') {
+        this.game.events.emit('toast', 'EYES IN THE DARK…');
+      }
+      a.ambush = next;
+      // Don't fight hurt-flash alpha hard; only set when not hurt
+      if (a.hurtCooldown <= 0) {
+        a.sprite.setAlpha(ambushAlpha(next.phase));
+      }
+      // Hidden: do not chase (AI zeroed)
+      if (next.phase === 'hidden') {
+        const body = a.sprite.body as Phaser.Physics.Arcade.Body | null;
+        if (body) body.setVelocity(0, 0);
+      }
+    }
+  }
+
   private updateEnemies(delta: number): void {
     for (const a of this.actors) {
       if (!a.alive) continue;
       a.hurtCooldown = Math.max(0, a.hurtCooldown - delta);
       a.aiTimer -= delta;
       a.shootCooldown = Math.max(0, (a.shootCooldown ?? 0) - delta);
+      // Shadow hidden: skip chase AI
+      if (
+        a.shadowStalker &&
+        a.ambush &&
+        a.ambush.phase === 'hidden'
+      ) {
+        continue;
+      }
 
       // Tumbleweeds just drift (not hostile)
       if (a.kind === 'tumbleweed') {
@@ -3986,10 +4311,23 @@ export class GameScene extends Phaser.Scene {
     if (this.leavingToTitle) return;
     if (!this.player?.body) return;
 
-    // Light fuel + combat buffs (dark rooms burn carried light)
+    // Light fuel + combat buffs + universal shadow veil
     if (!this.paused && !this.dialogLocked && !this.panelOpen()) {
-      const dark = roomNeedsCarriedLight(this.room, this.wallTorchCount);
-      const lit = tickLightFuel(this.save, delta, dark);
+      const dark = roomIsDark(this.room);
+      // Fuel pauses when standing in placed/wall/gear light
+      const nonCarried = this.collectLightSources(false);
+      const nonCarriedB = sampleBrightness(
+        this.player.x,
+        this.player.y,
+        nonCarried.sources,
+        nonCarried.ambient,
+      );
+      const burning = shouldBurnCarriedFuel({
+        darkRoom: dark,
+        hasCarried: hasActiveCarriedLight(this.save),
+        nonCarriedB,
+      });
+      const lit = tickLightFuel(this.save, delta, burning);
       this.save = lit.save;
       if (lit.expired) {
         this.game.events.emit('toast', 'YOUR LIGHT DIED — LIT ANOTHER');
@@ -4001,7 +4339,11 @@ export class GameScene extends Phaser.Scene {
         this.save = syncDerivedStats(this.save);
       }
       if (lit.expired || hadBuff) writeSave(this.save);
-      this.refreshDarkOverlay();
+      this.updateShadowAmbush(delta);
+      this.refreshLighting();
+    } else if (!this.leavingToTitle) {
+      // Still refresh veil when paused panels so lights don't freeze wrong
+      this.refreshLighting();
     }
 
     // ESC / MENU: close dialog → close panels → pause (never trap talk mode)

@@ -2891,15 +2891,27 @@ describe('mid dens P3 Assistant Honk + P4 deep wardens', () => {
 // ── Lighting + forge lights + scrolls (lit P0–P1) ──────────────────
 import {
   activeLightTier,
+  ambientForRoom,
+  AMBIENT_DARK,
+  AMBIENT_SURFACE,
+  ambushCanDealContact,
+  buildLightSources,
+  canPlaceTorch,
   hasActiveCarriedLight,
   igniteLight,
   LIGHT_BURN_MS,
   lightBurnMs,
   lightTierRank,
+  MAX_PLACED_TORCHES_PER_ROOM,
   roomIsDark,
   roomNeedsCarriedLight,
+  sampleBrightness,
+  shouldBurnCarriedFuel,
+  stepAmbushState,
+  smoothstepFalloff,
   tickLightFuel,
   visionDarkAlpha,
+  visionOverlayAlpha,
 } from './lighting';
 import {
   isMagicClass,
@@ -2969,6 +2981,141 @@ describe('lighting model', () => {
     expect(r.save.stacks.torch).toBe(1);
     expect(activeLightTier(r.save)).toBe('torch');
     expect(r.save.bossDefeated).toBe(false);
+  });
+});
+
+describe('universal positional lighting v2', () => {
+  it('ambient is high on surface, low in deep basements', () => {
+    expect(ambientForRoom({ floor: 0, land: 'woodz' })).toBeGreaterThanOrEqual(
+      AMBIENT_SURFACE - 0.01,
+    );
+    expect(ambientForRoom({ floor: -1, land: 'dunjunz' })).toBeGreaterThan(
+      AMBIENT_DARK,
+    );
+    expect(ambientForRoom({ floor: -3, land: 'dunjunz' })).toBe(AMBIENT_DARK);
+    expect(ambientForRoom({ floor: 0, dark: true })).toBe(AMBIENT_DARK);
+  });
+
+  it('smoothstep falloff is 1 at center and 0 at rim', () => {
+    expect(smoothstepFalloff(1)).toBeCloseTo(1, 5);
+    expect(smoothstepFalloff(0)).toBeCloseTo(0, 5);
+    expect(smoothstepFalloff(0.5)).toBeCloseTo(0.5, 5);
+  });
+
+  it('sampleBrightness adds soft cookies above ambient', () => {
+    const ambient = 0.12;
+    const sources = buildLightSources({
+      darkRoom: true,
+      ambient,
+      player: { x: 100, y: 100 },
+      activeTier: 'torch',
+      fuelMs: 90_000,
+      wallFixtures: [],
+      placed: [],
+      gear: [],
+    });
+    const atFeet = sampleBrightness(100, 100, sources, ambient);
+    const far = sampleBrightness(900, 900, sources, ambient);
+    expect(atFeet).toBeGreaterThan(0.7);
+    expect(far).toBeLessThanOrEqual(ambient + 0.05);
+    expect(visionOverlayAlpha(atFeet)).toBeLessThan(visionOverlayAlpha(far));
+  });
+
+  it('wall fixtures do not full-bright the far corner', () => {
+    const ambient = 0.58;
+    const sources = buildLightSources({
+      darkRoom: false,
+      ambient,
+      player: { x: 400, y: 300 },
+      activeTier: 'none',
+      fuelMs: 0,
+      wallFixtures: [
+        { id: 'w1', x: 80, y: 80, outward: { x: 1, y: 0 } },
+      ],
+      placed: [],
+      gear: [],
+    });
+    const near = sampleBrightness(100, 80, sources, ambient);
+    const far = sampleBrightness(700, 400, sources, ambient);
+    expect(near).toBeGreaterThan(far);
+    expect(far).toBeLessThan(0.95);
+  });
+
+  it('fuel pauses when non-carried brightness is high', () => {
+    expect(
+      shouldBurnCarriedFuel({
+        darkRoom: true,
+        hasCarried: true,
+        nonCarriedB: 0.7,
+      }),
+    ).toBe(false);
+    expect(
+      shouldBurnCarriedFuel({
+        darkRoom: true,
+        hasCarried: true,
+        nonCarriedB: 0.2,
+      }),
+    ).toBe(true);
+    expect(
+      shouldBurnCarriedFuel({
+        darkRoom: false,
+        hasCarried: true,
+        nonCarriedB: 0.1,
+      }),
+    ).toBe(false);
+  });
+
+  it('canPlaceTorch requires dark room, stack, wall adjacency, max 2', () => {
+    const walls = new Set(['5,3']);
+    const base = {
+      darkRoom: true,
+      tx: 5,
+      ty: 4,
+      facing: 0 as const,
+      isWall: (x: number, y: number) => walls.has(`${x},${y}`),
+      isInBounds: (x: number, y: number) => x >= 0 && y >= 0 && x < 20 && y < 20,
+      existing: [] as { x: number; y: number }[],
+      torchStacks: 2,
+    };
+    const ok = canPlaceTorch(base);
+    expect(ok.ok).toBe(true);
+    if (ok.ok) {
+      expect(ok.x).toBe(5);
+      expect(ok.y).toBe(3);
+    }
+    expect(canPlaceTorch({ ...base, torchStacks: 0 }).ok).toBe(false);
+    expect(canPlaceTorch({ ...base, darkRoom: false }).ok).toBe(false);
+    expect(
+      canPlaceTorch({
+        ...base,
+        existing: Array.from({ length: MAX_PLACED_TORCHES_PER_ROOM }, (_, i) => ({
+          x: i,
+          y: 0,
+        })),
+      }).ok,
+    ).toBe(false);
+  });
+
+  it('ambush telegraph blocks contact; reveal allows it', () => {
+    let s = { phase: 'hidden' as const, phaseMs: 0 };
+    s = stepAmbushState(s, 0.1, 500, 16);
+    expect(s.phase).toBe('hidden');
+    expect(ambushCanDealContact(s)).toBe(false);
+    // close enough to ambush radius (~96px at cell 48)
+    s = stepAmbushState(s, 0.1, 50, 16);
+    expect(s.phase).toBe('telegraph');
+    expect(ambushCanDealContact(s)).toBe(false);
+    s = stepAmbushState(s, 0.1, 50, 600);
+    expect(s.phase).toBe('revealed');
+    expect(ambushCanDealContact(s)).toBe(true);
+  });
+
+  it('tinkerer stocks torch pack', async () => {
+    const { SHOPS } = await import('./shop');
+    const pack = SHOPS.tinkerer.stock.find((s) => s.id === 'buy_torch_pack');
+    expect(pack).toBeTruthy();
+    expect(pack?.stackCount).toBe(3);
+    expect(pack?.price).toBe(12);
   });
 });
 

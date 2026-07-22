@@ -655,7 +655,9 @@ function makeBasementFloor(opts: {
     sign(`${prefix}-foyer-sign`, 12, 8, [
       `${flabel}: ${flavor}.`,
       `${titleTag} — DEEPER STILL AWAITS.`,
-      dark ? 'DARK. CARRY A TORCH. U = UP. N = HALL.' : 'U = STAIRS UP. N = HALL.',
+      dark
+        ? 'DARK. CARRY A TORCH. U = UP. N = HALL.'
+        : 'U = STAIRS UP. N = HALL.',
     ]),
     ...(dark
       ? []
@@ -668,7 +670,13 @@ function makeBasementFloor(opts: {
 
   const hallEnts: EntityDef[] = [
     ...(dark
-      ? []
+      ? [
+          sign(`${prefix}-hall-light-sign`, 3, 2, [
+            'HALL OF SHADOWS.',
+            'T = PLACE TORCH ON WALL.',
+            'PLACED LIGHT STAYS. CARRIED LIGHT BURNS.',
+          ]),
+        ]
       : [
           wallTorch(`${prefix}-hall-torch-a`, 2, 3),
           wallTorch(`${prefix}-hall-torch-b`, 13, 3),
@@ -693,7 +701,9 @@ function makeBasementFloor(opts: {
     sign(`${prefix}-side-sign`, 3, 8, [
       `SIDE · ${sideRole.toUpperCase()} · ${flabel}.`,
       depth >= 5 ? 'DARKER. MEANER. OPTIONAL.' : 'OPTIONAL. WEST = HALL.',
-      dark ? 'NO WALL LIGHTS. CARRY YOUR OWN TORCH.' : 'WEST BACK TO THE HALL.',
+      dark
+        ? 'NO WALL LIGHTS. [U] CARRY · [T] PLACE ON WALL.'
+        : 'WEST BACK TO THE HALL.',
     ]),
   ];
   if (sideRole === 'quiet') {

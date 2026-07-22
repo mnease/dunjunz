@@ -59,6 +59,7 @@ export function defaultSave(): SaveData {
     pendingAttrMajor: null,
     activeLight: null,
     lightFuelMs: 0,
+    placedTorches: {},
     buffAtk: 0,
     buffDef: 0,
     buffMs: 0,
@@ -108,10 +109,38 @@ function withV5Fields(s: SaveData): SaveData {
     pendingAttrMajor: s.pendingAttrMajor ?? null,
     activeLight: s.activeLight ?? null,
     lightFuelMs: typeof s.lightFuelMs === 'number' ? Math.max(0, s.lightFuelMs) : 0,
+    placedTorches: normalizePlacedTorches(s.placedTorches),
     buffAtk: typeof s.buffAtk === 'number' ? s.buffAtk : 0,
     buffDef: typeof s.buffDef === 'number' ? s.buffDef : 0,
     buffMs: typeof s.buffMs === 'number' ? Math.max(0, s.buffMs) : 0,
   };
+}
+
+function normalizePlacedTorches(
+  raw: SaveData['placedTorches'],
+): NonNullable<SaveData['placedTorches']> {
+  if (!raw || typeof raw !== 'object') return {};
+  const out: NonNullable<SaveData['placedTorches']> = {};
+  for (const [roomId, list] of Object.entries(raw)) {
+    if (!Array.isArray(list)) continue;
+    out[roomId] = list
+      .filter(
+        (t) =>
+          t &&
+          typeof t.x === 'number' &&
+          typeof t.y === 'number' &&
+          typeof t.id === 'string',
+      )
+      .map((t) => ({
+        id: t.id,
+        x: Math.floor(t.x),
+        y: Math.floor(t.y),
+        dir: ([0, 1, 2, 3] as const).includes(t.dir as 0 | 1 | 2 | 3)
+          ? (t.dir as 0 | 1 | 2 | 3)
+          : 2,
+      }));
+  }
+  return out;
 }
 
 /**

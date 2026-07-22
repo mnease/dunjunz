@@ -82,11 +82,17 @@ export class TitleScene extends Phaser.Scene {
     this.add
       .rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x0d1220)
       .setDepth(0);
+    // Soft CRT vignette under chrome (depth 1; text sits above)
+    this.add
+      .rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x02040a, 0.16)
+      .setDepth(1)
+      .setScrollFactor(0);
 
     this.add
       .rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24)
       .setStrokeStyle(3, COLORS.green, 0.9)
-      .setFillStyle(0x000000, 0);
+      .setFillStyle(0x000000, 0)
+      .setDepth(2);
 
     // Vertical rhythm for 16:9 — keep blocks spaced so nothing collides
     const yTitle = Math.floor(GAME_H * 0.11);

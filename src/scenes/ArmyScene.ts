@@ -55,6 +55,11 @@ export class ArmyScene extends Phaser.Scene {
     void unlockAudio().then(() => playMusic('dungeon'));
     setLastMode('army');
     this.cameras.main.setBackgroundColor(0x120a18);
+    // Soft vignette under UI text (depth low so labels stay readable)
+    this.add
+      .rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x02040a, 0.14)
+      .setDepth(1)
+      .setScrollFactor(0);
     this.army = loadArmySave();
     this.levelMode = this.army.preferAutoLevel ? 'auto' : 'manual';
     this.panel = 'barracks';

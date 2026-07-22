@@ -254,6 +254,14 @@ export interface SaveData {
   activeLight?: 'torch' | 'lantern' | 'flashlight' | null;
   /** Remaining fuel ms for activeLight. */
   lightFuelMs?: number;
+  /**
+   * Player-placed permanent wall torches (per room id).
+   * Dark rooms only; max 2 per room. Does not burn fuel.
+   */
+  placedTorches?: Record<
+    string,
+    Array<{ id: string; x: number; y: number; dir: 0 | 1 | 2 | 3 }>
+  >;
   /** Temporary ATK buff from scrolls/tomes. */
   buffAtk?: number;
   /** Temporary DEF buff from scrolls/tomes. */

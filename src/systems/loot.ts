@@ -353,13 +353,20 @@ const TABLES: Record<string, ChestTableFn> = {
         templateId: trinket,
       });
     }
-    // Light + magic drops (dark dungeons need fuel)
-    if (rng() < 0.4) {
+    // Light + magic drops (dark dungeons need fuel + place stock)
+    if (rng() < 0.48) {
       drops.push({
         kind: 'treasure',
         label: 'TORCH x2',
         stackId: 'torch',
         stackCount: 2,
+      });
+    } else if (rng() < 0.12) {
+      drops.push({
+        kind: 'treasure',
+        label: 'TORCH',
+        stackId: 'torch',
+        stackCount: 1,
       });
     }
     if (rng() < 0.22) {

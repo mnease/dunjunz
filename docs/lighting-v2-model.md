@@ -3,7 +3,8 @@
 **Status:** design lock (Hexis) · extends `src/systems/lighting.ts` (keep burn/fuel/`roomIsDark`)  
 **Scope:** pure functions, save schema, thresholds, units. Phaser = API shapes only.  
 **Hard/Army:** frozen — no mode-specific lighting work.  
-**Absorbs:** Waggle red-team (no pure-black FoW, no free gear sun, ambush telegraph) · Comb UX (place vs carry, α floor, teach beats).
+**Absorbs:** Waggle red-team (no pure-black FoW, no free gear sun, ambush telegraph) · Comb UX (place vs carry, α floor, teach beats).  
+**v2.1 amendment (2026-07-22):** shadows **everywhere** — ambient ladder + positional cookies on all crawl rooms; survival gates still dark-only.
 
 ---
 
@@ -38,15 +39,60 @@ export const pxToTiles = (px: number, cell = CELL_PX_DEFAULT) => px / cell;
 sampleBrightness(px: number, py: number, sources: LightSource[], ambient = AMBIENT_DARK): number
 ```
 
-### 1.2 Ambient floors (room-level)
+### 1.2 Ambient floors — **full-game ladder** (v2.1)
 
-| Room class | ambient | Notes |
-| --- | --- | --- |
-| `!roomIsDark` | **1.0** (`AMBIENT_LIT`) | surface / B1 / `dark:false` — fast path, skip sources |
-| dark + authored `wall_ambient` | **1.0** | legacy full-lit (should not appear if world invariant holds) |
-| dark cookies mode | **0.12** (`AMBIENT_DARK`) | **never pure black** — floor silhouettes always readable |
+Shadows apply on **every crawl room**. Ambient is no longer binary 1.0 / 0.12.
 
-`AMBIENT_DARK = 0.12` is deliberate (Waggle combat-clarity): hard FoW that zeros the room is **rejected**. Cookies add light **above** this floor.
+```ts
+/** Room ambient in [0,1]. Cookies add above this floor. Never pure black. */
+export function ambientForRoom(room: {
+  floor?: number;
+  dark?: boolean;
+  land?: string;
+  /** shops, castle halls, inns — not open field */
+  indoor?: boolean;
+  /** boss / mid-boss arena flag */
+  boss?: boolean;
+}): number {
+  // Survival dark wins (explicit or B2+)
+  if (room.dark === true) return AMBIENT_DARK; // 0.12
+  if (room.dark !== false && (room.floor ?? 0) <= -2) return AMBIENT_DARK;
+
+  if (room.boss) return AMBIENT_BOSS; // 0.36
+
+  const f = room.floor ?? 0;
+  // B1 dunjunz / sewerz (and any floor -1 that is not forced dark)
+  if (f === -1) return AMBIENT_B1; // 0.50
+
+  // Surface (floor >= 0)
+  if (room.indoor) return AMBIENT_INDOOR; // 0.62
+  return AMBIENT_OUTDOOR; // 0.78
+}
+```
+
+| Class | `ambient` | Detect | Feel |
+| --- | ---: | --- | --- |
+| Surface outdoor (woodz / dezertz / kingdomz / surface field) | **0.78** | `floor>=0`, `!indoor`, `!boss`, not dark | Soft day vignette; cookies = depth only |
+| Indoor surface (shops, castle interiors, inns) | **0.62** | `indoor:true` (or room tag) | Cozy gloom; wall torches read as architecture |
+| B1 dunjunz / sewerz (was “lit”) | **0.50** | `floor===-1` & not `dark` | Architectural basement; gradient without fuel tax |
+| Boss room (any floor) | **0.36** | `boss:true` | Dramatic pool; combat still fair |
+| B2+ / `dark:true` | **0.12** | `roomIsDark` | Survival crawl (unchanged threat band) |
+| Title playfield only | soft vignette α **~0.18–0.24** | TitleScene art layer | Atmosphere; **not** fuel/ambush model |
+| Pause / inventory / shop / forje / journal modals | **no veil** | UI chrome | Full readability — shadows never dim panels |
+
+```ts
+export const AMBIENT_DARK = 0.12;
+export const AMBIENT_BOSS = 0.36;
+export const AMBIENT_B1 = 0.50;
+export const AMBIENT_INDOOR = 0.62;
+export const AMBIENT_OUTDOOR = 0.78;
+/** @deprecated binary lit — do not use for crawl rooms */
+export const AMBIENT_LIT = 1.0;
+```
+
+**Law:** floor silhouettes always readable. Outdoor 0.78 means combat clarity without a torch. Cookies never required for fairness outside survival dark.
+
+`roomIsDark` **unchanged** (B2+ / `dark:true` / `dark:false` override) — it gates **survival systems**, not whether shadows draw.
 
 ### 1.3 Falloff formula — **smoothstep on linear t**
 
@@ -75,9 +121,9 @@ Additive, hard cap 1. No soft-max.
 | Pure linear | Thin mid-band → ambush flicker at rim |
 | Multiplicative darken | Breaks “two torches meet” readability |
 
-### 1.4 Wall half-disc lobe (`wall_placed` only)
+### 1.4 Wall half-disc lobe (`wall_placed` + authored `torch_wall`)
 
-Placed / wall fixtures face into the room:
+Placed **and authored** wall fixtures face into the room (v2.1: no full-room ambient short-circuit):
 
 ```ts
 /** outward = unit normal from wall into walkable space (N/E/S/W). */
@@ -92,17 +138,17 @@ function wallLobe(px, py, sx, sy, outward: {x:number;y:number}): number {
 ```
 
 `carried` / `gear_emit`: `lobe ≡ 1` (isotropic).  
-`wall_ambient`: no falloff (B=1).
+`wall_ambient`: **deprecated** — do not emit for world rooms.
 
 ### 1.5 Radii & peaks (tiles) — locked
 
 | Source | `kind` | `R_tiles` | `I` | Role |
-| --- | --- | --- | --- | --- |
+| --- | --- | ---: | ---: | --- |
 | carried torch | `carried` | **4.0** | **0.85** | ~half of 16-wide room |
 | carried lantern | `carried` | **5.5** | **0.90** | mid reach |
 | carried flashlight | `carried` | **7.0** | **0.95** | long corridor |
-| wall placed torch | `wall_placed` | **5.0** | **0.88** | half-disc; strong local, not full-room |
-| wall ambient legacy | `wall_ambient` | **∞** | **1.0** | full room only |
+| wall placed / authored torch | `wall_placed` | **5.0** | **0.88** | half-disc; strong local, not full-room |
+| wall ambient legacy | `wall_ambient` | **∞** | **1.0** | **deprecated** — migrate off |
 | gear flame weapon | `gear_emit` | **2.5** | **0.40** | weak — never replaces torch |
 | gear light amulet | `gear_emit` | **3.0** | **0.45** | passive fill |
 | gear minor enchant | `gear_emit` | **2.0** | **0.30** | cosmetic-ish |
@@ -136,38 +182,24 @@ export function alphaFromBrightness(B: number): number {
   // α(0)=0.88, α(1)=0; ease so mid-B stays playable
   return ALPHA_NONE * (1 - t) * (1 - t) * (1 + 0.12 * t);
 }
-```
 
-| At player | approx B | target α |
-| --- | --- | --- |
-| no light | 0.12 | ~0.70 (above pure void; better than bare 0.88× only if ambient folds in) |
-
-**Correct path:** pass `ambient=AMBIENT_DARK` into sample, then α from full B:
-
-| Condition | B | α target |
-| --- | --- | --- |
-| dark, no sources | 0.12 | **≈0.70** readable gloom |
-| torch at feet | ≈0.85+0.12→1.0 cap | **≈0.05–0.15** |
-| lantern at feet | ~1 | ~0 |
-| flashlight at feet | ~1 | ~0 |
-| wall_ambient / lit | 1 | **0** |
-
-For **legacy discrete feel** during migration, optional clamp:
-
-```ts
-// P1 only: never darker than shipped "none" when dark
-alpha = max(alphaFromBrightness(B), /* no — we want ambient lift */)
-// Actually: bare dark uses B=ambient → α≈0.70, which is *brighter* than 0.88.
-// Ship decision: bare dark α floor = 0.78 via:
 export function visionOverlayAlpha(B: number): number {
   return clamp(alphaFromBrightness(B), 0, 0.88);
 }
-// With ambient 0.12: alphaFromBrightness(0.12) ≈ 0.88 * 0.88² * … ≈ 0.69
 ```
 
-Keep `LIGHT_DARK_ALPHA` as **test anchors** only after P1; runtime is continuous.
+| Condition | ambient | B at feet (no sources) | α target (approx) |
+| --- | ---: | ---: | ---: |
+| outdoor | 0.78 | 0.78 | **~0.05** soft vignette |
+| indoor surface | 0.62 | 0.62 | **~0.14** |
+| B1 | 0.50 | 0.50 | **~0.23** |
+| boss | 0.36 | 0.36 | **~0.38** |
+| dark, no sources | 0.12 | 0.12 | **~0.70** readable gloom |
+| torch at feet (dark) | 0.12 | ~1.0 cap | **~0–0.15** |
 
-**P1 visual policy (not pure math but constrains it):** soft vignette / cookies **on top of** ambient floor — never hard cut to black. `reduceMotion`: freeze flame; static gradient OK.
+**P1 visual policy:** soft vignette / cookies **on top of** ambient floor — never hard cut to black. `reduceMotion`: freeze flame; static gradient OK.
+
+**UI chrome policy:** inventory / shop / forje / pause / journal **never** sample this overlay. Title: optional soft vignette on playfield art only (not HUD buttons).
 
 ---
 
@@ -177,7 +209,7 @@ Keep `LIGHT_DARK_ALPHA` as **test anchors** only after P1; runtime is continuous
 export type LightSourceKind =
   | 'carried'
   | 'wall_placed'
-  | 'wall_ambient'
+  | 'wall_ambient' // deprecated
   | 'gear_emit';
 
 export type LightSource = {
@@ -185,7 +217,7 @@ export type LightSource = {
   x: number; // world px
   y: number;
   intensity: number; // peak I
-  radiusPx: number;  // Infinity only for wall_ambient
+  radiusPx: number;  // Infinity only for wall_ambient (legacy)
   id?: string;
   /** Unit normal into room; required for wall_placed half-disc. */
   outward?: { x: number; y: number };
@@ -218,15 +250,23 @@ export const LIGHT_PEAK = {
 } as const;
 ```
 
-### 2.2 `buildLightSources` (pure)
+### 2.2 `buildLightSources` (pure) — v2.1
 
 ```ts
 export type BuildLightsInput = {
-  darkRoom: boolean;
+  /** ambientForRoom result — sources always allowed; fuel still dark-gated elsewhere */
+  ambient: number;
+  darkRoom: boolean; // roomIsDark — survival only
   player: { x: number; y: number };
   activeTier: 'torch' | 'lantern' | 'flashlight' | 'none';
   fuelMs: number;
-  ambientWallTorchCount: number; // authored torch_wall only
+  /** Authored torch_wall mounts (half-disc, same as placed) */
+  authoredWalls: {
+    id: string;
+    x: number;
+    y: number;
+    outward: { x: number; y: number };
+  }[];
   placed: {
     id: string;
     x: number;
@@ -245,25 +285,25 @@ export type BuildLightsInput = {
 export function buildLightSources(input: BuildLightsInput): LightSource[]
 ```
 
-Rules:
+Rules (v2.1 — **breaking vs v2.0**):
 
-1. `!darkRoom` → `[]` (caller ambient=1).
-2. `ambientWallTorchCount > 0` → one `wall_ambient` (B short-circuit 1).
-3. Else push carried (if tier+fuel), all placed, all gear.
+1. **Always** push authored walls as `wall_placed` half-discs (never `wall_ambient` B=1).
+2. Always push player `placed` wall_placed.
+3. Push carried **only if** `darkRoom && tier+fuel` (survival carry — surface/B1 do not need carried light).
+4. Push gear on every crawl room (weak fill / depth).
+5. No empty short-circuit when `!darkRoom` — lit rooms still get wall cookies.
 
 ### 2.3 Fuel burn (refined)
 
 ```ts
 /** True when carried fuel should tick down this frame. */
 export function shouldBurnCarriedFuel(opts: {
-  darkRoom: boolean;
-  ambientWallTorchCount: number;
+  darkRoom: boolean; // roomIsDark ONLY — not ambient ladder
   hasCarried: boolean;
   /** sampleBrightness(player) using ONLY wall_placed + gear (no carried). */
   nonCarriedB: number;
 }): boolean {
   if (!opts.darkRoom || !opts.hasCarried) return false;
-  if (opts.ambientWallTorchCount > 0) return false;
   // Pause burn when room investment already lights the hero well
   if (opts.nonCarriedB >= FUEL_PAUSE_B) return false;
   return true;
@@ -272,19 +312,27 @@ export function shouldBurnCarriedFuel(opts: {
 export const FUEL_PAUSE_B = 0.55;
 ```
 
-Stops torch babysitting when standing in a placed sconce pool (Comb), without making placed lights “full room solved.”
+| Burns? | When |
+| --- | --- |
+| **YES** | `roomIsDark` + carried active + `nonCarriedB < 0.55` |
+| **NO** | surface / B1 / indoor / outdoor (even with cookies) |
+| **NO** | standing in sconce/gear pool with `nonCarriedB ≥ 0.55` |
+| **NO** | no carried light |
+
+Authored wall torches **no longer** zero fuel via ambient short-circuit (they contribute to `nonCarriedB` as cookies; dark rooms still have **zero** authored walls by world invariant).
 
 ### 2.4 Scene API shapes only
 
 ```ts
-// sources = buildLightSources(...)
+// ambient = ambientForRoom(room)
+// sources = buildLightSources({ ambient, darkRoom: roomIsDark(room), ... })
 // Bp = sampleBrightness(player.x, player.y, sources, ambient)
-// overlay.setAlpha(visionOverlayAlpha(Bp))
+// overlay.setAlpha(visionOverlayAlpha(Bp))  // crawl only — never modals
 // Be = sampleBrightness(enemy.x, enemy.y, sources, ambient)
-// ambush = stepAmbushState(prev, Be, dist(player, enemy))
+// ambush only if roomIsDark: stepAmbushState(prev, Be, dist)
 ```
 
-Budget: ≤1 carried + ≤**2** placed + ≤3 gear ≈ 6 sources. Samples: 1 player + ≤20 enemies — trivial.
+Budget: ≤1 carried + ≤**N authored** + ≤**2** placed + ≤3 gear. Samples: 1 player + ≤20 enemies — trivial.
 
 ---
 
@@ -307,7 +355,7 @@ placedTorches?: Record<
 
 Normalize missing → `{}` on load (with `activeLight`).
 
-**Entity kind for sprites:** `torch_placed` (or reuse draw of `torch_wall` with different id prefix). **Never** count `torch_placed` toward `ambientWallTorchCount` / `wall_ambient`. Authored `torch_wall` stays ambient-only in lit rooms.
+**Entity kind for sprites:** `torch_placed` (or reuse draw of `torch_wall` with different id prefix). Authored `torch_wall` → runtime `wall_placed` sources (same math as player place). **Never** count player placed toward authored list.
 
 ### 3.2 Caps (anti-trivialize)
 
@@ -317,15 +365,13 @@ Normalize missing → `{}` on load (with `activeLight`).
 | global | none | 2/room is the pressure valve |
 | pickup | **no** (P0–P4) | permanent investment |
 
-Permanent is kept (user goal) but **tight cap + local half-disc** means you light a choke, not a floor.
-
 ### 3.3 Placement predicates
 
 ```ts
 export const MAX_PLACED_TORCHES_PER_ROOM = 2;
 
 export type PlaceTorchContext = {
-  darkRoom: boolean;
+  darkRoom: boolean; // roomIsDark — survival dark only
   tx: number;
   ty: number;
   facing: 0 | 1 | 2 | 3;
@@ -350,12 +396,12 @@ export function canPlaceTorch(ctx: PlaceTorchContext):
 
 **Rules:**
 
-1. **Dark room only** (`roomIsDark`). Lit rooms reject.
+1. **`roomIsDark` only** — surface / B1 / indoor reject (`not_dark_room`). Depth cookies there come from authored walls, not player sconces.
 2. Player stands on **floor**; target is **orthogonal wall** — prefer `facing`, else any N/E/S/W wall neighbor.
 3. Mount recorded as **wall tile** `(tx,ty)` with `dir` = outward (from wall toward player / into room).
 4. No second mount on same wall cell; no exceed max 2.
 5. Consume **1** `stacks.torch` (not fuel). Does not ignite carried light.
-6. Emission world pos = center of **first floor tile along outward** (or wall center + 0.5*CELL along outward) so light sits in the room, not inside solid.
+6. Emission world pos = wall center + 0.55*CELL along outward.
 
 ```ts
 export function placedEmissionWorld(
@@ -367,7 +413,6 @@ export function placedEmissionWorld(
   cell = 48,
 ): { x: number; y: number; outward: { x: number; y: number } } {
   const outward = DIR_OUT[dir]; // {0,-1},{1,0},{0,1},{-1,0}
-  // light center: wall tile center + 0.55 cell into room
   const cx = originX + (tileX + 0.5) * cell + outward.x * 0.55 * cell;
   const cy = originY + (tileY + 0.5) * cell + outward.y * 0.55 * cell;
   return { x: cx, y: cy, outward };
@@ -376,14 +421,26 @@ export function placedEmissionWorld(
 
 ### 3.4 World invariant (extended)
 
-| Room | authored `torch_wall` | `placedTorches` | mode |
-| --- | --- | --- | --- |
-| lit / surface / B1 | allowed | ignored | full ambient |
-| dark B2+ | **must be 0** | 0–2 player | cookies + ambient 0.12 |
+| Room | authored `torch_wall` | `placedTorches` | ambient | mode |
+| --- | --- | --- | ---: | --- |
+| outdoor surface | optional props | ignored | 0.78 | cookies + high floor |
+| indoor surface | common | ignored | 0.62 | cookies + medium floor |
+| B1 / lit basements | common | ignored | 0.50 | cookies + mid floor |
+| boss any floor | sparse OK | ignored unless dark | 0.36 | dramatic cookies |
+| dark B2+ | **must be 0** | 0–2 player | 0.12 | survival cookies |
 
 ---
 
 ## 4. Ambush (shadow creeps)
+
+### 4.0 Spawn gate (decisive)
+
+| Spawns? | When |
+| --- | --- |
+| **YES** | `roomIsDark(room)` only (B2+ / `dark:true`) |
+| **NO** | outdoor, indoor surface, B1, boss-unless-dark, UI |
+
+Ambush uses brightness thresholds against **dark ambient 0.12 + cookies**. Do **not** re-tune hide/reveal for high ambient rooms — those rooms never spawn ambush.
 
 ### 4.1 Thresholds
 
@@ -401,8 +458,6 @@ export const AMBUSH = {
   firstStrikeDamageMul: 0.7,
 } as const;
 ```
-
-**Hide is not pure gotcha death:** math allows `visual: hidden` but combat layer must honor `telegraphMs` before damage (Comb fairness). Pure function tracks phase:
 
 ### 4.2 State machine
 
@@ -438,7 +493,6 @@ export function stepAmbushState(
     if (phaseMs >= AMBUSH.telegraphMs) {
       return { phase: 'revealed', phaseMs: 0 };
     }
-    // brightness crash doesn't cancel telegraph (fair commit)
     return { phase: 'telegraph', phaseMs };
   }
 
@@ -467,7 +521,7 @@ export function ambushCanDealContact(s: AmbushState): boolean {
 
 **Spawn:** dark rooms only; Hard/Army = flag off until unfrozen. Prefer **one** ambush elite per dens, not full packs (Waggle).
 
-**Shared sample:** `brightness = sampleBrightness(enemy.x, enemy.y, sources, AMBIENT_DARK)`.
+**Shared sample:** `brightness = sampleBrightness(enemy.x, enemy.y, sources, ambientForRoom(room))`.
 
 ---
 
@@ -482,7 +536,7 @@ Starter 3 torch · chest 40% ×2 · forje 5c torch×2 / 25c lantern / 80c flashl
 **Tinkerer:**
 
 | SKU | minLvl | price | qty | Notes |
-| --- | --- | --- | --- | --- |
+| --- | --- | ---: | ---: | --- |
 | TORCH PACK | 1 | **12** | ×3 | 4c/ea survival (Comb) |
 | LANTERN | 5 | **50** | ×1 | convenience vs forje |
 | FLASHLIGHT | 10 | **100** | ×1 | late convenience |
@@ -502,11 +556,11 @@ No single torch@12 flood — pack only at L1. Sell = half.
 
 | | Cost | Benefit |
 | --- | --- | --- |
-| Ignite | 1 stack → 90s mobile R=4 | explore |
-| Place | 1 stack permanent, max 2/room | lane light + fuel pause in pool |
+| Ignite | 1 stack → 90s mobile R=4 | explore dark |
+| Place | 1 stack permanent, max 2/room, **dark only** | lane light + fuel pause in pool |
 | Gear | slot | weak fill; afterglow on swing (P4) |
 
-**Fuel job after ship:** still required for unscoped rooms, long runs past 2 sconces, and any room you haven't invested in. Gear alone never finishes the job.
+**Fuel job after ship:** still required for unscoped dark rooms, long runs past 2 sconces, and any dark room you haven't invested in. Gear alone never finishes the job. Surface/B1 never tax fuel.
 
 ---
 
@@ -516,74 +570,77 @@ No single torch@12 flood — pack only at L1. Sell = half.
 
 Extend `lighting.ts` + tests only.
 
-**Functions:** `smoothstep01`, `sampleBrightness`, `wallLobe`, `alphaFromBrightness` / `visionOverlayAlpha`, `buildLightSources`, `shouldBurnCarriedFuel`, `canPlaceTorch`, `placedEmissionWorld`, `stepAmbushState`, `ambushCanDealContact`, constants tables.
+**Functions:** `smoothstep01`, `sampleBrightness`, `wallLobe`, `ambientForRoom`, `alphaFromBrightness` / `visionOverlayAlpha`, `buildLightSources`, `shouldBurnCarriedFuel`, `canPlaceTorch`, `placedEmissionWorld`, `stepAmbushState`, `ambushCanDealContact`, constants tables.
 
 **Keep:** `roomIsDark`, `LIGHT_BURN_MS`, `igniteLight`, `tickLightFuel`, `visionDarkAlpha` (wrapper → continuous).
 
 **Test cases:**
 
 1. `roomIsDark` regression (B2+, overrides).
-2. Falloff: d=0 → I; d=R → 0; d=R/2 → I * 0.5 (smoothstep(0.5)=0.5).
-3. Additive two sources same point → min(1, ambient+2I).
-4. Empty sources + ambient 0.12 → 0.12; ambient 1 → 1.
-5. `wall_ambient` → B=1 any point.
-6. Radii order flashlight > lantern > torch > gear_amulet; peaks ordered.
-7. `visionOverlayAlpha(1)=0`; monotonic decrease; bare ambient maps &lt; 0.88.
-8. Wall lobe: forward cos≥0 → 1; behind → 0.15.
-9. Ambush: B in (0.22, 0.36) preserves phase; B&gt;0.36 → telegraph; dist&lt;2 tiles → telegraph; telegraph → revealed after 550ms; no contact in hidden/telegraph; rehide only after minRevealedMs + far + B&lt;0.22.
-10. `canPlaceTorch`: wall adj ok; center fail; max 2; no stack; lit room fail.
-11. `shouldBurnCarriedFuel`: false when nonCarriedB≥0.55; false when ambient walls; true when dark+carried+dark corner.
-12. `buildLightSources`: dark+torch → 1 carried; +2 placed → 2 wall_placed; ambient count&gt;0 → wall_ambient only short-circuit path.
-13. Fuel tick integration: burning flag false ⇒ fuel unchanged (existing).
+2. `ambientForRoom`: outdoor 0.78, indoor 0.62, B1 0.50, boss 0.36, dark 0.12; `dark:false` on B2 → not 0.12 unless boss/indoor rules apply.
+3. Falloff: d=0 → I; d=R → 0; d=R/2 → I * 0.5 (smoothstep(0.5)=0.5).
+4. Additive two sources same point → min(1, ambient+2I).
+5. Empty sources + ambient 0.12 → 0.12; ambient 0.78 → 0.78.
+6. Authored wall → `wall_placed` contrib, **not** B=1 short-circuit.
+7. Radii order flashlight > lantern > torch > gear_amulet; peaks ordered.
+8. `visionOverlayAlpha(1)=0`; monotonic decrease; bare ambient maps &lt; 0.88.
+9. Wall lobe: forward cos≥0 → 1; behind → 0.15.
+10. Ambush: B in (0.22, 0.36) preserves phase; B&gt;0.36 → telegraph; dist&lt;2 tiles → telegraph; telegraph → revealed after 550ms; no contact in hidden/telegraph; rehide only after minRevealedMs + far + B&lt;0.22.
+11. `canPlaceTorch`: wall adj ok; center fail; max 2; no stack; lit/surface/B1 fail.
+12. `shouldBurnCarriedFuel`: false when !darkRoom; false when nonCarriedB≥0.55; true when dark+carried+dark corner.
+13. `buildLightSources`: dark+torch → carried; authored walls always wall_placed; !darkRoom still returns wall cookies (not `[]`).
 14. Dying fuel: at 4% remaining, I_eff ∈ [0.55I, I).
 
-### P1 — Carried gradient / player-sampled overlay
+### P1 — Carried gradient / player-sampled overlay **all crawl rooms**
 
-Scene: build sources; `visionOverlayAlpha(sample player)`; keep fuel burn via `shouldBurnCarriedFuel`. Soft vignette preferred over hard mask.
+Scene: `ambientForRoom` + sources every room; `visionOverlayAlpha(sample player)`. Soft vignette preferred. Fuel via `shouldBurnCarriedFuel` (dark only).
 
 ### P2 — Place torch
 
-`T` crawl / long-press USE (Comb). Save `placedTorches`. Kind `torch_placed`. Max 2. Teach on B2 hall sign (not foyer).
+`T` crawl / long-press USE (Comb). Save `placedTorches`. Kind `torch_placed`. Max 2. Dark only. Teach on B2 hall sign.
 
 ### P3 — Ambush elite
 
-One species, dark-only, `stepAmbushState`; telegraph VFX; Hard/Army off. Journal optional.
+One species, **dark-only**, `stepAmbushState`; telegraph VFX; Hard/Army off.
 
 ### P4 — Gear emit + economy
 
-Template tags → gear sources; swing afterglow; tinkerer pack + loot bumps; changelog.
+Template tags → gear sources (all crawl rooms); swing afterglow; tinkerer pack + loot bumps; changelog.
 
 ---
 
-## 7. Breaking change: wall_ambient
+## 7. Breaking change: wall_ambient → always cookies
 
-### Decision: **authored rooms stay fully lit**
+### Decision: **positional half-disc everywhere; ambient ladder for fairness**
 
 | Case | Behavior |
 | --- | --- |
-| `!roomIsDark` | B=1 |
-| authored `torch_wall` count &gt; 0 | treat as `wall_ambient` → B=1 (invariant says dark rooms have 0) |
-| dark + player `torch_placed` only | cookies, ambient 0.12 |
+| every crawl room | `ambient = ambientForRoom(room)` + wall/carried/gear cookies |
+| authored `torch_wall` | **`wall_placed` half-disc** (R=5, I=0.88) — **not** B=1 |
+| dark + player `torch_placed` | cookies, ambient 0.12 |
 | dark + carried/gear | cookies |
+| UI modals | no lighting veil |
 
-**Not converting** foyers to multi-cookie in P0–P4 (no world rewrite; modes frozen).
+**Why:** user wants “another level of depth” on surface and B1. High ambient keeps combat fair; cookies supply gradient.
 
 **Semantic split:**
 
 | kind | Meaning |
 | --- | --- |
-| `torch_wall` entity | authored ambient architecture |
-| `torch_placed` / save `placedTorches` | player permanent cookie |
-| never mix counts | ambientWallTorchCount = authored only |
-
-`visionDarkAlpha` wrapper:
+| `torch_wall` entity | authored architecture → runtime `wall_placed` source |
+| `torch_placed` / save `placedTorches` | player permanent cookie (dark only) |
+| `wall_ambient` kind | **deprecated** — tests may keep one legacy path |
 
 ```ts
-export function visionDarkAlpha(save, opts: { darkRoom: boolean; wallTorchCount?: number; playerB?: number }): number {
-  if (!opts.darkRoom) return 0;
-  if ((opts.wallTorchCount ?? 0) > 0) return 0;
+export function visionDarkAlpha(save, opts: {
+  darkRoom: boolean;
+  playerB?: number;
+}): number {
   if (opts.playerB !== undefined) return visionOverlayAlpha(opts.playerB);
-  // legacy discrete fallback
+  if (!opts.darkRoom) {
+    // legacy callers without continuous sample: no flat blackout on lit
+    return 0;
+  }
   return LIGHT_DARK_ALPHA[activeLightTier(save)];
 }
 ```
@@ -595,7 +652,11 @@ export function visionDarkAlpha(save, opts: { darkRoom: boolean; wallTorchCount?
 ```ts
 export const CELL_PX_DEFAULT = 48;
 export const AMBIENT_DARK = 0.12;
-export const AMBIENT_LIT = 1.0;
+export const AMBIENT_BOSS = 0.36;
+export const AMBIENT_B1 = 0.50;
+export const AMBIENT_INDOOR = 0.62;
+export const AMBIENT_OUTDOOR = 0.78;
+export const AMBIENT_LIT = 1.0; // deprecated for crawl
 export const ALPHA_NONE = 0.88;
 export const FUEL_PAUSE_B = 0.55;
 export const MAX_PLACED_TORCHES_PER_ROOM = 2;
@@ -650,16 +711,22 @@ export const ECONOMY_LIGHT = {
 R=4 tiles, d=6 → enemy contrib 0 → B_e=0.12 &lt; hide → can start hidden.  
 Player B_p≈1 → bright overlay.
 
-**B — one wall torch west, player far east**  
+**B — one wall torch west, player far east (dark)**  
 Near wall: B high, fuel pause if ≥0.55.  
 Far side: B≈0.12 → ambush viable. Room not “solved.”
 
-**C — hysteresis**  
+**C — B1 hall with two authored wall torches**  
+ambient 0.50 + half-discs → near sconces ~1.0, mid-room ~0.55–0.70. No fuel burn. No ambush. Depth without tax.
+
+**D — woodz outdoor**  
+ambient 0.78, optional prop cookies → soft vignette only. Combat full-fair.
+
+**E — gear only (dark)**  
+Amulet I=0.45 R=3 → at feet B≈0.12+0.45=0.57 — dim crawl, still wants torch for radius.
+
+**F — hysteresis**  
 B oscillates 0.25–0.33 at rim: phase sticky.  
 Walk within 2 tiles: telegraph 550ms → revealed; min 2s visible.
-
-**D — gear only**  
-Amulet I=0.45 R=3 → at feet B≈0.12+0.45=0.57 — dim crawl, still wants torch for radius.
 
 ---
 
@@ -669,10 +736,12 @@ Amulet I=0.45 R=3 → at feet B≈0.12+0.45=0.57 — dim crawl, still wants torc
 | --- | --- |
 | Permanent place uninstalls fuel | Max **2**/room, half-disc local, fuel only pauses in pool (B≥0.55), not whole floor |
 | Full-invis one-shot | `telegraphMs` + no contact until `revealed`; firstStrike 0.7 |
-| Hard FoW / nausea | Ambient 0.12 floor; soft smoothstep; no pure black |
+| Hard FoW / nausea | Ambient ladder ≥0.12; soft smoothstep; no pure black |
 | Gear sun | Peaks ≤0.45; afterglow temporary |
 | Torch flood | Pack×3@12; chest 0.48 not 0.55+; no L1 single-spam SKU |
-| `torch_wall` invariant poison | Separate `torch_placed` / save field |
+| Surface too dark for combat | Outdoor 0.78 / indoor 0.62 / B1 0.50 floors |
+| Lit rooms flat / no depth | Authored walls = cookies, not B=1 |
+| UI unreadable | **No** shadow veil on modals |
 
 ---
 
@@ -683,6 +752,20 @@ Amulet I=0.45 R=3 → at feet B≈0.12+0.45=0.57 — dim crawl, still wants torc
 - Hard/Army ambush  
 - Picking up sconces  
 - Multiplayer  
+- Player place-torch on surface/B1 (revisit only if art pass demands)  
+
+---
+
+## 12. Survival vs atmosphere (cheat sheet)
+
+| System | Gate |
+| --- | --- |
+| Draw cookies / vignette | **always** on crawl rooms (`ambientForRoom` + sources) |
+| Fuel burn | `roomIsDark` ∧ carried ∧ `nonCarriedB < 0.55` |
+| Place torch | `roomIsDark` ∧ wall adj ∧ cap ∧ stacks |
+| Ambush spawn / step | `roomIsDark` only |
+| Carried light sources | `roomIsDark` ∧ fuel (optional: allow ignite anywhere but only burn dark — ship: burn gate is enough) |
+| UI modals | never |
 
 ---
 
