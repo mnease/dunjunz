@@ -41,11 +41,16 @@ import {
 } from '../systems/mapz';
 import {
   canAfford,
+  clampShopPage,
   getShop,
   listPlayerSellables,
   SHOP_BAG_COLS,
+  SHOP_BAG_PAGE_SIZE,
   SHOP_STOCK_COLS,
+  SHOP_STOCK_PAGE_SIZE,
   shopIconTexture,
+  shopPageCount,
+  shopPageOf,
   type ShopOpenPayload,
   type ShopPane,
 } from '../systems/shop';
@@ -171,6 +176,8 @@ export class UIScene extends Phaser.Scene {
   private shopSelected = 0;
   private shopBagSelected = 0;
   private shopPane: ShopPane = 'stock';
+  private shopStockPage = 0;
+  private shopBagPage = 0;
 
   constructor() {
     super({ key: 'UI', active: false });
@@ -570,7 +577,7 @@ export class UIScene extends Phaser.Scene {
       .text(
         GAME_W / 2,
         GAME_H - 26,
-        'ARROWS  ·  TAB PANE  ·  ENTER/B BUY OR SELL  ·  ESC/E CLOSE',
+        'ARROWS  ·  TAB PANE  ·  [ ] PAGE  ·  ENTER/B TRADE  ·  ESC/E CLOSE',
         {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '8px',
@@ -856,6 +863,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.off('shop-toggle', this.onShopToggle, this);
     this.game.events.off('shop-select', this.onShopSelect, this);
     this.game.events.off('shop-refresh', this.onShopRefresh, this);
+    this.game.events.off('shop-page', this.onShopPage, this);
 
     this.game.events.on('hud-update', this.refreshHud, this);
     this.game.events.on('dialog-show', this.showDialog, this);
@@ -875,6 +883,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('shop-toggle', this.onShopToggle, this);
     this.game.events.on('shop-select', this.onShopSelect, this);
     this.game.events.on('shop-refresh', this.onShopRefresh, this);
+    this.game.events.on('shop-page', this.onShopPage, this);
 
     if (!this.bound) {
       this.bound = true;
@@ -901,6 +910,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('shop-toggle', this.onShopToggle, this);
       this.game.events.off('shop-select', this.onShopSelect, this);
       this.game.events.off('shop-refresh', this.onShopRefresh, this);
+      this.game.events.off('shop-page', this.onShopPage, this);
       this.input.keyboard?.off('keydown-ENTER', this.onEnterKey, this);
       this.input.keyboard?.off('keydown-SPACE', this.onSpaceKey, this);
       this.bound = false;
@@ -1357,6 +1367,7 @@ export class UIScene extends Phaser.Scene {
       if (payload.bagSelectedIndex != null) {
         this.shopBagSelected = payload.bagSelectedIndex;
       }
+      this.syncShopPagesFromSelection();
       this.renderShopGrid();
       return;
     }
@@ -1371,7 +1382,74 @@ export class UIScene extends Phaser.Scene {
     this.shopSelected = payload.selectedIndex ?? 0;
     this.shopBagSelected = payload.bagSelectedIndex ?? 0;
     this.shopPane = payload.pane ?? 'stock';
+    this.shopStockPage = 0;
+    this.shopBagPage = 0;
+    this.syncShopPagesFromSelection();
     this.openShopGraphic();
+  };
+
+  /** Keep visible pages aligned with focused indices. */
+  private syncShopPagesFromSelection(): void {
+    if (!this.shopPayload) return;
+    const shop = getShop(this.shopPayload.shopId);
+    const stockLen = shop?.stock.length ?? 0;
+    const bagLen = listPlayerSellables(
+      this.shopPayload.save,
+      this.shopPayload.shopId,
+    ).length;
+    this.shopStockPage = clampShopPage(
+      shopPageOf(this.shopSelected, SHOP_STOCK_PAGE_SIZE),
+      stockLen,
+      SHOP_STOCK_PAGE_SIZE,
+    );
+    this.shopBagPage = clampShopPage(
+      shopPageOf(this.shopBagSelected, SHOP_BAG_PAGE_SIZE),
+      bagLen,
+      SHOP_BAG_PAGE_SIZE,
+    );
+  }
+
+  private onShopPage = (dir: number): void => {
+    if (!this.shopOpen || !this.shopPayload) return;
+    const shop = getShop(this.shopPayload.shopId);
+    if (!shop) return;
+    if (this.shopPane === 'stock') {
+      const count = shop.stock.length;
+      const pages = shopPageCount(count, SHOP_STOCK_PAGE_SIZE);
+      const next = Phaser.Math.Clamp(this.shopStockPage + dir, 0, pages - 1);
+      if (next === this.shopStockPage) return;
+      this.shopStockPage = next;
+      const rel = this.shopSelected % SHOP_STOCK_PAGE_SIZE;
+      this.shopSelected = Math.min(
+        count - 1,
+        this.shopStockPage * SHOP_STOCK_PAGE_SIZE + rel,
+      );
+      this.game.events.emit('shop-cursor', {
+        pane: 'stock',
+        index: this.shopSelected,
+      });
+    } else {
+      const bag = listPlayerSellables(
+        this.shopPayload.save,
+        this.shopPayload.shopId,
+      );
+      const count = bag.length;
+      if (!count) return;
+      const pages = shopPageCount(count, SHOP_BAG_PAGE_SIZE);
+      const next = Phaser.Math.Clamp(this.shopBagPage + dir, 0, pages - 1);
+      if (next === this.shopBagPage) return;
+      this.shopBagPage = next;
+      const rel = this.shopBagSelected % SHOP_BAG_PAGE_SIZE;
+      this.shopBagSelected = Math.min(
+        count - 1,
+        this.shopBagPage * SHOP_BAG_PAGE_SIZE + rel,
+      );
+      this.game.events.emit('shop-cursor', {
+        pane: 'bag',
+        index: this.shopBagSelected,
+      });
+    }
+    this.renderShopGrid();
   };
 
   private onShopSelect = (
@@ -1398,6 +1476,7 @@ export class UIScene extends Phaser.Scene {
         this.shopBagSelected = Math.max(0, Math.min(index, bag.length - 1));
       }
     }
+    this.syncShopPagesFromSelection();
     this.renderShopGrid();
   };
 
@@ -1409,6 +1488,7 @@ export class UIScene extends Phaser.Scene {
     if (this.shopBagSelected >= bag.length) {
       this.shopBagSelected = Math.max(0, bag.length - 1);
     }
+    this.syncShopPagesFromSelection();
     this.renderShopGrid();
   };
 
@@ -1454,18 +1534,6 @@ export class UIScene extends Phaser.Scene {
 
     this.shopTitle?.setText(shop.name);
     this.shopCoins?.setText(`YOUR COINS: ${save.coins}c`);
-    this.shopStockLabel?.setText(
-      this.shopPane === 'stock' ? '▶ SHOP STOCK' : 'SHOP STOCK',
-    );
-    this.shopBagLabel?.setText(
-      this.shopPane === 'bag' ? '▶ YOUR BAG' : 'YOUR BAG',
-    );
-    this.shopStockLabel?.setColor(
-      this.shopPane === 'stock' ? '#ffc857' : '#8a7a50',
-    );
-    this.shopBagLabel?.setColor(
-      this.shopPane === 'bag' ? '#7dffb3' : '#3a6a50',
-    );
 
     // Mid divider between panes
     const midX = GAME_W / 2;
@@ -1479,12 +1547,39 @@ export class UIScene extends Phaser.Scene {
     const stockCols = SHOP_STOCK_COLS;
     const stockOriginX = 48 + SHOP_CELL / 2;
     const gridOriginY = HUD_H + 78 + SHOP_CELL / 2;
-    const maxStockRows = 5;
 
-    stock.forEach((item, i) => {
-      const col = i % stockCols;
-      const row = Math.floor(i / stockCols);
-      if (row >= maxStockRows) return;
+    // Paginate stock (left)
+    const stockPages = shopPageCount(stock.length, SHOP_STOCK_PAGE_SIZE);
+    this.shopStockPage = clampShopPage(
+      this.shopStockPage,
+      stock.length,
+      SHOP_STOCK_PAGE_SIZE,
+    );
+    // Selection may have moved off-page via arrows — follow it
+    this.shopStockPage = shopPageOf(this.shopSelected, SHOP_STOCK_PAGE_SIZE);
+    this.shopStockPage = clampShopPage(
+      this.shopStockPage,
+      stock.length,
+      SHOP_STOCK_PAGE_SIZE,
+    );
+    const stockStart = this.shopStockPage * SHOP_STOCK_PAGE_SIZE;
+    const stockEnd = Math.min(stock.length, stockStart + SHOP_STOCK_PAGE_SIZE);
+
+    this.shopStockLabel?.setText(
+      (this.shopPane === 'stock' ? '▶ STOCK' : 'STOCK') +
+        (stock.length
+          ? `  ${stockStart + 1}-${stockEnd}/${stock.length}  P${this.shopStockPage + 1}/${stockPages}`
+          : ''),
+    );
+    this.shopStockLabel?.setColor(
+      this.shopPane === 'stock' ? '#ffc857' : '#8a7a50',
+    );
+
+    for (let i = stockStart; i < stockEnd; i++) {
+      const item = stock[i]!;
+      const local = i - stockStart;
+      const col = local % stockCols;
+      const row = Math.floor(local / stockCols);
       const x = stockOriginX + col * (SHOP_CELL + SHOP_GAP);
       const y = gridOriginY + row * (SHOP_CELL + SHOP_GAP);
       const selected = this.shopPane === 'stock' && i === this.shopSelected;
@@ -1505,6 +1600,7 @@ export class UIScene extends Phaser.Scene {
       frame.on('pointerdown', () => {
         this.shopPane = 'stock';
         this.shopSelected = i;
+        this.shopStockPage = shopPageOf(i, SHOP_STOCK_PAGE_SIZE);
         this.renderShopGrid();
         this.game.events.emit('shop-cursor', { pane: 'stock', index: i });
       });
@@ -1532,9 +1628,16 @@ export class UIScene extends Phaser.Scene {
         .setScrollFactor(0);
       this.shopLayer!.add(price);
       this.shopPieces.push(price);
-    });
+    }
 
-    // Right pane — player inventory (stacks + bag, equipped marked)
+    // Stock page buttons
+    if (stockPages > 1) {
+      const py = gridOriginY + 4 * (SHOP_CELL + SHOP_GAP) + 8;
+      const px = stockOriginX + SHOP_CELL + SHOP_GAP;
+      this.addShopPager(px, py, this.shopStockPage, stockPages, 'stock');
+    }
+
+    // Right pane — player inventory (paginated)
     const bag = listPlayerSellables(save, this.shopPayload.shopId);
     if (this.shopBagSelected >= bag.length) {
       this.shopBagSelected = Math.max(0, bag.length - 1);
@@ -1542,7 +1645,26 @@ export class UIScene extends Phaser.Scene {
     const bagCols = SHOP_BAG_COLS;
     const bagGridW = bagCols * SHOP_CELL + (bagCols - 1) * SHOP_GAP;
     const bagOriginX = GAME_W - 48 - bagGridW + SHOP_CELL / 2;
-    const maxBagRows = 5;
+
+    const bagPages = shopPageCount(bag.length, SHOP_BAG_PAGE_SIZE);
+    this.shopBagPage = shopPageOf(this.shopBagSelected, SHOP_BAG_PAGE_SIZE);
+    this.shopBagPage = clampShopPage(
+      this.shopBagPage,
+      bag.length,
+      SHOP_BAG_PAGE_SIZE,
+    );
+    const bagStart = this.shopBagPage * SHOP_BAG_PAGE_SIZE;
+    const bagEnd = Math.min(bag.length, bagStart + SHOP_BAG_PAGE_SIZE);
+
+    this.shopBagLabel?.setText(
+      (this.shopPane === 'bag' ? '▶ BAG' : 'BAG') +
+        (bag.length
+          ? `  ${bagStart + 1}-${bagEnd}/${bag.length}  P${this.shopBagPage + 1}/${bagPages}`
+          : ''),
+    );
+    this.shopBagLabel?.setColor(
+      this.shopPane === 'bag' ? '#7dffb3' : '#3a6a50',
+    );
 
     if (!bag.length) {
       const empty = this.add
@@ -1556,10 +1678,11 @@ export class UIScene extends Phaser.Scene {
       this.shopLayer.add(empty);
       this.shopPieces.push(empty);
     } else {
-      bag.forEach((item, i) => {
-        const col = i % bagCols;
-        const row = Math.floor(i / bagCols);
-        if (row >= maxBagRows) return;
+      for (let i = bagStart; i < bagEnd; i++) {
+        const item = bag[i]!;
+        const local = i - bagStart;
+        const col = local % bagCols;
+        const row = Math.floor(local / bagCols);
         const x = bagOriginX + col * (SHOP_CELL + SHOP_GAP);
         const y = gridOriginY + row * (SHOP_CELL + SHOP_GAP);
         const selected = this.shopPane === 'bag' && i === this.shopBagSelected;
@@ -1579,6 +1702,7 @@ export class UIScene extends Phaser.Scene {
         frame.on('pointerdown', () => {
           this.shopPane = 'bag';
           this.shopBagSelected = i;
+          this.shopBagPage = shopPageOf(i, SHOP_BAG_PAGE_SIZE);
           this.renderShopGrid();
           this.game.events.emit('shop-cursor', { pane: 'bag', index: i });
         });
@@ -1630,7 +1754,13 @@ export class UIScene extends Phaser.Scene {
           .setScrollFactor(0);
         this.shopLayer!.add(sell);
         this.shopPieces.push(sell);
-      });
+      }
+
+      if (bagPages > 1) {
+        const py = gridOriginY + 4 * (SHOP_CELL + SHOP_GAP) + 8;
+        const px = bagOriginX + (bagCols / 2) * (SHOP_CELL + SHOP_GAP);
+        this.addShopPager(px, py, this.shopBagPage, bagPages, 'bag');
+      }
     }
 
     // Detail line for focused pane
@@ -1668,7 +1798,55 @@ export class UIScene extends Phaser.Scene {
         this.shopDetail?.setColor('#6a738a');
       }
     }
+  }
 
+  /** ◀ N/M ▶ pager under a shop grid pane. */
+  private addShopPager(
+    x: number,
+    y: number,
+    page: number,
+    pages: number,
+    pane: ShopPane,
+  ): void {
+    if (!this.shopLayer) return;
+    const canPrev = page > 0;
+    const canNext = page < pages - 1;
+    const mkBtn = (
+      bx: number,
+      label: string,
+      enabled: boolean,
+      dir: number,
+    ) => {
+      const t = this.add
+        .text(bx, y, label, {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '9px',
+          color: enabled ? '#7dffb3' : '#3a4250',
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0);
+      if (enabled) {
+        t.setInteractive({ useHandCursor: true });
+        t.on('pointerdown', () => {
+          this.shopPane = pane;
+          this.onShopPage(dir);
+        });
+      }
+      this.shopLayer!.add(t);
+      this.shopPieces.push(t);
+    };
+    mkBtn(x - 48, '◀', canPrev, -1);
+    const mid = this.add
+      .text(x, y, `${page + 1}/${pages}`, {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
+        color: '#ffc857',
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0);
+    this.shopLayer.add(mid);
+    this.shopPieces.push(mid);
+    mkBtn(x + 48, '▶', canNext, 1);
   }
 
   private openForjingGraphic(): void {

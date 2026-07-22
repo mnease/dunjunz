@@ -1353,6 +1353,29 @@ describe('feedback validation', () => {
   });
 });
 
+describe('shop pagination helpers', () => {
+  it('pages stock and bag by fixed page sizes', async () => {
+    const {
+      SHOP_STOCK_PAGE_SIZE,
+      SHOP_BAG_PAGE_SIZE,
+      shopPageCount,
+      shopPageOf,
+      clampShopPage,
+      SHOPS,
+    } = await import('./shop');
+    expect(SHOP_STOCK_PAGE_SIZE).toBe(12);
+    expect(SHOP_BAG_PAGE_SIZE).toBe(16);
+    expect(shopPageCount(0, 12)).toBe(1);
+    expect(shopPageCount(12, 12)).toBe(1);
+    expect(shopPageCount(13, 12)).toBe(2);
+    expect(shopPageOf(11, 12)).toBe(0);
+    expect(shopPageOf(12, 12)).toBe(1);
+    expect(clampShopPage(9, 13, 12)).toBe(1);
+    // Tinkerer stock needs more than one page of the 3×4 grid
+    expect(SHOPS.tinkerer.stock.length).toBeGreaterThan(SHOP_STOCK_PAGE_SIZE);
+  });
+});
+
 describe('threat scaling', () => {
   it('later lands and progress raise threat and HP', async () => {
     const { threatForRoom, scaleEnemyHp, LAND_THREAT } = await import(

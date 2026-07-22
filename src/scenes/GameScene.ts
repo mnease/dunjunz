@@ -502,6 +502,10 @@ export class GameScene extends Phaser.Scene {
         this.game.events.emit('inventory-bag-page', -1);
         return;
       }
+      if (this.shopOpen) {
+        this.game.events.emit('shop-page', -1);
+        return;
+      }
       this.onMapzNav('floor-prev');
     });
     kb.on('keydown-CLOSED_BRACKET', () => {
@@ -509,13 +513,19 @@ export class GameScene extends Phaser.Scene {
         this.game.events.emit('inventory-bag-page', 1);
         return;
       }
+      if (this.shopOpen) {
+        this.game.events.emit('shop-page', 1);
+        return;
+      }
       this.onMapzNav('floor-next');
     });
     kb.on('keydown-PAGE_UP', () => {
       if (this.inventoryOpen) this.game.events.emit('inventory-bag-page', -1);
+      if (this.shopOpen) this.game.events.emit('shop-page', -1);
     });
     kb.on('keydown-PAGE_DOWN', () => {
       if (this.inventoryOpen) this.game.events.emit('inventory-bag-page', 1);
+      if (this.shopOpen) this.game.events.emit('shop-page', 1);
     });
     kb.on('keydown-T', () => {
       if (this.inventoryOpen) this.game.events.emit('inventory-bag-sort');

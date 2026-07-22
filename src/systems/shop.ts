@@ -66,7 +66,7 @@ export const SHOPS: Record<string, ShopDef> = {
     greeting: [
       'TINKERER: BUY LEFT · SELL RIGHT!',
       'FAIR-ISH PRICES. I DON\'T JUDGE. MUCH.',
-      'E OPEN SHOP · TAB PANE · ENTER TRADE',
+      'TAB PANE · [ ] PAGE · ENTER TRADE',
     ],
     stock: [
       {
@@ -466,4 +466,27 @@ export interface ShopOpenPayload {
 
 /** Stock (left) and bag (right) grid column counts for dual-pane layout. */
 export const SHOP_STOCK_COLS = 3;
+export const SHOP_STOCK_ROWS = 4;
 export const SHOP_BAG_COLS = 4;
+export const SHOP_BAG_ROWS = 4;
+/** Visible cells per page (paginated when stock/bag exceeds this). */
+export const SHOP_STOCK_PAGE_SIZE = SHOP_STOCK_COLS * SHOP_STOCK_ROWS;
+export const SHOP_BAG_PAGE_SIZE = SHOP_BAG_COLS * SHOP_BAG_ROWS;
+
+export function shopPageCount(count: number, pageSize: number): number {
+  return Math.max(1, Math.ceil(Math.max(0, count) / Math.max(1, pageSize)));
+}
+
+export function clampShopPage(
+  page: number,
+  count: number,
+  pageSize: number,
+): number {
+  return Math.max(0, Math.min(page, shopPageCount(count, pageSize) - 1));
+}
+
+/** Page that contains a global index. */
+export function shopPageOf(index: number, pageSize: number): number {
+  if (pageSize <= 0) return 0;
+  return Math.max(0, Math.floor(Math.max(0, index) / pageSize));
+}
