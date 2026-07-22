@@ -104,6 +104,10 @@ export class UIScene extends Phaser.Scene {
   private hintsText: Phaser.GameObjects.Text | null = null;
   private dialogBg: Phaser.GameObjects.Rectangle | null = null;
   private dialogText: Phaser.GameObjects.Text | null = null;
+  private dialogNextHit: Phaser.GameObjects.Rectangle | null = null;
+  private dialogCloseHit: Phaser.GameObjects.Rectangle | null = null;
+  private dialogNextLabel: Phaser.GameObjects.Text | null = null;
+  private dialogCloseLabel: Phaser.GameObjects.Text | null = null;
   private dialogLines: string[] = [];
   private dialogIndex = 0;
   private dialogOpen = false;
@@ -260,17 +264,20 @@ export class UIScene extends Phaser.Scene {
       })
       .setOrigin(1, 0);
 
-    // Dialog docked to bottom so it never fights the HUD
-    const dialogH = 152;
-    const dialogCy = GAME_H - dialogH / 2 - 18;
+    // Dialog: mid-high on mobile so thumbs/pad don't cover text (EMA mobile pass)
+    const dialogH = 168;
+    // Leave bottom ~200px free for overlay pad; desktop keeps lower dock
+    const dialogCy = Math.floor(GAME_H * 0.42);
     this.dialogBg = this.add
       .rectangle(GAME_W / 2, dialogCy, GAME_W - 48, dialogH, 0x12161f, 0.96)
       .setStrokeStyle(3, COLORS.green)
       .setVisible(false)
       .setDepth(100)
-      .setScrollFactor(0);
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    this.dialogBg.on('pointerdown', () => this.advanceDialog());
     this.dialogText = this.add
-      .text(40, dialogCy - dialogH / 2 + 22, '', {
+      .text(40, dialogCy - dialogH / 2 + 18, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '12px',
         color: '#f4f0ff',
@@ -280,6 +287,46 @@ export class UIScene extends Phaser.Scene {
       .setVisible(false)
       .setDepth(101)
       .setScrollFactor(0);
+
+    // On-canvas NEXT / CLOSE for talk mode (no keyboard needed)
+    const dBtnW = Math.min(200, (GAME_W - 80) / 2);
+    const dBtnY = dialogCy + dialogH / 2 - 28;
+    this.dialogNextHit = this.add
+      .rectangle(GAME_W / 2 - dBtnW / 2 - 8, dBtnY, dBtnW, 40, 0x1a4030, 0.98)
+      .setStrokeStyle(2, COLORS.green)
+      .setVisible(false)
+      .setDepth(102)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    this.dialogNextLabel = this.add
+      .text(GAME_W / 2 - dBtnW / 2 - 8, dBtnY, '▶ NEXT', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '11px',
+        color: '#7dffb3',
+      })
+      .setOrigin(0.5)
+      .setVisible(false)
+      .setDepth(103)
+      .setScrollFactor(0);
+    this.dialogCloseHit = this.add
+      .rectangle(GAME_W / 2 + dBtnW / 2 + 8, dBtnY, dBtnW, 40, 0x3a2030, 0.98)
+      .setStrokeStyle(2, 0xff6b9d)
+      .setVisible(false)
+      .setDepth(102)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    this.dialogCloseLabel = this.add
+      .text(GAME_W / 2 + dBtnW / 2 + 8, dBtnY, '✕ CLOSE', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '11px',
+        color: '#ffb0c8',
+      })
+      .setOrigin(0.5)
+      .setVisible(false)
+      .setDepth(103)
+      .setScrollFactor(0);
+    this.dialogNextHit.on('pointerdown', () => this.advanceDialog());
+    this.dialogCloseHit.on('pointerdown', () => this.closeDialog());
 
     this.buildInventoryPanel();
     this.buildMapzPanel();
@@ -847,6 +894,21 @@ export class UIScene extends Phaser.Scene {
     this.cycleBagSort();
   };
 
+  /** Pad OK / USE while bag open — equip or use the highlighted cell. */
+  private onBagActivateSelected = (): void => {
+    if (!this.inventoryOpen || !this.lastSave) return;
+    const bag = this.bagList(this.lastSave);
+    const item = bag[this.invBagSelected];
+    if (!item) return;
+    playSfx('ui_click');
+    this.game.events.emit('inventory-bag-activate', {
+      uid: item.uid,
+      templateId: item.templateId,
+      usable: item.usable,
+      slot: item.slot,
+    });
+  };
+
   private bagList(save: SaveData) {
     return listInventory(save, this.invBagSort);
   }
@@ -919,11 +981,21 @@ export class UIScene extends Phaser.Scene {
   private bindGameEvents(): void {
     this.game.events.off('hud-update', this.refreshHud, this);
     this.game.events.off('dialog-show', this.showDialog, this);
+    this.game.events.off('dialog-advance', this.advanceDialog, this);
+    this.game.events.off('dialog-close', this.closeDialog, this);
+    this.game.events.off('inventory-nav', this.onInventoryNav, this);
     this.game.events.off('toast', this.showToast, this);
     this.game.events.off('pause-ui', this.setPaused, this);
     this.game.events.off('ui-reset', this.onUiReset, this);
     this.game.events.off('inventory-toggle', this.onInventoryToggle, this);
     this.game.events.off('inventory-refresh', this.onInventoryRefresh, this);
+    this.game.events.off('inventory-bag-page', this.onBagPage, this);
+    this.game.events.off('inventory-bag-sort', this.onBagSort, this);
+    this.game.events.off(
+      'inventory-bag-activate-selected',
+      this.onBagActivateSelected,
+      this,
+    );
     this.game.events.off('gear-target', this.onGearTarget, this);
     this.game.events.off('mapz-toggle', this.onMapzToggle, this);
     this.game.events.off('mapz-nav', this.onMapzNav, this);
@@ -937,6 +1009,9 @@ export class UIScene extends Phaser.Scene {
 
     this.game.events.on('hud-update', this.refreshHud, this);
     this.game.events.on('dialog-show', this.showDialog, this);
+    this.game.events.on('dialog-advance', this.advanceDialog, this);
+    this.game.events.on('dialog-close', this.closeDialog, this);
+    this.game.events.on('inventory-nav', this.onInventoryNav, this);
     this.game.events.on('toast', this.showToast, this);
     this.game.events.on('pause-ui', this.setPaused, this);
     this.game.events.on('ui-reset', this.onUiReset, this);
@@ -944,6 +1019,11 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('inventory-refresh', this.onInventoryRefresh, this);
     this.game.events.on('inventory-bag-page', this.onBagPage, this);
     this.game.events.on('inventory-bag-sort', this.onBagSort, this);
+    this.game.events.on(
+      'inventory-bag-activate-selected',
+      this.onBagActivateSelected,
+      this,
+    );
     this.game.events.on('gear-target', this.onGearTarget, this);
     this.game.events.on('mapz-toggle', this.onMapzToggle, this);
     this.game.events.on('mapz-nav', this.onMapzNav, this);
@@ -964,6 +1044,9 @@ export class UIScene extends Phaser.Scene {
     this.events.once('shutdown', () => {
       this.game.events.off('hud-update', this.refreshHud, this);
       this.game.events.off('dialog-show', this.showDialog, this);
+      this.game.events.off('dialog-advance', this.advanceDialog, this);
+      this.game.events.off('dialog-close', this.closeDialog, this);
+      this.game.events.off('inventory-nav', this.onInventoryNav, this);
       this.game.events.off('toast', this.showToast, this);
       this.game.events.off('pause-ui', this.setPaused, this);
       this.game.events.off('ui-reset', this.onUiReset, this);
@@ -971,6 +1054,11 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('inventory-refresh', this.onInventoryRefresh, this);
       this.game.events.off('inventory-bag-page', this.onBagPage, this);
       this.game.events.off('inventory-bag-sort', this.onBagSort, this);
+      this.game.events.off(
+        'inventory-bag-activate-selected',
+        this.onBagActivateSelected,
+        this,
+      );
       this.game.events.off('gear-target', this.onGearTarget, this);
       this.game.events.off('mapz-toggle', this.onMapzToggle, this);
       this.game.events.off('mapz-nav', this.onMapzNav, this);
@@ -1011,8 +1099,7 @@ export class UIScene extends Phaser.Scene {
     this.dialogOpen = false;
     this.dialogLines = [];
     this.dialogIndex = 0;
-    this.dialogBg?.setVisible(false);
-    this.dialogText?.setVisible(false);
+    this.setDialogChromeVisible(false);
   }
 
   private onInventoryToggle = (save: SaveData): void => {
@@ -2649,24 +2736,32 @@ export class UIScene extends Phaser.Scene {
     if (!this.dialogLines.length) return;
     this.dialogIndex = 0;
     this.dialogOpen = true;
-    this.dialogBg.setVisible(true);
-    this.dialogText.setVisible(true);
+    this.setDialogChromeVisible(true);
     this.renderDialogLine();
     playSfx('dialog');
     this.game.events.emit('dialog-state', true);
   };
+
+  private setDialogChromeVisible(open: boolean): void {
+    this.dialogBg?.setVisible(open);
+    this.dialogText?.setVisible(open);
+    this.dialogNextHit?.setVisible(open);
+    this.dialogCloseHit?.setVisible(open);
+    this.dialogNextLabel?.setVisible(open);
+    this.dialogCloseLabel?.setVisible(open);
+  }
 
   private renderDialogLine(): void {
     if (!this.dialogText) return;
     const line = this.dialogLines[this.dialogIndex] ?? '';
     const more =
       this.dialogIndex < this.dialogLines.length - 1
-        ? '\n\n▼ ENTER'
-        : '\n\n[ENTER]';
+        ? '\n\n▼ TAP / NEXT'
+        : '\n\n[DONE — NEXT OR CLOSE]';
     this.dialogText.setText(line + more);
   }
 
-  private advanceDialog(): void {
+  private advanceDialog = (): void => {
     if (!this.dialogOpen) return;
     if (this.dialogIndex < this.dialogLines.length - 1) {
       this.dialogIndex += 1;
@@ -2674,11 +2769,35 @@ export class UIScene extends Phaser.Scene {
       this.renderDialogLine();
       return;
     }
+    this.closeDialog();
+  };
+
+  /** Skip remaining lines and end talk (ESC / CLOSE / pad MENU). */
+  private closeDialog = (): void => {
+    if (!this.dialogOpen) return;
     this.dialogOpen = false;
-    this.dialogBg?.setVisible(false);
-    this.dialogText?.setVisible(false);
+    this.dialogIndex = 0;
+    this.dialogLines = [];
+    this.setDialogChromeVisible(false);
+    playSfx('ui_close');
     this.game.events.emit('dialog-state', false);
-  }
+  };
+
+  /** D-pad bag navigation while inventory open. */
+  private onInventoryNav = (dir: 'up' | 'down' | 'left' | 'right'): void => {
+    if (!this.inventoryOpen || !this.lastSave) return;
+    const bag = this.bagList(this.lastSave);
+    if (!bag.length) return;
+    const cols = UIScene.BAG_COLS;
+    let i = this.invBagSelected;
+    if (dir === 'left') i = Math.max(0, i - 1);
+    else if (dir === 'right') i = Math.min(bag.length - 1, i + 1);
+    else if (dir === 'up') i = Math.max(0, i - cols);
+    else if (dir === 'down') i = Math.min(bag.length - 1, i + cols);
+    this.invBagSelected = i;
+    this.invBagPage = Math.floor(i / UIScene.BAG_PAGE_SIZE);
+    this.renderBagGrid(this.lastSave);
+  };
 
   private showToast = (msg: string): void => {
     if (!this.toastText?.active) return;

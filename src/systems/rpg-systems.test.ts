@@ -2329,6 +2329,15 @@ describe('mobile mode query', () => {
     expect(applyMobileQueryToSettings('?mobile=0')).toBe(false);
     expect(loadSettings().mobileMode).toBe(false);
   });
+
+  it('setTouchPadMode cycles contextual modes without throwing', async () => {
+    const { setTouchPadMode, getTouchPadMode } = await import('./touch-input');
+    for (const m of ['explore', 'dialog', 'panel', 'pause'] as const) {
+      setTouchPadMode(m);
+      expect(getTouchPadMode()).toBe(m);
+    }
+    setTouchPadMode('explore');
+  });
 });
 
 // ── Actor combat guards (room-transition safety) ──────────────────

@@ -22,6 +22,65 @@ export type TouchAction =
   | 'use'
   | 'menu';
 
+/**
+ * Contextual pad modes — labels remap so every desktop action has a thumb path.
+ * explore: crawl · dialog: talk · panel: bag/shop/forje/mapz · pause: menu
+ */
+export type TouchPadMode = 'explore' | 'dialog' | 'panel' | 'pause';
+
+const PAD_LABELS: Record<
+  TouchPadMode,
+  Record<'attack' | 'interact' | 'inventory' | 'map' | 'use' | 'menu', string>
+> = {
+  explore: {
+    attack: 'ATK',
+    interact: 'TALK',
+    inventory: 'BAG',
+    map: 'MAP',
+    use: 'USE',
+    menu: 'MENU',
+  },
+  dialog: {
+    attack: 'NEXT',
+    interact: 'NEXT',
+    inventory: '···',
+    map: '···',
+    use: 'SKIP',
+    menu: 'CLOSE',
+  },
+  panel: {
+    attack: 'OK',
+    interact: 'USE',
+    inventory: 'BAG',
+    map: 'PAGE+',
+    use: 'PAGE-',
+    menu: 'CLOSE',
+  },
+  pause: {
+    attack: 'GO',
+    interact: 'GO',
+    inventory: '···',
+    map: 'TITLE',
+    use: 'TITLE',
+    menu: 'GO',
+  },
+};
+
+const ACTION_BTN_IDS: Record<
+  'attack' | 'interact' | 'inventory' | 'map' | 'use' | 'menu',
+  string
+> = {
+  attack: 'touch-attack',
+  interact: 'touch-talk',
+  inventory: 'touch-inv',
+  map: 'touch-map',
+  use: 'touch-use',
+  menu: 'touch-menu',
+};
+
+let padMode: TouchPadMode = 'explore';
+let fullscreenAttempted = false;
+
 const held: Record<TouchAxis, boolean> = {
   up: false,
   down: false,
@@ -187,8 +246,10 @@ export function setTouchPadVisible(visible: boolean): void {
   document.body.classList.toggle('touch-play', show);
   if (show) {
     document.documentElement.classList.add('touch-play-root');
+    setTouchPadMode(padMode);
   } else {
     document.documentElement.classList.remove('touch-play-root');
+    document.body.classList.remove('mobile-immersive');
   }
   syncMobileToggleUi();
   refreshGameScale();
@@ -196,6 +257,97 @@ export function setTouchPadVisible(visible: boolean): void {
 
 export function isTouchPadVisible(): boolean {
   return padVisible && isTouchUiPreferred();
+}
+
+export function getTouchPadMode(): TouchPadMode {
+  return padMode;
+}
+
+/** Remap button labels + data-mode for explore/dialog/panel/pause. */
+export function setTouchPadMode(mode: TouchPadMode): void {
+  padMode = mode;
+  if (typeof document === 'undefined') return;
+  const root = document.getElementById('touch-pad');
+  if (!root) return;
+  root.dataset.mode = mode;
+  document.body.dataset.padMode = mode;
+  const labels = PAD_LABELS[mode];
+  for (const [action, id] of Object.entries(ACTION_BTN_IDS) as [
+    keyof typeof ACTION_BTN_IDS,
+    string,
+  ][]) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = labels[action];
+      el.setAttribute('aria-label', `${labels[action]} (${mode})`);
+    }
+  }
+  // Hide d-pad during dialog so thumbs don't fight the text box
+  root.classList.toggle('pad-mode-dialog', mode === 'dialog');
+  root.classList.toggle('pad-mode-panel', mode === 'panel');
+  root.classList.toggle('pad-mode-pause', mode === 'pause');
+  root.classList.toggle('pad-mode-explore', mode === 'explore');
+}
+
+/**
+ * Best-effort mobile fullscreen (Chrome/Android full; iOS Safari limited).
+ * Call only from a user gesture (pad tap / MOBILE toggle).
+ */
+export async function requestMobileFullscreen(): Promise<boolean> {
+  if (typeof document === 'undefined') return false;
+  fullscreenAttempted = true;
+  const target =
+    document.getElementById('game-stage') ??
+    document.getElementById('shell') ??
+    document.documentElement;
+  try {
+    const anyDoc = document as Document & {
+      webkitFullscreenElement?: Element | null;
+      webkitExitFullscreen?: () => Promise<void> | void;
+    };
+    const anyEl = target as HTMLElement & {
+      webkitRequestFullscreen?: () => Promise<void> | void;
+      webkitRequestFullScreen?: () => Promise<void> | void;
+    };
+    if (!document.fullscreenElement && !anyDoc.webkitFullscreenElement) {
+      if (anyEl.requestFullscreen) {
+        await anyEl.requestFullscreen();
+      } else if (anyEl.webkitRequestFullscreen) {
+        await anyEl.webkitRequestFullscreen();
+      } else if (anyEl.webkitRequestFullScreen) {
+        await anyEl.webkitRequestFullScreen();
+      }
+    }
+  } catch {
+    /* iOS often rejects — fall through to CSS immersion */
+  }
+  try {
+    const orient = screen.orientation as ScreenOrientation & {
+      lock?: (o: string) => Promise<void>;
+    };
+    if (
+      orient?.lock &&
+      window.matchMedia('(orientation: landscape)').matches
+    ) {
+      await orient.lock('landscape');
+    }
+  } catch {
+    /* orientation lock needs fullscreen + gesture on many browsers */
+  }
+  document.body.classList.add('mobile-immersive');
+  // Nudge iOS chrome collapse
+  window.scrollTo(0, 1);
+  refreshGameScale();
+  return !!(
+    document.fullscreenElement ||
+    (document as Document & { webkitFullscreenElement?: Element })
+      .webkitFullscreenElement
+  );
+}
+
+/** Drain all pending action edges (after mode switch / dialog close). */
+export function drainTouchActions(): void {
+  for (const k of Object.keys(edge) as TouchAction[]) edge[k] = false;
 }
 
 /**
@@ -257,6 +409,10 @@ function bindTap(el: HTMLElement, action: TouchAction): void {
     e.preventDefault();
     e.stopPropagation();
     el.classList.add('is-down');
+    // First combat/UI tap: try immersive fullscreen (user gesture)
+    if (!fullscreenAttempted && isTouchUiPreferred()) {
+      void requestMobileFullscreen();
+    }
     pulseTouchAction(action);
     window.setTimeout(() => el.classList.remove('is-down'), 120);
   });
@@ -339,9 +495,24 @@ export function initTouchPad(): void {
       // If already in a crawl, re-show pad immediately
       if (padVisible) setTouchPadVisible(true);
       toggle.textContent = on ? 'MOBILE ON' : 'MOBILE';
+      if (on) void requestMobileFullscreen();
     });
   }
   syncMobileToggleUi();
+  setTouchPadMode('explore');
+
+  // Landscape: re-assert immersion + scale
+  window
+    .matchMedia('(orientation: landscape)')
+    .addEventListener('change', (ev) => {
+      if (ev.matches && padVisible && isTouchUiPreferred()) {
+        document.body.classList.add('mobile-immersive');
+        if (!document.fullscreenElement) {
+          // Can't request FS without gesture — CSS immersion still applies
+          refreshGameScale();
+        }
+      }
+    });
 
   // Hide pad when shell modals open
   const modals = [

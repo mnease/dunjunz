@@ -26,8 +26,11 @@ import {
 import {
   clearAllTouch,
   consumeTouchAction,
+  drainTouchActions,
+  setTouchPadMode,
   setTouchPadVisible,
   touchAxisDown,
+  type TouchPadMode,
 } from '../systems/touch-input';
 import {
   enemyXpReward,
@@ -362,6 +365,13 @@ export class GameScene extends Phaser.Scene {
   private paused = false;
   /** Guards against double goToTitle / mid-update scene tears. */
   private leavingToTitle = false;
+  /** Rising-edge latch for touch d-pad while panels open. */
+  private touchNavLatch = {
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+  };
   private transitionLock = false;
   private roomOriginX = 0;
   private roomOriginY = 0;
@@ -648,6 +658,113 @@ export class GameScene extends Phaser.Scene {
     this.save = loadSave();
     this.emitHud();
   };
+
+  private syncTouchPadMode(mode: TouchPadMode): void {
+    setTouchPadMode(mode);
+  }
+
+  /**
+   * Map pad buttons while dialog / inventory / shop / forje / mapz open.
+   * Desktop keyboard paths stay unchanged.
+   */
+  private handleModalTouchInput(): void {
+    const edgeAxis = (axis: 'up' | 'down' | 'left' | 'right'): boolean => {
+      const down = touchAxisDown(axis);
+      const was = this.touchNavLatch[axis];
+      this.touchNavLatch[axis] = down;
+      return down && !was;
+    };
+
+    if (this.dialogLocked) {
+      this.syncTouchPadMode('dialog');
+      if (consumeTouchAction('attack') || consumeTouchAction('interact')) {
+        this.game.events.emit('dialog-advance');
+      }
+      if (consumeTouchAction('menu') || consumeTouchAction('use')) {
+        this.game.events.emit('dialog-close');
+      }
+      // Drain stray bag/map so they don't fire when talk ends
+      consumeTouchAction('inventory');
+      consumeTouchAction('map');
+      return;
+    }
+
+    this.syncTouchPadMode('panel');
+
+    if (this.inventoryOpen) {
+      if (edgeAxis('left')) this.game.events.emit('inventory-nav', 'left');
+      if (edgeAxis('right')) this.game.events.emit('inventory-nav', 'right');
+      if (edgeAxis('up')) this.game.events.emit('inventory-nav', 'up');
+      if (edgeAxis('down')) this.game.events.emit('inventory-nav', 'down');
+      if (consumeTouchAction('map')) {
+        this.game.events.emit('inventory-bag-page', 1);
+      }
+      if (consumeTouchAction('use')) {
+        this.game.events.emit('inventory-bag-page', -1);
+      }
+      if (consumeTouchAction('attack') || consumeTouchAction('interact')) {
+        // Activate selected bag cell (equip / use)
+        this.game.events.emit('inventory-bag-activate-selected');
+      }
+      if (consumeTouchAction('menu') || consumeTouchAction('inventory')) {
+        this.game.events.emit('inventory-toggle', this.save);
+        drainTouchActions();
+        this.syncTouchPadMode('explore');
+      }
+      return;
+    }
+
+    if (this.shopOpen) {
+      if (edgeAxis('left')) this.navShop('left');
+      if (edgeAxis('right')) this.navShop('right');
+      if (edgeAxis('up')) this.navShop('up');
+      if (edgeAxis('down')) this.navShop('down');
+      if (consumeTouchAction('attack') || consumeTouchAction('interact')) {
+        this.confirmShopTrade();
+      }
+      if (consumeTouchAction('map')) this.game.events.emit('shop-page', 1);
+      if (consumeTouchAction('use')) this.game.events.emit('shop-page', -1);
+      if (consumeTouchAction('menu')) {
+        this.game.events.emit('shop-toggle');
+        drainTouchActions();
+        this.syncTouchPadMode('explore');
+      }
+      return;
+    }
+
+    if (this.forjingOpen) {
+      if (edgeAxis('left')) this.navForjing('left');
+      if (edgeAxis('right')) this.navForjing('right');
+      if (edgeAxis('up')) this.navForjing('up');
+      if (edgeAxis('down')) this.navForjing('down');
+      if (consumeTouchAction('attack') || consumeTouchAction('interact')) {
+        this.confirmForjingAction();
+      }
+      if (consumeTouchAction('menu')) {
+        this.game.events.emit('forjing-toggle');
+        drainTouchActions();
+        this.syncTouchPadMode('explore');
+      }
+      return;
+    }
+
+    if (this.mapzOpen) {
+      if (edgeAxis('left') || edgeAxis('up')) this.onMapzNav('floor-prev');
+      if (edgeAxis('right') || edgeAxis('down')) this.onMapzNav('floor-next');
+      if (consumeTouchAction('use')) this.onMapzNav('land-prev');
+      if (consumeTouchAction('map')) this.onMapzNav('land-next');
+      if (
+        consumeTouchAction('menu') ||
+        consumeTouchAction('attack') ||
+        consumeTouchAction('interact') ||
+        consumeTouchAction('inventory')
+      ) {
+        this.game.events.emit('mapz-toggle');
+        drainTouchActions();
+        this.syncTouchPadMode('explore');
+      }
+    }
+  }
 
   /** Pause overlay buttons (UIScene) or keyboard M. */
   private onPauseAction = (action: 'resume' | 'title'): void => {
@@ -3667,12 +3784,15 @@ export class GameScene extends Phaser.Scene {
     if (this.leavingToTitle) return;
     if (!this.player?.body) return;
 
-    // Pause / panel close (ESC or touch MENU)
+    // ESC / MENU: close dialog → close panels → pause (never trap talk mode)
     if (
       Phaser.Input.Keyboard.JustDown(this.keys.esc) ||
       consumeTouchAction('menu')
     ) {
-      if (this.inventoryOpen) {
+      if (this.dialogLocked) {
+        this.game.events.emit('dialog-close');
+        drainTouchActions();
+      } else if (this.inventoryOpen) {
         this.game.events.emit('inventory-toggle', this.save);
       } else if (this.mapzOpen) {
         this.game.events.emit('mapz-toggle');
@@ -3685,11 +3805,15 @@ export class GameScene extends Phaser.Scene {
         this.game.events.emit('pause-ui', this.paused);
         if (this.paused) {
           (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+          this.syncTouchPadMode('pause');
+        } else {
+          this.syncTouchPadMode('explore');
         }
       }
     }
     if (this.paused) {
-      // M / MAP / USE / ATK-hold path to title; also ESC already toggled resume above
+      this.syncTouchPadMode('pause');
+      // M / MAP / USE → main title
       if (
         Phaser.Input.Keyboard.JustDown(this.keys.m) ||
         consumeTouchAction('map') ||
@@ -3698,13 +3822,16 @@ export class GameScene extends Phaser.Scene {
         this.goToTitle();
         return;
       }
-      // ATK / TALK while paused = resume (mobile-friendly)
+      // ATK / TALK / MENU while paused = resume
       if (
         consumeTouchAction('attack') ||
-        consumeTouchAction('interact')
+        consumeTouchAction('interact') ||
+        consumeTouchAction('menu')
       ) {
         this.paused = false;
         this.game.events.emit('pause-ui', false);
+        this.syncTouchPadMode('explore');
+        drainTouchActions();
       }
       return;
     }
@@ -3716,6 +3843,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.dialogLocked || this.panelOpen()) {
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      this.handleModalTouchInput();
       // Shop grid navigation while open
       if (this.shopOpen) {
         if (Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.keys.a)) {
@@ -3727,7 +3855,6 @@ export class GameScene extends Phaser.Scene {
         } else if (Phaser.Input.Keyboard.JustDown(this.cursors.down) || Phaser.Input.Keyboard.JustDown(this.keys.s)) {
           this.navShop('down');
         }
-        // E close is handled only in onInteractKey (not JustDown here)
         if (Phaser.Input.Keyboard.JustDown(this.keys.enter)) {
           this.confirmShopTrade();
         }
@@ -3747,6 +3874,10 @@ export class GameScene extends Phaser.Scene {
           this.confirmForjingAction();
         }
       }
+      // ESC closes dialog (desktop)
+      if (this.dialogLocked && Phaser.Input.Keyboard.JustDown(this.keys.esc)) {
+        this.game.events.emit('dialog-close');
+      }
       // Enemies still move while inventory is open so the world is not frozen unfairly
       this.updateEnemies(delta);
       this.updateProjectiles(delta);
@@ -3754,6 +3885,8 @@ export class GameScene extends Phaser.Scene {
       this.updateVisualMotion(delta, false);
       return;
     }
+
+    this.syncTouchPadMode('explore');
 
     const speed = 140;
     const body = this.player.body as Phaser.Physics.Arcade.Body;

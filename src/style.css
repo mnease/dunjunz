@@ -513,6 +513,57 @@ body.touch-play .touch-cluster {
   pointer-events: auto;
 }
 
+/* Dialog mode: hide move cluster (talk only needs NEXT/CLOSE) */
+body.touch-play .touch-pad.pad-mode-dialog .touch-dpad {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Panel mode: slightly dim attack cluster context via opacity on dpad ok */
+body.touch-play .touch-pad.pad-mode-panel .touch-dpad {
+  opacity: 0.95;
+}
+
+/* True immersion: landscape + mobile — edge-to-edge, no browser chrome chrome */
+body.touch-play.mobile-immersive,
+html.touch-play-root:has(body.mobile-immersive) {
+  background: #000;
+}
+
+body.touch-play.mobile-immersive {
+  padding: 0 !important;
+  height: 100dvh;
+  width: 100vw;
+  max-width: 100vw;
+}
+
+body.touch-play.mobile-immersive #shell,
+body.touch-play.mobile-immersive .main,
+body.touch-play.mobile-immersive .game-stage,
+body.touch-play.mobile-immersive #game-frame {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  body.touch-play {
+    /* Encourage full bleed when rotated — hide any residual chrome */
+    padding: 0;
+  }
+
+  body.touch-play #game-frame {
+    inset: 0;
+  }
+
+  body.touch-play .touch-pad {
+    /* Keep actions clear of home indicator */
+    padding-left: max(0.4rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.4rem, env(safe-area-inset-right, 0px));
+    padding-bottom: max(0.35rem, env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Narrow portrait: slightly denser HUD */
 @media (max-width: 400px) and (orientation: portrait) {
   body.touch-play .touch-dpad {
