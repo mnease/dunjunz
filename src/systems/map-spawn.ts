@@ -123,6 +123,62 @@ export function isWalkableTile(kind: string | undefined): boolean {
 }
 
 /**
+ * Spawn beside a stair tile after a floor transition.
+ *
+ * Going **down** into a room (entryFrom stairsDown): stand **north** of the
+ * stairs-up tile so the exit is south of you (not in front / north).
+ * Going **up** (entryFrom stairsUp): stand **south** of the stairs-down tile
+ * so the hole is north of you (behind when facing into the overworld).
+ */
+export function spawnBesideStairs(
+  grid: WalkGrid,
+  mode: 'arriveDown' | 'arriveUp',
+): { tx: number; ty: number } | null {
+  const h = grid.length || VIEW_TILES_H;
+  const w = grid[0]?.length || VIEW_TILES_W;
+  const want = mode === 'arriveDown' ? 'stairs_up' : 'stairs';
+  let sx = -1;
+  let sy = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (grid[y]?.[x] === want) {
+        sx = x;
+        sy = y;
+        break;
+      }
+    }
+    if (sx >= 0) break;
+  }
+  if (sx < 0) return null;
+
+  // Prefer 2 tiles off, then 1; then side-step if blocked
+  const deltas =
+    mode === 'arriveDown'
+      ? [
+          { dx: 0, dy: -2 },
+          { dx: 0, dy: -1 },
+          { dx: -1, dy: -1 },
+          { dx: 1, dy: -1 },
+          { dx: 0, dy: 1 },
+        ]
+      : [
+          { dx: 0, dy: 2 },
+          { dx: 0, dy: 1 },
+          { dx: -1, dy: 1 },
+          { dx: 1, dy: 1 },
+          { dx: 0, dy: -1 },
+        ];
+
+  for (const { dx, dy } of deltas) {
+    const tx = sx + dx;
+    const ty = sy + dy;
+    if (ty < 0 || ty >= h || tx < 0 || tx >= w) continue;
+    if (isWalkable(grid[ty]?.[tx])) return { tx, ty };
+  }
+  return null;
+}
+
+/**
  * Safe continue/load spawn: prefer a room entrance, never land on solids.
  * Fixes softlocks like woodz_hollow default (8,5) inside a sealed pen.
  */
@@ -161,20 +217,11 @@ export function spawnForContinue(
     if (isWalkable(grid[s.ty]?.[s.tx])) return s;
   }
 
-  // Stairs if any
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const k = grid[y]?.[x];
-      if (k === 'stairs_up') {
-        const ty = Math.min(h - 2, y + 1);
-        if (isWalkable(grid[ty]?.[x])) return { tx: x, ty };
-      }
-      if (k === 'stairs') {
-        const ty = Math.max(1, y - 1);
-        if (isWalkable(grid[ty]?.[x])) return { tx: x, ty };
-      }
-    }
-  }
+  // Stairs if any — same side contract as floor transitions
+  const byUp = spawnBesideStairs(grid, 'arriveDown');
+  if (byUp) return byUp;
+  const byDown = spawnBesideStairs(grid, 'arriveUp');
+  if (byDown) return byDown;
 
   // Prefer open mid-room walkables (avoid edges/corners)
   const preferred: [number, number][] = [

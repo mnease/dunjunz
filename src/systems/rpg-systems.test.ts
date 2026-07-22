@@ -57,7 +57,11 @@ import {
   equipCompareDetailLine,
   mintItem,
 } from './items';
-import { entryFromOpposite, spawnInsideEntryEdge } from './map-spawn';
+import {
+  entryFromOpposite,
+  spawnBesideStairs,
+  spawnInsideEntryEdge,
+} from './map-spawn';
 import {
   discoverMapz,
   formatMapzPanel,
@@ -944,6 +948,35 @@ describe('door entry spawn placement', () => {
     const s = spawnInsideEntryEdge(ow, 'east');
     expect(s.tx).toBe(2);
     expect([1, 2]).toContain(s.ty);
+  });
+
+  it('arriveDown spawns north of stairs_up; arriveUp south of stairs', () => {
+    // stairs_up at (2,3); stairs down at (2,2) on separate grids
+    const downRoom = [
+      ['wall', 'wall', 'wall', 'wall', 'wall'],
+      ['wall', 'floor', 'floor', 'floor', 'wall'],
+      ['wall', 'floor', 'floor', 'floor', 'wall'],
+      ['wall', 'floor', 'stairs_up', 'floor', 'wall'],
+      ['wall', 'floor', 'floor', 'floor', 'wall'],
+      ['wall', 'wall', 'wall', 'wall', 'wall'],
+    ];
+    const a = spawnBesideStairs(downRoom, 'arriveDown');
+    expect(a).not.toBeNull();
+    expect(a!.tx).toBe(2);
+    expect(a!.ty).toBeLessThan(3); // north of U
+
+    const upRoom = [
+      ['wall', 'wall', 'wall', 'wall', 'wall'],
+      ['wall', 'floor', 'floor', 'floor', 'wall'],
+      ['wall', 'floor', 'stairs', 'floor', 'wall'],
+      ['wall', 'floor', 'floor', 'floor', 'wall'],
+      ['wall', 'floor', 'floor', 'floor', 'wall'],
+      ['wall', 'wall', 'wall', 'wall', 'wall'],
+    ];
+    const b = spawnBesideStairs(upRoom, 'arriveUp');
+    expect(b).not.toBeNull();
+    expect(b!.tx).toBe(2);
+    expect(b!.ty).toBeGreaterThan(2); // south of S
   });
 });
 

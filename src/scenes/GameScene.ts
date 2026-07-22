@@ -15,6 +15,7 @@ import {
 import { ROOMS, resolveRoomId } from '../data/world';
 import {
   entryFromOpposite,
+  spawnBesideStairs,
   spawnForContinue,
   spawnInsideEntryEdge,
 } from '../systems/map-spawn';
@@ -2078,6 +2079,12 @@ export class GameScene extends Phaser.Scene {
     pBody.setVelocity(0, 0);
     pBody.enable = true;
     this.player.setActive(true).setVisible(true);
+    // Face into the room after stairs (stairs sit behind you, not north-in-front)
+    if (entryFrom === 'stairsDown') {
+      this.facing = 'down'; // north of U; look into the dungeon
+    } else if (entryFrom === 'stairsUp') {
+      this.facing = 'down'; // south of S; look into the overworld
+    }
 
     // Entities
     const kills = killListForSpawn(this.save, room.land);
@@ -2619,30 +2626,17 @@ export class GameScene extends Phaser.Scene {
     entryFrom?: string,
     fromSave?: boolean,
   ): { tx: number; ty: number } {
-    // Came down stairs → stand south of stairs-up (not ON them, or you bounce back up)
+    // Came down stairs → stand **north** of stairs-up (exit behind/south)
     if (entryFrom === 'stairsDown') {
-      const up = this.findTile('stairs_up');
-      if (up) {
-        const ty = Math.min(VIEW_TILES_H - 2, up.ty + 2);
-        // Prefer a walkable cell south of the stair
-        if (!SOLID.includes(this.tileGrid[ty]?.[up.tx] ?? 'wall')) {
-          return { tx: up.tx, ty };
-        }
-        return { tx: up.tx, ty: Math.min(VIEW_TILES_H - 2, up.ty + 1) };
-      }
-      return { tx: 8, ty: 8 };
-    }
-    // Came up stairs → stand north of stairs-down (not ON them)
-    if (entryFrom === 'stairsUp') {
-      const down = this.findTile('stairs');
-      if (down) {
-        const ty = Math.max(1, down.ty - 2);
-        if (!SOLID.includes(this.tileGrid[ty]?.[down.tx] ?? 'wall')) {
-          return { tx: down.tx, ty };
-        }
-        return { tx: down.tx, ty: Math.max(1, down.ty - 1) };
-      }
+      const beside = spawnBesideStairs(this.tileGrid, 'arriveDown');
+      if (beside) return beside;
       return { tx: 8, ty: 4 };
+    }
+    // Came up stairs → stand **south** of stairs-down (hole behind/north)
+    if (entryFrom === 'stairsUp') {
+      const beside = spawnBesideStairs(this.tileGrid, 'arriveUp');
+      if (beside) return beside;
+      return { tx: 8, ty: 6 };
     }
 
     // Cardinal doors: entryFrom = edge of THIS room we entered through.
