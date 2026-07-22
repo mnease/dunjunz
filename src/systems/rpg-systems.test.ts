@@ -1012,12 +1012,12 @@ describe('room expand to 16:9 view', () => {
     }
     expect(walkMid).toBeGreaterThan(VIEW_TILES_W * 0.6);
 
-    // West door present on outer edge (may span multiple tiles)
+    // West door: exactly one D on the outer edge (not a triple mouth)
     const doorRows = ex.tiles.filter((r) => r[0] === 'D' || r[0] === 'L');
-    expect(doorRows.length).toBeGreaterThanOrEqual(1);
+    expect(doorRows.length).toBe(1);
   });
 
-  it('door edges have no floor gaps beside the door (solid wall or door only)', async () => {
+  it('door edges are a single door with wall flanks (no DDD, no floor gaps)', async () => {
     const { expandRoomTiles } = await import('./room-expand');
     const src = [
       '################',
@@ -1034,11 +1034,14 @@ describe('room expand to 16:9 view', () => {
     ];
     const ex = expandRoomTiles(src);
     const south = ex.tiles[ex.tiles.length - 1]!;
+    let doors = 0;
     for (let i = 0; i < south.length; i++) {
       const c = south[i]!;
       // Rim: wall or door glyph only — never a lone floor hole next to D
       expect(['#', 'D', 'L'].includes(c)).toBe(true);
+      if (c === 'D' || c === 'L') doors += 1;
     }
+    expect(doors).toBe(1);
     expect(south.includes('D')).toBe(true);
   });
 

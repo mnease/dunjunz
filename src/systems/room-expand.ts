@@ -3,8 +3,8 @@
  * **playable** dungeon fills the 16:9 playfield.
  *
  * Interior floors/grass/features scale up; the outer rim is a solid wall
- * shell with intentional openings only. Single-tile doors become a short
- * multi-tile span so stretch no longer leaves floor “gaps” beside doors.
+ * shell with intentional openings only. Authored doors stay **one** rim
+ * tile (D/L) — flanks are wall, not triple doors.
  */
 
 import { VIEW_TILES_H, VIEW_TILES_W } from '../config';
@@ -13,8 +13,8 @@ import { VIEW_TILES_H, VIEW_TILES_W } from '../config';
 export const ROOM_AUTHOR_W = 16;
 export const ROOM_AUTHOR_H = 11;
 
-/** How many perimeter tiles a single authored door occupies after stretch. */
-export const DOOR_SPAN = 3;
+/** Perimeter tiles per authored door (always a single doorway). */
+export const DOOR_SPAN = 1;
 
 const DOORISH = new Set(['D', 'L']);
 
@@ -184,37 +184,24 @@ function placeEdgeOpenings(
     const half = Math.floor(span / 2);
     for (let d = -half; d <= half; d++) {
       const a = along + d;
+      // Doors: only the center cell is D/L. Flanks (if span>1) stay wall.
+      // Open trails (., g, d…): every cell in the span is walkable terrain.
+      const glyph =
+        d === 0 || !DOORISH.has(ch) ? ch : '#';
       if (edge === 'west' || edge === 'east') {
         if (a <= 0 || a >= targetH - 1) continue;
         const x = edge === 'west' ? 0 : targetW - 1;
         const inner = edge === 'west' ? 1 : targetW - 2;
-        // Door glyph only on center of span; flanks match open terrain
-        const glyph =
-          d === 0
-            ? DOORISH.has(ch)
-              ? ch
-              : ch
-            : DOORISH.has(ch)
-              ? ch
-              : openFill(ch);
         grid[a]![x] = glyph;
-        if (isSolidWall(grid[a]![inner]!)) {
+        if (!isSolidWall(glyph) && isSolidWall(grid[a]![inner]!)) {
           grid[a]![inner] = openFill(ch);
         }
       } else {
         if (a <= 0 || a >= targetW - 1) continue;
         const y = edge === 'north' ? 0 : targetH - 1;
         const inner = edge === 'north' ? 1 : targetH - 2;
-        const glyph =
-          d === 0
-            ? DOORISH.has(ch)
-              ? ch
-              : ch
-            : DOORISH.has(ch)
-              ? ch
-              : openFill(ch);
         grid[y]![a] = glyph;
-        if (isSolidWall(grid[inner]![a]!)) {
+        if (!isSolidWall(glyph) && isSolidWall(grid[inner]![a]!)) {
           grid[inner]![a] = openFill(ch);
         }
       }
@@ -328,67 +315,72 @@ function openFill(ch: string): string {
 }
 
 /**
- * Any rim cell that isn't door/open stays wall. Corners always wall.
- * Also: if a door sits alone with floor neighbors on the rim, expand door
- * flanks to door tiles (wider door) so no stray floor gap remains.
+ * Corners always wall. Rim cells that aren't intentional openings stay wall
+ * (kills stretch floor-gaps beside a single door without painting DDD).
  */
 function sealRim(
   grid: string[][],
   targetW: number,
   targetH: number,
 ): void {
-  const isOpenRim = (ch: string | undefined) =>
-    !!ch && ch !== '#';
-
   // Corners
   grid[0]![0] = '#';
   grid[0]![targetW - 1] = '#';
   grid[targetH - 1]![0] = '#';
   grid[targetH - 1]![targetW - 1] = '#';
 
-  // Widen door clusters: any rim open cell adjacent to D/L becomes D/L
-  // (fills the classic stretch gap of "D.")
-  const widen = (get: (i: number) => string, set: (i: number, c: string) => void, n: number) => {
-    const next = Array.from({ length: n }, (_, i) => get(i));
+  // Keep single doors: if a rim cell is floor-like, only leave it open when
+  // it is a multi-tile trail (not a one-tile door mouth). Door glyphs (D/L)
+  // stay as-is; stray floor holes on the rim become wall.
+  const sealEdge = (
+    get: (i: number) => string,
+    set: (i: number, c: string) => void,
+    n: number,
+  ) => {
     for (let i = 1; i < n - 1; i++) {
-      if (next[i] === '#' ) continue;
-      if (DOORISH.has(next[i]!)) continue;
-      // Floor-like next to door → convert to door for a solid mouth
-      const nearDoor =
-        DOORISH.has(next[i - 1] ?? '#') || DOORISH.has(next[i + 1] ?? '#');
-      if (nearDoor && (next[i] === '.' || next[i] === 'g' || next[i] === 'd')) {
-        const doorCh =
-          (DOORISH.has(next[i - 1] ?? '#') ? next[i - 1] : next[i + 1]) ?? 'D';
-        next[i] = doorCh!;
+      const c = get(i);
+      if (c === '#' || DOORISH.has(c)) continue;
+      // Floor/grass/dirt on rim is only OK for open trails (already painted
+      // as continuous runs). Isolated floor next to walls becomes wall so
+      // we never show a gap or a fake second door tile.
+      const left = get(i - 1);
+      const right = get(i + 1);
+      const alone =
+        (left === '#' || DOORISH.has(left)) &&
+        (right === '#' || DOORISH.has(right));
+      // Next to a door: always wall flanks (one door, solid stone beside it)
+      if (DOORISH.has(left) || DOORISH.has(right)) {
+        set(i, '#');
+        continue;
+      }
+      if (alone && (c === '.' || c === 'g' || c === 'd')) {
+        set(i, '#');
       }
     }
-    for (let i = 0; i < n; i++) set(i, next[i]!);
   };
 
-  // North / south rows
-  widen(
+  sealEdge(
     (i) => grid[0]![i]!,
     (i, c) => {
       grid[0]![i] = c;
     },
     targetW,
   );
-  widen(
+  sealEdge(
     (i) => grid[targetH - 1]![i]!,
     (i, c) => {
       grid[targetH - 1]![i] = c;
     },
     targetW,
   );
-  // West / east cols
-  widen(
+  sealEdge(
     (i) => grid[i]![0]!,
     (i, c) => {
       grid[i]![0] = c;
     },
     targetH,
   );
-  widen(
+  sealEdge(
     (i) => grid[i]![targetW - 1]!,
     (i, c) => {
       grid[i]![targetW - 1] = c;
@@ -401,8 +393,6 @@ function sealRim(
   grid[0]![targetW - 1] = '#';
   grid[targetH - 1]![0] = '#';
   grid[targetH - 1]![targetW - 1] = '#';
-
-  void isOpenRim;
 }
 
 /**

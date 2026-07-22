@@ -24,6 +24,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 - **Buddy shows equipped gear** — Best Bud world sprite + inventory doll paint weapon, armor, helm, shield, amulet, ring, gloves, greaves, and shoes from `budEquipped` (same look IDs as the hero, fitted to the critter). Pose swaps keep gear via on-demand pose+loadout textures.
 - **Readable gear silhouettes** — breastplates (cuirass + pauldrons), helmets (visor, horns, brimmed mage hat), boots (shaft + toe + sole), gloves (fingers, not boot blocks), greaves (knee/shin), and kite/heater shields. Inventory icons match.
 - **Depth personality** — each basement floor darkens (tile tint + void), gains cramped/maze layouts, more lava/water/clutter, denser/meaner creeps, and a first-visit toast (`B3 · COLD STONE · THREAT T…`). Threat scales steeper with depth so B7 hits harder than B2.
+
+### Fixed
+
+- **Single doorways** — room stretch no longer paints three D tiles in a row; each authored door is one rim tile with wall flanks.
 - **Map tile detail (16-bit)** — dungeon floors (irregular cobbles, cracks, moss), walls (3-row staggered brick + grit), grass (dense blades + flowers), dirt ruts, water/lava frames, doors/stairs/pads, and mapz cells/links all redrawn to match avatar/weapon density.
 
 - **Class clothing & D&D armor categories** — gear is **cloth / light / medium / heavy**. Class proficiency (primary *or* secondary) keeps full DEF; wrong category soft-nerfs DEF (×0.65). Affinity pieces (wizard cloak, ranger cloak/sheath, fighter plate, cleric vestments, barbarian hide…) grant **+1 DEF** when you have that class. Loot biases armor by class.
