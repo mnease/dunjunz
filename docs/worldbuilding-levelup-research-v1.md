@@ -1,6 +1,6 @@
 # Dunjunz worldbuilding level-up — research v1
 
-**Status:** Research only. **No code this round.**  
+**Status:** Research complete. **P0–P6 implemented in code** (see CHANGELOG).  
 **Date:** 2026-07-22  
 **Council:** Scout (canon influences + gaps), Forager (design systems / room–encounter grammar), Waggle (contrarian traps + topologies)  
 **External anchors:** Zelda 1 / ALttP dungeon craft, OSR (Keep on the Borderlands, Barrowmaze, Veins of the Earth, Mörk Borg / Shadowdark), roguelikes & crawlers (Isaac, Gungeon, Spelunky, Hades, Dead Cells, Darkest Dungeon, Shiren / Mystery Dungeon, Grimrock / Etrian), LitRPG (*Dungeon Crawler Carl* floor seasons / factions / rule injections)  

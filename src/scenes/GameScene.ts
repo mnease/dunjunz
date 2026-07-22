@@ -80,9 +80,12 @@ import {
   applyMinibossKill,
   applyRulesLawyerForgive,
   ASSISTANT_HONK_ID,
+  BILGE_BRUTE_ID,
   DEPUTY_HOWL_ID,
+  DUNE_STALKER_ID,
   isPeacefulMinibossUntilProvoked,
   LEASE_WIGHT_ID,
+  ROOT_ALPHA_ID,
   RULES_LAWYER_ID,
   shouldApplyMinibossReward,
   shouldSkipMinibossSpawn,
@@ -2266,6 +2269,12 @@ export class GameScene extends Phaser.Scene {
       sprite.setTint(0x9a9ab0); // pack-grey wolf intern
     } else if (def.id === LEASE_WIGHT_ID) {
       sprite.setTint(0xd4c0a0); // sandy property manager
+    } else if (def.id === ROOT_ALPHA_ID) {
+      sprite.setTint(0x6a8a50); // pack green-grey
+    } else if (def.id === DUNE_STALKER_ID) {
+      sprite.setTint(0xc09050); // sand stalker
+    } else if (def.id === BILGE_BRUTE_ID) {
+      sprite.setTint(0x4a7060); // bilge green
     } else if (def.id === 'floor-captain' || def.kind === 'miniboss') {
       sprite.setTint(0xffb090); // manager warmth; skip depth wash
     }
@@ -2284,7 +2293,10 @@ export class GameScene extends Phaser.Scene {
         def.id !== RULES_LAWYER_ID &&
         def.id !== ASSISTANT_HONK_ID &&
         def.id !== DEPUTY_HOWL_ID &&
-        def.id !== LEASE_WIGHT_ID
+        def.id !== LEASE_WIGHT_ID &&
+        def.id !== ROOT_ALPHA_ID &&
+        def.id !== DUNE_STALKER_ID &&
+        def.id !== BILGE_BRUTE_ID
       ) {
         sprite.setTint(et);
       }

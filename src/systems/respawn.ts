@@ -36,7 +36,10 @@ export function isPermanentKill(kind: string, id: string): boolean {
     id === 'rules-lawyer' ||
     id === 'assistant-honk' ||
     id === 'deputy-howl' ||
-    id === 'lease-wight'
+    id === 'lease-wight' ||
+    id === 'root-alpha' ||
+    id === 'dune-stalker' ||
+    id === 'bilge-brute'
   ) {
     return true;
   }

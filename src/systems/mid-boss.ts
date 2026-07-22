@@ -50,6 +50,19 @@ export const LEASE_WIGHT_ID = 'lease-wight';
 export const LEASE_WIGHT_ROOM_ID = 'dezertz_b2_side';
 export const LEASE_WIGHT_BASE_HP = 36;
 
+/** P6 ecology elites (non-manager job titles). */
+export const ROOT_ALPHA_ID = 'root-alpha';
+export const ROOT_ALPHA_ROOM_ID = 'woodz_b1_side';
+export const ROOT_ALPHA_BASE_HP = 38;
+
+export const DUNE_STALKER_ID = 'dune-stalker';
+export const DUNE_STALKER_ROOM_ID = 'dezertz_b3_side';
+export const DUNE_STALKER_BASE_HP = 34;
+
+export const BILGE_BRUTE_ID = 'bilge-brute';
+export const BILGE_BRUTE_ROOM_ID = 'sewerz_b3_secret';
+export const BILGE_BRUTE_BASE_HP = 42;
+
 /** Known mid-warden entity ids (kind miniboss preferred). */
 export const MINIBOSS_IDS: ReadonlySet<string> = new Set([
   FLOOR_CAPTAIN_ID,
@@ -57,6 +70,9 @@ export const MINIBOSS_IDS: ReadonlySet<string> = new Set([
   ASSISTANT_HONK_ID,
   DEPUTY_HOWL_ID,
   LEASE_WIGHT_ID,
+  ROOT_ALPHA_ID,
+  DUNE_STALKER_ID,
+  BILGE_BRUTE_ID,
 ]);
 
 export function isMinibossKind(kind: string): boolean {
@@ -126,6 +142,9 @@ function wardenDisplayName(id: string): string {
   if (id === ASSISTANT_HONK_ID) return 'ASSISTANT HONK';
   if (id === DEPUTY_HOWL_ID) return 'DEPUTY HOWL';
   if (id === LEASE_WIGHT_ID) return 'LEASE WIGHT';
+  if (id === ROOT_ALPHA_ID) return 'ROOT ALPHA';
+  if (id === DUNE_STALKER_ID) return 'DUNE STALKER';
+  if (id === BILGE_BRUTE_ID) return 'BILGE BRUTE';
   return id.toUpperCase().replace(/-/g, ' ');
 }
 
@@ -163,6 +182,24 @@ function wardenKillDialog(id: string): string[] {
       'LEASE WIGHT FADES. SECURITY DEPOSIT FORFEIT.',
       '"THAT WAS NOT NORMAL WEAR AND TEAR."',
       'OPTIONAL CRYPT DEN DONE. TOWER STAIRS FREE.',
+    ];
+  }
+  if (id === ROOT_ALPHA_ID) {
+    return [
+      'ROOT ALPHA FALLS. THE PACK LOSES ITS EDGE.',
+      'NO LAND CLEAR. THE WOLF LORD STILL RULES ABOVE.',
+    ];
+  }
+  if (id === DUNE_STALKER_ID) {
+    return [
+      'DUNE STALKER CRACKS. HEAT SHIMMERS FADE.',
+      'OPTIONAL CRYPT ELITE. NO PORTAL. NO LAND CLEAR.',
+    ];
+  }
+  if (id === BILGE_BRUTE_ID) {
+    return [
+      'BILGE BRUTE SINKS. THE PIPE REMEMBERS.',
+      'SECRET DEN CLEARED. GOOSE STILL AWAITS B4.',
     ];
   }
   return ['A WARDEN FALLS.', 'NOT THE LAND BOSS. KEEP GOING.'];

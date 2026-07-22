@@ -82,6 +82,23 @@ function wallTorch(id: string, x: number, y: number): EntityDef {
   return { kind: 'torch_wall', id, x, y };
 }
 
+/** Open a cardinal edge mid-point for Jaquays links (must match validateRooms). */
+function openEdge(
+  tiles: string[],
+  edge: 'N' | 'S' | 'E' | 'W',
+): string[] {
+  const rows = tiles.map((r) => r.split(''));
+  const h = rows.length;
+  const w = rows[0]?.length ?? 0;
+  const midX = Math.floor(w / 2);
+  const midY = Math.floor(h / 2);
+  if (edge === 'N' && rows[0]) rows[0][midX] = 'D';
+  else if (edge === 'S' && rows[h - 1]) rows[h - 1]![midX] = 'D';
+  else if (edge === 'E' && rows[midY]) rows[midY]![w - 1] = 'D';
+  else if (edge === 'W' && rows[midY]) rows[midY]![0] = 'D';
+  return rows.map((r) => r.join(''));
+}
+
 /** Assert each row is 16 tiles (authoring guard). */
 function rows16(label: string, rows: string[]): string[] {
   for (let i = 0; i < rows.length; i++) {
@@ -632,7 +649,7 @@ function makeBasementFloor(opts: {
   const dark = floor <= -2;
   const sideRole = sideRoleForDepth(depth);
 
-  // Foyer: quiet threshold (R0–R1) — light creeps + wall torches
+  // P3 foyer quiet law: threshold only (signs/torches/heart) — no combat packs
   const foyerEnts: EntityDef[] = [
     sign(`${prefix}-foyer-sign`, 12, 8, [
       `${flabel}: ${flavor}.`,
@@ -641,12 +658,7 @@ function makeBasementFloor(opts: {
     ]),
     wallTorch(`${prefix}-foyer-torch-a`, 2, 2),
     wallTorch(`${prefix}-foyer-torch-b`, 13, 2),
-    ...creepsForDepth(
-      hostiles.slice(0, 1),
-      `${prefix}-foyer`,
-      [[4, 8]],
-      Math.max(0, depth - 1),
-    ),
+    heart(`${prefix}-foyer-heart`, 8, 8),
   ];
 
   const hallEnts: EntityDef[] = [
@@ -676,7 +688,14 @@ function makeBasementFloor(opts: {
     ]),
   ];
   if (sideRole === 'quiet') {
+    // Shrine / rest dens — no hostiles
     sideEnts.push(heart(`${prefix}-side-heart`, 8, 5));
+    sideEnts.push(
+      sign(`${prefix}-side-shrine`, 11, 5, [
+        'SHRINE. BREATHE. HEAL IF YOU MUST.',
+        'THE DUNJUN DOES NOT BILL FOR HOPE.',
+      ]),
+    );
   } else if (sideRole === 'vault') {
     sideEnts.push(chest(`${prefix}-side-chest`, 8, 5));
     sideEnts.push(
@@ -896,6 +915,79 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
     };
   }
 
+  // P5 Jaquays: loop b3_side ↔ b5_side (cross-floor soft shortcut, not required)
+  if (out.b3_side && out.b5_side) {
+    out.b3_side = {
+      ...out.b3_side,
+      tiles: openEdge(out.b3_side.tiles, 'N'),
+      north: 'b5_side',
+      entities: [
+        ...(out.b3_side.entities ?? []),
+        sign('b3-loop-sign', 8, 2, [
+          'CRACK IN THE CEILING. FAULT LINE.',
+          'NORTH: SOMEWHERE DEEPER. OPTIONAL.',
+        ]),
+      ],
+    };
+    out.b5_side = {
+      ...out.b5_side,
+      tiles: openEdge(out.b5_side.tiles, 'S'),
+      south: 'b3_side',
+      entities: [
+        ...(out.b5_side.entities ?? []),
+        sign('b5-loop-sign', 8, 9, [
+          'FAULT SHAFT SOUTH — BACK TO B3 SIDE.',
+          'NOT THE MAIN STAIRS. KNOWLEDGE PATH.',
+        ]),
+      ],
+    };
+  }
+
+  // P5 secret vault off b5_side (east) — not required for land clear
+  if (out.b5_side) {
+    out.b5_side = {
+      ...out.b5_side,
+      tiles: openEdge(out.b5_side.tiles, 'E'),
+      east: 'b5_secret',
+    };
+    out.b5_secret = {
+      id: 'b5_secret',
+      title: 'SECRET CACHE · B5',
+      land: 'dunjunz',
+      floor: -5,
+      mapX: 2,
+      mapY: 1,
+      west: 'b5_side',
+      dark: true,
+      sideRole: 'vault',
+      tiles: openEdge(
+        rows16('b5_secret', [
+          '################',
+          '#..............#',
+          '#..####..####..#',
+          '#..............#',
+          'D..............#',
+          '#..............#',
+          '#..............#',
+          '#..####..####..#',
+          '#..............#',
+          '#..............#',
+          '################',
+        ]),
+        'W',
+      ),
+      entities: [
+        sign('b5-secret-sign', 3, 8, [
+          'SECRET CACHE. NOT ON THE MAPZ… YET.',
+          'LOOT. WEST BACK. STAIRS STILL FREE.',
+        ]),
+        chest('b5-secret-chest', 8, 5, 'dungeon'),
+        wallTorch('b5-secret-torch', 2, 2),
+        heart('b5-secret-heart', 11, 5),
+      ],
+    };
+  }
+
   // B8 — final throne
   out.b8_foyer = {
     id: 'b8_foyer',
@@ -1018,6 +1110,70 @@ export function buildWoodzDeep(): Record<string, RoomDef> {
       }),
     );
   }
+  // P4 pack geometry: tree chokepoints in halls (biome as verbs)
+  for (const id of Object.keys(out)) {
+    if (!id.includes('woodz_b') || !id.endsWith('_hall')) continue;
+    const hall = out[id]!;
+    out[id] = {
+      ...hall,
+      entities: [
+        {
+          kind: 'tree',
+          id: `${id}-tree-a`,
+          x: 6,
+          y: 4,
+        },
+        {
+          kind: 'tree',
+          id: `${id}-tree-b`,
+          x: 10,
+          y: 6,
+        },
+        sign(`${id}-pack-sign`, 3, 8, [
+          'PACK TRAILS. TREES CHOKE THE LINE OF SIGHT.',
+          'FLANK OR GET FLANKED.',
+        ]),
+        ...(hall.entities ?? []).filter((e) => e.kind !== 'sign'),
+      ],
+    };
+  }
+
+  // P6 ecology elite — Root Alpha (not a job title)
+  if (out.woodz_b1_side) {
+    out.woodz_b1_side = {
+      ...out.woodz_b1_side,
+      title: 'ALPHA HOLLOW · B1',
+      sideRole: 'combat',
+      entities: [
+        sign('woodz-alpha-sign', 3, 8, [
+          'ALPHA HOLLOW. PACK EDGE.',
+          'ROOT ALPHA HUNTS HERE. NOT MIDDLE MANAGEMENT.',
+          'WEST: HALL. OPTIONAL.',
+        ]),
+        {
+          kind: 'miniboss',
+          id: 'root-alpha',
+          x: 8,
+          y: 5,
+          hp: 38,
+          dialog: [
+            'ROOT ALPHA: *LOW GROWL*',
+            'THE PACK OBEYS STRENGTH. NOT BADGES.',
+            'THE WOLF LORD RULES ABOVE. I RULE THE ROOTS.',
+          ],
+        },
+        {
+          kind: 'tree',
+          id: 'woodz-alpha-tree',
+          x: 5,
+          y: 4,
+        },
+        ...creeps(['wolf'], 'woodz-alpha-pack', [[11, 6]]),
+        chest('woodz-alpha-chest', 11, 3, 'dungeon'),
+      ],
+    };
+  }
+
   // B2 optional den: Deputy Howl (post-clear deep; stairs free via hall)
   if (out.woodz_b2_side) {
     out.woodz_b2_side = {
@@ -1047,6 +1203,12 @@ export function buildWoodzDeep(): Record<string, RoomDef> {
           [5, 5],
           [4, 6],
         ]),
+        {
+          kind: 'tree',
+          id: 'woodz-howl-tree',
+          x: 6,
+          y: 3,
+        },
         chest('woodz-howl-chest', 11, 3, 'dungeon'),
       ],
     };
@@ -1168,6 +1330,76 @@ export function buildDezertzDeep(): Record<string, RoomDef> {
       ]),
     ],
   };
+  // P4 exposure geometry: cactus blockers + open-sight signs on halls
+  for (const id of Object.keys(out)) {
+    if (!id.includes('dezertz_b') || !id.endsWith('_hall')) continue;
+    const hall = out[id]!;
+    out[id] = {
+      ...hall,
+      entities: [
+        {
+          kind: 'cactus',
+          id: `${id}-cactus-a`,
+          x: 5,
+          y: 4,
+        },
+        {
+          kind: 'cactus',
+          id: `${id}-cactus-b`,
+          x: 11,
+          y: 6,
+        },
+        {
+          kind: 'tumbleweed',
+          id: `${id}-tumble`,
+          x: 8,
+          y: 3,
+        },
+        sign(`${id}-heat-sign`, 3, 8, [
+          'EXPOSURE. FEW WALLS. MORE SPINES.',
+          'HEAT PATHS. CACTI MARK CLAIMS.',
+        ]),
+        ...(hall.entities ?? []).filter((e) => e.kind !== 'sign'),
+      ],
+    };
+  }
+
+  // P6 ecology elite — Dune Stalker
+  if (out.dezertz_b3_side) {
+    out.dezertz_b3_side = {
+      ...out.dezertz_b3_side,
+      title: 'STALKER DUNE · B3',
+      sideRole: 'hazard',
+      entities: [
+        sign('dezertz-stalker-sign', 3, 8, [
+          'STALKER DUNE. AMBUSH HEAT.',
+          'DUNE STALKER — NOT A LANDLORD. WORSE.',
+          'WEST: HALL. OPTIONAL.',
+        ]),
+        {
+          kind: 'miniboss',
+          id: 'dune-stalker',
+          x: 8,
+          y: 5,
+          hp: 34,
+          dialog: [
+            'DUNE STALKER: *SAND HISSES*',
+            'I HUNT BETWEEN LEASES.',
+            'THE WRAITH OWNS THE TOWER. I OWN THE SHADOW.',
+          ],
+        },
+        {
+          kind: 'cactus',
+          id: 'dezertz-stalker-cactus',
+          x: 5,
+          y: 3,
+        },
+        ...creeps(['scorpion'], 'dezertz-stalker-pack', [[11, 6]]),
+        chest('dezertz-stalker-chest', 11, 3, 'dungeon'),
+      ],
+    };
+  }
+
   // B2 optional den: Lease Wight (post-clear deep; stairs free via hall)
   if (out.dezertz_b2_side) {
     out.dezertz_b2_side = {
@@ -1191,6 +1423,12 @@ export function buildDezertzDeep(): Record<string, RoomDef> {
             'PRIZELLA WAS A MODEL TENANT. YOU ARE NOT.',
             'FIGHT OR LEAVE. HALL WEST. NO HARD GATE.',
           ],
+        },
+        {
+          kind: 'cactus',
+          id: 'dezertz-lease-cactus',
+          x: 5,
+          y: 3,
         },
         chest('dezertz-lease-chest', 11, 3, 'dungeon'),
       ],
@@ -1270,6 +1508,70 @@ export function buildSewerzDeep(): Record<string, RoomDef> {
           ],
         },
         chest('sewerz-honk-chest', 11, 3, 'dungeon'),
+      ],
+    };
+  }
+
+  // P5 secret + P6 bilge ecology elite (not required for goose)
+  if (out.sewerz_b3_side) {
+    out.sewerz_b3_side = {
+      ...out.sewerz_b3_side,
+      tiles: openEdge(out.sewerz_b3_side.tiles, 'E'),
+      east: 'sewerz_b3_secret',
+      entities: [
+        ...(out.sewerz_b3_side.entities ?? []),
+        sign('sewerz-b3-secret-hint', 12, 5, [
+          'EAST: BILGE SECRET. SMELLS LIKE REGRET.',
+          'NOT THE PATH TO THE GOOSE.',
+        ]),
+      ],
+    };
+    out.sewerz_b3_secret = {
+      id: 'sewerz_b3_secret',
+      title: 'BILGE SECRET · B3',
+      land: 'sewerz',
+      floor: -3,
+      mapX: 2,
+      mapY: 1,
+      west: 'sewerz_b3_side',
+      dark: true,
+      sideRole: 'combat',
+      tiles: openEdge(
+        rows16('sewerz_b3_secret', [
+          '################',
+          '#..............#',
+          '#..##~~~~~~##..#',
+          '#..............#',
+          'D..............#',
+          '#..............#',
+          '#..##~~~~~~##..#',
+          '#..............#',
+          '#..............#',
+          '#..............#',
+          '################',
+        ]),
+        'W',
+      ),
+      entities: [
+        sign('sewerz-bilge-sign', 3, 8, [
+          'BILGE SECRET. PIPE MONSTER HOME.',
+          'BILGE BRUTE — ECOLOGY, NOT HR.',
+          'WEST OUT. GOOSE IS STILL B4 NORTH.',
+        ]),
+        {
+          kind: 'miniboss',
+          id: 'bilge-brute',
+          x: 8,
+          y: 5,
+          hp: 42,
+          dialog: [
+            'BILGE BRUTE: *WET ROAR*',
+            'I LIVE IN WHAT THE KINGDOM FLUSHES.',
+            'THE GOOSE TAXES. I DIGEST.',
+          ],
+        },
+        chest('sewerz-bilge-chest', 11, 3, 'dungeon'),
+        wallTorch('sewerz-bilge-torch', 2, 2),
       ],
     };
   }

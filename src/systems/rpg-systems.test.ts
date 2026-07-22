@@ -3140,9 +3140,15 @@ describe('world P0–P1 packs and side roles', () => {
     const wh = ROOMS.woodz_b1_hall;
     expect(wh).toBeDefined();
     const kinds = (wh.entities ?? [])
-      .filter((e) => e.kind !== 'sign' && e.kind !== 'heart' && e.kind !== 'torch_wall')
+      .filter(
+        (e) =>
+          e.kind !== 'sign' &&
+          e.kind !== 'heart' &&
+          e.kind !== 'torch_wall' &&
+          e.kind !== 'tree',
+      )
       .map((e) => e.kind);
-    expect(kinds.every((k) => k === 'wolf' || k === 'heart')).toBe(true);
+    expect(kinds.every((k) => k === 'wolf')).toBe(true);
     expect(kinds.includes('slime')).toBe(false);
 
     const dh = ROOMS.dezertz_b1_hall;
@@ -3169,4 +3175,195 @@ describe('world P0–P1 packs and side roles', () => {
       .filter(Boolean);
     expect(new Set(roles).size).toBeGreaterThan(1);
   });
+});
+
+// ── World P2–P6 grammar ────────────────────────────────────────────
+import {
+  countCombatHostiles,
+  countLandRooms,
+  entityKindHistogram,
+  isQuietFoyer,
+  landGraphHasCycle,
+  LAND_LENGTH_DOCTRINE,
+  pathLengthTo,
+  roomHasBossId,
+  secretOrVaultRooms,
+} from './world-grammar';
+import {
+  BILGE_BRUTE_BASE_HP,
+  BILGE_BRUTE_ID,
+  BILGE_BRUTE_ROOM_ID,
+  DUNE_STALKER_BASE_HP,
+  DUNE_STALKER_ID,
+  DUNE_STALKER_ROOM_ID,
+  ROOT_ALPHA_BASE_HP,
+  ROOT_ALPHA_ID,
+  ROOT_ALPHA_ROOM_ID,
+} from './mid-boss';
+
+describe('world P2 asymmetric land length', () => {
+  it('Dunjunz is long-spine; Woodz/Dezertz surface paths stay short', () => {
+    expect(countLandRooms(ROOMS, 'dunjunz')).toBeGreaterThanOrEqual(
+      LAND_LENGTH_DOCTRINE.dunjunz.minRooms,
+    );
+    const dunjPath = pathLengthTo(ROOMS, 'b1_entrance', (r) =>
+      roomHasBossId(r, 'dungeon-master'),
+    );
+    expect(dunjPath).not.toBeNull();
+    expect(dunjPath!).toBeGreaterThanOrEqual(
+      LAND_LENGTH_DOCTRINE.dunjunz.minPathToBoss,
+    );
+
+    const woodzPath = pathLengthTo(ROOMS, 'woodz_path', (r) =>
+      roomHasBossId(r, 'wolf-lord'),
+    );
+    expect(woodzPath).not.toBeNull();
+    expect(woodzPath!).toBeLessThanOrEqual(
+      LAND_LENGTH_DOCTRINE.woodz.maxSurfacePathToBoss,
+    );
+
+    const dezPath = pathLengthTo(ROOMS, 'dezertz_dunes', (r) =>
+      roomHasBossId(r, 'sand-wraith'),
+    );
+    expect(dezPath).not.toBeNull();
+    expect(dezPath!).toBeLessThanOrEqual(
+      LAND_LENGTH_DOCTRINE.dezertz.maxSurfacePathToBoss,
+    );
+
+    // Asymmetry: Dunjunz path >> Woodz surface path
+    expect(dunjPath!).toBeGreaterThan(woodzPath! * 2);
+  });
+
+  it('Sewerz is shorter pipe than Dunjunz full room count', () => {
+    const s = countLandRooms(ROOMS, 'sewerz');
+    const d = countLandRooms(ROOMS, 'dunjunz');
+    expect(s).toBeLessThan(d);
+    expect(s).toBeGreaterThanOrEqual(LAND_LENGTH_DOCTRINE.sewerz.minRooms);
+    expect(s).toBeLessThanOrEqual(LAND_LENGTH_DOCTRINE.sewerz.maxRooms);
+  });
+});
+
+describe('world P3 foyer quiet + shrine sides', () => {
+  it('deep foyers are low-combat thresholds', () => {
+    for (const id of ['b2_foyer', 'b5_foyer', 'woodz_b2_foyer', 'sewerz_b2_foyer']) {
+      const r = ROOMS[id];
+      expect(r).toBeDefined();
+      expect(isQuietFoyer(r)).toBe(true);
+      expect(countCombatHostiles(r)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('quiet side includes heart shrine without combat denseness', () => {
+    // depth 3 → quiet role on generator (before mid overrides)
+    const quietish = Object.values(ROOMS).filter(
+      (r) => r.sideRole === 'quiet' && r.land === 'dunjunz',
+    );
+    expect(quietish.length).toBeGreaterThan(0);
+    for (const r of quietish) {
+      expect(countCombatHostiles(r)).toBe(0);
+      expect(r.entities?.some((e) => e.kind === 'heart')).toBe(true);
+    }
+  });
+});
+
+describe('world P4 biome geometry verbs', () => {
+  it('Woodz deep halls use trees + wolves not slime halls', () => {
+    const hall = ROOMS.woodz_b1_hall;
+    expect(hall).toBeDefined();
+    const h = entityKindHistogram(hall!);
+    expect(h.tree ?? 0).toBeGreaterThanOrEqual(1);
+    expect(h.wolf ?? 0).toBeGreaterThanOrEqual(1);
+    expect(h.slime ?? 0).toBe(0);
+    expect(h.skeleton ?? 0).toBe(0);
+  });
+
+  it('Dezertz deep halls use cactus/exposure props not redshirt halls', () => {
+    const hall = ROOMS.dezertz_b1_hall;
+    expect(hall).toBeDefined();
+    const h = entityKindHistogram(hall!);
+    expect((h.cactus ?? 0) + (h.tumbleweed ?? 0)).toBeGreaterThanOrEqual(1);
+    expect(h.redshirt ?? 0).toBe(0);
+    expect(h.slime ?? 0).toBe(0);
+  });
+});
+
+describe('world P5 Jaquays loops and secrets', () => {
+  it('Dunjunz graph has a cycle (loop) and a secret vault', () => {
+    expect(landGraphHasCycle(ROOMS, 'dunjunz')).toBe(true);
+    expect(ROOMS.b3_side?.north).toBe('b5_side');
+    expect(ROOMS.b5_side?.south).toBe('b3_side');
+    expect(ROOMS.b5_secret).toBeDefined();
+    expect(ROOMS.b5_side?.east).toBe('b5_secret');
+    expect(ROOMS.b5_secret?.west).toBe('b5_side');
+    // Secret is optional dens — not on stairs spine only
+    expect(ROOMS.b5_secret?.stairsDown).toBeUndefined();
+    expect(
+      ROOMS.b5_secret?.entities?.some((e) => e.kind === 'chest'),
+    ).toBe(true);
+  });
+
+  it('Sewerz has a secret dens not required for goose', () => {
+    expect(ROOMS.sewerz_b3_secret).toBeDefined();
+    expect(ROOMS.sewerz_b3_side?.east).toBe('sewerz_b3_secret');
+    // Critical path to goose does not require secret
+    const viaSecret = pathLengthTo(ROOMS, 'sewerz_mouth', (r) =>
+      roomHasBossId(r, 'royal-goose'),
+    );
+    expect(viaSecret).not.toBeNull();
+    // Secret is off side branch
+    expect(ROOMS.sewerz_b3_secret?.entities?.some((e) => e.id === BILGE_BRUTE_ID)).toBe(
+      true,
+    );
+  });
+});
+
+describe('world P6 ecology elites (non-manager)', () => {
+  const elites = [
+    {
+      id: ROOT_ALPHA_ID,
+      roomId: ROOT_ALPHA_ROOM_ID,
+      hp: ROOT_ALPHA_BASE_HP,
+      land: 'woodz' as const,
+    },
+    {
+      id: DUNE_STALKER_ID,
+      roomId: DUNE_STALKER_ROOM_ID,
+      hp: DUNE_STALKER_BASE_HP,
+      land: 'dezertz' as const,
+    },
+    {
+      id: BILGE_BRUTE_ID,
+      roomId: BILGE_BRUTE_ROOM_ID,
+      hp: BILGE_BRUTE_BASE_HP,
+      land: 'sewerz' as const,
+    },
+  ];
+
+  it.each(elites)(
+    '$id placed as miniboss with mid-only kill contract',
+    ({ id, roomId, hp, land }) => {
+      const room = ROOMS[roomId];
+      expect(room).toBeDefined();
+      expect(room.land).toBe(land);
+      const e = room.entities?.find((x) => x.id === id);
+      expect(e).toBeDefined();
+      expect(e!.kind).toBe('miniboss');
+      expect(e!.hp).toBe(hp);
+      // Not job-title HR ids
+      expect(id.includes('captain') || id.includes('lawyer')).toBe(false);
+      expect(isBossRoom(roomId)).toBe(false);
+      expect(BOSS_ROOM_META[roomId]).toBeUndefined();
+
+      let save = defaultSave();
+      save = { ...save, bossDefeated: true, landsCleared: ['woodz'] };
+      const r = applyMinibossKill(save, id, land);
+      expect(r.save.killed).toContain(id);
+      expect(r.save.bossDefeated).toBe(true);
+      expect(r.save.landsCleared).toEqual(['woodz']);
+      expect(r.setsBossDefeated).toBe(false);
+      expect(r.opensLandExitPortal).toBe(false);
+      expect(shouldSpawnBossExitPortal(r.save, roomId, land)).toBe(false);
+      expect(isPermanentKill('miniboss', id)).toBe(true);
+    },
+  );
 });
