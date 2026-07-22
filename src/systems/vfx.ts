@@ -64,6 +64,171 @@ export function slashArc(
   });
 }
 
+export type LightningPoint = { x: number; y: number };
+
+/**
+ * Build a jagged lightning polyline from start → end (screen/world coords).
+ * Pure geometry — used for VFX draw + hit tests.
+ */
+export function buildLightningPath(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  segs = 8,
+  jag = 14,
+  rng: () => number = Math.random,
+): LightningPoint[] {
+  const n = Math.max(2, segs | 0);
+  const pts: LightningPoint[] = [{ x: x0, y: y0 }];
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  for (let i = 1; i < n; i++) {
+    const t = i / n;
+    // Mid-path jags stronger; ends hug the line
+    const amp = jag * Math.sin(t * Math.PI) * (0.55 + rng() * 0.9);
+    const side = rng() < 0.5 ? -1 : 1;
+    pts.push({
+      x: x0 + dx * t + nx * amp * side,
+      y: y0 + dy * t + ny * amp * side,
+    });
+  }
+  pts.push({ x: x1, y: y1 });
+  return pts;
+}
+
+/**
+ * Draw a bright electric arc along a polyline, then fade/destroy.
+ * Main bolt + thinner core + optional side forks.
+ */
+export function drawLightningArc(
+  scene: Phaser.Scene,
+  points: readonly LightningPoint[],
+  opts?: {
+    color?: number;
+    coreColor?: number;
+    durationMs?: number;
+    forks?: boolean;
+  },
+): void {
+  if (points.length < 2) return;
+  const color = opts?.color ?? 0x4ac0ff;
+  const core = opts?.coreColor ?? 0xe0f8ff;
+  const duration = opts?.durationMs ?? 220;
+  const forks = opts?.forks !== false;
+
+  const g = scene.add.graphics().setDepth(18);
+  // Outer glow
+  g.lineStyle(5, color, 0.35);
+  g.beginPath();
+  g.moveTo(points[0]!.x, points[0]!.y);
+  for (let i = 1; i < points.length; i++) {
+    g.lineTo(points[i]!.x, points[i]!.y);
+  }
+  g.strokePath();
+  // Mid bolt
+  g.lineStyle(2.5, color, 0.95);
+  g.beginPath();
+  g.moveTo(points[0]!.x, points[0]!.y);
+  for (let i = 1; i < points.length; i++) {
+    g.lineTo(points[i]!.x, points[i]!.y);
+  }
+  g.strokePath();
+  // Hot core
+  g.lineStyle(1.2, core, 1);
+  g.beginPath();
+  g.moveTo(points[0]!.x, points[0]!.y);
+  for (let i = 1; i < points.length; i++) {
+    g.lineTo(points[i]!.x, points[i]!.y);
+  }
+  g.strokePath();
+
+  // Short side forks from mid segments
+  if (forks && motionAllowed()) {
+    for (let i = 2; i < points.length - 2; i += 2) {
+      if (Math.random() > 0.55) continue;
+      const p = points[i]!;
+      const ang = Math.random() * Math.PI * 2;
+      const fl = 10 + Math.random() * 18;
+      const fx = p.x + Math.cos(ang) * fl;
+      const fy = p.y + Math.sin(ang) * fl;
+      g.lineStyle(1.5, color, 0.75);
+      g.beginPath();
+      g.moveTo(p.x, p.y);
+      g.lineTo(
+        p.x + Math.cos(ang + 0.4) * fl * 0.45,
+        p.y + Math.sin(ang + 0.4) * fl * 0.45,
+      );
+      g.lineTo(fx, fy);
+      g.strokePath();
+    }
+  }
+
+  if (!motionAllowed()) {
+    scene.time.delayedCall(80, () => g.destroy());
+    return;
+  }
+  scene.tweens.add({
+    targets: g,
+    alpha: 0,
+    duration,
+    ease: 'Cubic.easeOut',
+    onComplete: () => g.destroy(),
+  });
+  // Second flicker bolt slightly offset
+  scene.time.delayedCall(40, () => {
+    if (!scene.sys?.isActive()) return;
+    const g2 = scene.add.graphics().setDepth(18);
+    g2.lineStyle(2, core, 0.85);
+    g2.beginPath();
+    const j = 3;
+    g2.moveTo(points[0]!.x + j, points[0]!.y - j);
+    for (let i = 1; i < points.length; i++) {
+      g2.lineTo(
+        points[i]!.x + (Math.random() - 0.5) * 6,
+        points[i]!.y + (Math.random() - 0.5) * 6,
+      );
+    }
+    g2.strokePath();
+    scene.tweens.add({
+      targets: g2,
+      alpha: 0,
+      duration: duration * 0.7,
+      ease: 'Quad.easeOut',
+      onComplete: () => g2.destroy(),
+    });
+  });
+}
+
+/** Distance from point to polyline (min segment distance). */
+export function distPointToPolyline(
+  px: number,
+  py: number,
+  points: readonly LightningPoint[],
+): number {
+  if (points.length < 2) return Number.POSITIVE_INFINITY;
+  let best = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i]!;
+    const b = points[i + 1]!;
+    const abx = b.x - a.x;
+    const aby = b.y - a.y;
+    const apx = px - a.x;
+    const apy = py - a.y;
+    const ab2 = abx * abx + aby * aby || 1;
+    let t = (apx * abx + apy * aby) / ab2;
+    t = Math.max(0, Math.min(1, t));
+    const cx = a.x + abx * t;
+    const cy = a.y + aby * t;
+    const d = Math.hypot(px - cx, py - cy);
+    if (d < best) best = d;
+  }
+  return best;
+}
+
 /** Soft float bob amplitude for display scale (physics-safe). */
 export function bobScale(
   timeSec: number,

@@ -30,6 +30,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Lightning staff arc** — lightning staff casts a jagged electric bolt along facing (hits along the path, may chain-fork to a nearby foe) instead of a slow projectile.
 - **Adventure music beds** — multi-voice procedural score (bass + lead + harmony + sparkle) for overworld, plus richer title and dungeon loops; soft low-pass so it reads as adventure music instead of a single square arpeggio.
 - **Beach start → meadow → guild** — new crawlers wake on `beach_start` south of the meadow with blurry-eye intro, sequential **CRAWLER ###** id (cloud allocate + local fallback), and a voice sending them north. Meadow has cave mouth + **Tutorial Guild — West** sign; guild east door still locks until graduation; entrance sign says speak to the Guild Master (full Dunjunz intro on talk).
 - **Full multi-weapon guild racks** — sword: mild/iron/saber/cleaver; **axe**: training/battle/iron hatchet/great; **bow**: short/long/crossbow/magical; **staff**: emerald/lightning/fire/ice (distinct crystals + projectiles). Only the equipped piece leaves its peg; siblings stay. E browses hanging set (1–9); empty peg + E returns.

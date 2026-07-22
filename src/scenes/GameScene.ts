@@ -291,6 +291,9 @@ import {
   enemyBobScale,
   motionAllowed,
   slashArc,
+  buildLightningPath,
+  distPointToPolyline,
+  drawLightningArc,
   sparkBurst,
 } from '../systems/vfx';
 import {
@@ -6177,6 +6180,20 @@ export class GameScene extends Phaser.Scene {
     const inst = findInBag(this.save, uid);
     const tmpl = inst ? getTemplate(inst.templateId) : null;
     const projKind = tmpl?.projectile ?? 'bolt';
+    // Never allow 0 / NaN damage on ranged shots
+    const dmg = Math.max(1, computePlayerDamage(this.save) | 0);
+    const dir = this.facingVector();
+
+    // Lightning staff: instant jagged arc bolt (not a slow projectile)
+    if (projKind === 'lightning') {
+      this.castLightningArc(dir, dmg);
+      this.time.delayedCall(200, () => {
+        this.attacking = false;
+        this.refreshPlayerAppearance();
+      });
+      return;
+    }
+
     const tex =
       projKind === 'arrow'
         ? 'proj-arrow'
@@ -6184,23 +6201,12 @@ export class GameScene extends Phaser.Scene {
           ? 'proj-phaser'
           : projKind === 'fireball'
             ? 'proj-fireball'
-            : projKind === 'lightning'
-              ? 'proj-lightning'
-              : projKind === 'ice'
-                ? 'proj-ice'
-                : 'proj-bolt';
-    // Never allow 0 / NaN damage on ranged shots
-    const dmg = Math.max(1, computePlayerDamage(this.save) | 0);
-    const dir = this.facingVector();
+            : projKind === 'ice'
+              ? 'proj-ice'
+              : 'proj-bolt';
     // Phaser beams a bit faster; keep speeds hittable (no tunneling)
     const speed =
-      projKind === 'phaser'
-        ? 220
-        : projKind === 'arrow'
-          ? 200
-          : projKind === 'lightning'
-            ? 210
-            : 180;
+      projKind === 'phaser' ? 220 : projKind === 'arrow' ? 200 : 180;
     const angle =
       dir.x === 0 && dir.y === -1
         ? -90
@@ -6231,6 +6237,106 @@ export class GameScene extends Phaser.Scene {
       this.attacking = false;
       this.refreshPlayerAppearance();
     });
+  }
+
+  /**
+   * Lightning staff — jagged arc bolt along facing.
+   * Hits creeps/dummies near the polyline; may fork to a second nearby target.
+   */
+  private castLightningArc(
+    dir: { x: number; y: number },
+    dmg: number,
+  ): void {
+    const cell = TILE * SCALE;
+    const range = cell * 6.2;
+    const x0 = this.player.x + dir.x * 20;
+    const y0 = this.player.y + dir.y * 20;
+    // Stop arc at wall if possible
+    let endX = x0 + dir.x * range;
+    let endY = y0 + dir.y * range;
+    const steps = 14;
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const px = x0 + dir.x * range * t;
+      const py = y0 + dir.y * range * t;
+      const tx = Math.floor((px - this.roomOriginX) / cell);
+      const ty = Math.floor((py - this.roomOriginY) / cell);
+      if (this.isSolidTile(tx, ty)) {
+        endX = x0 + dir.x * range * Math.max(0.12, (i - 1) / steps);
+        endY = y0 + dir.y * range * Math.max(0.12, (i - 1) / steps);
+        break;
+      }
+    }
+
+    const path = buildLightningPath(x0, y0, endX, endY, 10, 16);
+    drawLightningArc(this, path, {
+      color: 0x4ac0ff,
+      coreColor: 0xe0f8ff,
+      durationMs: 260,
+      forks: true,
+    });
+    sparkBurst(this, x0, y0, 0x4ac0ff, 5);
+    sparkBurst(this, endX, endY, 0xc0ecff, 4);
+
+    const hitR = cell * 0.85;
+    const hit: typeof this.actors = [];
+    for (const a of this.actors) {
+      if (!a.alive || !a.sprite?.active) continue;
+      if (!isPlayerProjectileTarget(a.kind)) continue;
+      if (this.isUnprovokedPeaceful(a)) continue;
+      const d = distPointToPolyline(a.sprite.x, a.sprite.y, path);
+      if (d <= hitR) hit.push(a);
+    }
+    // Prefer nearer targets for damage order
+    hit.sort(
+      (a, b) =>
+        Math.hypot(a.sprite.x - x0, a.sprite.y - y0) -
+        Math.hypot(b.sprite.x - x0, b.sprite.y - y0),
+    );
+
+    let primary: (typeof this.actors)[0] | null = hit[0] ?? null;
+    for (const a of hit) {
+      this.hitEnemyWithDamage(a, dmg, true);
+      sparkBurst(this, a.sprite.x, a.sprite.y, 0x4ac0ff, 4);
+    }
+
+    // Chain fork to a nearby second enemy not already on the main path
+    if (primary) {
+      let best: (typeof this.actors)[0] | null = null;
+      let bestD = cell * 3.2;
+      for (const a of this.actors) {
+        if (!a.alive || !a.sprite?.active || a === primary) continue;
+        if (!isPlayerProjectileTarget(a.kind)) continue;
+        if (this.isUnprovokedPeaceful(a)) continue;
+        if (hit.includes(a)) continue;
+        const d = Math.hypot(
+          a.sprite.x - primary.sprite.x,
+          a.sprite.y - primary.sprite.y,
+        );
+        if (d < bestD) {
+          bestD = d;
+          best = a;
+        }
+      }
+      if (best) {
+        const fork = buildLightningPath(
+          primary.sprite.x,
+          primary.sprite.y,
+          best.sprite.x,
+          best.sprite.y,
+          6,
+          12,
+        );
+        drawLightningArc(this, fork, {
+          color: 0x7dd8ff,
+          coreColor: 0xffffff,
+          durationMs: 200,
+          forks: false,
+        });
+        this.hitEnemyWithDamage(best, Math.max(1, Math.floor(dmg * 0.75)), true);
+        sparkBurst(this, best.sprite.x, best.sprite.y, 0x4ac0ff, 5);
+      }
+    }
   }
 
   private facingVector(): { x: number; y: number } {

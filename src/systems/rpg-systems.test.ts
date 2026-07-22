@@ -3437,6 +3437,22 @@ describe('tutorial guild hall', () => {
   });
 });
 
+describe('lightning arc geometry', () => {
+  it('builds a jagged path from start to end and distance hits the polyline', async () => {
+    const {
+      buildLightningPath,
+      distPointToPolyline,
+    } = await import('./vfx');
+    const path = buildLightningPath(0, 0, 100, 0, 8, 10, () => 0.5);
+    expect(path.length).toBeGreaterThanOrEqual(3);
+    expect(path[0]).toEqual({ x: 0, y: 0 });
+    expect(path[path.length - 1]).toEqual({ x: 100, y: 0 });
+    // Point on the straight midline should be near the polyline
+    expect(distPointToPolyline(50, 0, path)).toBeLessThan(12);
+    expect(distPointToPolyline(50, 80, path)).toBeGreaterThan(20);
+  });
+});
+
 describe('loot boxes', () => {
   it('opens crawler starter box into full leather kit + sword + shield', async () => {
     const {
