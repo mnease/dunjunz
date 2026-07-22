@@ -257,7 +257,12 @@ export function openLootBox(
       grantedNames.push(t.name + (tid === 'potion' ? ' x2' : ''));
     } else {
       const minted = mintItem(next, tid, rarity, 0);
-      next = minted.save;
+      // Permanent loot — never strip as guild rack loaners
+      const keep = { ...minted.instance, guildLoaner: false as const };
+      next = {
+        ...minted.save,
+        bag: minted.save.bag.map((b) => (b.uid === keep.uid ? keep : b)),
+      };
       grantedNames.push(t.name);
     }
   }

@@ -114,6 +114,11 @@ export interface ItemInstance {
   enhancement: number;
   /** Magical stat enhancers from forjing (e.g. +2 STR). */
   attrBonuses?: Partial<Attributes>;
+  /**
+   * Training Guild rack loaner — equip for drills only.
+   * Stripped when leaving the hall; never permanent loot.
+   */
+  guildLoaner?: boolean;
 }
 
 /** Player-facing land ids (intentional misspellingz). */

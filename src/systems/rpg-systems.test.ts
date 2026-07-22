@@ -3071,6 +3071,8 @@ import {
   completeTutorial,
   ensureCatalogInBag,
   drillDamageRequired,
+  isGuildLoanerInstance,
+  stripGuildLoanerWeapons,
   equipTrainingWeapon,
   guildMasterDialog,
   guildMasterIntroDialog,
@@ -3386,6 +3388,19 @@ describe('tutorial guild hall', () => {
     expect(payload.options[0]?.blurb).toBeTruthy();
     expect(payload.family).toBe('sword');
   });
+
+  it('rack weapons are loaners and strip on graduate; starter box remains', () => {
+    let save = ensureCatalogInBag(defaultSave(), 'sword');
+    save = equipTrainingWeapon(save, 'sword');
+    expect(save.bag.some((b) => b.guildLoaner === true)).toBe(true);
+    expect(save.equipped.weapon).toBeTruthy();
+
+    // Graduate: strip loaners, keep starter box stack
+    save = completeTutorial(save);
+    expect(save.bag.every((b) => !isGuildLoanerInstance(b))).toBe(true);
+    expect(save.equipped.weapon).toBeNull();
+    expect(save.stacks.crawler_starter_box).toBe(1);
+  });
 });
 
 describe('loot boxes', () => {
@@ -3407,6 +3422,13 @@ describe('loot boxes', () => {
     for (const tid of STARTER_BOX_CONTENTS) {
       expect(r.save.bag.some((b) => b.templateId === tid)).toBe(true);
     }
+    // Permanent — survives strip of guild loaners
+    const sword = r.save.bag.find((b) => b.templateId === 'mild_sword');
+    expect(sword?.guildLoaner).toBe(false);
+    const kept = stripGuildLoanerWeapons(r.save);
+    expect(kept.bag.some((b) => b.templateId === 'mild_sword')).toBe(true);
+    expect(kept.bag.some((b) => b.templateId === 'leather_armor')).toBe(true);
+    expect(kept.bag.some((b) => b.templateId === 'wood_shield')).toBe(true);
   });
 
   it('rolls tiers with bronze most common over many trials', async () => {

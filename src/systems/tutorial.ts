@@ -5,7 +5,13 @@
  */
 
 import type { SaveData } from '../types';
-import { displayItemName, getTemplate, mintItem } from './items';
+import {
+  ALL_EQUIP_SLOTS,
+  displayItemName,
+  emptyEquipped,
+  getTemplate,
+  mintItem,
+} from './items';
 import { grantCrawlerStarterBox } from './loot-boxes';
 import { syncDerivedStats } from './inventory';
 
@@ -65,6 +71,77 @@ export const RACK_CATALOG: Record<TutorialWeapon, readonly string[]> = {
   bow: ['short_bow', 'long_bow', 'hunter_crossbow', 'magic_bow'],
   staff: ['wizard_staff', 'staff_lightning', 'staff_fire', 'staff_ice'],
 };
+
+/** Flat set of template ids that are guild rack loaners (never leave the hall). */
+export function guildLoanerTemplateIds(): Set<string> {
+  const s = new Set<string>();
+  for (const fam of TUTORIAL_WEAPONS) {
+    for (const tid of RACK_CATALOG[fam]) s.add(tid);
+  }
+  return s;
+}
+
+export function isGuildLoanerTemplate(templateId: string): boolean {
+  return guildLoanerTemplateIds().has(templateId);
+}
+
+/**
+ * True if this bag instance is a guild rack loaner.
+ * - guildLoaner: true → always loaner
+ * - guildLoaner: false → permanent (loot box / drops)
+ * - untagged + rack catalog template → legacy loaner
+ */
+export function isGuildLoanerInstance(
+  inst: { templateId: string; guildLoaner?: boolean },
+): boolean {
+  if (inst.guildLoaner === true) return true;
+  if (inst.guildLoaner === false) return false;
+  return isGuildLoanerTemplate(inst.templateId);
+}
+
+/**
+ * Remove rack loaner weapons from bag/equip.
+ * Training gear is hall-only — crawlers leave with loot-box gear only.
+ * Also strips temporary rack bow ammo so free arrows don't walk out.
+ */
+export function stripGuildLoanerWeapons(save: SaveData): SaveData {
+  const removedUids = new Set(
+    save.bag.filter((i) => isGuildLoanerInstance(i)).map((i) => i.uid),
+  );
+  const hadArrows = (save.stacks?.arrows ?? 0) > 0;
+  if (removedUids.size === 0 && !hadArrows) {
+    return save;
+  }
+
+  const bag = save.bag.filter((i) => !isGuildLoanerInstance(i));
+  const equipped = { ...emptyEquipped(), ...save.equipped };
+  for (const slot of ALL_EQUIP_SLOTS) {
+    const uid = equipped[slot];
+    if (uid && removedUids.has(uid)) equipped[slot] = null;
+  }
+  const budEquipped = {
+    ...emptyEquipped(),
+    ...(save.budEquipped ?? emptyEquipped()),
+  };
+  for (const slot of ALL_EQUIP_SLOTS) {
+    const uid = budEquipped[slot];
+    if (uid && removedUids.has(uid)) budEquipped[slot] = null;
+  }
+
+  // Temporary practice ammo for rack bows — does not leave the hall
+  const stacks = { ...save.stacks };
+  if (removedUids.size > 0 || hadArrows) {
+    delete stacks.arrows;
+  }
+
+  return syncDerivedStats({
+    ...save,
+    bag,
+    equipped,
+    budEquipped,
+    stacks,
+  });
+}
 
 /** Damage that must be dealt with a weapon to clear its drill stage. */
 export function drillDamageRequired(): number {
@@ -304,6 +381,8 @@ export function completeTutorial(save: SaveData): SaveData {
   // Bronze Crawler Starter Box — leather kit + mild sword + wood shield
   let next: SaveData = { ...save, flags, stacks };
   next = grantCrawlerStarterBox(next).save;
+  // Rack weapons stay at the guild — strip loaners before graduate walks out
+  next = stripGuildLoanerWeapons(next);
   return next;
 }
 
@@ -357,8 +436,32 @@ export function ensureCatalogInBag(
 ): SaveData {
   let next = save;
   for (const tid of RACK_CATALOG[family]) {
-    if (next.bag.some((b) => b.templateId === tid)) continue;
-    next = mintItem(next, tid, 'common', 0).save;
+    // Promote legacy untagged catalog copies to explicit loaners
+    if (
+      next.bag.some(
+        (b) => b.templateId === tid && b.guildLoaner === undefined,
+      )
+    ) {
+      next = {
+        ...next,
+        bag: next.bag.map((b) =>
+          b.templateId === tid && b.guildLoaner === undefined
+            ? { ...b, guildLoaner: true }
+            : b,
+        ),
+      };
+    }
+    // Already have a tagged loaner for this template
+    if (next.bag.some((b) => b.templateId === tid && b.guildLoaner === true)) {
+      continue;
+    }
+    // Mint a hall-only loaner (even if a permanent copy exists)
+    const minted = mintItem(next, tid, 'common', 0);
+    const loaner = { ...minted.instance, guildLoaner: true as const };
+    next = {
+      ...minted.save,
+      bag: minted.save.bag.map((b) => (b.uid === loaner.uid ? loaner : b)),
+    };
   }
   return next;
 }
@@ -384,7 +487,10 @@ export function listRackWeaponOptions(
   const out: { uid: string; templateId: string; name: string }[] = [];
   for (const tid of RACK_CATALOG[family]) {
     if (!present.has(tid)) continue;
-    const inst = next.bag.find((b) => b.templateId === tid);
+    // Prefer loaner instance over permanent loot with the same template
+    const inst =
+      next.bag.find((b) => b.templateId === tid && b.guildLoaner === true) ??
+      next.bag.find((b) => b.templateId === tid && isGuildLoanerInstance(b));
     if (!inst) continue;
     out.push({
       uid: inst.uid,
@@ -662,19 +768,19 @@ export function rackDialog(
     return [
       `${weapon.toUpperCase()} RACK — WEAPON RETURNED.`,
       'IT HANGS WITH THE OTHERS AGAIN.',
-      'PRESS E TO BROWSE THIS RACK\'S WEAPONS.',
+      'GUILD WEAPONS STAY HERE — LOANERS ONLY.',
     ];
   }
   if (opts?.mode === 'browse') {
     return [
-      `${weapon.toUpperCase()} RACK — SEVERAL REAL WEAPONS.`,
-      'OPEN THE RACK WINDOW TO PICK ONE.',
-      'THAT PIECE LEAVES THE RACK; THE REST STAY.',
+      `${weapon.toUpperCase()} RACK — TRAINING LOANERS.`,
+      'OPEN THE RACK WINDOW TO BORROW ONE.',
+      'THEY NEVER LEAVE THE GUILD HALL.',
     ];
   }
   return [
-    `YOU TAKE THE ${label}.`,
-    'IT LEAVES ITS PEG. THE OTHER WEAPONS STAY.',
+    `YOU BORROW THE ${label}.`,
+    'TRAINING LOANER — STAYS IN THE GUILD HALL.',
     'RETURN IT (EMPTY STAND + E) OR PICK ANOTHER.',
     goal,
   ];

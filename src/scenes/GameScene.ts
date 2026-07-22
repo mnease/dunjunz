@@ -247,6 +247,7 @@ import {
   recordDummyDamage,
   returnWeaponToRack,
   stairsBlockedToast,
+  stripGuildLoanerWeapons,
   takeWeaponFromRack,
   tutorialWeaponFromEquip,
   weaponDamageDealt,
@@ -2314,6 +2315,26 @@ export class GameScene extends Phaser.Scene {
     this.budAnimLock = 0;
     // Prevent walk-on portals from firing the frame you enter a room
     this.portalCooldown = 700;
+
+    // Guild rack weapons are loaners — never leave the hall
+    const leavingGuild =
+      this.room?.id === GUILD_HALL_ID && resolved !== GUILD_HALL_ID;
+    const loadOutsideGuild = resolved !== GUILD_HALL_ID;
+    if (leavingGuild || (fromSave && loadOutsideGuild)) {
+      const before = this.save;
+      this.save = stripGuildLoanerWeapons(this.save);
+      if (this.save !== before) {
+        writeSave(this.save);
+        this.refreshPlayerAppearance();
+        if (leavingGuild) {
+          this.game.events.emit(
+            'toast',
+            'GUILD WEAPONS STAY HERE — LOOT BOX IS YOURS',
+          );
+        }
+      }
+    }
+
     this.clearRoomObjects();
     this.room = room;
     this.save.roomId = resolved;
@@ -4601,7 +4622,7 @@ export class GameScene extends Phaser.Scene {
     );
     this.game.events.emit(
       'toast',
-      `TOOK ${r.name ?? family.toUpperCase()} — E TO RETURN`,
+      `BORROWED ${r.name ?? family.toUpperCase()} — GUILD LOANER`,
     );
   }
 
@@ -4630,18 +4651,21 @@ export class GameScene extends Phaser.Scene {
     if (allWeaponHitsDone(this.save)) {
       this.save = completeTutorial(this.save);
       writeSave(this.save);
+      this.refreshPlayerAppearance();
+      this.syncWeaponRackSprites();
       // Unlock east door tiles live
       this.tileGrid = this.applyPersistentDoorUnlocks(this.tileGrid);
       this.rebuildMapTilesForUnlock();
       this.game.events.emit('dialog-show', [
         ...guildMasterDialog(this.save),
         '',
+        'RACK WEAPONS STAY IN THE HALL. LOANERS ONLY.',
         'CRAWLER STARTER BOX — OPEN IT IN YOUR BAG [I].',
         'SWORD, LEATHER SET, WOOD SHIELD. YOU EARNED IT.',
       ]);
       this.game.events.emit(
         'toast',
-        'GRADUATED — STARTER BOX IN BAG · EAST DOOR OPEN',
+        'GRADUATED — STARTER BOX ONLY · EAST DOOR OPEN',
       );
       playSfx('success');
       return;

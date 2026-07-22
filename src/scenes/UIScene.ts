@@ -2138,8 +2138,8 @@ export class UIScene extends Phaser.Scene {
           sel.name,
           sel.blurb,
           '',
-          'ENTER OR CLICK AGAIN TO EQUIP',
-          'THAT WEAPON LEAVES THE RACK — OTHERS STAY.',
+          'ENTER OR CLICK AGAIN TO BORROW',
+          'GUILD LOANER — STAYS IN THE HALL.',
         ].join('\n'),
       );
       this.rackDetail?.setColor('#f4f0ff');
@@ -2156,7 +2156,7 @@ export class UIScene extends Phaser.Scene {
       this.rackLayer.add(btn);
       this.rackPieces.push(btn);
       const btnLabel = this.add
-        .text(GAME_W / 2, btnY, '▶  EQUIP', {
+        .text(GAME_W / 2, btnY, '▶  BORROW', {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '11px',
           color: '#7dffb3',
