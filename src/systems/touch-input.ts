@@ -109,6 +109,8 @@ const edge: Record<TouchAction, boolean> = {
 
 let padVisible = false;
 let bound = false;
+/** Mobile-only: user hid pad this session (TOUCH OFF). */
+let sessionPadHidden = false;
 
 /**
  * Session URL override: true/false from query, null if absent.
@@ -132,28 +134,64 @@ export function parseMobileQuery(
   }
 }
 
-/** Whether pad + touch-play chrome should be used. */
+export type MediaMatcher = (query: string) => { matches: boolean };
+
+/**
+ * True phone / tablet only — never desktop mouse+keyboard.
+ * Desktop with a touchscreen still counts as desktop if fine pointer + hover.
+ */
+export function isMobileDevice(
+  nav: Pick<Navigator, 'userAgent' | 'maxTouchPoints'> | {
+    userAgent?: string;
+    maxTouchPoints?: number;
+  } = typeof navigator !== 'undefined' ? navigator : {},
+  matchMedia: MediaMatcher = typeof window !== 'undefined' && window.matchMedia
+    ? (q) => window.matchMedia(q)
+    : () => ({ matches: false }),
+): boolean {
+  const ua = nav.userAgent ?? '';
+  const touchPoints = nav.maxTouchPoints ?? 0;
+  // Classic mobile UAs
+  if (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(
+      ua,
+    )
+  ) {
+    return true;
+  }
+  // iPadOS 13+ reports as Macintosh but has multi-touch
+  if (/Macintosh/i.test(ua) && touchPoints > 1) return true;
+
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  const fine = matchMedia('(pointer: fine)').matches;
+  const canHover = matchMedia('(hover: hover)').matches;
+  // Desktop primary: fine pointer + hover → never show pad
+  if (fine && canHover) return false;
+  // Phone-like: coarse primary, no hover, has touch
+  if (coarse && touchPoints > 0 && !canHover) return true;
+  return false;
+}
+
+/**
+ * Whether on-screen pad + touch-play chrome should be used.
+ * Desktop: always false (settings / ?mobile=1 cannot force pad on desktop).
+ * Mobile: true unless ?mobile=0 or user hid via TOUCH OFF.
+ */
 export function isTouchUiPreferred(): boolean {
   if (typeof window === 'undefined') return false;
 
-  // Explicit setting always wins when on
-  if (loadSettings().mobileMode) return true;
+  // Hard gate: no virtual controls on desktop
+  if (!isMobileDevice()) return false;
 
-  // URL session force (also written into settings on init)
+  // URL opt-out
   const q = parseMobileQuery(window.location.search);
-  if (q === true) return true;
   if (q === false) return false;
 
-  // Auto-detect phone / tablet
-  const coarse =
-    window.matchMedia('(pointer: coarse)').matches ||
-    window.matchMedia('(hover: none)').matches;
-  const narrow = window.matchMedia('(max-width: 900px)').matches;
-  const touchPoints =
-    typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
-  const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
-  const mobileUa = /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry/i.test(ua);
-  return coarse || mobileUa || (narrow && touchPoints);
+  // Session hide (TOUCH OFF button)
+  if (sessionPadHidden) return false;
+
+  // On phone/tablet: show pad when a play scene requests it
+  return true;
 }
 
 /** True when user explicitly enabled mobile mode (settings or ?mobile=1). */
@@ -162,15 +200,19 @@ export function isMobileModeEnabled(): boolean {
 }
 
 export function setMobileMode(on: boolean): void {
+  // Only meaningful on real mobile devices
+  if (!isMobileDevice()) {
+    patchSettings({ mobileMode: false });
+    syncMobileToggleUi();
+    return;
+  }
   patchSettings({ mobileMode: !!on });
   // Refresh pad chrome if a play scene already asked for the pad
   if (padVisible) {
     setTouchPadVisible(true);
   } else {
-    // Still update body class if they toggle on title (prep layout)
     document.body.classList.toggle('touch-play', false);
     document.documentElement.classList.remove('touch-play-root');
-    syncMobileToggleUi();
   }
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
@@ -180,29 +222,30 @@ export function setMobileMode(on: boolean): void {
   syncMobileToggleUi();
 }
 
+/** Toggle pad on mobile only (desktop has no on-screen controls). */
 export function toggleMobileMode(): boolean {
-  const next = !isMobileModeEnabled();
-  setMobileMode(next);
-  return next;
+  if (!isMobileDevice()) return false;
+  sessionPadHidden = !sessionPadHidden;
+  if (padVisible) setTouchPadVisible(true);
+  syncMobileToggleUi();
+  return !sessionPadHidden;
 }
 
 function syncMobileToggleUi(): void {
   if (typeof document === 'undefined') return;
   const btn = document.getElementById('mobile-mode-toggle');
   if (!(btn instanceof HTMLElement)) return;
-  const on = isMobileModeEnabled() || isTouchUiPreferred();
-  btn.classList.toggle('is-active', isMobileModeEnabled());
-  btn.setAttribute('aria-pressed', isMobileModeEnabled() ? 'true' : 'false');
-  btn.textContent = isMobileModeEnabled() ? 'MOBILE ON' : 'MOBILE';
-  // Hint auto-detect separately
-  if (!isMobileModeEnabled() && isTouchUiPreferred()) {
-    btn.title = 'Touch controls auto-on for this device. Click to force mobile mode.';
-  } else if (isMobileModeEnabled()) {
-    btn.title = 'Mobile mode ON — on-screen pad while playing. Click to turn off.';
-  } else {
-    btn.title = 'Turn on mobile mode (on-screen D-pad + buttons). Also: /play?mobile=1';
-  }
-  void on;
+  // Desktop: hide the MOBILE control entirely
+  const mobile = isMobileDevice();
+  btn.hidden = !mobile;
+  btn.style.display = mobile ? '' : 'none';
+  if (!mobile) return;
+  btn.classList.toggle('is-active', isTouchUiPreferred());
+  btn.setAttribute('aria-pressed', isTouchUiPreferred() ? 'true' : 'false');
+  btn.textContent = isTouchUiPreferred() ? 'TOUCH ON' : 'TOUCH OFF';
+  btn.title = isTouchUiPreferred()
+    ? 'On-screen stick + buttons visible. Tap to hide.'
+    : 'Show on-screen stick + buttons.';
 }
 
 export function touchAxisDown(axis: TouchAxis): boolean {
@@ -558,6 +601,8 @@ export function initTouchPad(): void {
 
   // Honor URL before first paint of pad preference
   applyMobileQueryToSettings();
+  // Desktop: never surface the MOBILE toggle or pad
+  syncMobileToggleUi();
 
   // Block iOS scroll/callout on the dock without driving game input
   root.addEventListener(

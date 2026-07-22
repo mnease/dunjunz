@@ -14,7 +14,7 @@ import {
   getCurrentMusic,
   unlockAudio,
 } from '../systems/audio';
-import { setMobileMode } from '../systems/touch-input';
+import { isMobileDevice, setMobileMode } from '../systems/touch-input';
 
 export function initSettingsUi(): void {
   const openBtn = document.getElementById('settings-open');
@@ -51,6 +51,14 @@ export function initSettingsUi(): void {
   const testBtn = document.getElementById('settings-test-sfx');
 
   if (!openBtn || !modal || !form) return;
+
+  // Touch-controls row only makes sense on real phones/tablets
+  const mobileRow = document.getElementById('set-mobile-mode-row');
+  if (mobileRow) {
+    const show = isMobileDevice();
+    mobileRow.hidden = !show;
+    (mobileRow as HTMLElement).style.display = show ? '' : 'none';
+  }
 
   const setOpen = (open: boolean) => {
     modal.classList.toggle('is-open', open);

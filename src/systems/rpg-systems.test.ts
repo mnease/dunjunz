@@ -2397,6 +2397,45 @@ describe('mobile mode query', () => {
     expect(d.down).toBe(true);
     expect(d.left).toBe(false);
   });
+
+  it('isMobileDevice is false for desktop fine+hover, true for phones', async () => {
+    const { isMobileDevice } = await import('./touch-input');
+    const desktopMm = (q: string) => ({
+      matches:
+        q.includes('pointer: fine') ||
+        q.includes('hover: hover')
+          ? true
+          : q.includes('pointer: coarse')
+            ? false
+            : false,
+    });
+    expect(
+      isMobileDevice(
+        { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)', maxTouchPoints: 0 },
+        desktopMm,
+      ),
+    ).toBe(false);
+    expect(
+      isMobileDevice(
+        {
+          userAgent:
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
+          maxTouchPoints: 5,
+        },
+        () => ({ matches: true }),
+      ),
+    ).toBe(true);
+    // Desktop UA must not light up pad even with touchscreen-ish flags if fine+hover
+    expect(
+      isMobileDevice(
+        {
+          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+          maxTouchPoints: 10,
+        },
+        desktopMm,
+      ),
+    ).toBe(false);
+  });
 });
 
 // ── Actor combat guards (room-transition safety) ──────────────────
