@@ -946,10 +946,10 @@ export function buildWoodzDeep(): Record<string, RoomDef> {
             'FIGHT ME OR SNEAK PAST. HALL IS WEST.',
           ],
         },
-        // Atmosphere pack — normal creeps, not ceremony bosses
+        // Atmosphere pack — walkable floor only (post-hazard side layout)
         ...creeps(['wolf', 'wolf'], 'woodz-howl-pack', [
-          [5, 7],
-          [11, 6],
+          [5, 5],
+          [4, 6],
         ]),
         chest('woodz-howl-chest', 11, 3, 'dungeon'),
       ],

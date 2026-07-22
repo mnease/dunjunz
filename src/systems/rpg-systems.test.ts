@@ -2865,4 +2865,25 @@ describe('mid dens P3 Assistant Honk + P4 deep wardens', () => {
     const wight = resolveEnemyHp('miniboss', LEASE_WIGHT_BASE_HP, 4);
     expect(wight).toBeLessThan(resolveEnemyHp('boss', 70, 6));
   });
+
+  it('Deputy Howl pack wolves spawn on walkable floor not walls', () => {
+    const side = ROOMS[DEPUTY_HOWL_ROOM_ID];
+    expect(side).toBeDefined();
+    const tiles = side.tiles;
+    const isBlocked = (x: number, y: number) => {
+      const c = tiles[y]?.[x];
+      return c == null || c === '#' || c === 'wall' || c === 'void' || c === ' ';
+    };
+    const pack = (side.entities ?? []).filter((e) =>
+      (e.id ?? '').startsWith('woodz-howl-pack'),
+    );
+    expect(pack.length).toBeGreaterThanOrEqual(2);
+    for (const w of pack) {
+      expect(isBlocked(w.x, w.y)).toBe(false);
+    }
+    // Warden + chest also on open floor
+    const warden = side.entities?.find((e) => e.id === DEPUTY_HOWL_ID);
+    expect(warden).toBeDefined();
+    expect(isBlocked(warden!.x, warden!.y)).toBe(false);
+  });
 });
