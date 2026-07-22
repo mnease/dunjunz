@@ -82,11 +82,17 @@
               aria-hidden="true"
               aria-label="Touch controls"
             >
-              <div class="touch-cluster touch-dpad" role="group" aria-label="Move">
-                <button type="button" id="touch-up" class="touch-btn touch-dir" data-axis="up" aria-label="Up">▲</button>
-                <button type="button" id="touch-left" class="touch-btn touch-dir" data-axis="left" aria-label="Left">◀</button>
-                <button type="button" id="touch-right" class="touch-btn touch-dir" data-axis="right" aria-label="Right">▶</button>
-                <button type="button" id="touch-down" class="touch-btn touch-dir" data-axis="down" aria-label="Down">▼</button>
+              <!-- Omni stick (replaces 4-way crossbar) -->
+              <div
+                class="touch-cluster touch-stick"
+                id="touch-stick"
+                role="group"
+                aria-label="Move joystick"
+              >
+                <div class="stick-base" id="stick-base">
+                  <div class="stick-ring" aria-hidden="true"></div>
+                  <div class="stick-knob" id="stick-knob"></div>
+                </div>
               </div>
               <div class="touch-cluster touch-actions" role="group" aria-label="Actions">
                 <button type="button" id="touch-attack" class="touch-btn touch-a" data-action="attack" aria-label="Attack">ATK</button>
@@ -95,6 +101,21 @@
                 <button type="button" id="touch-map" class="touch-btn touch-c" data-action="map" aria-label="Map">MAP</button>
                 <button type="button" id="touch-use" class="touch-btn touch-c" data-action="use" aria-label="Use item">USE</button>
                 <button type="button" id="touch-menu" class="touch-btn touch-c" data-action="menu" aria-label="Pause menu">MENU</button>
+              </div>
+            </div>
+            <!-- Portrait lock: mobile play is landscape-only -->
+            <div
+              id="rotate-hint"
+              class="rotate-hint"
+              hidden
+              aria-live="polite"
+            >
+              <div class="rotate-hint-card">
+                <p class="rotate-hint-icon" aria-hidden="true">📱↺</p>
+                <p class="rotate-hint-title">LANDSCAPE ONLY</p>
+                <p class="rotate-hint-sub">
+                  Rotate your device sideways for full-screen play.
+                </p>
               </div>
             </div>
           </div>
@@ -113,7 +134,7 @@
               equip
             </li>
             <li><kbd>1</kbd>–<kbd>5</kbd> attrs (+2 then +1) · <kbd>U</kbd> potion / beam</li>
-            <li><strong>Phone:</strong> full-screen play · overlay D-pad (move · ATK · TALK · BAG · MAP)</li>
+            <li><strong>Phone:</strong> landscape full-screen · virtual stick + ATK · TALK · BAG · MAP</li>
             <li>Hard gate at cleared dungeon mouths · classes at Lv5/15 · race at 25</li>
             <li>Modes: Dunjunz · Humanz · Army (L20+ press <kbd>P</kbd> to enlist)</li>
           </ul>

@@ -299,29 +299,105 @@ body {
   flex-shrink: 0;
 }
 
-.touch-dpad {
-  display: grid;
-  grid-template-columns: 3.25rem 3.25rem 3.25rem;
-  grid-template-rows: 3.25rem 3.25rem 3.25rem;
-  gap: 0.14rem;
-  width: 10rem;
+/* Omni-directional virtual stick */
+.touch-stick {
+  width: 7.5rem;
+  height: 7.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.touch-dpad #touch-up {
-  grid-column: 2;
-  grid-row: 1;
+.stick-base {
+  position: relative;
+  width: 7.25rem;
+  height: 7.25rem;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 200, 87, 0.55);
+  background: rgba(12, 16, 24, 0.35);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 0 24px rgba(255, 200, 87, 0.08);
+  touch-action: none;
+  cursor: grab;
 }
-.touch-dpad #touch-left {
-  grid-column: 1;
-  grid-row: 2;
+
+.touch-stick.is-active .stick-base {
+  border-color: rgba(125, 255, 179, 0.75);
+  cursor: grabbing;
 }
-.touch-dpad #touch-right {
-  grid-column: 3;
-  grid-row: 2;
+
+.stick-ring {
+  position: absolute;
+  inset: 18%;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 200, 87, 0.25);
+  pointer-events: none;
 }
-.touch-dpad #touch-down {
-  grid-column: 2;
-  grid-row: 3;
+
+.stick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2.65rem;
+  height: 2.65rem;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 35% 30%, #ffe08a, #c9a227 55%, #6a5010);
+  border: 2px solid rgba(255, 240, 180, 0.85);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Portrait gate — force landscape for mobile play */
+.rotate-hint {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 6, 10, 0.94);
+  padding: 1.5rem;
+  text-align: center;
+  pointer-events: auto;
+}
+
+body.need-landscape .rotate-hint {
+  display: flex;
+}
+
+body.need-landscape #touch-pad,
+body.need-landscape #game-container {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.rotate-hint-card {
+  max-width: 18rem;
+}
+
+.rotate-hint-icon {
+  font-size: 2.5rem;
+  margin: 0 0 0.75rem;
+  line-height: 1;
+}
+
+.rotate-hint-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--neon);
+  margin: 0 0 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.rotate-hint-sub {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
 }
 
 .touch-actions {
@@ -513,15 +589,20 @@ body.touch-play .touch-cluster {
   pointer-events: auto;
 }
 
-/* Dialog mode: hide move cluster (talk only needs NEXT/CLOSE) */
-body.touch-play .touch-pad.pad-mode-dialog .touch-dpad {
+/* Dialog mode: hide stick (talk only needs NEXT/CLOSE) */
+body.touch-play .touch-pad.pad-mode-dialog .touch-stick {
   visibility: hidden;
   pointer-events: none;
 }
 
-/* Panel mode: slightly dim attack cluster context via opacity on dpad ok */
-body.touch-play .touch-pad.pad-mode-panel .touch-dpad {
+/* Panel mode: stick still navigates grids */
+body.touch-play .touch-pad.pad-mode-panel .touch-stick {
   opacity: 0.95;
+}
+
+body.touch-play .touch-pad.pad-mode-pause .touch-stick {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* True immersion: landscape + mobile — edge-to-edge, no browser chrome chrome */
@@ -564,49 +645,21 @@ body.touch-play.mobile-immersive #game-frame {
   }
 }
 
-/* Narrow portrait: slightly denser HUD */
-@media (max-width: 400px) and (orientation: portrait) {
-  body.touch-play .touch-dpad {
-    grid-template-columns: 3rem 3rem 3rem;
-    grid-template-rows: 3rem 3rem 3rem;
-    width: 9.3rem;
-    gap: 0.12rem;
-  }
-
-  body.touch-play .touch-actions {
-    grid-template-columns: repeat(3, minmax(2.9rem, 3.25rem));
-    gap: 0.28rem;
-  }
-
-  body.touch-play .touch-btn {
-    min-width: 2.9rem;
-    min-height: 2.9rem;
-    font-size: 0.48rem;
-  }
-
-  body.touch-play .touch-dir {
-    min-width: 3rem;
-    min-height: 3rem;
-    font-size: 0.88rem;
-  }
-
-  body.touch-play .touch-a,
-  body.touch-play .touch-b {
-    min-height: 3.1rem;
-  }
-}
-
-/* Landscape phone: keep overlay, slightly smaller */
+/* Landscape phone: compact stick + actions */
 @media (max-height: 500px) and (orientation: landscape) {
   body.touch-play .touch-pad {
     padding-bottom: max(0.35rem, env(safe-area-inset-bottom, 0px));
   }
 
-  body.touch-play .touch-dpad {
-    grid-template-columns: 2.6rem 2.6rem 2.6rem;
-    grid-template-rows: 2.6rem 2.6rem 2.6rem;
-    width: 8.1rem;
-    gap: 0.1rem;
+  body.touch-play .touch-stick,
+  body.touch-play .stick-base {
+    width: 6.1rem;
+    height: 6.1rem;
+  }
+
+  body.touch-play .stick-knob {
+    width: 2.2rem;
+    height: 2.2rem;
   }
 
   body.touch-play .touch-actions {
@@ -619,12 +672,6 @@ body.touch-play.mobile-immersive #game-frame {
     min-height: 2.5rem;
     font-size: 0.42rem;
     border-radius: 12px;
-  }
-
-  body.touch-play .touch-dir {
-    min-width: 2.6rem;
-    min-height: 2.6rem;
-    font-size: 0.75rem;
   }
 
   body.touch-play .touch-a,

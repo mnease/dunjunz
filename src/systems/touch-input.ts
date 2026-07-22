@@ -81,12 +81,21 @@ const ACTION_BTN_IDS: Record<
 let padMode: TouchPadMode = 'explore';
 let fullscreenAttempted = false;
 
+/** Virtual stick vector −1..1 (for tests / future analog speed). */
+let stickX = 0;
+let stickY = 0;
+
 const held: Record<TouchAxis, boolean> = {
   up: false,
   down: false,
   left: false,
   right: false,
 };
+
+/** Dead zone before an axis counts as held (0–1 of stick radius). */
+export const STICK_DEADZONE = 0.28;
+/** Max knob travel in CSS px (matches .stick-base radius ~ half of 7rem). */
+export const STICK_MAX_PX = 42;
 
 /** Rising-edge pulses consumed once by game update. */
 const edge: Record<TouchAction, boolean> = {
@@ -204,6 +213,47 @@ export function touchAnyMove(): boolean {
   return held.up || held.down || held.left || held.right;
 }
 
+/** Normalized stick (−1..1). Zero when released. */
+export function touchStickVector(): { x: number; y: number } {
+  return { x: stickX, y: stickY };
+}
+
+/**
+ * Map stick nx,ny (−1..1) into digital held axes (8-way).
+ * Pure helper for tests.
+ */
+export function axesFromStick(
+  nx: number,
+  ny: number,
+  dead = STICK_DEADZONE,
+): Record<TouchAxis, boolean> {
+  return {
+    left: nx < -dead,
+    right: nx > dead,
+    up: ny < -dead,
+    down: ny > dead,
+  };
+}
+
+function applyStickAxes(nx: number, ny: number): void {
+  stickX = nx;
+  stickY = ny;
+  const a = axesFromStick(nx, ny);
+  held.left = a.left;
+  held.right = a.right;
+  held.up = a.up;
+  held.down = a.down;
+}
+
+function clearStick(): void {
+  stickX = 0;
+  stickY = 0;
+  held.up = held.down = held.left = held.right = false;
+  if (typeof document === 'undefined') return;
+  const knob = document.getElementById('stick-knob');
+  if (knob) knob.style.transform = 'translate(-50%, -50%)';
+}
+
 /** Consume a one-shot action (like JustDown). */
 export function consumeTouchAction(action: TouchAction): boolean {
   if (!edge[action]) return false;
@@ -220,8 +270,47 @@ export function pulseTouchAction(action: TouchAction): void {
 }
 
 export function clearAllTouch(): void {
-  held.up = held.down = held.left = held.right = false;
+  clearStick();
   for (const k of Object.keys(edge) as TouchAction[]) edge[k] = false;
+}
+
+/** Prefer landscape for mobile / PWA (best-effort; needs gesture on many UAs). */
+export async function tryLockLandscape(): Promise<boolean> {
+  if (typeof screen === 'undefined') return false;
+  try {
+    const orient = screen.orientation as ScreenOrientation & {
+      lock?: (o: string) => Promise<void>;
+    };
+    if (typeof orient?.lock === 'function') {
+      // Prefer any landscape; some engines only accept primary
+      try {
+        await orient.lock('landscape');
+      } catch {
+        await orient.lock('landscape-primary');
+      }
+      return true;
+    }
+  } catch {
+    /* denied or unsupported */
+  }
+  return false;
+}
+
+/** Show/hide portrait rotate gate while mobile play is active. */
+export function syncLandscapeGate(): void {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+  const hint = document.getElementById('rotate-hint');
+  const showPad = padVisible && isTouchUiPreferred();
+  const portrait = window.matchMedia('(orientation: portrait)').matches;
+  const needRotate = showPad && portrait;
+  document.body.classList.toggle('need-landscape', needRotate);
+  if (hint) {
+    hint.hidden = !needRotate;
+    hint.setAttribute('aria-hidden', needRotate ? 'false' : 'true');
+  }
+  if (showPad && !portrait) {
+    void tryLockLandscape();
+  }
 }
 
 /** Nudge Phaser Scale.FIT after DOM layout changes (pad dock / chrome). */
@@ -247,10 +336,18 @@ export function setTouchPadVisible(visible: boolean): void {
   if (show) {
     document.documentElement.classList.add('touch-play-root');
     setTouchPadMode(padMode);
+    void tryLockLandscape();
   } else {
     document.documentElement.classList.remove('touch-play-root');
     document.body.classList.remove('mobile-immersive');
+    document.body.classList.remove('need-landscape');
+    const hint = document.getElementById('rotate-hint');
+    if (hint) {
+      hint.hidden = true;
+      hint.setAttribute('aria-hidden', 'true');
+    }
   }
+  syncLandscapeGate();
   syncMobileToggleUi();
   refreshGameScale();
 }
@@ -282,11 +379,12 @@ export function setTouchPadMode(mode: TouchPadMode): void {
       el.setAttribute('aria-label', `${labels[action]} (${mode})`);
     }
   }
-  // Hide d-pad during dialog so thumbs don't fight the text box
+  // Hide stick during dialog so thumbs don't fight the text box
   root.classList.toggle('pad-mode-dialog', mode === 'dialog');
   root.classList.toggle('pad-mode-panel', mode === 'panel');
   root.classList.toggle('pad-mode-pause', mode === 'pause');
   root.classList.toggle('pad-mode-explore', mode === 'explore');
+  if (mode === 'dialog' || mode === 'pause') clearStick();
 }
 
 /**
@@ -321,22 +419,11 @@ export async function requestMobileFullscreen(): Promise<boolean> {
   } catch {
     /* iOS often rejects — fall through to CSS immersion */
   }
-  try {
-    const orient = screen.orientation as ScreenOrientation & {
-      lock?: (o: string) => Promise<void>;
-    };
-    if (
-      orient?.lock &&
-      window.matchMedia('(orientation: landscape)').matches
-    ) {
-      await orient.lock('landscape');
-    }
-  } catch {
-    /* orientation lock needs fullscreen + gesture on many browsers */
-  }
+  await tryLockLandscape();
   document.body.classList.add('mobile-immersive');
   // Nudge iOS chrome collapse
   window.scrollTo(0, 1);
+  syncLandscapeGate();
   refreshGameScale();
   return !!(
     document.fullscreenElement ||
@@ -345,21 +432,38 @@ export async function requestMobileFullscreen(): Promise<boolean> {
   );
 }
 
-/** Drain all pending action edges (after mode switch / dialog close). */
-export function drainTouchActions(): void {
-  for (const k of Object.keys(edge) as TouchAction[]) edge[k] = false;
-}
-
 /**
- * Hold button: pointer-only + capture.
- * Do not also bind touch* — iOS would fire both and double-set state.
+ * Omni-directional virtual stick — drag from base center.
+ * Maps continuous vector → digital 8-way axes for GameScene.
  */
-function bindHold(
-  el: HTMLElement,
-  onDown: () => void,
-  onUp: () => void,
-): void {
+function bindJoystick(cluster: HTMLElement): void {
+  const base = cluster.querySelector('.stick-base') as HTMLElement | null;
+  const knob = cluster.querySelector('.stick-knob') as HTMLElement | null;
+  if (!base || !knob) return;
+
   let activeId: number | null = null;
+
+  const placeKnob = (dx: number, dy: number) => {
+    knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  };
+
+  const fromEvent = (clientX: number, clientY: number) => {
+    const rect = base.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    let dx = clientX - cx;
+    let dy = clientY - cy;
+    const len = Math.hypot(dx, dy);
+    const maxR = Math.min(STICK_MAX_PX, rect.width * 0.38);
+    if (len > maxR && len > 0) {
+      dx = (dx / len) * maxR;
+      dy = (dy / len) * maxR;
+    }
+    placeKnob(dx, dy);
+    const nx = maxR > 0 ? dx / maxR : 0;
+    const ny = maxR > 0 ? dy / maxR : 0;
+    applyStickAxes(nx, ny);
+  };
 
   const down = (e: PointerEvent) => {
     if (activeId !== null) return;
@@ -367,39 +471,54 @@ function bindHold(
     e.preventDefault();
     e.stopPropagation();
     activeId = e.pointerId;
-    el.classList.add('is-down');
+    cluster.classList.add('is-active');
     try {
-      el.setPointerCapture(e.pointerId);
+      base.setPointerCapture(e.pointerId);
     } catch {
-      /* older browsers */
+      /* ignore */
     }
-    onDown();
+    if (!fullscreenAttempted && isTouchUiPreferred()) {
+      void requestMobileFullscreen();
+    }
+    fromEvent(e.clientX, e.clientY);
+  };
+
+  const move = (e: PointerEvent) => {
+    if (activeId === null || e.pointerId !== activeId) return;
+    e.preventDefault();
+    fromEvent(e.clientX, e.clientY);
   };
 
   const up = (e: PointerEvent) => {
     if (activeId === null || e.pointerId !== activeId) return;
     e.preventDefault();
     activeId = null;
-    el.classList.remove('is-down');
+    cluster.classList.remove('is-active');
     try {
-      if (el.hasPointerCapture?.(e.pointerId)) {
-        el.releasePointerCapture(e.pointerId);
+      if (base.hasPointerCapture?.(e.pointerId)) {
+        base.releasePointerCapture(e.pointerId);
       }
     } catch {
       /* ignore */
     }
-    onUp();
+    clearStick();
   };
 
-  el.addEventListener('pointerdown', down);
-  el.addEventListener('pointerup', up);
-  el.addEventListener('pointercancel', up);
-  el.addEventListener('lostpointercapture', (e) => {
+  base.addEventListener('pointerdown', down);
+  base.addEventListener('pointermove', move);
+  base.addEventListener('pointerup', up);
+  base.addEventListener('pointercancel', up);
+  base.addEventListener('lostpointercapture', (e) => {
     if (activeId === null || e.pointerId !== activeId) return;
     activeId = null;
-    el.classList.remove('is-down');
-    onUp();
+    cluster.classList.remove('is-active');
+    clearStick();
   });
+}
+
+/** Drain all pending action edges (after mode switch / dialog close). */
+export function drainTouchActions(): void {
+  for (const k of Object.keys(edge) as TouchAction[]) edge[k] = false;
 }
 
 /** One-shot action on pointerdown only (no touchstart twin). */
@@ -458,21 +577,8 @@ export function initTouchPad(): void {
     { passive: false },
   );
 
-  const map: [string, TouchAxis][] = [
-    ['touch-up', 'up'],
-    ['touch-down', 'down'],
-    ['touch-left', 'left'],
-    ['touch-right', 'right'],
-  ];
-  for (const [id, axis] of map) {
-    const el = document.getElementById(id);
-    if (!(el instanceof HTMLElement)) continue;
-    bindHold(
-      el,
-      () => setTouchAxis(axis, true),
-      () => setTouchAxis(axis, false),
-    );
-  }
+  const stick = document.getElementById('touch-stick');
+  if (stick instanceof HTMLElement) bindJoystick(stick);
 
   const taps: [string, TouchAction][] = [
     ['touch-attack', 'attack'],
@@ -501,18 +607,25 @@ export function initTouchPad(): void {
   syncMobileToggleUi();
   setTouchPadMode('explore');
 
-  // Landscape: re-assert immersion + scale
-  window
-    .matchMedia('(orientation: landscape)')
-    .addEventListener('change', (ev) => {
-      if (ev.matches && padVisible && isTouchUiPreferred()) {
-        document.body.classList.add('mobile-immersive');
-        if (!document.fullscreenElement) {
-          // Can't request FS without gesture — CSS immersion still applies
-          refreshGameScale();
-        }
-      }
-    });
+  // Landscape lock + rotate gate
+  const onOrient = () => {
+    syncLandscapeGate();
+    if (
+      padVisible &&
+      isTouchUiPreferred() &&
+      window.matchMedia('(orientation: landscape)').matches
+    ) {
+      document.body.classList.add('mobile-immersive');
+      void tryLockLandscape();
+      refreshGameScale();
+    }
+  };
+  window.matchMedia('(orientation: landscape)').addEventListener('change', onOrient);
+  window.matchMedia('(orientation: portrait)').addEventListener('change', onOrient);
+  window.addEventListener('orientationchange', () => {
+    window.setTimeout(onOrient, 120);
+  });
+  syncLandscapeGate();
 
   // Hide pad when shell modals open
   const modals = [

@@ -2338,6 +2338,24 @@ describe('mobile mode query', () => {
     }
     setTouchPadMode('explore');
   });
+
+  it('axesFromStick maps omni stick into 8-way digital axes', async () => {
+    const { axesFromStick, STICK_DEADZONE } = await import('./touch-input');
+    expect(axesFromStick(0, 0).up).toBe(false);
+    expect(axesFromStick(0, 0).left).toBe(false);
+    // Inside dead zone
+    const tiny = STICK_DEADZONE * 0.5;
+    expect(axesFromStick(tiny, tiny).right).toBe(false);
+    // Cardinal
+    expect(axesFromStick(0, -1).up).toBe(true);
+    expect(axesFromStick(0, -1).down).toBe(false);
+    expect(axesFromStick(1, 0).right).toBe(true);
+    // Diagonal
+    const d = axesFromStick(0.8, 0.8);
+    expect(d.right).toBe(true);
+    expect(d.down).toBe(true);
+    expect(d.left).toBe(false);
+  });
 });
 
 // ── Actor combat guards (room-transition safety) ──────────────────
