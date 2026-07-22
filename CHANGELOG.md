@@ -15,6 +15,8 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Version string consistency** — title menu footer and under-canvas badge both use `formatGameVersion()` from `package.json` (no more hardcoded `V0.7` vs stale `v0.6.0`).
+
 ### Fixed
 
 ## [0.7.0] — 2026-07-22

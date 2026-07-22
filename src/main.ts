@@ -1,6 +1,6 @@
 import './style.css';
 import Phaser from 'phaser';
-import { GAME_H, GAME_VERSION, GAME_W } from './config';
+import { formatGameVersion, GAME_H, GAME_W } from './config';
 import { BootScene } from './scenes/BootScene';
 import { TitleScene } from './scenes/TitleScene';
 import { GameScene } from './scenes/GameScene';
@@ -17,10 +17,10 @@ import { initJournalUi } from './ui/journal';
 import { initSettingsUi } from './ui/settings';
 import { initTouchPad } from './systems/touch-input';
 
-// Version under the play canvas (package.json via Vite)
+// Version under the play canvas (same source as title menu footer)
 const versionEl = document.getElementById('game-version');
 if (versionEl) {
-  versionEl.textContent = `v${GAME_VERSION}`;
+  versionEl.textContent = formatGameVersion();
 }
 
 const config: Phaser.Types.Core.GameConfig = {

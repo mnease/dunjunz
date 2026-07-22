@@ -4,10 +4,18 @@ export const GAME_H = 720;
 
 /**
  * Player-facing game version (from package.json via Vite `__APP_VERSION__`).
- * Display as `v${GAME_VERSION}` under the play canvas.
+ * Single source for title footer, under-canvas badge, and any other chrome.
  */
-export const GAME_VERSION =
-  typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
+export const GAME_VERSION: string =
+  typeof __APP_VERSION__ === 'string' && __APP_VERSION__.length > 0
+    ? __APP_VERSION__
+    : '0.0.0';
+
+/** Canonical display form, e.g. `v0.7.0` (always lowercase v + full semver). */
+export function formatGameVersion(version: string = GAME_VERSION): string {
+  const v = version.trim().replace(/^v/i, '');
+  return `v${v}`;
+}
 /**
  * Logical tile step in the room grid (world units before display scale).
  * Textures render at ART_RES (32) for 32-bit craft density; sprites use

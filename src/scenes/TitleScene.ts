@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_H, GAME_W } from '../config';
+import { COLORS, formatGameVersion, GAME_H, GAME_W } from '../config';
 import {
   loadSlot,
   startSlot,
@@ -224,11 +224,16 @@ export class TitleScene extends Phaser.Scene {
     });
 
     this.add
-      .text(GAME_W / 2, yFooter, 'NEASEMEDIA  ·  V0.7  ·  HUMANZ & VILLAGEZ', {
-        fontFamily: '"Press Start 2P", monospace',
-        fontSize: '8px',
-        color: '#6a738a',
-      })
+      .text(
+        GAME_W / 2,
+        yFooter,
+        `NEASEMEDIA  ·  ${formatGameVersion().toUpperCase()}  ·  HUMANZ & VILLAGEZ`,
+        {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '8px',
+          color: '#6a738a',
+        },
+      )
       .setOrigin(0.5);
 
     const applyAuthMe = () => {
