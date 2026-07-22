@@ -2885,7 +2885,7 @@ export class GameScene extends Phaser.Scene {
     } else if (def.kind === 'rack') {
       sprite.setImmovable(true);
       sprite.setDepth(4);
-      sprite.setTint(0xffc857);
+      // No flat gold tint — each rack texture already shows the weapon type
       const body = sprite.body as Phaser.Physics.Arcade.Body;
       body.enable = false;
     } else if (isCactusPlant || isTree) {
