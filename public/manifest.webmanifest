@@ -1,0 +1,19 @@
+{
+  "name": "DUNJUNZ",
+  "short_name": "DUNJUNZ",
+  "description": "The ultimate top down RPG. Free in your browser. No ads ever.",
+  "start_url": "/play?mobile=1",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0c10",
+  "theme_color": "#0a0c10",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

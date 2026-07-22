@@ -932,20 +932,23 @@ export class GameScene extends Phaser.Scene {
   };
 
   private onAttackKey = (): void => {
-    // Space advances dialog when open (UI scene); do not swing mid-dialog
-    if (
-      this.dialogLocked ||
-      this.panelOpen() ||
-      this.paused ||
-      this.dialogCloseCooldown > 0
-    ) {
+    // Space/Z advance talk when open (parity with pad NEXT); no swing mid-dialog
+    if (this.dialogLocked) {
+      this.game.events.emit('dialog-advance');
+      return;
+    }
+    if (this.panelOpen() || this.paused || this.dialogCloseCooldown > 0) {
       return;
     }
     this.tryAttack();
   };
 
   private onInteractKey = (): void => {
-    // E opens talk / shop. Enter never opens (UI only advances with Enter).
+    // E advances talk when open (players expect "E again" to continue)
+    if (this.dialogLocked) {
+      this.game.events.emit('dialog-advance');
+      return;
+    }
     if (this.paused || this.dialogCloseCooldown > 0) return;
     // E also closes shop (do not also handle E in update — that same-frame
     // double-fire was opening then immediately closing the shop).
@@ -953,7 +956,7 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('shop-toggle');
       return;
     }
-    if (this.dialogLocked || this.panelOpen()) return;
+    if (this.panelOpen()) return;
     this.tryInteract();
   };
 
