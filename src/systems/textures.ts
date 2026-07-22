@@ -1624,6 +1624,23 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#4a3018', 10, 16, 4, 2);
     fill(ctx, '#4a3018', 18, 16, 4, 2);
   });
+
+  // Mirror of Changing — tall oval looking-glass
+  canvasTex(scene, 'mirror', ART_RES, ART_RES, (ctx) => {
+    // Full-height oval frame
+    fill(ctx, '#2a1810', 6, 1, 20, 30);
+    fill(ctx, '#5a3d1a', 7, 2, 18, 28);
+    fill(ctx, '#c9a227', 8, 3, 16, 26);
+    // Glass (cool shimmer)
+    fill(ctx, '#1a3048', 10, 5, 12, 22);
+    fill(ctx, '#2a5070', 11, 6, 10, 20);
+    fill(ctx, '#4a90b0', 12, 7, 4, 8);
+    fill(ctx, '#a0e0ff', 13, 8, 2, 4);
+    spark(ctx, 14, 9, '#ffffff');
+    // Base
+    fill(ctx, '#3a2410', 8, 28, 16, 3);
+    fill(ctx, '#6b4423', 10, 29, 12, 2);
+  });
   // Static full-catalog fallbacks (used before dynamic ensure)
   for (const fam of ['sword', 'axe', 'bow', 'staff'] as const) {
     canvasTex(scene, `rack_${fam}`, ART_RES, ART_RES, (ctx) => {

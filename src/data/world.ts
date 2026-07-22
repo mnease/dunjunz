@@ -249,6 +249,20 @@ export const ROOMS: Record<string, RoomDef> = {
       // ── Extra floor lamps along the drill lane ─────────────
       { kind: 'lamp', id: 'lamp-mid-w', x: 6, y: 5 },
       { kind: 'lamp', id: 'lamp-mid-e', x: 10, y: 5 },
+
+      // ── Mirror of Changing (SW corner) ─────────────────────
+      {
+        kind: 'mirror',
+        id: 'mirror-of-changing',
+        x: 2,
+        y: 8,
+        dialog: [
+          'MIRROR OF CHANGING',
+          'LOOK DEEP. CHOOSE HOW BATTLES FEEL.',
+          'LIVE ACTION OR TURN-BASED.',
+          'PRESS E TO OPEN THE MIRROR.',
+        ],
+      },
     ],
   },
 

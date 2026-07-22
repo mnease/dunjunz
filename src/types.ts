@@ -54,7 +54,9 @@ export type EntityKind =
   | 'chair'
   | 'table'
   /** Free-standing lamp — solid + warm light cookie. */
-  | 'lamp';
+  | 'lamp'
+  /** Mirror of Changing — combat mode select (live vs turn-based). */
+  | 'mirror';
 
 /** Non-human best friend companion (randomized per playthrough). */
 export type BestBudId =
@@ -186,6 +188,9 @@ export interface RoomDef {
   sideRole?: RoomSideRole;
 }
 
+/** Combat presentation (Mirror of Changing). */
+export type CombatMode = 'live' | 'turn';
+
 /**
  * Save v6 — hard mode, class/race identity (migrates from ≤5).
  */
@@ -238,6 +243,12 @@ export interface SaveData {
    * Sequential across all players when cloud allocate succeeds.
    */
   crawlerId?: number;
+  /**
+   * Combat presentation mode (Mirror of Changing).
+   * `live` = real-time Zelda-like crawl (default).
+   * `turn` = classic turn-based battles (heroes left, enemies right).
+   */
+  combatMode?: CombatMode;
   /** Rolled once on Best Bud quest accept; null until then. */
   bestBudId: BestBudId | null;
   /** Best Bud champion quest stage. */

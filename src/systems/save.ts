@@ -43,6 +43,7 @@ export function defaultSave(): SaveData {
       (Math.floor(Math.random() * 0xffffffff) ^ (Date.now() & 0xffffffff)) >>>
         0 || 1,
     crawlerId: undefined,
+    combatMode: 'live',
     bestBudId: null,
     bestBudStage: 'none',
     budXp: 0,

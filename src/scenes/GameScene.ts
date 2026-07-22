@@ -260,6 +260,11 @@ import {
   needsBeachWake,
 } from '../systems/crawler-id';
 import { BEACH_START_ID } from '../data/world';
+import { getCombatMode } from '../systems/combat-mode';
+import {
+  enemySeedFromActor,
+  type TbEnemySeed,
+} from '../systems/turn-battle';
 import { loadSave, writeSave } from '../systems/save';
 import {
   basementDepth,
@@ -406,6 +411,7 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   chair: 'chair',
   table: 'table',
   lamp: 'lamp',
+  mirror: 'mirror',
 };
 
 const MOBILE_HOSTILES = [
@@ -748,6 +754,7 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on('shop-cursor', this.onShopCursor, this);
     this.game.events.on('inventory-bag-activate', this.onBagActivate, this);
     this.game.events.on('pause-action', this.onPauseAction, this);
+    this.game.events.on('turn-battle-ended', this.onTurnBattleEnded, this);
     this.game.events.on('spend-attr', this.onSpendAttrEvent, this);
     this.game.events.on('auto-stats-flush', this.onAutoStatsFlushEvent, this);
     window.addEventListener('dunjunz-auto-stats-enabled', this.onAutoStatsEnabled);
@@ -767,6 +774,7 @@ export class GameScene extends Phaser.Scene {
       this.game.events.off('shop-cursor', this.onShopCursor, this);
       this.game.events.off('inventory-bag-activate', this.onBagActivate, this);
       this.game.events.off('pause-action', this.onPauseAction, this);
+      this.game.events.off('turn-battle-ended', this.onTurnBattleEnded, this);
       this.game.events.off('spend-attr', this.onSpendAttrEvent, this);
       this.game.events.off('auto-stats-flush', this.onAutoStatsFlushEvent, this);
       kb.off('keydown-SPACE', this.onAttackKey, this);
@@ -2937,6 +2945,7 @@ export class GameScene extends Phaser.Scene {
       'bookshelf',
       'chair',
       'table',
+      'mirror',
     ].includes(def.kind);
 
     // Props the hero cannot walk through (interact still uses reach radius)
@@ -2953,7 +2962,8 @@ export class GameScene extends Phaser.Scene {
       def.kind === 'bookshelf' ||
       def.kind === 'chair' ||
       def.kind === 'table' ||
-      def.kind === 'lamp';
+      def.kind === 'lamp' ||
+      def.kind === 'mirror';
 
     // Mobile hostiles: chase + walls. Cactus: rooted hazard (overlap only).
     // Solid props: immovable footprint collider. Tumbleweed: drifts, no combat.
@@ -3008,10 +3018,11 @@ export class GameScene extends Phaser.Scene {
         def.kind === 'rack' ||
         def.kind === 'chair' ||
         def.kind === 'table' ||
-        def.kind === 'lamp'
+        def.kind === 'lamp' ||
+        def.kind === 'mirror'
       ) {
-        bw = 10;
-        bh = 10;
+        bw = def.kind === 'mirror' ? 12 : 10;
+        bh = def.kind === 'mirror' ? 14 : 10;
       } else if (
         def.kind === 'npc' ||
         def.kind === 'merchant' ||
@@ -3074,7 +3085,8 @@ export class GameScene extends Phaser.Scene {
       def.kind === 'bookshelf' ||
       def.kind === 'chair' ||
       def.kind === 'table' ||
-      def.kind === 'lamp'
+      def.kind === 'lamp' ||
+      def.kind === 'mirror'
         ? 99
         : resolveEnemyHp(def.kind, def.hp, threat);
     let contactDamage = contactHostile
@@ -3259,6 +3271,11 @@ export class GameScene extends Phaser.Scene {
     if (!from.alive || this.invuln > 0 || this.dialogLocked || this.paused) return;
     // Peaceful cube / Rules Lawyer (not yet hit) — walk up and press E
     if (this.isUnprovokedPeaceful(from)) return;
+    // Turn-based mode: contact starts a battle instead of real-time damage
+    if (getCombatMode(this.save) === 'turn' && isHostileKind(from.kind)) {
+      this.startTurnBattle([from]);
+      return;
+    }
     // Shadow stalkers cannot contact-damage while hidden/telegraphing
     if (from.shadowStalker && from.ambush && !ambushCanDealContact(from.ambush)) {
       return;
@@ -3342,6 +3359,114 @@ export class GameScene extends Phaser.Scene {
       this.die();
     }
   }
+
+  private useMirrorOfChanging(_actor: Actor): void {
+    // Brief flavor then HTML mode picker
+    this.game.events.emit('dialog-show', [
+      'MIRROR OF CHANGING…',
+      'THE GLASS SHOWS ANOTHER YOU.',
+      'LIVE ACTION — OR TURN-BASED BATTLES.',
+      'CHOOSE HOW DUNJUNZ FEELS.',
+    ]);
+    const openAfter = (open: boolean) => {
+      if (open) return;
+      this.game.events.off('dialog-state', openAfter);
+      this.time.delayedCall(80, () => {
+        window.dispatchEvent(new CustomEvent('dunjunz-mirror-open'));
+      });
+    };
+    this.game.events.on('dialog-state', openAfter);
+  }
+
+  /**
+   * Enter classic turn-based battle (heroes left, enemies right).
+   * Pulls nearby hostiles into the encounter when possible.
+   */
+  private startTurnBattle(seedActors: Actor[]): void {
+    if (this.leavingToTitle || this.dialogLocked || this.paused) return;
+    if (getCombatMode(this.save) !== 'turn') return;
+
+    const seeds: TbEnemySeed[] = [];
+    const seen = new Set<string>();
+    const add = (a: Actor) => {
+      if (!a.alive || seen.has(a.id)) return;
+      if (!isHostileKind(a.kind) || a.kind === 'dummy') return;
+      if (this.isUnprovokedPeaceful(a)) return;
+      seen.add(a.id);
+      seeds.push(
+        enemySeedFromActor({
+          id: a.id,
+          kind: a.kind,
+          hp: a.hp,
+          maxHp: a.maxHp,
+          contactDamage: a.contactDamage,
+        }),
+      );
+    };
+    for (const a of seedActors) add(a);
+    // Nearby hostiles join the fight (pack engagements)
+    if (this.player) {
+      for (const a of this.actors) {
+        if (!a.alive || !a.sprite?.active) continue;
+        const d = Phaser.Math.Distance.Between(
+          this.player.x,
+          this.player.y,
+          a.sprite.x,
+          a.sprite.y,
+        );
+        if (d < TILE * SCALE * 4.5) add(a);
+      }
+    }
+    if (!seeds.length) return;
+
+    // Soft-pause crawl
+    if (this.player?.body) {
+      (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    }
+    writeSave(this.save);
+    playSfx('ui_open');
+    this.game.events.emit('toast', 'BATTLE!');
+
+    const payload = {
+      enemies: seeds,
+      roomId: this.room.id,
+      land: this.room.land,
+      threat: threatForRoom(this.room, this.save),
+    };
+
+    // Sleep crawl + UI so battle owns the canvas
+    try {
+      if (this.scene.isActive('UI')) this.scene.sleep('UI');
+    } catch {
+      /* ignore */
+    }
+    this.scene.sleep('Game');
+    this.scene.launch('TurnBattle', payload);
+  }
+
+  private onTurnBattleEnded = (result: {
+    phase: string;
+    defeatedIds: string[];
+    save: SaveData;
+  }): void => {
+    this.save = result.save;
+    // Despawn defeated creeps in the room
+    for (const id of result.defeatedIds ?? []) {
+      const a = this.actors.find((x) => x.id === id);
+      if (!a) continue;
+      a.alive = false;
+      a.sprite?.destroy();
+    }
+    writeSave(this.save);
+    this.emitHud();
+    if (result.phase === 'lost') {
+      // Mirror real-time death path
+      this.die();
+      return;
+    }
+    // Brief i-frames so the same contact doesn't re-trigger battle
+    this.invuln = 900;
+  };
 
   private beginBeachWake(): void {
     // Blurry eyes — dark vignette over outdoor beach
@@ -3438,6 +3563,12 @@ export class GameScene extends Phaser.Scene {
     // Best Bud is immortal friendship — not a target
     if (actor.kind === 'best_bud') {
       this.game.events.emit('toast', 'OW. RUDE. STILL BUDDIES.');
+      return;
+    }
+
+    // Turn-based mode: swinging at a creep opens a classic battle
+    if (getCombatMode(this.save) === 'turn' && isHostileKind(actor.kind)) {
+      this.startTurnBattle([actor]);
       return;
     }
 
@@ -4301,6 +4432,11 @@ export class GameScene extends Phaser.Scene {
 
     if (best.id === GUILD_MASTER_ID || best.id === 'old-man') {
       this.talkToGuildMaster(best);
+      return;
+    }
+
+    if (best.kind === 'mirror' || best.id === 'mirror-of-changing') {
+      this.useMirrorOfChanging(best);
       return;
     }
 
@@ -5709,6 +5845,11 @@ export class GameScene extends Phaser.Scene {
 
     if (actor.kind === 'dummy') {
       this.onDummyHit(actor, dmg);
+      return true;
+    }
+
+    if (getCombatMode(this.save) === 'turn' && isHostileKind(actor.kind)) {
+      this.startTurnBattle([actor]);
       return true;
     }
 

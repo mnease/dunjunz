@@ -3067,6 +3067,57 @@ import {
 } from './tutorial';
 import { START_ROOM } from '../data/world';
 
+describe('combat mode + turn battle', () => {
+  it('defaults to live and toggles via setCombatMode', async () => {
+    const { getCombatMode, setCombatMode } = await import('./combat-mode');
+    let save = defaultSave();
+    expect(getCombatMode(save)).toBe('live');
+    save = setCombatMode(save, 'turn');
+    expect(getCombatMode(save)).toBe('turn');
+    save = setCombatMode(save, 'live');
+    expect(getCombatMode(save)).toBe('live');
+  });
+
+  it('turn battle: speed order, attack, victory', async () => {
+    const {
+      buildEnemies,
+      buildHeroes,
+      selectAction,
+      startBattle,
+    } = await import('./turn-battle');
+    const save = defaultSave();
+    const heroes = buildHeroes(save);
+    const enemies = buildEnemies([
+      {
+        id: 'e1',
+        kind: 'slime',
+        hp: 4,
+        maxHp: 4,
+        contactDamage: 1,
+      },
+    ]);
+    let b = startBattle(heroes, enemies, 0);
+    expect(b.phase === 'pick_action' || b.phase === 'won').toBe(true);
+    // Keep attacking until won or safety cap
+    for (let i = 0; i < 20 && b.phase !== 'won' && b.phase !== 'lost'; i++) {
+      if (b.phase === 'pick_action') {
+        b = selectAction(b, 'attack');
+      } else break;
+    }
+    expect(b.phase).toBe('won');
+    expect(b.defeatedEnemyIds).toContain('e1');
+  });
+
+  it('guild has Mirror of Changing', async () => {
+    const { ROOMS } = await import('../data/world');
+    const m = (ROOMS.guild_hall?.entities ?? []).find(
+      (e) => e.id === 'mirror-of-changing',
+    );
+    expect(m?.kind).toBe('mirror');
+    expect(m?.dialog?.some((l) => /MIRROR OF CHANGING/i.test(l))).toBe(true);
+  });
+});
+
 describe('tutorial guild hall', () => {
   it('starts on the beach and blocks east + stairs until graduated', () => {
     expect(START_ROOM).toBe('beach_start');
