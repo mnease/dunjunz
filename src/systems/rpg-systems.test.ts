@@ -3036,6 +3036,7 @@ import {
   completeTutorial,
   equipTrainingWeapon,
   guildMasterDialog,
+  guildMasterIntroDialog,
   isTutorialComplete,
   nextTutorialWeapon,
   recordDummyHit,
@@ -3079,6 +3080,17 @@ describe('tutorial guild hall', () => {
     expect(save.equipped.weapon).toBeTruthy();
     const inst = save.bag.find((b) => b.uid === save.equipped.weapon);
     expect(inst?.templateId).toBe('training_axe');
+  });
+
+  it('intro welcomes to Dunjunz, then guild master, then drills', () => {
+    const intro = guildMasterIntroDialog().join('\n');
+    expect(intro).toMatch(/WELCOME TO DUNJUNZ/i);
+    expect(intro).toMatch(/PRIZELLA|QUEST/i);
+    expect(intro).toMatch(/TRAINING GUILD/i);
+    expect(intro).toMatch(/TUTORIAL GUILD MASTER/i);
+    expect(intro).toMatch(/SWORD.*AXE.*BOW.*STAFF/s);
+    const lines = guildMasterDialog(defaultSave());
+    expect(lines.some((l) => /SWORD|AXE|DUMMY|GUILD/i.test(l))).toBe(true);
   });
 
   it('guild dialog mentions drills; migrate veterans with dungeon visits', async () => {
