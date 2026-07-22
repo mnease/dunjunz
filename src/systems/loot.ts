@@ -353,6 +353,35 @@ const TABLES: Record<string, ChestTableFn> = {
         templateId: trinket,
       });
     }
+    // Light + magic drops (dark dungeons need fuel)
+    if (rng() < 0.4) {
+      drops.push({
+        kind: 'treasure',
+        label: 'TORCH x2',
+        stackId: 'torch',
+        stackCount: 2,
+      });
+    }
+    if (rng() < 0.22) {
+      const scroll = pick(rng, [
+        'scroll_ward',
+        'scroll_spark',
+        'scroll_light',
+      ]);
+      drops.push({
+        kind: 'treasure',
+        label: gearLabel(scroll),
+        stackId: scroll,
+        stackCount: 1,
+      });
+    } else if (rng() < 0.08) {
+      drops.push({
+        kind: 'treasure',
+        label: 'TOME OF EMBERS',
+        stackId: 'tome_embers',
+        stackCount: 1,
+      });
+    }
     return drops;
   },
   boss: (rng, ctx) => {

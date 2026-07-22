@@ -2887,3 +2887,263 @@ describe('mid dens P3 Assistant Honk + P4 deep wardens', () => {
     expect(isBlocked(warden!.x, warden!.y)).toBe(false);
   });
 });
+
+// ── Lighting + forge lights + scrolls (lit P0–P1) ──────────────────
+import {
+  activeLightTier,
+  hasActiveCarriedLight,
+  igniteLight,
+  LIGHT_BURN_MS,
+  lightBurnMs,
+  lightTierRank,
+  roomIsDark,
+  tickLightFuel,
+  visionDarkAlpha,
+} from './lighting';
+import {
+  isMagicClass,
+  useScrollOrTome,
+  tickCombatBuffs,
+} from './scrolls';
+import { landPackRecipe, sideRoleForDepth } from '../data/world-deep';
+import { forjeCraft, CRAFT_RECIPES } from './forjing';
+import { useInventoryItem } from './inventory';
+import { computePlayerDamage } from './attributes';
+
+describe('lighting model', () => {
+  it('marks B2+ basements dark by default; surface lit', () => {
+    expect(roomIsDark({ floor: 0 })).toBe(false);
+    expect(roomIsDark({ floor: -1 })).toBe(false);
+    expect(roomIsDark({ floor: -2 })).toBe(true);
+    expect(roomIsDark({ floor: -5 })).toBe(true);
+    expect(roomIsDark({ floor: -5, dark: false })).toBe(false);
+    expect(roomIsDark({ floor: 0, dark: true })).toBe(true);
+  });
+
+  it('torch burns out after finite fuel from real burn helper', () => {
+    let save = defaultSave();
+    save = igniteLight(save, 'torch');
+    expect(hasActiveCarriedLight(save)).toBe(true);
+    expect(activeLightTier(save)).toBe('torch');
+    expect(save.lightFuelMs).toBe(LIGHT_BURN_MS.torch);
+    // burn half
+    let r = tickLightFuel(save, LIGHT_BURN_MS.torch / 2, true);
+    expect(r.expired).toBe(false);
+    expect(r.save.lightFuelMs).toBeLessThan(LIGHT_BURN_MS.torch);
+    // burn rest
+    r = tickLightFuel(r.save, LIGHT_BURN_MS.torch, true);
+    expect(r.expired).toBe(true);
+    expect(hasActiveCarriedLight(r.save)).toBe(false);
+    expect(r.save.activeLight).toBeNull();
+  });
+
+  it('lantern lasts longer than torch; flashlight longer than lantern', () => {
+    expect(lightBurnMs('lantern')).toBeGreaterThan(lightBurnMs('torch'));
+    expect(lightBurnMs('flashlight')).toBeGreaterThan(lightBurnMs('lantern'));
+    expect(lightTierRank('flashlight')).toBeGreaterThan(lightTierRank('lantern'));
+    expect(lightTierRank('lantern')).toBeGreaterThan(lightTierRank('torch'));
+  });
+
+  it('dark vision alpha is worse without light', () => {
+    const bare = defaultSave();
+    const lit = igniteLight(defaultSave(), 'torch');
+    const a0 = visionDarkAlpha(bare, { darkRoom: true, wallTorchCount: 0 });
+    const a1 = visionDarkAlpha(lit, { darkRoom: true, wallTorchCount: 0 });
+    expect(a0).toBeGreaterThan(a1);
+    const aWall = visionDarkAlpha(bare, { darkRoom: true, wallTorchCount: 2 });
+    expect(aWall).toBeLessThan(a0);
+    expect(visionDarkAlpha(bare, { darkRoom: false })).toBe(0);
+  });
+
+  it('useInventoryItem torch consumes stack and ignites', () => {
+    let save = defaultSave();
+    save.stacks = { torch: 2 };
+    const r = useInventoryItem(save, 'torch');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.stacks.torch).toBe(1);
+    expect(activeLightTier(r.save)).toBe('torch');
+    expect(r.save.bossDefeated).toBe(false);
+  });
+});
+
+describe('forge light recipes', () => {
+  it('lists torch, lantern, flashlight craft recipes', () => {
+    const ids = CRAFT_RECIPES.map((r) => r.id);
+    expect(ids).toContain('craft_torch');
+    expect(ids).toContain('craft_lantern');
+    expect(ids).toContain('craft_flashlight');
+  });
+
+  it('crafts torch into stacks with mats', () => {
+    let save = defaultSave();
+    save.coins = 20;
+    save.stacks = { wood_shard: 2, slime_gel: 2 };
+    const r = forjeCraft(save, 'craft_torch');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect((r.save.stacks.torch ?? 0)).toBeGreaterThanOrEqual(2);
+    expect(r.save.stacks.wood_shard ?? 0).toBeLessThan(2);
+  });
+
+  it('crafts lantern and flashlight under stated mats', () => {
+    let save = defaultSave();
+    save.coins = 200;
+    save.stacks = {
+      ore_iron: 5,
+      wood_shard: 5,
+      ore_spark: 10,
+      sand_crystal: 5,
+    };
+    const lan = forjeCraft(save, 'craft_lantern');
+    expect(lan.ok).toBe(true);
+    if (!lan.ok) return;
+    expect(lan.save.stacks.lantern).toBe(1);
+    const flash = forjeCraft(lan.save, 'craft_flashlight');
+    expect(flash.ok).toBe(true);
+    if (!flash.ok) return;
+    expect(flash.save.stacks.flashlight).toBe(1);
+  });
+});
+
+describe('scrolls and tomes', () => {
+  it('scroll_ward buffs non-magic class without land ceremony', () => {
+    let save = defaultSave();
+    save = {
+      ...save,
+      primaryClass: 'fighter',
+      stacks: { scroll_ward: 1 },
+      bossDefeated: false,
+      landsCleared: [],
+    };
+    expect(isMagicClass(save)).toBe(false);
+    const r = useScrollOrTome(save, 'scroll_ward');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.buffDef).toBe(2);
+    expect(r.save.buffMs).toBeGreaterThan(0);
+    expect(r.setsBossDefeated).toBe(false);
+    expect(r.landsClearedChanged).toBe(false);
+    expect(r.save.bossDefeated).toBe(false);
+    expect(r.save.landsCleared).toEqual([]);
+    expect(r.save.stacks.scroll_ward ?? 0).toBe(0);
+  });
+
+  it('scroll_spark stronger for magic class; still usable by non-magic', () => {
+    let fighter = defaultSave();
+    fighter = {
+      ...fighter,
+      primaryClass: 'fighter',
+      stacks: { scroll_spark: 1 },
+    };
+    const rf = useScrollOrTome(fighter, 'scroll_spark');
+    expect(rf.ok).toBe(true);
+    if (!rf.ok) return;
+    expect(rf.save.buffAtk).toBe(1);
+
+    let wizard = defaultSave();
+    wizard = {
+      ...wizard,
+      primaryClass: 'wizard',
+      stacks: { scroll_spark: 1 },
+    };
+    const rw = useScrollOrTome(wizard, 'scroll_spark');
+    expect(rw.ok).toBe(true);
+    if (!rw.ok) return;
+    expect(rw.save.buffAtk).toBe(3);
+    expect(rw.save.buffAtk).toBeGreaterThan(rf.save.buffAtk!);
+    expect(computePlayerDamage(rw.save)).toBeGreaterThan(
+      computePlayerDamage({ ...wizard, buffAtk: 0, buffMs: 0 }),
+    );
+  });
+
+  it('tome_embers requires magic class', () => {
+    let save = defaultSave();
+    save = { ...save, primaryClass: 'fighter', stacks: { tome_embers: 1 } };
+    const fail = useScrollOrTome(save, 'tome_embers');
+    expect(fail.ok).toBe(false);
+    save = { ...save, primaryClass: 'sorcerer' };
+    const ok = useScrollOrTome(save, 'tome_embers');
+    expect(ok.ok).toBe(true);
+    if (!ok.ok) return;
+    expect(ok.save.buffAtk).toBe(4);
+    expect(ok.save.bossDefeated).toBe(false);
+  });
+
+  it('scroll_light grants temporary torch light', () => {
+    let save = defaultSave();
+    save.stacks = { scroll_light: 1 };
+    const r = useScrollOrTome(save, 'scroll_light');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(activeLightTier(r.save)).toBe('torch');
+    expect(r.save.lightFuelMs).toBeGreaterThan(0);
+  });
+
+  it('buffs expire via tickCombatBuffs', () => {
+    let save = defaultSave();
+    save = { ...save, buffAtk: 2, buffMs: 100 };
+    save = tickCombatBuffs(save, 200);
+    expect(save.buffAtk).toBe(0);
+    expect(save.buffMs).toBe(0);
+  });
+});
+
+describe('world P0–P1 packs and side roles', () => {
+  it('woodz pack recipe has no slime/skeleton', () => {
+    for (const band of [0, 1, 2]) {
+      const pack = landPackRecipe('woodz', band);
+      expect(pack.every((k) => k === 'wolf')).toBe(true);
+      expect(pack.includes('slime' as never)).toBe(false);
+      expect(pack.includes('skeleton' as never)).toBe(false);
+    }
+  });
+
+  it('dezertz pack recipe has no slime/skeleton/redshirt', () => {
+    for (const band of [0, 1, 2]) {
+      const pack = landPackRecipe('dezertz', band);
+      expect(pack.some((k) => k === 'slime')).toBe(false);
+      expect(pack.some((k) => k === 'skeleton')).toBe(false);
+      expect(pack.some((k) => k === 'redshirt')).toBe(false);
+      expect(
+        pack.every((k) =>
+          ['scorpion', 'tarantula', 'hornet', 'cactus'].includes(k),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it('woodz/dezertz deep halls use land-locked fauna not slime halls', () => {
+    const wh = ROOMS.woodz_b1_hall;
+    expect(wh).toBeDefined();
+    const kinds = (wh.entities ?? [])
+      .filter((e) => e.kind !== 'sign' && e.kind !== 'heart' && e.kind !== 'torch_wall')
+      .map((e) => e.kind);
+    expect(kinds.every((k) => k === 'wolf' || k === 'heart')).toBe(true);
+    expect(kinds.includes('slime')).toBe(false);
+
+    const dh = ROOMS.dezertz_b1_hall;
+    const dk = (dh.entities ?? [])
+      .filter((e) => !['sign', 'heart', 'torch_wall', 'chest'].includes(e.kind))
+      .map((e) => e.kind);
+    expect(dk.includes('slime')).toBe(false);
+    expect(dk.includes('skeleton')).toBe(false);
+  });
+
+  it('side roles rotate and deep rooms have wall torches + dark flag', () => {
+    expect(sideRoleForDepth(1)).toBe('vault');
+    expect(sideRoleForDepth(2)).toBe('combat');
+    expect(sideRoleForDepth(3)).toBe('quiet');
+    const side = ROOMS.b2_side;
+    expect(side?.sideRole).toBeDefined();
+    expect(side?.dark).toBe(true);
+    expect(
+      (side?.entities ?? []).some((e) => e.kind === 'torch_wall'),
+    ).toBe(true);
+    // quiet sides may skip combat chest density
+    const roles = [ROOMS.b2_side, ROOMS.b3_side, ROOMS.b4_side, ROOMS.b5_side]
+      .map((r) => r?.sideRole)
+      .filter(Boolean);
+    expect(new Set(roles).size).toBeGreaterThan(1);
+  });
+});

@@ -1718,6 +1718,52 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#1a3328', 18, 16, 4, 4);
   });
 
+  // Wall torch prop — bracket + flame
+  canvasTex(scene, 'torch_wall', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#3a3a48', 13, 10, 6, 14);
+    fill(ctx, '#5c4d7a', 14, 12, 4, 10);
+    fill(ctx, '#ffc857', 12, 4, 8, 8);
+    fill(ctx, '#ff6b3a', 14, 2, 4, 6);
+    fill(ctx, '#fff0a0', 15, 5, 2, 3);
+  });
+
+  // Light item icons
+  canvasTex(scene, 'icon_torch', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#6b4423', 14, 12, 4, 14);
+    fill(ctx, '#ffc857', 12, 4, 8, 10);
+    fill(ctx, '#ff6b3a', 14, 2, 4, 6);
+  });
+  canvasTex(scene, 'icon_lantern', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#888', 12, 6, 8, 2);
+    fill(ctx, '#c9a227', 11, 8, 10, 12);
+    fill(ctx, '#ffc857', 13, 10, 6, 8);
+    fill(ctx, '#555', 14, 20, 4, 6);
+  });
+  canvasTex(scene, 'icon_flashlight', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#444', 10, 12, 12, 8);
+    fill(ctx, '#222', 8, 13, 4, 6);
+    fill(ctx, '#a0e0ff', 20, 12, 6, 8);
+    fill(ctx, '#fff', 22, 14, 2, 4);
+  });
+  canvasTex(scene, 'icon_scroll_ward', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#e8dcc8', 8, 4, 16, 22);
+    fill(ctx, '#7dffb3', 12, 10, 8, 8);
+  });
+  canvasTex(scene, 'icon_scroll_spark', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#e8dcc8', 8, 4, 16, 22);
+    fill(ctx, '#ffc857', 14, 8, 4, 12);
+    fill(ctx, '#ff6b3a', 12, 12, 8, 4);
+  });
+  canvasTex(scene, 'icon_scroll_light', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#e8dcc8', 8, 4, 16, 22);
+    fill(ctx, '#fff0a0', 12, 10, 8, 8);
+  });
+  canvasTex(scene, 'icon_tome_embers', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#4a2060', 8, 6, 16, 20);
+    fill(ctx, '#ff6b3a', 12, 10, 8, 10);
+    fill(ctx, '#ffc857', 14, 8, 4, 4);
+  });
+
   canvasTex(scene, 'boss', ART_RES, ART_RES, (ctx) => {
     shadedBlock(ctx, '#4a2060', '#7a40a0', '#2a1040', 6, 12, 20, 16);
     shadedBlock(ctx, '#f0c8a4', '#ffe0c8', '#c09070', 10, 4, 12, 10);

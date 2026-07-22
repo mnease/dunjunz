@@ -112,6 +112,12 @@ import {
   runForjingAction,
 } from '../systems/forjing';
 import {
+  roomIsDark,
+  tickLightFuel,
+  visionDarkAlpha,
+} from '../systems/lighting';
+import { tickCombatBuffs } from '../systems/scrolls';
+import {
   bestBudBanter,
   ensureRunSeed,
   getBestBud,
@@ -308,6 +314,7 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   scorpion: 'scorpion',
   tarantula: 'tarantula',
   hornet: 'hornet',
+  torch_wall: 'torch_wall',
 };
 
 const MOBILE_HOSTILES = [
@@ -366,6 +373,10 @@ export class GameScene extends Phaser.Scene {
   private forjingOpen = false;
   private forjingSelected = 0;
   private shopOpen = false;
+  /** Dark-room vision overlay (readable darkness, not free sight). */
+  private darkOverlay: Phaser.GameObjects.Rectangle | null = null;
+  private wallTorchCount = 0;
+
   private shopId: string | null = null;
   private shopSelected = 0;
   private shopBagSelected = 0;
@@ -1163,8 +1174,26 @@ export class GameScene extends Phaser.Scene {
 
   private onUseItemKey = (): void => {
     if (this.dialogLocked || this.paused) return;
-    // U = potion first; if none, Beam Me Up if owned
+    // U = potion → light → scroll → beam
+    const tryIds = [
+      'potion',
+      'torch',
+      'lantern',
+      'flashlight',
+      'scroll_light',
+      'scroll_ward',
+      'scroll_spark',
+      'tome_embers',
+    ];
     let result = useInventoryItem(this.save, 'potion');
+    if (!result.ok) {
+      for (const id of tryIds.slice(1)) {
+        if ((this.save.stacks[id] ?? 0) > 0) {
+          result = useInventoryItem(this.save, id);
+          if (result.ok) break;
+        }
+      }
+    }
     if (!result.ok && (this.save.stacks.beam_me_up ?? 0) > 0) {
       this.activateBeamMeUp();
       return;
@@ -1177,6 +1206,7 @@ export class GameScene extends Phaser.Scene {
     this.save = result.save;
     writeSave(this.save);
     this.emitHud();
+    this.refreshDarkOverlay();
     playSfx('heal');
     this.game.events.emit('inventory-refresh', this.save);
     this.game.events.emit('toast', result.message);
@@ -1270,6 +1300,7 @@ export class GameScene extends Phaser.Scene {
       this.save = result.save;
       writeSave(this.save);
       this.emitHud();
+      this.refreshDarkOverlay();
       playSfx(
         payload.templateId === 'potion' || payload.templateId.includes('potion')
           ? 'heal'
@@ -1466,6 +1497,25 @@ export class GameScene extends Phaser.Scene {
     this.children.list
       .filter((c) => (c as Phaser.GameObjects.Image).getData?.('mapTile'))
       .forEach((c) => c.destroy());
+    // Keep dark overlay GO; alpha refreshed per room
+  }
+
+  /** Readable darkness overlay — denser without carried light. */
+  private refreshDarkOverlay(): void {
+    if (!this.darkOverlay) {
+      this.darkOverlay = this.add
+        .rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x02040a, 0)
+        .setScrollFactor(0)
+        .setDepth(90)
+        .setVisible(true);
+    }
+    const dark = this.room ? roomIsDark(this.room) : false;
+    const alpha = visionDarkAlpha(this.save, {
+      darkRoom: dark,
+      wallTorchCount: this.wallTorchCount,
+    });
+    this.darkOverlay.setFillStyle(0x02040a, alpha);
+    this.darkOverlay.setVisible(alpha > 0.02);
   }
 
   private musicForRoom(room: RoomDef): MusicId {
@@ -1649,9 +1699,21 @@ export class GameScene extends Phaser.Scene {
     this.ensureHardModeGates();
     this.maybePromoteCaptain();
     this.startRoomAmbience();
+    this.wallTorchCount = (room.entities ?? []).filter(
+      (e) => e.kind === 'torch_wall',
+    ).length;
+    this.refreshDarkOverlay();
     if (isHardRunActive(this.save, room.land)) {
       this.time.delayedCall(120, () => {
         this.game.events.emit('toast', 'HARD MODE — CREEPS SHOOT · STAY ALERT');
+      });
+    }
+    if (roomIsDark(room) && !(this.save.lightFuelMs ?? 0)) {
+      this.time.delayedCall(280, () => {
+        this.game.events.emit(
+          'toast',
+          'DARK — USE A TORCH (U / BAG) OR FORJE LIGHT',
+        );
       });
     }
 
@@ -2264,6 +2326,11 @@ export class GameScene extends Phaser.Scene {
       body.setMaxVelocity(def.kind === 'hornet' ? 140 : 120, 140);
       body.enable = true;
       this.physics.add.collider(sprite, this.walls);
+    } else if (def.kind === 'torch_wall') {
+      sprite.setImmovable(true);
+      sprite.setDepth(3);
+      const body = sprite.body as Phaser.Physics.Arcade.Body;
+      body.enable = false;
     } else if (isCactusPlant || isTree) {
       sprite.setImmovable(true);
       const body = sprite.body as Phaser.Physics.Arcade.Body;
@@ -3900,6 +3967,19 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     if (this.leavingToTitle) return;
     if (!this.player?.body) return;
+
+    // Light fuel + combat buffs (dark rooms burn carried light)
+    if (!this.paused && !this.dialogLocked && !this.panelOpen()) {
+      const dark = roomIsDark(this.room);
+      const lit = tickLightFuel(this.save, delta, dark);
+      this.save = lit.save;
+      if (lit.expired) {
+        this.game.events.emit('toast', 'YOUR LIGHT DIED — LIT ANOTHER');
+        writeSave(this.save);
+      }
+      this.save = tickCombatBuffs(this.save, delta);
+      this.refreshDarkOverlay();
+    }
 
     // ESC / MENU: close dialog → close panels → pause (never trap talk mode)
     if (

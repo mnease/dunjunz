@@ -26,7 +26,8 @@ export function defaultSave(): SaveData {
     xp: 0,
     level: 1,
     coins: 0,
-    stacks: {},
+    // Starter light for first dark basements
+    stacks: { torch: 3 },
     bag: [],
     nextItemUid: 1,
     equipped: emptyEquipped(),
@@ -56,6 +57,11 @@ export function defaultSave(): SaveData {
     race: 'human',
     raceChosen: false,
     pendingAttrMajor: null,
+    activeLight: null,
+    lightFuelMs: 0,
+    buffAtk: 0,
+    buffDef: 0,
+    buffMs: 0,
   };
 }
 
@@ -100,6 +106,11 @@ function withV5Fields(s: SaveData): SaveData {
     race: s.race ?? 'human',
     raceChosen: !!s.raceChosen,
     pendingAttrMajor: s.pendingAttrMajor ?? null,
+    activeLight: s.activeLight ?? null,
+    lightFuelMs: typeof s.lightFuelMs === 'number' ? Math.max(0, s.lightFuelMs) : 0,
+    buffAtk: typeof s.buffAtk === 'number' ? s.buffAtk : 0,
+    buffDef: typeof s.buffDef === 'number' ? s.buffDef : 0,
+    buffMs: typeof s.buffMs === 'number' ? Math.max(0, s.buffMs) : 0,
   };
 }
 

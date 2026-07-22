@@ -9,7 +9,13 @@
  * denser/meaner creeps, and layout tiers (open → cramped → maze).
  */
 
-import type { EntityDef, EntityKind, LandId, RoomDef } from '../types';
+import type {
+  EntityDef,
+  EntityKind,
+  LandId,
+  RoomDef,
+  RoomSideRole,
+} from '../types';
 import {
   applyDepthHazards,
   basementDepth,
@@ -18,6 +24,63 @@ import {
   depthLayoutTier,
   type DepthTileset,
 } from '../systems/floor-depth';
+
+/** P0: side chamber role rotation (not every side is combat+chest). */
+export function sideRoleForDepth(depth: number): RoomSideRole {
+  const cycle: RoomSideRole[] = [
+    'vault',
+    'combat',
+    'quiet',
+    'hazard',
+    'combat',
+    'vault',
+  ];
+  return cycle[Math.max(0, depth - 1) % cycle.length]!;
+}
+
+/** P1 land-locked pack recipes — pure, testable. */
+export function landPackRecipe(
+  land: LandId,
+  depthBand: number,
+): EntityKind[] {
+  // depthBand: 0 = shallow, 1 = mid, 2 = deep
+  const b = Math.max(0, Math.min(2, depthBand));
+  if (land === 'woodz') {
+    const packs: EntityKind[][] = [
+      ['wolf', 'wolf'],
+      ['wolf', 'wolf', 'wolf'],
+      ['wolf', 'wolf'],
+    ];
+    return packs[b]!;
+  }
+  if (land === 'dezertz') {
+    const packs: EntityKind[][] = [
+      ['scorpion', 'cactus'],
+      ['scorpion', 'tarantula'],
+      ['tarantula', 'scorpion', 'hornet'],
+    ];
+    return packs[b]!;
+  }
+  if (land === 'sewerz') {
+    const packs: EntityKind[][] = [
+      ['slime', 'skeleton'],
+      ['skeleton', 'slime'],
+      ['skeleton', 'slime', 'wolf'],
+    ];
+    return packs[b]!;
+  }
+  // dunjunz default bureaucracy fauna
+  const packs: EntityKind[][] = [
+    ['slime', 'skeleton'],
+    ['skeleton', 'redshirt'],
+    ['redshirt', 'skeleton', 'wolf'],
+  ];
+  return packs[b]!;
+}
+
+function wallTorch(id: string, x: number, y: number): EntityDef {
+  return { kind: 'torch_wall', id, x, y };
+}
 
 /** Assert each row is 16 tiles (authoring guard). */
 function rows16(label: string, rows: string[]): string[] {
@@ -277,7 +340,15 @@ const SEWER_PIPE = rows16('SEWER_PIPE', [
   '########D#######',
 ]);
 
-type Creep = 'slime' | 'skeleton' | 'redshirt' | 'wolf' | 'scorpion' | 'tarantula';
+type Creep =
+  | 'slime'
+  | 'skeleton'
+  | 'redshirt'
+  | 'wolf'
+  | 'scorpion'
+  | 'tarantula'
+  | 'hornet'
+  | 'cactus';
 
 function creeps(
   kinds: Creep[],
@@ -558,6 +629,97 @@ function makeBasementFloor(opts: {
   descent = stamp(descent, 'descent');
 
   const flabel = floor < 0 ? `B${Math.abs(floor)}` : `F${floor}`;
+  const dark = floor <= -2;
+  const sideRole = sideRoleForDepth(depth);
+
+  // Foyer: quiet threshold (R0–R1) — light creeps + wall torches
+  const foyerEnts: EntityDef[] = [
+    sign(`${prefix}-foyer-sign`, 12, 8, [
+      `${flabel}: ${flavor}.`,
+      `${titleTag} — DEEPER STILL AWAITS.`,
+      dark ? 'DARK. CARRY A TORCH. U = UP. N = HALL.' : 'U = STAIRS UP. N = HALL.',
+    ]),
+    wallTorch(`${prefix}-foyer-torch-a`, 2, 2),
+    wallTorch(`${prefix}-foyer-torch-b`, 13, 2),
+    ...creepsForDepth(
+      hostiles.slice(0, 1),
+      `${prefix}-foyer`,
+      [[4, 8]],
+      Math.max(0, depth - 1),
+    ),
+  ];
+
+  const hallEnts: EntityDef[] = [
+    wallTorch(`${prefix}-hall-torch-a`, 2, 3),
+    wallTorch(`${prefix}-hall-torch-b`, 13, 3),
+    ...creepsForDepth(
+      hostiles,
+      `${prefix}-hall`,
+      [
+        [5, 3],
+        [11, 7],
+        [8, 5],
+        [4, 8],
+      ],
+      depth,
+    ),
+    heart(`${prefix}-hall-heart`, 12, 4),
+  ];
+
+  // Side role variety (P0)
+  let sideEnts: EntityDef[] = [
+    wallTorch(`${prefix}-side-torch`, 2, 2),
+    sign(`${prefix}-side-sign`, 3, 8, [
+      `SIDE · ${sideRole.toUpperCase()} · ${flabel}.`,
+      depth >= 5 ? 'DARKER. MEANER. OPTIONAL.' : 'OPTIONAL. WEST = HALL.',
+      dark ? 'TORCHES HELP. YOURS BURN OUT.' : 'WEST BACK TO THE HALL.',
+    ]),
+  ];
+  if (sideRole === 'quiet') {
+    sideEnts.push(heart(`${prefix}-side-heart`, 8, 5));
+  } else if (sideRole === 'vault') {
+    sideEnts.push(chest(`${prefix}-side-chest`, 8, 5));
+    sideEnts.push(
+      ...creepsForDepth(hostiles.slice(0, 1), `${prefix}-side`, [[11, 7]], depth),
+    );
+  } else if (sideRole === 'hazard') {
+    sideEnts.push(chest(`${prefix}-side-chest`, 11, 3));
+    sideEnts.push(
+      ...creepsForDepth(hostiles.slice(0, 1), `${prefix}-side`, [[5, 5]], depth),
+    );
+  } else {
+    // combat
+    sideEnts.push(chest(`${prefix}-side-chest`, 8, 5));
+    sideEnts.push(
+      ...creepsForDepth(
+        hostiles,
+        `${prefix}-side`,
+        [
+          [5, 3],
+          [11, 7],
+        ],
+        depth,
+      ),
+    );
+  }
+
+  const descentEnts: EntityDef[] = [
+    wallTorch(`${prefix}-descent-torch`, 2, 2),
+    sign(`${prefix}-descent-sign`, 3, 8, [
+      `YOU ARE ON ${flabel} — ${flavor}.`,
+      dark ? 'S = DEEPER. BRING LIGHT.' : 'S = STAIRS DEEPER.',
+      'SOUTH: HALL.',
+    ]),
+    ...creepsForDepth(
+      hostiles,
+      `${prefix}-descent`,
+      [
+        [11, 7],
+        [6, 5],
+      ],
+      depth,
+    ),
+  ];
 
   const rooms: Record<string, RoomDef> = {
     [`${prefix}_foyer`]: {
@@ -570,22 +732,8 @@ function makeBasementFloor(opts: {
       north: `${prefix}_hall`,
       stairsUp: stairsUpTo,
       tiles: foyer,
-      entities: [
-        sign(`${prefix}-foyer-sign`, 12, 8, [
-          `${flabel}: ${flavor}.`,
-          `${titleTag} — DEEPER STILL AWAITS.`,
-          'U = STAIRS UP. N = HALL.',
-        ]),
-        ...creepsForDepth(
-          hostiles,
-          `${prefix}-foyer`,
-          [
-            [4, 8],
-            [11, 7],
-          ],
-          depth,
-        ),
-      ],
+      dark,
+      entities: foyerEnts,
     },
     [`${prefix}_hall`]: {
       id: `${prefix}_hall`,
@@ -598,20 +746,8 @@ function makeBasementFloor(opts: {
       north: `${prefix}_descent`,
       east: `${prefix}_side`,
       tiles: hall,
-      entities: [
-        ...creepsForDepth(
-          hostiles,
-          `${prefix}-hall`,
-          [
-            [5, 3],
-            [11, 7],
-            [8, 5],
-            [4, 8],
-          ],
-          depth,
-        ),
-        heart(`${prefix}-hall-heart`, 12, 4),
-      ],
+      dark,
+      entities: hallEnts,
     },
     [`${prefix}_side`]: {
       id: `${prefix}_side`,
@@ -622,23 +758,9 @@ function makeBasementFloor(opts: {
       mapY: 1,
       west: `${prefix}_hall`,
       tiles: side,
-      entities: [
-        chest(`${prefix}-side-chest`, 8, 5),
-        ...creepsForDepth(
-          hostiles,
-          `${prefix}-side`,
-          [
-            [5, 3],
-            [11, 7],
-          ],
-          depth,
-        ),
-        sign(`${prefix}-side-sign`, 3, 8, [
-          `SIDE CHAMBER · ${flabel}.`,
-          depth >= 5 ? 'LOOT. LAVA. REGRET.' : 'LOOT + REGRET.',
-          'WEST BACK TO THE HALL.',
-        ]),
-      ],
+      dark,
+      sideRole,
+      entities: sideEnts,
     },
     [`${prefix}_descent`]: {
       id: `${prefix}_descent`,
@@ -650,22 +772,8 @@ function makeBasementFloor(opts: {
       south: `${prefix}_hall`,
       stairsDown: stairsDownTo,
       tiles: descent,
-      entities: [
-        sign(`${prefix}-descent-sign`, 3, 8, [
-          `YOU ARE ON ${flabel} — ${flavor}.`,
-          'S = STAIRS DEEPER. DARKER. MEANER.',
-          'SOUTH: HALL.',
-        ]),
-        ...creepsForDepth(
-          hostiles,
-          `${prefix}-descent`,
-          [
-            [11, 7],
-            [6, 5],
-          ],
-          depth,
-        ),
-      ],
+      dark,
+      entities: descentEnts,
     },
   };
 
@@ -676,22 +784,14 @@ function makeBasementFloor(opts: {
 export function buildDunjunzDeep(): Record<string, RoomDef> {
   const out: Record<string, RoomDef> = {};
 
-  // B2–B7: escalate species as you sink (layout/hazards also escalate)
-  const hostilesByDepth: Creep[][] = [
-    ['slime', 'skeleton'], // B2 — still learning
-    ['skeleton', 'slime'], // B3
-    ['skeleton', 'redshirt'], // B4 — redshirts join
-    ['redshirt', 'skeleton'], // B5
-    ['redshirt', 'skeleton', 'wolf'], // B6 — deep fauna
-    ['wolf', 'redshirt', 'skeleton'], // B7 — wolves lead packs
-  ];
-
+  // B2–B7: land-locked dunjunz packs (P1)
   for (let n = 2; n <= 7; n++) {
     const floor = -n;
     const prefix = `b${n}`;
     const up =
       n === 2 ? 'b1_descent' : `b${n - 1}_descent`;
     const down = n === 7 ? 'b8_foyer' : `b${n + 1}_foyer`;
+    const band = n <= 3 ? 0 : n <= 5 ? 1 : 2;
     Object.assign(
       out,
       makeBasementFloor({
@@ -702,7 +802,7 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
         stairsUpTo: up,
         stairsDownTo: down,
         tileset: 'dungeon',
-        hostiles: hostilesByDepth[n - 2]!,
+        hostiles: landPackRecipe('dunjunz', band) as Creep[],
       }),
     );
   }
@@ -897,11 +997,7 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
 /** Woodz deep B1–B3 under woodz_deep. */
 export function buildWoodzDeep(): Record<string, RoomDef> {
   const out: Record<string, RoomDef> = {};
-  const packs: Creep[][] = [
-    ['wolf', 'slime'],
-    ['wolf', 'skeleton'],
-    ['wolf', 'wolf', 'slime'],
-  ];
+  // P1: pack-only woodz ecology (no slime/skeleton halls)
   for (let n = 1; n <= 3; n++) {
     const floor = -n;
     const prefix = `woodz_b${n}`;
@@ -918,7 +1014,7 @@ export function buildWoodzDeep(): Record<string, RoomDef> {
         stairsUpTo: up,
         stairsDownTo: down,
         tileset: 'wood',
-        hostiles: packs[n - 1]!,
+        hostiles: landPackRecipe('woodz', n - 1) as Creep[],
       }),
     );
   }
@@ -1017,11 +1113,7 @@ export function buildWoodzDeep(): Record<string, RoomDef> {
 /** Dezertz B1–B3 under tower. */
 export function buildDezertzDeep(): Record<string, RoomDef> {
   const out: Record<string, RoomDef> = {};
-  const packs: Creep[][] = [
-    ['scorpion', 'slime'],
-    ['scorpion', 'tarantula'],
-    ['tarantula', 'scorpion', 'redshirt'],
-  ];
+  // P1: arid fauna only (no slime/skeleton/redshirt bleed)
   for (let n = 1; n <= 3; n++) {
     const floor = -n;
     const prefix = `dezertz_b${n}`;
@@ -1038,7 +1130,7 @@ export function buildDezertzDeep(): Record<string, RoomDef> {
         stairsUpTo: up,
         stairsDownTo: down,
         tileset: 'sand',
-        hostiles: packs[n - 1]!,
+        hostiles: landPackRecipe('dezertz', n - 1) as Creep[],
       }),
     );
   }
@@ -1133,11 +1225,6 @@ export function buildDezertzDeep(): Record<string, RoomDef> {
  */
 export function buildSewerzDeep(): Record<string, RoomDef> {
   const out: Record<string, RoomDef> = {};
-  const packs: Creep[][] = [
-    ['slime', 'skeleton'],
-    ['skeleton', 'wolf'],
-    ['skeleton', 'slime', 'wolf'],
-  ];
   for (let n = 2; n <= 3; n++) {
     const floor = -n;
     const prefix = `sewerz_b${n}`;
@@ -1153,7 +1240,7 @@ export function buildSewerzDeep(): Record<string, RoomDef> {
         stairsUpTo: up,
         stairsDownTo: down,
         tileset: 'sewer',
-        hostiles: packs[n - 2]!,
+        hostiles: landPackRecipe('sewerz', n - 2) as Creep[],
       }),
     );
   }

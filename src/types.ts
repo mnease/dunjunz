@@ -42,7 +42,9 @@ export type EntityKind =
   /** Dezertz fauna. */
   | 'scorpion'
   | 'tarantula'
-  | 'hornet';
+  | 'hornet'
+  /** Wall-mounted torch prop (decoration + ambient light ease). */
+  | 'torch_wall';
 
 /** Non-human best friend companion (randomized per playthrough). */
 export type BestBudId =
@@ -135,6 +137,9 @@ export interface EntityDef {
   portalTarget?: string;
 }
 
+/** Side chamber content role (P0 world grammar). */
+export type RoomSideRole = 'combat' | 'vault' | 'quiet' | 'hazard';
+
 export interface RoomDef {
   id: string;
   title: string;
@@ -157,6 +162,13 @@ export interface RoomDef {
   /** Room reached by walking onto stairs-up tiles (U). */
   stairsUp?: string;
   onEnter?: string;
+  /**
+   * Dark room: carried light is primary vision.
+   * Default: true for floor ≤ -2 when unset.
+   */
+  dark?: boolean;
+  /** Authored side role for P0 grammar / tests. */
+  sideRole?: RoomSideRole;
 }
 
 /**
@@ -237,6 +249,17 @@ export interface SaveData {
   race?: RaceId;
   /** True after the L25 race pick is spent. */
   raceChosen?: boolean;
+  // ── lighting + temporary buffs ─────────────────────────
+  /** Active carried light tier (null = none). */
+  activeLight?: 'torch' | 'lantern' | 'flashlight' | null;
+  /** Remaining fuel ms for activeLight. */
+  lightFuelMs?: number;
+  /** Temporary ATK buff from scrolls/tomes. */
+  buffAtk?: number;
+  /** Temporary DEF buff from scrolls/tomes. */
+  buffDef?: number;
+  /** Remaining combat buff duration ms. */
+  buffMs?: number;
 }
 
 /** Re-export identity ids for SaveData (defined in systems to avoid cycles). */

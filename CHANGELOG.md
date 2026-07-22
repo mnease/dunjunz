@@ -13,6 +13,8 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Lighting + forge lights + scrolls (lit pass)** — wall torch props in deep rooms; B2+ basements are dark; carried **torch / lantern / flashlight** burn finite fuel (use from bag or U). Forje crafts torch (x2), lantern, and flashlight. **Scrolls** (ward / spark / light) and **tome of embers** (magic classes); ward/spark/light usable by non-casters too. Temp ATK/DEF buffs; starter 3 torches.
+- **World P0–P1 grammar** — side rooms rotate vault/combat/quiet/hazard roles; **land-locked packs** so Woodz deep is wolves-only and Dezertz deep is arid fauna (no slime/skeleton halls).
 - **Mid-boss wardens (P0 + P1)** — new `miniboss` combat tier (HP 36 / contact 3 / XP 18, between elite and land boss). Permanent kills only; never sets `bossDefeated`, land clear, or exit portals. **Floor Captain** on Dunjunz `b4_side` (BADGE CHECK, base HP 40) — soft mid (hall → descent stairs stay free).
 - **Mid-boss P2 — Rules Lawyer** — optional Dunjunz B6 den (`b6_side`, ERRATA DEN, base HP 46). Peaceful until hit or chest open; talk grants +5 HP + bone mat + durable `rules_lawyer_forgiven` (skips re-spawn). Fight path mid XP/loot only — no land clear, portal, or boss chest table. Hall/descent stairs remain free.
 - **Mid-boss P3 — Assistant Honk** — optional Sewerz B2 den (`sewerz_b2_side`, HONKLET OFFICE, base HP 50). Goose intern chase/dialog; mid kill only; hall/descent free before Royal Goose @ B4.

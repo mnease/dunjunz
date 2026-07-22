@@ -24,6 +24,9 @@ export const FORJING_PANEL_MATS = [
   'wolf_pelt',
   'cactus_spine',
   'ensign_badge',
+  'torch',
+  'lantern',
+  'flashlight',
 ] as const;
 
 export const FORJING_ACTION_COLS = 3;
@@ -31,11 +34,14 @@ export const FORJING_ACTION_COLS = 3;
 export interface CraftRecipe {
   id: string;
   name: string;
-  /** Result weapon/armor template. */
+  /** Result weapon/armor template (gear) OR stack id when stackResult is set. */
   resultTemplateId: string;
   cost: Partial<Record<string, number>>;
   coins?: number;
   blurb: string;
+  /** When set, craft adds stacks instead of bag gear. */
+  stackResult?: boolean;
+  stackCount?: number;
 }
 
 export const CRAFT_RECIPES: CraftRecipe[] = [
@@ -78,6 +84,37 @@ export const CRAFT_RECIPES: CraftRecipe[] = [
     cost: { ore_iron: 1, ore_spark: 1 },
     coins: 18,
     blurb: 'Finger furniture. +DEF.',
+  },
+  // ── Light ladder ──────────────────────────────────────
+  {
+    id: 'craft_torch',
+    name: 'TORCH',
+    resultTemplateId: 'torch',
+    cost: { wood_shard: 1, slime_gel: 1 },
+    coins: 5,
+    blurb: 'Stick + gel. ~90s of light. [U]',
+    stackResult: true,
+    stackCount: 2,
+  },
+  {
+    id: 'craft_lantern',
+    name: 'LANTERN',
+    resultTemplateId: 'lantern',
+    cost: { ore_iron: 1, wood_shard: 1, ore_spark: 1 },
+    coins: 25,
+    blurb: 'Oil lamp. Outlasts a torch. [U]',
+    stackResult: true,
+    stackCount: 1,
+  },
+  {
+    id: 'craft_flashlight',
+    name: 'FLASHLIGHT',
+    resultTemplateId: 'flashlight',
+    cost: { ore_spark: 3, sand_crystal: 2, ore_iron: 1 },
+    coins: 80,
+    blurb: 'Electric torch. Bright science. [U]',
+    stackResult: true,
+    stackCount: 1,
   },
 ];
 
@@ -309,7 +346,7 @@ export function forjeImbueWeapon(
   };
 }
 
-/** Craft a new weapon from a recipe. */
+/** Craft gear into bag, or stackable lights into stacks. */
 export function forjeCraft(
   save: SaveData,
   recipeId: string,
@@ -320,6 +357,18 @@ export function forjeCraft(
     return { ok: false, save, reason: 'MISSING MATERIALZ OR COINZ' };
   }
   let next = payCosts(save, recipe.cost, recipe.coins ?? 0);
+  if (recipe.stackResult) {
+    const n = recipe.stackCount ?? 1;
+    const stacks = { ...next.stacks };
+    const id = recipe.resultTemplateId;
+    stacks[id] = (stacks[id] ?? 0) + n;
+    next = syncDerivedStats({ ...next, stacks });
+    return {
+      ok: true,
+      save: next,
+      message: `FORJED ${recipe.name}${n > 1 ? ` x${n}` : ''}!`,
+    };
+  }
   const minted = mintItem(next, recipe.resultTemplateId, 'uncommon', 0);
   next = minted.save;
   // Auto-equip if no weapon

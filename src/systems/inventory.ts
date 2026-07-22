@@ -19,6 +19,8 @@ import {
 } from './items';
 import { canHeroEquipGear, effectiveGearDef } from './class-gear';
 // class-gear registers compare-hook on load
+import { igniteLight, isLightItemId } from './lighting';
+import { isScrollOrTomeId, useScrollOrTome } from './scrolls';
 
 export {
   computePlayerDamage,
@@ -43,6 +45,7 @@ export function computeArmor(save: SaveData): number {
   }
   const dex = effectiveAttrs(save).dex + weaponAttrBonus(save, 'dex');
   def += Math.floor(Math.max(0, dex - 1) / 4);
+  def += Math.max(0, save.buffDef ?? 0);
   return def;
 }
 
@@ -269,6 +272,30 @@ export function useInventoryItem(
       ok: true,
       save: syncDerivedStats({ ...save, stacks }),
       message: 'BEAM ME UP — ENERGIZE!',
+    };
+  }
+  // Light ladder — ignite carried light
+  if (isLightItemId(templateId)) {
+    const stacks = { ...save.stacks };
+    stacks[templateId] = count - 1;
+    if (stacks[templateId]! <= 0) delete stacks[templateId];
+    const lit = igniteLight({ ...save, stacks }, templateId);
+    return {
+      ok: true,
+      save: syncDerivedStats(lit),
+      message: `LIT ${t.name.toUpperCase()}`,
+    };
+  }
+  // Scrolls / tomes
+  if (isScrollOrTomeId(templateId)) {
+    const r = useScrollOrTome(save, templateId);
+    if (!r.ok) {
+      return { ok: false, save: r.save, reason: r.reason ?? 'CANNOT USE' };
+    }
+    return {
+      ok: true,
+      save: syncDerivedStats(r.save),
+      message: r.message ?? 'USED SCROLL',
     };
   }
   return { ok: false, save, reason: 'UNKNOWN ITEM' };
