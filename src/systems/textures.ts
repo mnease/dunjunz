@@ -130,27 +130,24 @@ function drawAmulet(
   look: AmuletLook,
 ): void {
   if (look === 'none') return;
-  // chain across collar
-  fill(ctx, '#c9a227', 11, 12, 10, 1);
-  fill(ctx, '#8a6820', 11, 13, 10, 1);
+  // Compact collar trinket (~half former 6×6 medallion — was pacifier-scale)
+  fill(ctx, '#c9a227', 13, 13, 6, 1); // short chain
   if (look === 'cube') {
-    block(ctx, '#5ad45a', '#2a6a2a', 13, 13, 6, 6);
-    fill(ctx, '#9ef09e', 14, 14, 3, 2);
-    fill(ctx, '#2a8a2a', 13, 17, 6, 1);
+    block(ctx, '#5ad45a', '#2a6a2a', 14, 14, 3, 3);
+    fill(ctx, '#9ef09e', 14, 14, 2, 1);
     spark(ctx, 15, 15, '#e0ffe0');
     return;
   }
   if (look === 'bauble') {
-    block(ctx, '#ff6b9d', '#8a2040', 13, 13, 6, 6);
-    fill(ctx, '#ffb0c8', 14, 14, 3, 2);
+    block(ctx, '#ff6b9d', '#8a2040', 14, 14, 3, 3);
+    fill(ctx, '#ffb0c8', 14, 14, 2, 1);
     spark(ctx, 15, 15);
-    fill(ctx, '#c07090', 14, 18, 4, 1);
     return;
   }
   // gold medallion
-  block(ctx, '#ffc857', '#8a6820', 13, 13, 6, 6);
-  fill(ctx, '#fff3a0', 14, 14, 3, 2);
-  fill(ctx, '#c9a227', 15, 16, 2, 2);
+  block(ctx, '#ffc857', '#8a6820', 14, 14, 3, 3);
+  fill(ctx, '#fff3a0', 14, 14, 2, 1);
+  fill(ctx, '#c9a227', 15, 15, 1, 1);
   spark(ctx, 14, 14, '#ffffff');
 }
 
@@ -159,22 +156,21 @@ function drawRing(
   look: RingLook,
 ): void {
   if (look === 'none') return;
-  // on right hand knuckles (near glove)
+  // Compact band on right knuckles (~half former 5×4)
   if (look === 'luck') {
-    fill(ctx, '#2a6a50', 24, 19, 5, 4);
-    fill(ctx, '#7dffb3', 25, 18, 3, 5);
-    fill(ctx, '#c9ffe0', 26, 19, 1, 3);
-    spark(ctx, 26, 18);
+    fill(ctx, '#2a6a50', 25, 20, 3, 2);
+    fill(ctx, '#7dffb3', 25, 19, 2, 3);
+    fill(ctx, '#c9ffe0', 26, 20, 1, 1);
+    spark(ctx, 26, 19);
     return;
   }
   if (look === 'silver') {
-    block(ctx, '#d0d8e8', '#607080', 24, 19, 5, 4);
-    fill(ctx, '#ffffff', 25, 20, 2, 1);
-    spark(ctx, 26, 20);
+    block(ctx, '#d0d8e8', '#607080', 25, 20, 3, 2);
+    fill(ctx, '#ffffff', 25, 20, 1, 1);
     return;
   }
-  block(ctx, '#c07040', '#603010', 24, 19, 5, 4);
-  fill(ctx, '#e09060', 25, 20, 2, 1);
+  block(ctx, '#c07040', '#603010', 25, 20, 3, 2);
+  fill(ctx, '#e09060', 25, 20, 1, 1);
 }
 
 /**
@@ -800,29 +796,29 @@ export function drawBuddyGear(
     spark(ctx, 15, 1, '#ffc857');
   }
 
-  // —— Collar amulet ——
+  // —— Collar amulet (compact, ~half former size) ——
   if (spec.amulet !== 'none') {
-    fill(ctx, '#c9a227', 12, 13, 8, 1);
+    fill(ctx, '#c9a227', 13, 14, 5, 1);
     if (spec.amulet === 'gold') {
-      block(ctx, '#ffc857', '#8a6820', 13, 13, 6, 5);
-      spark(ctx, 15, 14, '#fff3a0');
+      block(ctx, '#ffc857', '#8a6820', 14, 14, 3, 3);
+      spark(ctx, 15, 15, '#fff3a0');
     } else if (spec.amulet === 'bauble') {
-      block(ctx, '#ff6b9d', '#8a2040', 13, 13, 6, 5);
-      spark(ctx, 15, 14);
+      block(ctx, '#ff6b9d', '#8a2040', 14, 14, 3, 3);
+      spark(ctx, 15, 15);
     } else {
-      block(ctx, '#5ad45a', '#2a6a2a', 13, 13, 6, 5);
-      spark(ctx, 15, 14, '#e0ffe0');
+      block(ctx, '#5ad45a', '#2a6a2a', 14, 14, 3, 3);
+      spark(ctx, 15, 15, '#e0ffe0');
     }
   }
 
-  // —— Ring on paw ——
+  // —— Ring on paw (compact) ——
   if (spec.ring === 'luck') {
-    fill(ctx, '#7dffb3', 24 + Math.min(2, sx), 21, 4, 3);
-    spark(ctx, 25 + Math.min(2, sx), 21);
+    fill(ctx, '#7dffb3', 25 + Math.min(2, sx), 22, 2, 2);
+    spark(ctx, 25 + Math.min(2, sx), 22);
   } else if (spec.ring === 'silver') {
-    block(ctx, '#d0d8e8', '#607080', 24 + Math.min(2, sx), 21, 4, 3);
+    block(ctx, '#d0d8e8', '#607080', 25 + Math.min(2, sx), 22, 2, 2);
   } else if (spec.ring === 'copper') {
-    block(ctx, '#c07040', '#603010', 24 + Math.min(2, sx), 21, 4, 3);
+    block(ctx, '#c07040', '#603010', 25 + Math.min(2, sx), 22, 2, 2);
   }
 
   // —— Shield (true shield shapes on left flank) ——
