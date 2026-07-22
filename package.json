@@ -1,12 +1,12 @@
 {
   "name": "dunjunz",
   "private": true,
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "engines": {
     "node": "24.x"
   },
-  "description": "DUNJUNZ — a humorous retro Zelda-like dungeon crawler",
+  "description": "DUNJUNZ \u2014 a humorous retro Zelda-like dungeon crawler",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

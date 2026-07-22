@@ -13,7 +13,15 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
-- **Game version under play canvas** — lower-left of the stage shows `vX.Y.Z` from `package.json` (e.g. `v0.6.0`).
+### Changed
+
+### Fixed
+
+## [0.7.0] — 2026-07-22
+
+### Added
+
+- **Game version under play canvas** — lower-left of the stage shows `vX.Y.Z` from `package.json` (e.g. `v0.7.0`).
 - **Loot boxes + brag rewards** — bronze → silver → gold → platinum → diamond tiers (weighted drop on each NEW BRAG). Open from bag. Tutorial graduate grants a fixed **Crawler Starter Box** (mild sword, full leather set, wood shield).
 - **Weapon rack picker panel** — guild stands open an inventory-style window (icons, select, equip) instead of a numbered dialog list.
 - **Guild rack loaners** — training weapons never leave the hall (stripped on graduate / exit). Only loot-box gear is permanent. One loaner at a time; unequipped pieces are not bag stash. **E** on a stocked rack while holding that family prompts **Return? Yes/No**.
@@ -211,7 +219,6 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 - More lands / champion jobs from Princess Prizella
 
 ---
-
 ## [0.6.0] — 2026-07-20
 
 Champion quests, dual-pane UI, stronger creeps, Adventure Time voice.

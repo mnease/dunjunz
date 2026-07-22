@@ -35,8 +35,9 @@ Keep **[`CHANGELOG.md`](./CHANGELOG.md)** current on GitHub:
 
 1. For any notable player-facing feature, fix, or balance change: add a bullet under `## [Unreleased]` (or under a dated version section when cutting a release).
 2. Ship **code + CHANGELOG in the same commit/push** when practical.
-3. On release cuts: move Unreleased into `## [X.Y.Z] — YYYY-MM-DD`, bump `package.json` version, push to `main`.
-4. Format: [Keep a Changelog](https://keepachangelog.com/) — Added / Changed / Fixed / Removed.
+3. On release cuts: move Unreleased into `## [X.Y.Z] — YYYY-MM-DD`, bump `package.json` **and** `package-lock.json` version, push to `main`. The play canvas badge (`vX.Y.Z`) reads `package.json` — **it will not move until this bump**.
+4. **Bump often:** after a meaningful player-facing batch (not every one-line fix), cut a **patch** (`0.7.0` → `0.7.1`) or **minor** (`0.7.0` → `0.8.0`) so the on-screen version tracks progress. Do not leave weeks of Unreleased ships stuck on the same number.
+5. Format: [Keep a Changelog](https://keepachangelog.com/) — Added / Changed / Fixed / Removed.
 
 ### Misspellings (player-facing)
 
