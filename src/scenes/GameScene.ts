@@ -20,7 +20,8 @@ import {
 } from '../systems/map-spawn';
 import {
   expandRoomTiles,
-  offsetEntityTile,
+  mapEntityTile,
+  type ExpandedRoom,
 } from '../systems/room-expand';
 import {
   enemyXpReward,
@@ -336,9 +337,8 @@ export class GameScene extends Phaser.Scene {
   private transitionLock = false;
   private roomOriginX = 0;
   private roomOriginY = 0;
-  /** Authored→expanded tile offset for entities (room-expand). */
-  private roomTileOffsetX = 0;
-  private roomTileOffsetY = 0;
+  /** Last room expand result (entity placement + stretch metadata). */
+  private roomExpand: ExpandedRoom | null = null;
   private padCooldown = 0;
   /** Blocks walk-on portals right after room load (entry overlap). */
   private portalCooldown = 0;
@@ -1115,10 +1115,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private parseTiles(room: RoomDef): TileKind[][] {
-    // Expand authored 16×11 into full 16:9 playfield grid
+    // Stretch authored 16×11 into full 16:9 **playable** grid (not brick padding)
     const expanded = expandRoomTiles(room.tiles, VIEW_TILES_W, VIEW_TILES_H);
-    this.roomTileOffsetX = expanded.offsetX;
-    this.roomTileOffsetY = expanded.offsetY;
+    this.roomExpand = expanded;
     const grid: TileKind[][] = [];
     for (let y = 0; y < VIEW_TILES_H; y++) {
       const row = expanded.tiles[y] ?? '#'.repeat(VIEW_TILES_W);
@@ -1792,12 +1791,9 @@ export class GameScene extends Phaser.Scene {
         : def.id === 'royal-goose' && this.textures.exists('boss')
           ? 'boss'
           : (ENTITY_TEX[def.kind] ?? 'npc');
-    const placed = offsetEntityTile(
-      def.x,
-      def.y,
-      this.roomTileOffsetX,
-      this.roomTileOffsetY,
-    );
+    const placed = this.roomExpand
+      ? mapEntityTile(def.x, def.y, this.roomExpand)
+      : { x: def.x, y: def.y };
     const pos = this.tileToWorld(placed.x, placed.y);
     const sprite = this.physics.add.sprite(pos.x, pos.y, tex);
     sprite.setScale(SPRITE_SCALE);

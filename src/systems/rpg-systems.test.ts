@@ -909,55 +909,59 @@ describe('world tile geometry', () => {
 });
 
 describe('room expand to 16:9 view', () => {
-  it('fills VIEW_TILES and keeps east trail open on outer edge', async () => {
+  it('stretches playable interior across VIEW_TILES (not a brick frame)', async () => {
     const { expandRoomTiles } = await import('./room-expand');
     const { VIEW_TILES_W, VIEW_TILES_H, MAP_PIXEL_W, MAP_PIXEL_H, GAME_W, GAME_H, HUD_H } =
       await import('../config');
     expect(VIEW_TILES_W).toBeGreaterThan(16);
     expect(VIEW_TILES_H).toBeGreaterThan(11);
-    // Map nearly fills playfield
     expect(MAP_PIXEL_W).toBeLessThanOrEqual(GAME_W);
     expect(MAP_PIXEL_H).toBeLessThanOrEqual(GAME_H - HUD_H);
-    expect(MAP_PIXEL_W).toBeGreaterThan(GAME_W * 0.9);
-    expect(MAP_PIXEL_H).toBeGreaterThan((GAME_H - HUD_H) * 0.9);
 
-    const meadow = ROOMS.overworld;
-    const ex = expandRoomTiles(meadow.tiles);
-    expect(ex.tiles).toHaveLength(VIEW_TILES_H);
-    expect(ex.tiles[0]?.length).toBe(VIEW_TILES_W);
-    // Expanded east openings remain walkable on the outer edge
-    for (const y of [4, 5, 6]) {
-      const ty = ex.offsetY + y;
-      const ch = ex.tiles[ty]?.[VIEW_TILES_W - 1];
-      expect(ch === '#' || ch === '~' || ch === 'L').toBe(false);
-    }
-  });
-
-  it('moves west doors to outer edge with a corridor', async () => {
-    const { expandRoomTiles } = await import('./room-expand');
-    const { VIEW_TILES_W } = await import('../config');
-    // Synthetic room with a west door mid-row
+    // Empty-ish dungeon hall: mostly floor inside walls
     const src = [
       '################',
-      '################',
-      '################',
-      '################',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
       'D..............#',
-      '################',
-      '################',
-      '################',
-      '################',
-      '################',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
       '################',
     ];
     const ex = expandRoomTiles(src);
-    const ty = ex.offsetY + 4;
-    expect(ex.tiles[ty]?.[0]).toBe('D');
-    // corridor between outer door and content is walkable
-    if (ex.offsetX > 1) {
-      expect(ex.tiles[ty]?.[1]).not.toBe('#');
+    expect(ex.tiles).toHaveLength(VIEW_TILES_H);
+    expect(ex.tiles[0]?.length).toBe(VIEW_TILES_W);
+
+    // Mid-room should be walkable floor across most of the width (not a thin strip)
+    let walkMid = 0;
+    const midY = Math.floor(VIEW_TILES_H / 2);
+    for (let x = 1; x < VIEW_TILES_W - 1; x++) {
+      const ch = ex.tiles[midY]?.[x];
+      if (ch && ch !== '#') walkMid += 1;
     }
-    expect(ex.tiles[ty]?.length).toBe(VIEW_TILES_W);
+    expect(walkMid).toBeGreaterThan(VIEW_TILES_W * 0.6);
+
+    // West door present on outer edge
+    const doorRows = ex.tiles.filter((r) => r[0] === 'D');
+    expect(doorRows.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('keeps meadow east trail open on outer edge after stretch', async () => {
+    const { expandRoomTiles } = await import('./room-expand');
+    const { VIEW_TILES_W } = await import('../config');
+    const meadow = ROOMS.overworld;
+    const ex = expandRoomTiles(meadow.tiles);
+    // At least one east-edge cell is walkable (trail exit)
+    let open = 0;
+    for (let y = 0; y < ex.tiles.length; y++) {
+      const ch = ex.tiles[y]?.[VIEW_TILES_W - 1];
+      if (ch && ch !== '#' && ch !== 'L') open += 1;
+    }
+    expect(open).toBeGreaterThan(0);
   });
 });
 

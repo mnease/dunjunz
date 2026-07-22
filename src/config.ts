@@ -20,8 +20,8 @@ export const HUD_H = 64;
 
 /**
  * Live dungeon grid fills the playfield under the HUD (16:9).
- * Authored rooms stay 16×11 in world.ts and expand at load (room-expand).
- * 26×13 × 48px = 1248×624 — nearly full 1280×656 play area.
+ * Authored rooms stay 16×11; room-expand **stretches playable interior**
+ * (floors/grass) to 26×13 — not a brick border around a small room.
  */
 export const VIEW_TILES_W = Math.floor(GAME_W / (TILE * SCALE));
 export const VIEW_TILES_H = Math.floor((GAME_H - HUD_H) / (TILE * SCALE));
