@@ -1630,9 +1630,9 @@ export class GameScene extends Phaser.Scene {
         .setScrollFactor(0);
     }
 
-    // Inventory / shop / mapz / forje / pause: lift veil so chrome stays readable.
-    // Sign/talk dialog keeps the crawl veil — reading a sign must not brighten the room.
-    if (this.panelOpen() || this.paused) {
+    // Inventory / shop / mapz / forje: lift veil so bag/shop chrome stays readable.
+    // Sign/talk dialog and pause keep the crawl veil (must not brighten the room).
+    if (this.panelOpen()) {
       this.lightRt.clear();
       this.lightRt.setVisible(false);
       return;
