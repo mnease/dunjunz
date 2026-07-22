@@ -1382,6 +1382,58 @@ describe('threat scaling', () => {
       resolveEnemyContactDamage('slime', 0),
     );
   });
+
+  it('deeper basements are meaner than shallow ones', async () => {
+    const { threatForRoom } = await import('./threat');
+    const s = defaultSave();
+    const b2 = threatForRoom({ land: 'dunjunz', floor: -2 }, s);
+    const b7 = threatForRoom({ land: 'dunjunz', floor: -7 }, s);
+    expect(b7).toBeGreaterThan(b2);
+  });
+});
+
+describe('floor depth personality', () => {
+  it('darkens tiles and stamps more hazards deeper', async () => {
+    const {
+      basementDepth,
+      depthTileTint,
+      depthLayoutTier,
+      depthExtraCreepSlots,
+      applyDepthHazards,
+      depthThreatBonus,
+    } = await import('./floor-depth');
+    expect(basementDepth(-5)).toBe(5);
+    expect(basementDepth(0)).toBe(0);
+    expect(depthThreatBonus(7)).toBeGreaterThan(depthThreatBonus(2));
+    expect(depthLayoutTier(2)).toBe(0);
+    expect(depthLayoutTier(4)).toBe(1);
+    expect(depthLayoutTier(7)).toBe(2);
+    expect(depthExtraCreepSlots(7)).toBeGreaterThan(depthExtraCreepSlots(2));
+    const shallow = depthTileTint(1, 'floor', 'dunjunz');
+    const deep = depthTileTint(8, 'floor', 'dunjunz');
+    // deeper tint is darker (lower average channel)
+    const avg = (n: number) =>
+      ((n >> 16) & 0xff) + ((n >> 8) & 0xff) + (n & 0xff);
+    expect(avg(deep)).toBeLessThan(avg(shallow));
+
+    const open = [
+      '########D#######',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '################',
+    ];
+    const stamped = applyDepthHazards(open, 7, 'dungeon', 'test:hall');
+    const lava = stamped.join('').split('=').length - 1;
+    expect(lava).toBeGreaterThan(0);
+    expect(stamped.every((r) => r.length === 16)).toBe(true);
+  });
 });
 
 describe('champion quests + kingdom', () => {

@@ -4,6 +4,7 @@
  */
 
 import type { LandId, RoomDef, SaveData } from '../types';
+import { basementDepth, depthThreatBonus } from './floor-depth';
 import { hardThreatBonus } from './hard-mode';
 
 /** Base land danger (0 = meadow tutorial). */
@@ -28,8 +29,8 @@ export function threatFromSave(save: SaveData): number {
 }
 
 /**
- * Room threat = land tier + depth penalty + half of world progress.
- * Depth: floor 0 = 0, B1 (-1) = +1, B2 (-2) = +2, etc.
+ * Room threat = land tier + depth curve + half of world progress.
+ * Depth scales faster than +1/floor so B6+ creeps hit harder than B2.
  */
 export function threatForRoom(
   room: Pick<RoomDef, 'land' | 'floor'> | null | undefined,
@@ -37,11 +38,10 @@ export function threatForRoom(
 ): number {
   const land = room?.land ?? 'surface';
   const landTier = LAND_THREAT[land] ?? 0;
-  const floor = room?.floor ?? 0;
-  const depth = floor < 0 ? Math.abs(floor) : Math.max(0, floor);
+  const depth = basementDepth(room?.floor);
   const progress = Math.floor(threatFromSave(save) / 2);
   const hard = hardThreatBonus(save, land);
-  return landTier + depth + progress + hard;
+  return landTier + depthThreatBonus(depth) + progress + hard;
 }
 
 /** Scale base HP by threat. Room overrides are treated as base too. */

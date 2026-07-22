@@ -4,11 +4,36 @@
  * Dunjunz: B1 (authored) + B2…B8 generated (4× the old B1–B2 depth).
  * Woodz / Dezertz: surface + B1–B3 deep wings (4 floors total).
  * Sewerz: B1 authored + B2–B4 to the goose (4 floors).
+ *
+ * Each deeper floor gets: darker tile tint (GameScene), hazard stamping,
+ * denser/meaner creeps, and layout tiers (open → cramped → maze).
  */
 
 import type { EntityDef, EntityKind, LandId, RoomDef } from '../types';
+import {
+  applyDepthHazards,
+  basementDepth,
+  depthExtraCreepSlots,
+  depthFlavor,
+  depthLayoutTier,
+  type DepthTileset,
+} from '../systems/floor-depth';
 
-const HALL: string[] = [
+/** Assert each row is 16 tiles (authoring guard). */
+function rows16(label: string, rows: string[]): string[] {
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i]!.length !== 16) {
+      throw new Error(`${label}[${i}] len ${rows[i]!.length}: ${rows[i]}`);
+    }
+  }
+  if (rows.length !== 11) {
+    throw new Error(`${label} has ${rows.length} rows (need 11)`);
+  }
+  return rows;
+}
+
+/** Open hall (shallow). */
+const HALL_OPEN = rows16('HALL_OPEN', [
   '########D#######',
   '#..............#',
   '#..##......##..#',
@@ -20,9 +45,39 @@ const HALL: string[] = [
   '#..##......##..#',
   '#..............#',
   '########D#######',
-];
+]);
 
-const FOYER: string[] = [
+/** Cramped hall (mid). */
+const HALL_CRAMP = rows16('HALL_CRAMP', [
+  '########D#######',
+  '#..##......##..#',
+  '#.##..####..##.#',
+  '#..............#',
+  '....####..##....',
+  '#.##........##.#',
+  '....##..####....',
+  '#..............#',
+  '#.##..####..##.#',
+  '#..##......##..#',
+  '########D#######',
+]);
+
+/** Maze hall (deep) — lava pockets. */
+const HALL_MAZE = rows16('HALL_MAZE', [
+  '########D#######',
+  '#.##.=..=.##...#',
+  '#.#..####..##..#',
+  '#....#..#......#',
+  '....##..=..##...',
+  '#.#....##....#.#',
+  '....##..=..##...',
+  '#......#..#....#',
+  '#.#..####..##..#',
+  '#.##.=..=.##...#',
+  '########D#######',
+]);
+
+const FOYER_OPEN = rows16('FOYER_OPEN', [
   '########D#######',
   '#..............#',
   '#..............#',
@@ -34,9 +89,37 @@ const FOYER: string[] = [
   '#..............#',
   '#..............#',
   '################',
-];
+]);
 
-const SIDE: string[] = [
+const FOYER_CRAMP = rows16('FOYER_CRAMP', [
+  '########D#######',
+  '#..##......##..#',
+  '#..............#',
+  '#......U.......#',
+  '#..##......##..#',
+  '#..............#',
+  '#.####....####.#',
+  '#..............#',
+  '#..##......##..#',
+  '#..............#',
+  '################',
+]);
+
+const FOYER_MAZE = rows16('FOYER_MAZE', [
+  '########D#######',
+  '#.##.=..=.##...#',
+  '#.#..........#.#',
+  '#......U.......#',
+  '#.#..####..##..#',
+  '#....#==#......#',
+  '#.#..####..##..#',
+  '#..............#',
+  '#.##.=..=.##...#',
+  '#..............#',
+  '################',
+]);
+
+const SIDE_OPEN = rows16('SIDE_OPEN', [
   '################',
   '#..............#',
   '#..####..####..#',
@@ -48,9 +131,37 @@ const SIDE: string[] = [
   '#..............#',
   '#..............#',
   '################',
-];
+]);
 
-const DESCENT: string[] = [
+const SIDE_CRAMP = rows16('SIDE_CRAMP', [
+  '################',
+  '#.##........##.#',
+  '#..####..####..#',
+  '#....#....#....#',
+  'D..............#',
+  '#....#....#....#',
+  '#..............#',
+  '#..####..####..#',
+  '#.##........##.#',
+  '#..............#',
+  '################',
+]);
+
+const SIDE_MAZE = rows16('SIDE_MAZE', [
+  '################',
+  '#.##.=..=.##...#',
+  '#..####..####..#',
+  '#.#..........#.#',
+  'D....#==#......#',
+  '#.#..........#.#',
+  '#....#==#......#',
+  '#..####..####..#',
+  '#.##.=..=.##...#',
+  '#..............#',
+  '################',
+]);
+
+const DESCENT_OPEN = rows16('DESCENT_OPEN', [
   '################',
   '#..............#',
   '#..............#',
@@ -62,7 +173,46 @@ const DESCENT: string[] = [
   '#..............#',
   '#..............#',
   '########D#######',
-];
+]);
+
+const DESCENT_CRAMP = rows16('DESCENT_CRAMP', [
+  '################',
+  '#..##......##..#',
+  '#..............#',
+  '#......S.......#',
+  '#..##......##..#',
+  '#..............#',
+  '#.####....####.#',
+  '#..............#',
+  '#..##......##..#',
+  '#..............#',
+  '########D#######',
+]);
+
+const DESCENT_MAZE = rows16('DESCENT_MAZE', [
+  '################',
+  '#.##.=..=.##...#',
+  '#.#..........#.#',
+  '#......S.......#',
+  '#.#..#==#..##..#',
+  '#..............#',
+  '#.#..####..##..#',
+  '#....#..#......#',
+  '#.##.=..=.##...#',
+  '#..............#',
+  '########D#######',
+]);
+
+function pickLayout(
+  tier: 0 | 1 | 2,
+  open: string[],
+  cramp: string[],
+  maze: string[],
+): string[] {
+  if (tier >= 2) return maze;
+  if (tier >= 1) return cramp;
+  return open;
+}
 
 const BOSS_ARENA: string[] = [
   '################',
@@ -135,6 +285,30 @@ function creeps(
   }));
 }
 
+/** Extra spawn points used as floors deepen (kept clear of doors/stairs). */
+const EXTRA_SPOTS: [number, number][] = [
+  [6, 5],
+  [9, 6],
+  [7, 4],
+  [10, 8],
+  [5, 6],
+  [12, 5],
+];
+
+function creepsForDepth(
+  kinds: Creep[],
+  prefix: string,
+  baseSpots: [number, number][],
+  depth: number,
+): EntityDef[] {
+  const extra = depthExtraCreepSlots(depth);
+  const spots = [...baseSpots];
+  for (let i = 0; i < extra && i < EXTRA_SPOTS.length; i++) {
+    spots.push(EXTRA_SPOTS[i]!);
+  }
+  return creeps(kinds, prefix, spots);
+}
+
 function sign(
   id: string,
   x: number,
@@ -162,70 +336,94 @@ function makeBasementFloor(opts: {
   titleTag: string;
   stairsUpTo: string;
   stairsDownTo: string;
-  tileset: 'dungeon' | 'wood' | 'sand' | 'sewer';
+  tileset: DepthTileset;
   hostiles: Creep[];
 }): Record<string, RoomDef> {
   const { land, floor, prefix, titleTag, stairsUpTo, stairsDownTo, hostiles } =
     opts;
-  const foyer =
-    opts.tileset === 'dungeon'
-      ? FOYER
-      : opts.tileset === 'sewer'
+  const depth = basementDepth(floor);
+  const tier = depthLayoutTier(depth);
+  const flavor = depthFlavor(depth);
+  const ts = opts.tileset;
+
+  const stamp = (tiles: string[], roomKey: string) =>
+    applyDepthHazards(tiles, depth, ts, `${prefix}:${roomKey}`);
+
+  let foyer: string[];
+  let hall: string[];
+  let side: string[];
+  let descent: string[];
+
+  if (ts === 'dungeon') {
+    foyer = pickLayout(tier, FOYER_OPEN, FOYER_CRAMP, FOYER_MAZE);
+    hall = pickLayout(tier, HALL_OPEN, HALL_CRAMP, HALL_MAZE);
+    side = pickLayout(tier, SIDE_OPEN, SIDE_CRAMP, SIDE_MAZE);
+    descent = pickLayout(tier, DESCENT_OPEN, DESCENT_CRAMP, DESCENT_MAZE);
+  } else if (ts === 'sewer') {
+    foyer =
+      tier >= 2
         ? [
             '########D#######',
-            '#..............#',
+            '#.##~~~~~~##..#',
             '#.####....####.#',
             '#......U.......#',
-            '....#......#....',
+            '....#~~~~~~#....',
             '#.#..~~~~~~..#.#',
-            '....#......#....',
+            '....#~~~~~~#....',
             '#.#..........#.#',
             '#.####....####.#',
+            '#.##~~~~~~##..#',
+            '################',
+          ]
+        : tier >= 1
+          ? [
+              '########D#######',
+              '#..##......##..#',
+              '#.####....####.#',
+              '#......U.......#',
+              '....#......#....',
+              '#.#..~~~~~~..#.#',
+              '....#......#....',
+              '#.#..........#.#',
+              '#.####....####.#',
+              '#..##......##..#',
+              '################',
+            ]
+          : [
+              '########D#######',
+              '#..............#',
+              '#.####....####.#',
+              '#......U.......#',
+              '....#......#....',
+              '#.#..~~~~~~..#.#',
+              '....#......#....',
+              '#.#..........#.#',
+              '#.####....####.#',
+              '#..............#',
+              '################',
+            ];
+    hall =
+      tier >= 2
+        ? SEWER_PIPE.map((r, i) =>
+            i === 2 || i === 8 ? '#.#.~~~~~~.#.#.#' : r,
+          )
+        : SEWER_PIPE;
+    side =
+      tier >= 1
+        ? [
+            '################',
+            '#..##~~~~~~##..#',
+            '#..##~~~~~~##..#',
+            '#..............#',
+            'D..............#',
+            '#..............#',
+            '#..##~~~~~~##..#',
+            '#..##~~~~~~##..#',
+            '#..............#',
             '#..............#',
             '################',
           ]
-        : opts.tileset === 'wood'
-          ? [
-              '###g###D###g####',
-              '#gg..........gg#',
-              '#g............g#',
-              '#......U.......#',
-              'D..............#',
-              '#..............#',
-              '#..............#',
-              '#g............g#',
-              '#gg..........gg#',
-              '#ggg........ggg#',
-              '######g##g######',
-            ]
-          : [
-              '###d###D###d####',
-              '#dd..........dd#',
-              '#d............d#',
-              '#......U.......#',
-              'D..............#',
-              '#......dd......#',
-              '#..............#',
-              '#d............d#',
-              '#dd..........dd#',
-              '#ddd........ddd#',
-              '######d##d######',
-            ];
-
-  const hall =
-    opts.tileset === 'dungeon'
-      ? HALL
-      : opts.tileset === 'sewer'
-        ? SEWER_PIPE
-        : opts.tileset === 'wood'
-          ? WOOD_DEEP
-          : SAND_DEEP;
-
-  const side =
-    opts.tileset === 'dungeon'
-      ? SIDE
-      : opts.tileset === 'sewer'
-        ? [
+        : [
             '################',
             '#..............#',
             '#..##~~~~~~##..#',
@@ -237,51 +435,147 @@ function makeBasementFloor(opts: {
             '#..............#',
             '#..............#',
             '################',
+          ];
+    descent = pickLayout(tier, DESCENT_OPEN, DESCENT_CRAMP, DESCENT_MAZE).map(
+      (r) => r.replace(/=/g, '~'),
+    );
+  } else if (ts === 'wood') {
+    foyer =
+      tier >= 1
+        ? [
+            '###g###D###g####',
+            '#gg..####..gggg#',
+            '#g............g#',
+            '#......U.......#',
+            'D....#....#....#',
+            '#..............#',
+            '#....#....#....#',
+            '#g............g#',
+            '#gg..####..gggg#',
+            '#ggg........ggg#',
+            '######g##g######',
           ]
-        : opts.tileset === 'wood'
-          ? [
-              '################',
-              '#gg..........gg#',
-              '#g..####..##..g#',
-              '#..............#',
-              'D..............#',
-              '#..............#',
-              '#..............#',
-              '#g..####..##..g#',
-              '#gg..........gg#',
-              '#ggg........ggg#',
-              '################',
-            ]
-          : [
-              '################',
-              '#dd..........dd#',
-              '#d..####..##..d#',
-              '#..............#',
-              'D..............#',
-              '#......dd......#',
-              '#..............#',
-              '#d..####..##..d#',
-              '#dd..........dd#',
-              '#ddd........ddd#',
-              '################',
-            ];
+        : [
+            '###g###D###g####',
+            '#gg..........gg#',
+            '#g............g#',
+            '#......U.......#',
+            'D..............#',
+            '#..............#',
+            '#..............#',
+            '#g............g#',
+            '#gg..........gg#',
+            '#ggg........ggg#',
+            '######g##g######',
+          ];
+    hall =
+      tier >= 2
+        ? WOOD_DEEP.map((r, i) =>
+            i === 4 || i === 6 ? 'D..###....###..#' : r,
+          )
+        : WOOD_DEEP;
+    side =
+      tier >= 1
+        ? rows16('wood-side-cramp', [
+            '################',
+            '#gg..####..gggg#',
+            '#g..######..ggg#',
+            '#..............#',
+            'D....#....#....#',
+            '#..............#',
+            '#....#....#....#',
+            '#g..######..ggg#',
+            '#gg..####..gggg#',
+            '#ggg........ggg#',
+            '################',
+          ])
+        : rows16('wood-side-open', [
+            '################',
+            '#gg..........gg#',
+            '#g..####..##..g#',
+            '#..............#',
+            'D..............#',
+            '#..............#',
+            '#..............#',
+            '#g..####..##..g#',
+            '#gg..........gg#',
+            '#ggg........ggg#',
+            '################',
+          ]);
+    descent = pickLayout(tier, DESCENT_OPEN, DESCENT_CRAMP, DESCENT_MAZE).map(
+      (r) => r.replace(/=/g, '#'),
+    );
+  } else {
+    // sand
+    foyer =
+      tier >= 1
+        ? [
+            '###d###D###d####',
+            '#dd..####..dddd#',
+            '#d............d#',
+            '#......U.......#',
+            'D....#....#....#',
+            '#......dd......#',
+            '#....#....#....#',
+            '#d............d#',
+            '#dd..####..dddd#',
+            '#ddd........ddd#',
+            '######d##d######',
+          ]
+        : [
+            '###d###D###d####',
+            '#dd..........dd#',
+            '#d............d#',
+            '#......U.......#',
+            'D..............#',
+            '#......dd......#',
+            '#..............#',
+            '#d............d#',
+            '#dd..........dd#',
+            '#ddd........ddd#',
+            '######d##d######',
+          ];
+    hall =
+      tier >= 2
+        ? SAND_DEEP.map((r, i) =>
+            i === 5 ? '#....====......#' : r,
+          )
+        : SAND_DEEP;
+    side =
+      tier >= 1
+        ? rows16('sand-side-cramp', [
+            '################',
+            '#dd..####..dddd#',
+            '#d..##==##..ddd#',
+            '#..............#',
+            'D......dd......#',
+            '#......dd......#',
+            '#..............#',
+            '#d..##==##..ddd#',
+            '#dd..####..dddd#',
+            '#ddd........ddd#',
+            '################',
+          ])
+        : rows16('sand-side-open', [
+            '################',
+            '#dd..........dd#',
+            '#d..####..##..d#',
+            '#..............#',
+            'D..............#',
+            '#......dd......#',
+            '#..............#',
+            '#d..####..##..d#',
+            '#dd..........dd#',
+            '#ddd........ddd#',
+            '################',
+          ]);
+    descent = pickLayout(tier, DESCENT_OPEN, DESCENT_CRAMP, DESCENT_MAZE);
+  }
 
-  const descent =
-    opts.tileset === 'dungeon'
-      ? DESCENT
-      : [
-          '################',
-          '#..............#',
-          '#..............#',
-          '#......S.......#',
-          '#..............#',
-          '#..............#',
-          '#..............#',
-          '#..............#',
-          '#..............#',
-          '#..............#',
-          '########D#######',
-        ];
+  foyer = stamp(foyer, 'foyer');
+  hall = stamp(hall, 'hall');
+  side = stamp(side, 'side');
+  descent = stamp(descent, 'descent');
 
   const flabel = floor < 0 ? `B${Math.abs(floor)}` : `F${floor}`;
 
@@ -298,14 +592,19 @@ function makeBasementFloor(opts: {
       tiles: foyer,
       entities: [
         sign(`${prefix}-foyer-sign`, 12, 8, [
-          `${flabel}: ${titleTag}. KEEP GOING DOWN.`,
+          `${flabel}: ${flavor}.`,
+          `${titleTag} — DEEPER STILL AWAITS.`,
           'U = STAIRS UP. N = HALL.',
-          'THE BOTTOM STILL HAS TEETH.',
         ]),
-        ...creeps(hostiles, `${prefix}-foyer`, [
-          [4, 8],
-          [11, 7],
-        ]),
+        ...creepsForDepth(
+          hostiles,
+          `${prefix}-foyer`,
+          [
+            [4, 8],
+            [11, 7],
+          ],
+          depth,
+        ),
       ],
     },
     [`${prefix}_hall`]: {
@@ -320,12 +619,17 @@ function makeBasementFloor(opts: {
       east: `${prefix}_side`,
       tiles: hall,
       entities: [
-        ...creeps(hostiles, `${prefix}-hall`, [
-          [5, 3],
-          [11, 7],
-          [8, 5],
-          [4, 8],
-        ]),
+        ...creepsForDepth(
+          hostiles,
+          `${prefix}-hall`,
+          [
+            [5, 3],
+            [11, 7],
+            [8, 5],
+            [4, 8],
+          ],
+          depth,
+        ),
         heart(`${prefix}-hall-heart`, 12, 4),
       ],
     },
@@ -340,12 +644,18 @@ function makeBasementFloor(opts: {
       tiles: side,
       entities: [
         chest(`${prefix}-side-chest`, 8, 5),
-        ...creeps(hostiles, `${prefix}-side`, [
-          [5, 3],
-          [11, 7],
-        ]),
+        ...creepsForDepth(
+          hostiles,
+          `${prefix}-side`,
+          [
+            [5, 3],
+            [11, 7],
+          ],
+          depth,
+        ),
         sign(`${prefix}-side-sign`, 3, 8, [
-          'SIDE CHAMBER. LOOT + REGRET.',
+          `SIDE CHAMBER · ${flabel}.`,
+          depth >= 5 ? 'LOOT. LAVA. REGRET.' : 'LOOT + REGRET.',
           'WEST BACK TO THE HALL.',
         ]),
       ],
@@ -362,14 +672,19 @@ function makeBasementFloor(opts: {
       tiles: descent,
       entities: [
         sign(`${prefix}-descent-sign`, 3, 8, [
-          `STAIRS DOWN → NEXT LEVEL.`,
-          `YOU ARE ON ${flabel}.`,
+          `YOU ARE ON ${flabel} — ${flavor}.`,
+          'S = STAIRS DEEPER. DARKER. MEANER.',
           'SOUTH: HALL.',
         ]),
-        ...creeps(hostiles, `${prefix}-descent`, [
-          [11, 7],
-          [6, 5],
-        ]),
+        ...creepsForDepth(
+          hostiles,
+          `${prefix}-descent`,
+          [
+            [11, 7],
+            [6, 5],
+          ],
+          depth,
+        ),
       ],
     },
   };
@@ -381,14 +696,14 @@ function makeBasementFloor(opts: {
 export function buildDunjunzDeep(): Record<string, RoomDef> {
   const out: Record<string, RoomDef> = {};
 
-  // B2–B7 intermediate floors (6 floors × 4 rooms)
+  // B2–B7: escalate species as you sink (layout/hazards also escalate)
   const hostilesByDepth: Creep[][] = [
-    ['slime', 'skeleton'], // B2
-    ['skeleton', 'slime', 'redshirt'], // B3
-    ['skeleton', 'redshirt'], // B4
-    ['redshirt', 'skeleton', 'slime'], // B5
-    ['redshirt', 'wolf'], // B6 (weird deep fauna)
-    ['skeleton', 'redshirt', 'wolf'], // B7
+    ['slime', 'skeleton'], // B2 — still learning
+    ['skeleton', 'slime'], // B3
+    ['skeleton', 'redshirt'], // B4 — redshirts join
+    ['redshirt', 'skeleton'], // B5
+    ['redshirt', 'skeleton', 'wolf'], // B6 — deep fauna
+    ['wolf', 'redshirt', 'skeleton'], // B7 — wolves lead packs
   ];
 
   for (let n = 2; n <= 7; n++) {
@@ -422,18 +737,23 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
     mapY: 0,
     north: 'b8_boss',
     stairsUp: 'b7_descent',
-    tiles: FOYER,
+    tiles: applyDepthHazards(FOYER_MAZE, 8, 'dungeon', 'b8:foyer'),
     entities: [
       sign('b8-foyer-sign', 12, 8, [
-        'B8: THE BOTTOM. FINALLY.',
+        'B8: THE ABYSS. FINALLY.',
         'NORTH: THRONE OF META.',
         'U = ALL THE WAY BACK UP. COWARD.',
       ]),
-      ...creeps(['redshirt', 'skeleton'], 'b8-foyer', [
-        [4, 8],
-        [11, 7],
-        [8, 6],
-      ]),
+      ...creepsForDepth(
+        ['wolf', 'redshirt', 'skeleton'],
+        'b8-foyer',
+        [
+          [4, 8],
+          [11, 7],
+          [8, 6],
+        ],
+        8,
+      ),
     ],
   };
 
@@ -445,7 +765,7 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
     mapX: 0,
     mapY: 1,
     south: 'b8_foyer',
-    tiles: BOSS_ARENA,
+    tiles: applyDepthHazards(BOSS_ARENA, 8, 'dungeon', 'b8:boss'),
     entities: [
       {
         kind: 'boss',

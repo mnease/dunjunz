@@ -159,6 +159,13 @@ import { pendingHeroPick } from '../systems/hero-identity';
 import { playMusic, playSfx, type MusicId } from '../systems/audio';
 import { loadSettings } from '../systems/settings';
 import { loadSave, writeSave } from '../systems/save';
+import {
+  basementDepth,
+  depthBackdropColor,
+  depthEnemyTint,
+  depthFlavor,
+  depthTileTint,
+} from '../systems/floor-depth';
 import { threatForRoom } from '../systems/threat';
 import { syncAchievements } from '../systems/achievements';
 import {
@@ -1238,9 +1245,31 @@ export class GameScene extends Phaser.Scene {
     this.save.roomId = resolved;
     playMusic(this.musicForRoom(room));
     this.save = markRoomVisited(this.save, resolved);
-    // First visit threat toast for meaner lands
+    // First visit threat toast for meaner lands / deeper floors
     const threat = threatForRoom(room, this.save);
+    const depth = basementDepth(room.floor);
+    const depthFlag = `depth_toast_${room.land ?? 'x'}_${depth}`;
     if (
+      depth >= 2 &&
+      !this.save.flags[depthFlag]
+    ) {
+      this.save = {
+        ...this.save,
+        flags: {
+          ...this.save.flags,
+          [depthFlag]: true,
+        },
+      };
+      const flabel = room.floor != null && room.floor < 0
+        ? `B${Math.abs(room.floor)}`
+        : 'FLOOR';
+      this.time.delayedCall(200, () => {
+        this.game.events.emit(
+          'toast',
+          `${flabel} · ${depthFlavor(depth)} · THREAT T${threat}`,
+        );
+      });
+    } else if (
       threat >= 3 &&
       !this.save.flags[`threat_toast_${room.land ?? 'x'}`]
     ) {
@@ -1262,6 +1291,12 @@ export class GameScene extends Phaser.Scene {
     this.ambientTiles = [];
     this.ambientFrame = 0;
 
+    // Depth personality: darker tiles + void as you go down basements
+    const land = room.land ?? 'surface';
+    this.cameras.main.setBackgroundColor(
+      depthBackdropColor(depth, land === 'surface' ? 'dunjunz' : land),
+    );
+
     for (let y = 0; y < VIEW_TILES_H; y++) {
       for (let x = 0; x < VIEW_TILES_W; x++) {
         const kind = this.tileGrid[y][x];
@@ -1271,6 +1306,8 @@ export class GameScene extends Phaser.Scene {
           .setScale(SPRITE_SCALE)
           .setDepth(0);
         img.setData('mapTile', true);
+        const tint = depthTileTint(depth, kind, land === 'surface' ? 'dunjunz' : land);
+        if (tint !== 0xffffff) img.setTint(tint);
         if (kind === 'water' || kind === 'lava') {
           this.ambientTiles.push({ img, kind });
         }
@@ -1844,6 +1881,11 @@ export class GameScene extends Phaser.Scene {
     const contactHostile = (CONTACT_HOSTILES as readonly string[]).includes(
       def.kind,
     );
+    // Deeper basements: creeps get a sicklier wash so packs read meaner
+    if (contactHostile && def.kind !== 'best_bud') {
+      const et = depthEnemyTint(basementDepth(this.room.floor));
+      if (et != null && def.id !== 'royal-goose') sprite.setTint(et);
+    }
     const mobileHostile = (MOBILE_HOSTILES as readonly string[]).includes(
       def.kind,
     );
