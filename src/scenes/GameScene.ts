@@ -218,6 +218,20 @@ import { rewardHardCaptain, rewardHardKing } from '../systems/hard-rewards';
 import { pendingHeroPick } from '../systems/hero-identity';
 import { playMusic, playSfx, type MusicId } from '../systems/audio';
 import { loadSettings } from '../systems/settings';
+import {
+  canUseDungeonStairs,
+  completeTutorial,
+  GUILD_MASTER_ID,
+  guildMasterDialog,
+  guildMasterIntroDialog,
+  isTutorialComplete,
+  markTutorialBag,
+  markTutorialIntroSeen,
+  markTutorialSwung,
+  needsTutorialIntro,
+  stairsBlockedToast,
+  tutorialChecklist,
+} from '../systems/tutorial';
 import { loadSave, writeSave } from '../systems/save';
 import {
   basementDepth,
@@ -973,6 +987,14 @@ export class GameScene extends Phaser.Scene {
     this.inventoryOpen = open;
     if (open && this.player.body) {
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    }
+    if (open && !isTutorialComplete(this.save)) {
+      const next = markTutorialBag(this.save);
+      if (next !== this.save) {
+        this.save = next;
+        writeSave(this.save);
+        this.game.events.emit('toast', 'BAG OPENED — TALK TO GUILD MASTER');
+      }
     }
   };
 
@@ -2174,6 +2196,17 @@ export class GameScene extends Phaser.Scene {
     this.syncCompanion();
     this.flushAchievements();
 
+    // First-boot meadow: Guild Master intro (stairs locked until graduation)
+    if (resolved === 'overworld' && needsTutorialIntro(this.save)) {
+      this.time.delayedCall(400, () => {
+        if (this.leavingToTitle || this.room?.id !== 'overworld') return;
+        this.save = markTutorialIntroSeen(this.save);
+        writeSave(this.save);
+        this.game.events.emit('dialog-show', guildMasterIntroDialog());
+        this.game.events.emit('toast', 'TALK TO THE GUILD MASTER (E)');
+      });
+    }
+
     if (
       (resolved === 'b8_boss' || resolved === 'b2_boss') &&
       !this.save.bossDefeated &&
@@ -2689,6 +2722,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (def.id === 'royal-goose') {
       sprite.setTint(0xffe08a);
+    }
+    if (def.id === GUILD_MASTER_ID || def.id === 'old-man') {
+      sprite.setTint(0xffe08a); // guild gold — tutorial master
     }
     if (def.id === RULES_LAWYER_ID) {
       sprite.setTint(0xc8c0e8); // binder grey-purple skeleton clerk
@@ -3636,6 +3672,49 @@ export class GameScene extends Phaser.Scene {
     return best;
   }
 
+  private noteTutorialSwing(): void {
+    if (isTutorialComplete(this.save)) return;
+    const next = markTutorialSwung(this.save);
+    if (next === this.save) return;
+    this.save = next;
+    writeSave(this.save);
+    this.game.events.emit('toast', 'SWING NOTED — TALK TO GUILD MASTER');
+  }
+
+  /**
+   * Tutorial Guild Master — gates dungeon stairs until checklist done:
+   * sword + one swing + open bag, then talk again to graduate.
+   */
+  private talkToGuildMaster(_npc: Actor): void {
+    if (!this.save.hasSword) {
+      this.grantSword(false);
+    }
+    this.save = markTutorialIntroSeen(this.save);
+    const check = tutorialChecklist(this.save);
+
+    if (check.complete) {
+      this.game.events.emit('dialog-show', [
+        ...guildMasterDialog(this.save),
+        '',
+        ...questHint(this.save),
+      ]);
+      writeSave(this.save);
+      return;
+    }
+
+    if (check.readyToGraduate) {
+      this.save = completeTutorial(this.save);
+      writeSave(this.save);
+      this.game.events.emit('dialog-show', guildMasterDialog(this.save));
+      this.game.events.emit('toast', 'GRADUATED — DUNJUN STAIRS OPEN');
+      playSfx('success');
+      return;
+    }
+
+    writeSave(this.save);
+    this.game.events.emit('dialog-show', guildMasterDialog(this.save));
+  }
+
   private tryInteract(): void {
     if (this.dialogLocked || this.paused || this.panelOpen()) return;
     const best = this.findInteractable();
@@ -3724,27 +3803,12 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (best.id === GUILD_MASTER_ID || best.id === 'old-man') {
+      this.talkToGuildMaster(best);
+      return;
+    }
+
     if (best.dialog?.length) {
-      // Classic Zelda: talking to the old man hands you the sword
-      if (best.id === 'old-man' && !this.save.hasSword) {
-        this.grantSword(false);
-        this.game.events.emit('dialog-show', [
-          ...best.dialog,
-          '',
-          'SWORD OF MILD ENTHUSIASM: YOURS NOW.',
-          'SPACE / Z TO SWING. GO BE COOL.',
-        ]);
-        return;
-      }
-      // Old man post-quest hints
-      if (best.id === 'old-man') {
-        this.game.events.emit('dialog-show', [
-          ...best.dialog,
-          '',
-          ...questHint(this.save),
-        ]);
-        return;
-      }
       this.game.events.emit('dialog-show', best.dialog);
       return;
     }
@@ -3998,18 +4062,20 @@ export class GameScene extends Phaser.Scene {
     if (!hasWeaponEquipped(this.save)) {
       this.game.events.emit(
         'toast',
-        'NO WEAPON EQUIPPED — TALK TO OLD MAN / [I] THEN W',
+        'NO WEAPON — TALK TO GUILD MASTER / [I] THEN W',
       );
       return;
     }
 
     if (equippedWeaponIsRanged(this.save)) {
       this.tryRangedAttack();
+      this.noteTutorialSwing();
       return;
     }
 
     this.attacking = true;
     playSfx('attack');
+    this.noteTutorialSwing();
     // Hip sheathe vanishes while the blade is out in front
     this.refreshPlayerAppearance();
 
@@ -4192,6 +4258,10 @@ export class GameScene extends Phaser.Scene {
     // Stairs down (S) and stairs up (U) — different dungeon floors
     if (!this.transitionLock) {
       if (tile === 'stairs' && this.room.stairsDown) {
+        if (!canUseDungeonStairs(this.save)) {
+          this.game.events.emit('toast', stairsBlockedToast());
+          return;
+        }
         this.transitionLock = true;
         playSfx('stairs');
         this.loadRoom(this.room.stairsDown, false, 'stairsDown');

@@ -68,17 +68,13 @@ export const ROOMS: Record<string, RoomDef> = {
     entities: [
       {
         kind: 'npc',
-        id: 'old-man',
+        id: 'guild-master',
         x: 4,
         y: 3,
+        // Dialog is dynamic via systems/tutorial.ts (Guild Master phases)
         dialog: [
-          "IT'S DANGEROUS TO GO ALONE!",
-          'ALSO: PRINCESZ PRIZELLA GOT KIDNAPPED.',
-          'THE DUNJUN MASTER DID THE YEETING.',
-          'STAIRS = DUNJUNZ. EAST = THE TRAIL.',
-          'NORTH OF TRAIL: WOODZ. SOUTH: DEZERTZ.',
-          'GRAB MAPZ. FORJE STEEL. SAVE HER.',
-          'MATHEMATICAL!',
+          'GUILD MASTER OF THE TUTORIAL GUILD.',
+          'TALK TO ME TO TRAIN. STAIRS STAY LOCKED UNTIL YOU GRADUATE.',
         ],
       },
       {
@@ -95,7 +91,8 @@ export const ROOMS: Record<string, RoomDef> = {
         dialog: [
           'OFFICIAL QUEST SIGN (VERY OFFICIAL)',
           'SAVE PRIZELLA. SHE RULES. LITERALLY.',
-          'STAIRS = DUNJUNZ B1. EAST = TRAIL.',
+          'TALK TO THE GUILD MASTER FIRST — STAIRS LOCK UNTIL GRADUATION.',
+          'THEN: STAIRS = DUNJUNZ B1. EAST = TRAIL.',
           'TRAIL NORTH: WOODZ. SOUTH: DEZERTZ.',
           'M = MAPZ (ONCE YOU FIND SOME)',
           'F AT A FORJE = MAKE COOLER STUFF',

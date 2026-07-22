@@ -3029,6 +3029,48 @@ import {
   SUN_DIR,
 } from './surface-sun';
 
+import {
+  canUseDungeonStairs,
+  completeTutorial,
+  guildMasterDialog,
+  isTutorialComplete,
+  markTutorialBag,
+  markTutorialSwung,
+  tutorialChecklist,
+} from './tutorial';
+
+describe('tutorial guild master', () => {
+  it('blocks dungeon stairs until graduated', () => {
+    let save = defaultSave();
+    expect(canUseDungeonStairs(save)).toBe(false);
+    expect(isTutorialComplete(save)).toBe(false);
+    save = completeTutorial(save);
+    expect(canUseDungeonStairs(save)).toBe(true);
+    expect(isTutorialComplete(save)).toBe(true);
+  });
+
+  it('checklist requires sword, swing, and bag before graduate', () => {
+    let save = defaultSave();
+    expect(tutorialChecklist(save).readyToGraduate).toBe(false);
+    save = { ...save, hasSword: true };
+    expect(tutorialChecklist(save).readyToGraduate).toBe(false);
+    save = markTutorialSwung(save);
+    expect(tutorialChecklist(save).readyToGraduate).toBe(false);
+    save = markTutorialBag(save);
+    expect(tutorialChecklist(save).readyToGraduate).toBe(true);
+    expect(tutorialChecklist(save).hasSword).toBe(true);
+  });
+
+  it('guild master dialog mentions lock before complete', () => {
+    const lines = guildMasterDialog(defaultSave());
+    expect(lines.some((l) => /STAIRS|LOCK|GRADUATE|GUILD/i.test(l))).toBe(
+      true,
+    );
+    const done = guildMasterDialog(completeTutorial(defaultSave()));
+    expect(done.some((l) => /OPEN|GRADUATE STATUS/i.test(l))).toBe(true);
+  });
+});
+
 describe('surface sun + cloud shade', () => {
   it('marks surface/woodz outdoor, not basements or kingdom', () => {
     expect(isOutdoorSurface({ floor: 0, land: 'surface' })).toBe(true);
