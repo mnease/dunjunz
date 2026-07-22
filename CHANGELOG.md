@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Share graphic** — `public/share-dunjunz.png` (1200² hero in full armor + sword, **DUNJUNZ** title) and `public/og-image.png` (1200×630) for social/OG; landing + play meta tags point at og-image.
 - **Surface sun depth (EMA council)** — big meadow/trail oaks (`scale` 2.2–2.6), sun-cast elongated ground shadows, and **moving cloud shade** (no cloud sprites) drifting slowly across outdoor surface lands. Trunk-sized colliders so canopies don't brick the meadow. `prefers-reduced-motion` freezes cloud drift.
 
 ### Changed
