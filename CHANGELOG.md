@@ -11,6 +11,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ## [Unreleased]
 
+### Added
+
+- **Mobile play (EMA council)** — on-screen D-pad + ATK / TALK / BAG / MAP / USE / MENU overlay on `/play` for touch devices. DOM pad (not Phaser joystick) ORs into GameScene input; fullscreen button; hide keyboard help rail on phone. Inventory/shop center clicks still work (`pointer-events` only on pad buttons).
+
 ### Changed
 
 - **Class clothing & D&D armor categories** — gear is **cloth / light / medium / heavy**. Class proficiency (primary *or* secondary) keeps full DEF; wrong category soft-nerfs DEF (×0.65). Affinity pieces (wizard cloak, ranger cloak/sheath, fighter plate, cleric vestments, barbarian hide…) grant **+1 DEF** when you have that class. Loot biases armor by class.

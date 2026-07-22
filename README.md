@@ -208,7 +208,7 @@ All references are **parody / homage**, not licensed IP. Names and beats are twi
 - Extra boss patterns and item gates
 - Optional AI-assisted pixel assets via Imagine pipeline
 - Sound (chiptune SFX / stingers)
-- Mobile virtual pad
+- ~~Mobile virtual pad~~ (shipped: touch D-pad + actions on `/play`)
 
 ## License
 

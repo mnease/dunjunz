@@ -24,6 +24,12 @@ import {
   type ExpandedRoom,
 } from '../systems/room-expand';
 import {
+  clearAllTouch,
+  consumeTouchAction,
+  setTouchPadVisible,
+  touchAxisDown,
+} from '../systems/touch-input';
+import {
   enemyXpReward,
   grantXp,
 } from '../systems/progression';
@@ -381,6 +387,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Mobile pad (EMA council) — show only during crawl play
+    setTouchPadVisible(true);
+    clearAllTouch();
+
     // Phaser reuses the same Scene instance — always reset runtime state on enter.
     // Leftover dialogLocked/paused from a prior run freezes movement entirely.
     this.dialogLocked = false;
@@ -568,6 +578,8 @@ export class GameScene extends Phaser.Scene {
       kb.off('keydown-F', this.onForjingOrShoesKey, this);
       kb.off('keydown-M', this.onMapzKey, this);
       kb.off('keydown-TAB', this.onMapzKey, this);
+      clearAllTouch();
+      setTouchPadVisible(false);
       writeSave(this.save);
     });
 
@@ -3412,8 +3424,11 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     if (!this.player?.body) return;
 
-    // Pause / panel close
-    if (Phaser.Input.Keyboard.JustDown(this.keys.esc)) {
+    // Pause / panel close (ESC or touch MENU)
+    if (
+      Phaser.Input.Keyboard.JustDown(this.keys.esc) ||
+      consumeTouchAction('menu')
+    ) {
       if (this.inventoryOpen) {
         this.game.events.emit('inventory-toggle', this.save);
       } else if (this.mapzOpen) {
@@ -3431,10 +3446,15 @@ export class GameScene extends Phaser.Scene {
       }
     }
     if (this.paused) {
-      if (Phaser.Input.Keyboard.JustDown(this.keys.m)) {
+      if (
+        Phaser.Input.Keyboard.JustDown(this.keys.m) ||
+        consumeTouchAction('map')
+      ) {
         writeSave(this.save);
         // Soft-reset UI — do not stop (listener/chrome race kills dialog)
         this.game.events.emit('ui-reset');
+        setTouchPadVisible(false);
+        clearAllTouch();
         this.scene.start('Title');
       }
       return;
@@ -3491,17 +3511,26 @@ export class GameScene extends Phaser.Scene {
     let vx = 0;
     let vy = 0;
 
-    if (this.cursors.left.isDown || this.keys.a.isDown) {
+    const left =
+      this.cursors.left.isDown || this.keys.a.isDown || touchAxisDown('left');
+    const right =
+      this.cursors.right.isDown || this.keys.d.isDown || touchAxisDown('right');
+    const up =
+      this.cursors.up.isDown || this.keys.w.isDown || touchAxisDown('up');
+    const down =
+      this.cursors.down.isDown || this.keys.s.isDown || touchAxisDown('down');
+
+    if (left) {
       vx = -speed;
       this.facing = 'left';
-    } else if (this.cursors.right.isDown || this.keys.d.isDown) {
+    } else if (right) {
       vx = speed;
       this.facing = 'right';
     }
-    if (this.cursors.up.isDown || this.keys.w.isDown) {
+    if (up) {
       vy = -speed;
       this.facing = 'up';
-    } else if (this.cursors.down.isDown || this.keys.s.isDown) {
+    } else if (down) {
       vy = speed;
       this.facing = 'down';
     }
@@ -3515,14 +3544,18 @@ export class GameScene extends Phaser.Scene {
     // Blink while invuln
     this.player.setAlpha(this.invuln > 0 && Math.floor(_time / 80) % 2 === 0 ? 0.4 : 1);
 
-    // Attack / interact also handled via keydown events; JustDown as backup
-    // Attack backup via JustDown; interact is event-only (avoids double-fire)
+    // Attack / interact — keyboard JustDown OR touch pad pulses
     if (
       Phaser.Input.Keyboard.JustDown(this.keys.space) ||
-      Phaser.Input.Keyboard.JustDown(this.keys.z)
+      Phaser.Input.Keyboard.JustDown(this.keys.z) ||
+      consumeTouchAction('attack')
     ) {
       this.tryAttack();
     }
+    if (consumeTouchAction('interact')) this.onInteractKey();
+    if (consumeTouchAction('inventory')) this.onInventoryKey();
+    if (consumeTouchAction('map')) this.onMapzKey();
+    if (consumeTouchAction('use')) this.onUseItemKey();
 
     this.tryUnlockNearPlayer();
     this.checkHazards(delta);

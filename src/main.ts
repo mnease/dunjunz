@@ -13,6 +13,7 @@ import { initFeedbackUi } from './ui/feedback';
 import { initHeroPickUi } from './ui/hero-pick';
 import { initJournalUi } from './ui/journal';
 import { initSettingsUi } from './ui/settings';
+import { initTouchPad } from './systems/touch-input';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -45,3 +46,4 @@ initHeroPickUi();
 initSettingsUi();
 initAuthUi();
 initFeedbackUi();
+initTouchPad();

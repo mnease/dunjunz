@@ -21,6 +21,7 @@ import { defaultCampaign } from '../systems/village-battle';
 import { clearSave, loadSave, writeSave } from '../systems/save';
 import type { SaveData } from '../types';
 import { getLastAuthMe } from '../ui/auth';
+import { clearAllTouch, setTouchPadVisible } from '../systems/touch-input';
 
 const MODE_COUNT = 3;
 
@@ -47,6 +48,9 @@ export class TitleScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(COLORS.black);
+    // Hide crawl pad on title (tap slots / keyboard)
+    setTouchPadVisible(false);
+    clearAllTouch();
     void unlockAudio().then(() => playMusic('title'));
     this.phase = 'main';
     this.modeCursor = 0;

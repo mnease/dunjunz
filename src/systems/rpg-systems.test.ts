@@ -537,6 +537,20 @@ describe('bud anim poses', () => {
   });
 });
 
+describe('touch-input virtual pad', () => {
+  it('holds axes and consumes one-shot actions', async () => {
+    const t = await import('./touch-input');
+    t.clearAllTouch();
+    t.setTouchAxis('left', true);
+    expect(t.touchAxisDown('left')).toBe(true);
+    t.setTouchAxis('left', false);
+    expect(t.touchAxisDown('left')).toBe(false);
+    t.pulseTouchAction('attack');
+    expect(t.consumeTouchAction('attack')).toBe(true);
+    expect(t.consumeTouchAction('attack')).toBe(false);
+  });
+});
+
 describe('class gear proficiency (D&D-style)', () => {
   it('wizard cloak synergizes with wizard; heavy plate penalizes wizard', async () => {
     const { effectiveGearDef } = await import('./class-gear');
