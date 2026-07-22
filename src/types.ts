@@ -48,7 +48,13 @@ export type EntityKind =
   /** Training dummy (guild hall — hit with weapons, no contact damage). */
   | 'dummy'
   /** Weapon rack (guild hall — equip training gear). */
-  | 'rack';
+  | 'rack'
+  /** Indoor furniture — solid scenery (guild hall living quarters). */
+  | 'bookshelf'
+  | 'chair'
+  | 'table'
+  /** Free-standing lamp — solid + warm light cookie. */
+  | 'lamp';
 
 /** Non-human best friend companion (randomized per playthrough). */
 export type BestBudId =

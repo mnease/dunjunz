@@ -42,6 +42,13 @@ import { buildAllDeepRooms } from './world-deep';
 
 export const ROOMS: Record<string, RoomDef> = {
   // ─── TRAINING GUILD (start) ─────────────────────────────
+  /**
+   * Training Guild — ominous living quarters (EMA atmosphere).
+   * Perimeter bookshelves + wall torches + reading corners;
+   * center remains drill floor (dummies / racks / master).
+   * Ambient gloom via ambientForRoom('guild_hall'); not dark:true
+   * so new players are never soft-locked without a carried torch.
+   */
   guild_hall: {
     id: 'guild_hall',
     title: 'TRAINING GUILD · HALL',
@@ -65,6 +72,7 @@ export const ROOMS: Record<string, RoomDef> = {
       '################',
     ],
     entities: [
+      // ── Guild Master + drill core ──────────────────────────
       {
         kind: 'npc',
         id: 'guild-master',
@@ -74,10 +82,10 @@ export const ROOMS: Record<string, RoomDef> = {
           'WELCOME TO DUNJUNZ… TALK TO ME FOR THE FULL BRIEFING.',
         ],
       },
-      { kind: 'dummy', id: 'dummy-nw', x: 3, y: 3 },
-      { kind: 'dummy', id: 'dummy-ne', x: 12, y: 3 },
-      { kind: 'dummy', id: 'dummy-sw', x: 3, y: 7 },
-      { kind: 'dummy', id: 'dummy-se', x: 12, y: 7 },
+      { kind: 'dummy', id: 'dummy-nw', x: 4, y: 3 },
+      { kind: 'dummy', id: 'dummy-ne', x: 11, y: 3 },
+      { kind: 'dummy', id: 'dummy-sw', x: 4, y: 7 },
+      { kind: 'dummy', id: 'dummy-se', x: 11, y: 7 },
       { kind: 'rack', id: 'rack-sword', x: 5, y: 2 },
       { kind: 'rack', id: 'rack-axe', x: 7, y: 2 },
       { kind: 'rack', id: 'rack-bow', x: 9, y: 2 },
@@ -96,6 +104,100 @@ export const ROOMS: Record<string, RoomDef> = {
           '4. EAST DOOR OPENS AFTER GRADUATION',
         ],
       },
+
+      // ── Wall torches (cookie light radii) ───────────────────
+      { kind: 'torch_wall', id: 'guild-torch-n1', x: 3, y: 1 },
+      { kind: 'torch_wall', id: 'guild-torch-n2', x: 8, y: 1 },
+      { kind: 'torch_wall', id: 'guild-torch-n3', x: 12, y: 1 },
+      { kind: 'torch_wall', id: 'guild-torch-s1', x: 3, y: 9 },
+      { kind: 'torch_wall', id: 'guild-torch-s2', x: 12, y: 9 },
+      { kind: 'torch_wall', id: 'guild-torch-w1', x: 1, y: 3 },
+      { kind: 'torch_wall', id: 'guild-torch-w2', x: 1, y: 7 },
+      { kind: 'torch_wall', id: 'guild-torch-e1', x: 14, y: 3 },
+      { kind: 'torch_wall', id: 'guild-torch-e2', x: 14, y: 7 },
+
+      // ── Bookshelves lining the hall (living quarters) ──────
+      { kind: 'bookshelf', id: 'shelf-nw-a', x: 1, y: 1, dialog: ['DUSTY TOMES. "ON NOT DYING." VOLUME I.'] },
+      { kind: 'bookshelf', id: 'shelf-nw-b', x: 2, y: 1, dialog: ['LEDGERS OF OLD GRADUATES. MOSTLY CROSSED OUT.'] },
+      { kind: 'bookshelf', id: 'shelf-n-a', x: 5, y: 1, dialog: ['FIELD MANUAL: SWORDS, POLITELY.'] },
+      { kind: 'bookshelf', id: 'shelf-n-b', x: 10, y: 1, dialog: ['AXE THEORY. CHAPTER ONE: "HIT HARDER."'] },
+      { kind: 'bookshelf', id: 'shelf-ne-a', x: 13, y: 1, dialog: ['BOW STRINGS AND BAD POETRY.'] },
+      { kind: 'bookshelf', id: 'shelf-ne-b', x: 14, y: 1, dialog: ['STAFF LORE. SMELLS LIKE OZONE.'] },
+      { kind: 'bookshelf', id: 'shelf-w-a', x: 1, y: 2, dialog: ['A SHELF OF UNFINISHED APOLOGIES.'] },
+      { kind: 'bookshelf', id: 'shelf-w-b', x: 1, y: 4, dialog: ['MAPS OF PLACES THAT NO LONGER EXIST.'] },
+      { kind: 'bookshelf', id: 'shelf-w-c', x: 1, y: 5, dialog: ['THE MASTER\'S NOTES. DO NOT READ ALOUD.'] },
+      { kind: 'bookshelf', id: 'shelf-w-d', x: 1, y: 6, dialog: ['TAX LAW FOR ADVENTURERS. THICKER THAN STEEL.'] },
+      { kind: 'bookshelf', id: 'shelf-w-e', x: 1, y: 8, dialog: ['BESTIARY. THE MARGINS HAVE TEETH MARKS.'] },
+      { kind: 'bookshelf', id: 'shelf-w-f', x: 1, y: 9, dialog: ['SLEEPING BAGS FOR THE NIGHT WATCH. EMPTY.'] },
+      { kind: 'bookshelf', id: 'shelf-e-a', x: 14, y: 2, dialog: ['RELICS WRAPPED IN CLOTH. DO NOT UNWRAP.'] },
+      { kind: 'bookshelf', id: 'shelf-e-b', x: 14, y: 4, dialog: ['A HIDDEN FLASK. PROBABLY TEA. PROBABLY.'] },
+      { kind: 'bookshelf', id: 'shelf-e-c', x: 14, y: 5, dialog: ['EAST DOOR KEYS… WAIT, THOSE ARE CANDLES.'] },
+      { kind: 'bookshelf', id: 'shelf-e-d', x: 14, y: 6, dialog: ['SCROLLS LABELED "LATER." NEVER LATER.'] },
+      { kind: 'bookshelf', id: 'shelf-e-e', x: 14, y: 8, dialog: ['PORTRAITS OF PRIOR GUILD MASTERS. NONE SMILE.'] },
+      { kind: 'bookshelf', id: 'shelf-e-f', x: 14, y: 9, dialog: ['BLANK BOOKS. FOR FUTURE REGRETS.'] },
+      { kind: 'bookshelf', id: 'shelf-s-a', x: 2, y: 9, dialog: ['RUGS ROLLED TIGHT. THE FLOOR IS COLDER.'] },
+      { kind: 'bookshelf', id: 'shelf-s-b', x: 5, y: 9, dialog: ['KITCHEN INVENTORY: HARDTACK AND HOPE.'] },
+      { kind: 'bookshelf', id: 'shelf-s-c', x: 10, y: 9, dialog: ['SONGBOOK: "BALLAD OF THE LOST TRAIL."'] },
+      { kind: 'bookshelf', id: 'shelf-s-d', x: 13, y: 9, dialog: ['A MIRROR FACING THE WALL. WISE.'] },
+
+      // ── NW reading corner (chair, table, lamp, local shelves)
+      {
+        kind: 'chair',
+        id: 'chair-nw',
+        x: 2,
+        y: 3,
+        dialog: ['A WORN CHAIR. THE CUSHION REMEMBERS SOMEONE HEAVIER.'],
+      },
+      {
+        kind: 'table',
+        id: 'table-nw',
+        x: 3,
+        y: 4,
+        dialog: [
+          'SIDE TABLE. OPEN JOURNAL:',
+          '"DAY 1,042. STILL TRAINING HEROES."',
+          '"THE TORCHES OUTLAST US ALL."',
+        ],
+      },
+      { kind: 'lamp', id: 'lamp-nw', x: 2, y: 4 },
+      {
+        kind: 'bookshelf',
+        id: 'shelf-nook-nw',
+        x: 2,
+        y: 2,
+        dialog: ['NOOK SHELF: GHOST STORIES FOR SKEPTICS.'],
+      },
+
+      // ── SE reading corner
+      {
+        kind: 'chair',
+        id: 'chair-se',
+        x: 13,
+        y: 7,
+        dialog: ['READING CHAIR. FACES THE SHADOWS, NOT THE DOOR.'],
+      },
+      {
+        kind: 'table',
+        id: 'table-se',
+        x: 12,
+        y: 6,
+        dialog: [
+          'LITTLE TABLE. COLD TEA. HALF A CANDLE.',
+          'A NOTE: "GRADUATE. THEN GO GET HER."',
+        ],
+      },
+      { kind: 'lamp', id: 'lamp-se', x: 13, y: 6 },
+      {
+        kind: 'bookshelf',
+        id: 'shelf-nook-se',
+        x: 13,
+        y: 8,
+        dialog: ['SE NOOK: "HOW TO LEAVE AND STILL COME BACK."'],
+      },
+
+      // ── Extra floor lamps along the drill lane ─────────────
+      { kind: 'lamp', id: 'lamp-mid-w', x: 6, y: 5 },
+      { kind: 'lamp', id: 'lamp-mid-e', x: 10, y: 5 },
     ],
   },
 

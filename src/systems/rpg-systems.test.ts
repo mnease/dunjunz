@@ -2926,6 +2926,7 @@ import {
   activeLightTier,
   ambientForRoom,
   AMBIENT_DARK,
+  AMBIENT_GUILD_HALL,
   AMBIENT_SURFACE,
   ambushCanDealContact,
   buildLightSources,
@@ -3058,6 +3059,32 @@ describe('tutorial guild hall', () => {
     save = completeTutorial(save);
     expect(canUseDungeonStairs(save)).toBe(true);
     expect(canExitGuildEast(save)).toBe(true);
+  });
+
+  it('guild hall is a decorated living quarters with light fixtures', async () => {
+    const { ROOMS } = await import('../data/world');
+    const hall = ROOMS.guild_hall;
+    expect(hall).toBeTruthy();
+    const ents = hall.entities ?? [];
+    const kinds = ents.map((e) => e.kind);
+    expect(kinds.filter((k) => k === 'bookshelf').length).toBeGreaterThanOrEqual(
+      12,
+    );
+    expect(kinds.filter((k) => k === 'torch_wall').length).toBeGreaterThanOrEqual(
+      6,
+    );
+    expect(kinds.filter((k) => k === 'lamp').length).toBeGreaterThanOrEqual(2);
+    expect(kinds.filter((k) => k === 'chair').length).toBeGreaterThanOrEqual(2);
+    expect(kinds.filter((k) => k === 'table').length).toBeGreaterThanOrEqual(2);
+    expect(kinds.filter((k) => k === 'dummy').length).toBe(4);
+    expect(kinds.filter((k) => k === 'rack').length).toBe(4);
+    // Reading corners + shelves have flavor dialogs
+    const withTalk = ents.filter(
+      (e) =>
+        (e.kind === 'bookshelf' || e.kind === 'table' || e.kind === 'chair') &&
+        (e.dialog?.length ?? 0) > 0,
+    );
+    expect(withTalk.length).toBeGreaterThan(4);
   });
 
   it('records dummy damage in sword→axe→bow→staff order with % threshold', () => {
@@ -3200,6 +3227,32 @@ describe('universal positional lighting v2', () => {
     );
     expect(ambientForRoom({ floor: -3, land: 'dunjunz' })).toBe(AMBIENT_DARK);
     expect(ambientForRoom({ floor: 0, dark: true })).toBe(AMBIENT_DARK);
+  });
+
+  it('guild hall is ominously dim with readable torch cookies', () => {
+    const a = ambientForRoom({
+      id: 'guild_hall',
+      floor: 0,
+      land: 'surface',
+    });
+    expect(a).toBe(AMBIENT_GUILD_HALL);
+    expect(a).toBeLessThan(AMBIENT_SURFACE);
+    expect(a).toBeGreaterThan(AMBIENT_DARK);
+    // Wall fixture still lifts brightness near the torch
+    const sources = buildLightSources({
+      darkRoom: false,
+      ambient: a,
+      player: { x: 200, y: 200 },
+      activeTier: 'none',
+      fuelMs: 0,
+      wallFixtures: [{ id: 't', x: 200, y: 200 }],
+      placed: [],
+      gear: [],
+    });
+    const near = sampleBrightness(200, 200, sources, a);
+    const far = sampleBrightness(800, 800, sources, a);
+    expect(near).toBeGreaterThan(far);
+    expect(near).toBeGreaterThan(a);
   });
 
   it('smoothstep falloff is 1 at center and 0 at rim', () => {

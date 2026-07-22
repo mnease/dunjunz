@@ -387,6 +387,10 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   torch_wall: 'torch_wall',
   dummy: 'dummy',
   rack: 'rack_sword',
+  bookshelf: 'bookshelf',
+  chair: 'chair',
+  table: 'table',
+  lamp: 'lamp',
 };
 
 const MOBILE_HOSTILES = [
@@ -1655,7 +1659,18 @@ export class GameScene extends Phaser.Scene {
       outward?: { x: number; y: number };
     }[] = [];
     for (const a of this.actors) {
-      if (!a.alive || a.kind !== 'torch_wall') continue;
+      if (!a.alive) continue;
+      // Wall torches + free-standing lamps (guild reading corners)
+      if (a.kind !== 'torch_wall' && a.kind !== 'lamp') continue;
+      if (a.kind === 'lamp') {
+        // Floor lamp — isotropic warm pool at the stand
+        wallFixtures.push({
+          id: a.id,
+          x: a.sprite.x,
+          y: a.sprite.y,
+        });
+        continue;
+      }
       const { tx, ty } = this.worldToTile(a.sprite.x, a.sprite.y);
       const outward = inferOutwardFromWalls(tx, ty, (x, y) =>
         this.isSolidTile(x, y),
@@ -2856,6 +2871,9 @@ export class GameScene extends Phaser.Scene {
       'portal',
       'rack',
       'dummy',
+      'bookshelf',
+      'chair',
+      'table',
     ].includes(def.kind);
 
     // Props the hero cannot walk through (interact still uses reach radius)
@@ -2868,7 +2886,11 @@ export class GameScene extends Phaser.Scene {
       def.kind === 'npc' ||
       def.kind === 'merchant' ||
       def.kind === 'princess' ||
-      def.kind === 'tree';
+      def.kind === 'tree' ||
+      def.kind === 'bookshelf' ||
+      def.kind === 'chair' ||
+      def.kind === 'table' ||
+      def.kind === 'lamp';
 
     // Mobile hostiles: chase + walls. Cactus: rooted hazard (overlap only).
     // Solid props: immovable footprint collider. Tumbleweed: drifts, no combat.
@@ -2895,6 +2917,8 @@ export class GameScene extends Phaser.Scene {
       sprite.setImmovable(true);
       if (def.kind === 'dummy') sprite.setDepth(5);
       if (def.kind === 'rack') sprite.setDepth(4);
+      if (def.kind === 'bookshelf') sprite.setDepth(4);
+      if (def.kind === 'lamp') sprite.setDepth(4);
       const body = sprite.body as Phaser.Physics.Arcade.Body;
       body.moves = false;
       body.enable = true;
@@ -2910,10 +2934,19 @@ export class GameScene extends Phaser.Scene {
       } else if (def.kind === 'dummy') {
         bw = 14;
         bh = 12;
+      } else if (def.kind === 'bookshelf') {
+        bw = 14;
+        bh = 12;
       } else if (def.kind === 'chest' || def.kind === 'forje') {
         bw = 14;
         bh = 12;
-      } else if (def.kind === 'sign' || def.kind === 'rack') {
+      } else if (
+        def.kind === 'sign' ||
+        def.kind === 'rack' ||
+        def.kind === 'chair' ||
+        def.kind === 'table' ||
+        def.kind === 'lamp'
+      ) {
         bw = 10;
         bh = 10;
       } else if (
@@ -2971,7 +3004,14 @@ export class GameScene extends Phaser.Scene {
     const threat = threatForRoom(this.room, this.save);
     const generation = Math.max(0, opts?.generation ?? 0);
     let hp =
-      isTree || isTumbleweed || def.kind === 'dummy' || def.kind === 'rack'
+      isTree ||
+      isTumbleweed ||
+      def.kind === 'dummy' ||
+      def.kind === 'rack' ||
+      def.kind === 'bookshelf' ||
+      def.kind === 'chair' ||
+      def.kind === 'table' ||
+      def.kind === 'lamp'
         ? 99
         : resolveEnemyHp(def.kind, def.hp, threat);
     let contactDamage = contactHostile

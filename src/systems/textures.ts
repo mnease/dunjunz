@@ -1815,6 +1815,79 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#fff0a0', 15, 5, 2, 3);
   });
 
+  // Guild hall furniture — living quarters (EMA atmosphere)
+  canvasTex(scene, 'bookshelf', ART_RES, ART_RES, (ctx) => {
+    // Dark oak case
+    shadedBlock(ctx, '#3a2410', '#5a3d1a', '#1a1008', 2, 2, 28, 28);
+    fill(ctx, '#2a1810', 3, 3, 26, 26);
+    // Shelves
+    fill(ctx, '#6b4423', 3, 10, 26, 2);
+    fill(ctx, '#6b4423', 3, 18, 26, 2);
+    fill(ctx, '#6b4423', 3, 26, 26, 2);
+    // Books — varied spines
+    const spines = [
+      '#4a2060', '#2a4a6a', '#6a2030', '#2a5a30', '#8a6820', '#3a3a58',
+      '#5a2040', '#1a4a40', '#7a3020', '#404060',
+    ];
+    for (let row = 0; row < 3; row++) {
+      let x = 4;
+      const y = 4 + row * 8;
+      for (let i = 0; i < 6 && x < 28; i++) {
+        const w = 3 + (i % 3);
+        fill(ctx, spines[(row * 3 + i) % spines.length], x, y, w, 6);
+        fill(ctx, '#c9a227', x + 1, y + 1, 1, 4);
+        x += w + 1;
+      }
+    }
+    spark(ctx, 6, 5, '#c9a227');
+  });
+
+  canvasTex(scene, 'chair', ART_RES, ART_RES, (ctx) => {
+    // Reading chair — high back, worn seat
+    fill(ctx, '#2a1810', 8, 6, 16, 4); // top rail
+    shadedBlock(ctx, '#4a3018', '#6b4423', '#2a1810', 9, 8, 14, 12); // back
+    fill(ctx, '#5a3d1a', 10, 10, 12, 8);
+    // seat
+    shadedBlock(ctx, '#6b4423', '#8b5a2b', '#3a2410', 7, 18, 18, 6);
+    fill(ctx, '#3a2410', 8, 24, 4, 6); // legs
+    fill(ctx, '#3a2410', 20, 24, 4, 6);
+    fill(ctx, '#2a1810', 8, 28, 4, 2);
+    fill(ctx, '#2a1810', 20, 28, 4, 2);
+    // cushion
+    fill(ctx, '#4a3060', 10, 19, 12, 4);
+    fill(ctx, '#6a50a0', 11, 20, 10, 2);
+  });
+
+  canvasTex(scene, 'table', ART_RES, ART_RES, (ctx) => {
+    // Small side table + open book
+    shadedBlock(ctx, '#5a3d1a', '#8b5a2b', '#3a2410', 4, 12, 24, 8);
+    fill(ctx, '#c9a070', 5, 13, 22, 2); // top hilite
+    fill(ctx, '#3a2410', 6, 20, 3, 10); // legs
+    fill(ctx, '#3a2410', 23, 20, 3, 10);
+    fill(ctx, '#3a2410', 14, 20, 4, 8);
+    // open book
+    fill(ctx, '#e8dcc8', 10, 8, 12, 6);
+    fill(ctx, '#d0c4a8', 10, 8, 6, 6);
+    fill(ctx, '#c0b090', 16, 8, 6, 6);
+    fill(ctx, '#5a4510', 15, 8, 2, 6);
+    fill(ctx, '#3a3010', 12, 10, 3, 1);
+    fill(ctx, '#3a3010', 18, 11, 4, 1);
+  });
+
+  canvasTex(scene, 'lamp', ART_RES, ART_RES, (ctx) => {
+    // Floor lamp — iron stem + warm glass
+    fill(ctx, '#2a2a35', 14, 14, 4, 16);
+    fill(ctx, '#4a4a58', 15, 14, 2, 15);
+    fill(ctx, '#1a1a22', 10, 28, 12, 3); // base
+    fill(ctx, '#3a3a48', 11, 28, 10, 1);
+    // shade / glass
+    block(ctx, '#ffc857', '#8a6820', 10, 4, 12, 12);
+    fill(ctx, '#fff0a0', 12, 6, 8, 8);
+    fill(ctx, '#ff6b3a', 14, 8, 4, 5);
+    spark(ctx, 15, 7, '#ffffff');
+    spark(ctx, 13, 10, '#ffc857');
+  });
+
   // Light item icons
   canvasTex(scene, 'icon_torch', ART_RES, ART_RES, (ctx) => {
     fill(ctx, '#6b4423', 14, 12, 4, 14);

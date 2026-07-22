@@ -20,6 +20,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Training Guild atmosphere (EMA)** — ominous living-quarters hall: bookshelves lining the walls, NW/SE reading corners (chair + table + lamp + nook shelf), wall torches + floor lamps with visible light radii, dim ambient (`AMBIENT_GUILD_HALL`) so shadows read without soft-locking new players. Center stays drill floor (dummies/racks/master). Flavor dialogs on shelves/tables.
 - **Weapon drills need damage %** — each tutorial weapon (sword→axe→bow→staff) must deal 100% of dummy drill HP (20) before the stage clears; progress is saved and shown on toast / Guild Master checklist.
 - **Weapon racks** — taking a training weapon empties that rack stand and equips it on the hero’s hip (re-equip from empty stand still works).
 - **Guild Master intro** — first message is Welcome to Dunjunz → game/quest pitch → Training Guild + Guild Master identity → weapon drill briefing (then normal drill progress on re-talk).

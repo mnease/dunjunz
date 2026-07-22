@@ -57,6 +57,11 @@ export const AMBIENT_SURFACE = 0.9;
 export const AMBIENT_INDOOR_SURFACE = 0.78;
 /** B1 / authored-lit basements (depth via cookies, not full bright). */
 export const AMBIENT_LIT_DUNGEON = 0.58;
+/**
+ * Training Guild living quarters — ominous, not pitch black.
+ * Low enough that wall torch / lamp cookies read clearly.
+ */
+export const AMBIENT_GUILD_HALL = 0.26;
 /** Boss rooms slightly moodier than floor peers. */
 export const AMBIENT_BOSS_MUL = 0.92;
 
@@ -71,6 +76,8 @@ export function ambientForRoom(room: {
   id?: string;
   boss?: boolean;
 }): number {
+  // Guild hall: authored indoor gloom (EMA atmosphere) — before outdoor surface
+  if (room.id === 'guild_hall') return AMBIENT_GUILD_HALL;
   if (room.dark === true) return AMBIENT_DARK;
   if (room.dark === false) {
     // Explicit lit basement still gets positional depth
