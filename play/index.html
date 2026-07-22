@@ -3,12 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <meta
       name="description"
       content="DUNJUNZ — The ultimate top down RPG. Free in your browser. No ads ever."
     />
     <meta name="theme-color" content="#0a0c10" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>DUNJUNZ — The ultimate top down RPG</title>
     <!-- Analytics: deferred + delayed on /play so Phaser boots first (see /analytics.js) -->
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
@@ -53,10 +59,12 @@
       </header>
 
       <main class="main" id="main">
-        <div id="game-frame">
-          <div id="game-container" tabindex="-1"></div>
-          <div class="crt-overlay" aria-hidden="true"></div>
-          <!-- Mobile virtual pad (EMA council P0): DOM overlay, not Phaser -->
+        <div id="game-stage" class="game-stage">
+          <div id="game-frame">
+            <div id="game-container" tabindex="-1"></div>
+            <div class="crt-overlay" aria-hidden="true"></div>
+          </div>
+          <!-- Mobile pad: dock BELOW canvas on iPhone (not over a short 16:9 frame) -->
           <div
             id="touch-pad"
             class="touch-pad"
@@ -65,19 +73,18 @@
             aria-label="Touch controls"
           >
             <div class="touch-cluster touch-dpad" role="group" aria-label="Move">
-              <button type="button" id="touch-up" class="touch-btn touch-dir" aria-label="Up">▲</button>
-              <button type="button" id="touch-left" class="touch-btn touch-dir" aria-label="Left">◀</button>
-              <button type="button" id="touch-right" class="touch-btn touch-dir" aria-label="Right">▶</button>
-              <button type="button" id="touch-down" class="touch-btn touch-dir" aria-label="Down">▼</button>
+              <button type="button" id="touch-up" class="touch-btn touch-dir" data-axis="up" aria-label="Up">▲</button>
+              <button type="button" id="touch-left" class="touch-btn touch-dir" data-axis="left" aria-label="Left">◀</button>
+              <button type="button" id="touch-right" class="touch-btn touch-dir" data-axis="right" aria-label="Right">▶</button>
+              <button type="button" id="touch-down" class="touch-btn touch-dir" data-axis="down" aria-label="Down">▼</button>
             </div>
             <div class="touch-cluster touch-actions" role="group" aria-label="Actions">
-              <button type="button" id="touch-attack" class="touch-btn touch-a" aria-label="Attack">ATK</button>
-              <button type="button" id="touch-talk" class="touch-btn touch-b" aria-label="Talk or interact">TALK</button>
-              <button type="button" id="touch-inv" class="touch-btn touch-c" aria-label="Inventory">BAG</button>
-              <button type="button" id="touch-map" class="touch-btn touch-c" aria-label="Map">MAP</button>
-              <button type="button" id="touch-use" class="touch-btn touch-c" aria-label="Use item">USE</button>
-              <button type="button" id="touch-menu" class="touch-btn touch-c" aria-label="Pause menu">MENU</button>
-              <button type="button" id="touch-fs" class="touch-btn touch-fs" aria-label="Fullscreen">⛶</button>
+              <button type="button" id="touch-attack" class="touch-btn touch-a" data-action="attack" aria-label="Attack">ATK</button>
+              <button type="button" id="touch-talk" class="touch-btn touch-b" data-action="interact" aria-label="Talk or interact">TALK</button>
+              <button type="button" id="touch-inv" class="touch-btn touch-c" data-action="inventory" aria-label="Inventory">BAG</button>
+              <button type="button" id="touch-map" class="touch-btn touch-c" data-action="map" aria-label="Map">MAP</button>
+              <button type="button" id="touch-use" class="touch-btn touch-c" data-action="use" aria-label="Use item">USE</button>
+              <button type="button" id="touch-menu" class="touch-btn touch-c" data-action="menu" aria-label="Pause menu">MENU</button>
             </div>
           </div>
         </div>

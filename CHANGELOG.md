@@ -13,7 +13,11 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
-- **Mobile play (EMA council)** — on-screen D-pad + ATK / TALK / BAG / MAP / USE / MENU overlay on `/play` for touch devices. DOM pad (not Phaser joystick) ORs into GameScene input; fullscreen button; hide keyboard help rail on phone. Inventory/shop center clicks still work (`pointer-events` only on pad buttons).
+- **Mobile play (EMA council)** — on-screen D-pad + ATK / TALK / BAG / MAP / USE / MENU on `/play` for touch devices. DOM pad (not Phaser joystick) ORs into GameScene input.
+
+### Fixed
+
+- **iPhone layout** — pad docks **under** the canvas (not over a short 16:9 frame). Full-viewport `touch-play` shell, safe-area insets, rubber-band lock, Phaser scale refresh on dock/orientation. Pointer-only pad input with `setPointerCapture` (no pointer+touch double-fire). Site chrome hidden while crawling so the playfield + dock fit.
 
 ### Changed
 
