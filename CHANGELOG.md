@@ -20,6 +20,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Weapon drills need damage %** — each tutorial weapon (sword→axe→bow→staff) must deal 100% of dummy drill HP (20) before the stage clears; progress is saved and shown on toast / Guild Master checklist.
 - **Weapon racks** — taking a training weapon empties that rack stand and equips it on the hero’s hip (re-equip from empty stand still works).
 - **Guild Master intro** — first message is Welcome to Dunjunz → game/quest pitch → Training Guild + Guild Master identity → weapon drill briefing (then normal drill progress on re-talk).
 - **Solid props** — hero cannot walk through dummies, weapon racks, signs, chests, forje, NPCs, merchants, princess, or trees. Footprint-sized immovable Arcade colliders; talk/use still uses reach radius. Cactus stays overlap-only (spines).

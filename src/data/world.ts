@@ -90,7 +90,7 @@ export const ROOMS: Record<string, RoomDef> = {
         dialog: [
           'TRAINING GUILD RULES',
           '1. RACK (E) = EQUIP WEAPON',
-          '2. DUMMY (SPACE/Z) = HIT IN ORDER',
+          '2. DUMMY = DEAL 100% HP PER WEAPON',
           'SWORD → AXE → BOW → STAFF',
           '3. TALK TO GUILD MASTER TO GRADUATE',
           '4. EAST DOOR OPENS AFTER GRADUATION',

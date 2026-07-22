@@ -223,6 +223,7 @@ import {
   canExitGuildEast,
   canUseDungeonStairs,
   completeTutorial,
+  drillDamageRequired,
   dummyHitToast,
   equipTrainingWeapon,
   eastDoorBlockedToast,
@@ -238,9 +239,10 @@ import {
   rackDialog,
   rackTextureKey,
   rackWeaponFromId,
-  recordDummyHit,
+  recordDummyDamage,
   stairsBlockedToast,
   tutorialWeaponFromEquip,
+  weaponDamageDealt,
   type TutorialWeapon,
 } from '../systems/tutorial';
 import { loadSave, writeSave } from '../systems/save';
@@ -3011,6 +3013,8 @@ export class GameScene extends Phaser.Scene {
     };
 
     if (def.kind === 'dummy') {
+      // Shared drill HP pool for the active weapon stage
+      this.syncDummyDrillHp(actor);
       this.physics.add.overlap(this.swordHit, sprite, () =>
         this.hitEnemy(actor),
       );
@@ -3805,7 +3809,7 @@ export class GameScene extends Phaser.Scene {
     return tutorialWeaponFromEquip(tid, look);
   }
 
-  private onDummyHit(actor: Actor): void {
+  private onDummyHit(actor: Actor, damageOverride?: number): void {
     if (!actor.alive || actor.kind !== 'dummy') return;
     if (actor.hurtCooldown > 0) return;
     actor.hurtCooldown = 220;
@@ -3820,15 +3824,54 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const w = this.equippedTutorialWeapon();
-    const r = recordDummyHit(this.save, w);
+    const dmg =
+      damageOverride != null
+        ? Math.max(1, damageOverride | 0)
+        : Math.max(1, computePlayerDamage(this.save) | 0);
+    const r = recordDummyDamage(this.save, w, dmg);
     this.save = r.save;
     writeSave(this.save);
-    this.game.events.emit(
-      'toast',
-      dummyHitToast(r.accepted, w, r.next, r.advanced),
-    );
-    if (r.advanced && !r.next) {
-      this.game.events.emit('toast', 'ALL WEAPONS HIT — TALK TO GUILD MASTER');
+    // Reflect remaining drill HP on this dummy (shared progress pool)
+    if (r.accepted) {
+      actor.maxHp = r.required;
+      actor.hp = Math.max(0, r.required - r.total);
+      this.syncAllDummyDrillHp();
+    }
+    this.game.events.emit('toast', dummyHitToast(r, w));
+    if (r.advanced && r.next) {
+      this.game.events.emit(
+        'toast',
+        `${w?.toUpperCase() ?? 'WEAPON'} CLEAR — NEXT: ${r.next.toUpperCase()}`,
+      );
+    } else if (r.advanced && !r.next) {
+      this.game.events.emit(
+        'toast',
+        'ALL WEAPONS CLEAR — TALK TO GUILD MASTER',
+      );
+    }
+  }
+
+  /** Set dummy actor HP from current weapon-stage progress. */
+  private syncDummyDrillHp(actor: Actor): void {
+    if (actor.kind !== 'dummy') return;
+    if (isTutorialComplete(this.save)) {
+      actor.maxHp = drillDamageRequired();
+      actor.hp = actor.maxHp;
+      return;
+    }
+    const need = nextTutorialWeapon(this.save);
+    const req = drillDamageRequired();
+    actor.maxHp = req;
+    if (!need) {
+      actor.hp = 0;
+      return;
+    }
+    actor.hp = Math.max(0, req - weaponDamageDealt(this.save, need));
+  }
+
+  private syncAllDummyDrillHp(): void {
+    for (const a of this.actors) {
+      if (a.alive && a.kind === 'dummy') this.syncDummyDrillHp(a);
     }
   }
 
@@ -5441,7 +5484,7 @@ export class GameScene extends Phaser.Scene {
     if (fromProjectile && actor.hurtCooldown > 120) return false;
 
     if (actor.kind === 'dummy') {
-      this.onDummyHit(actor);
+      this.onDummyHit(actor, dmg);
       return true;
     }
 

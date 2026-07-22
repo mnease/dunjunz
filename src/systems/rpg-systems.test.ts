@@ -3034,6 +3034,7 @@ import {
   canExitGuildEast,
   canUseDungeonStairs,
   completeTutorial,
+  drillDamageRequired,
   equipTrainingWeapon,
   guildMasterDialog,
   guildMasterIntroDialog,
@@ -3041,8 +3042,10 @@ import {
   isTutorialComplete,
   nextTutorialWeapon,
   rackTextureKey,
+  recordDummyDamage,
   recordDummyHit,
   tutorialWeaponFromEquip,
+  weaponProgressPct,
 } from './tutorial';
 import { START_ROOM } from '../data/world';
 
@@ -3057,16 +3060,34 @@ describe('tutorial guild hall', () => {
     expect(canExitGuildEast(save)).toBe(true);
   });
 
-  it('records dummy hits only in sword→axe→bow→staff order', () => {
+  it('records dummy damage in sword→axe→bow→staff order with % threshold', () => {
     let save = defaultSave();
     expect(nextTutorialWeapon(save)).toBe('sword');
-    let r = recordDummyHit(save, 'axe');
+    const req = drillDamageRequired();
+    expect(req).toBeGreaterThan(1);
+
+    // Wrong weapon does not advance
+    let r = recordDummyDamage(save, 'axe', req);
     expect(r.accepted).toBe(false);
-    r = recordDummyHit(save, 'sword');
+    expect(weaponProgressPct(save, 'sword')).toBe(0);
+
+    // Partial damage accumulates; does not clear stage
+    r = recordDummyDamage(save, 'sword', Math.max(1, Math.floor(req / 2)));
     expect(r.accepted).toBe(true);
+    expect(r.advanced).toBe(false);
+    expect(r.pct).toBeGreaterThan(0);
+    expect(r.pct).toBeLessThan(100);
+    save = r.save;
+    expect(nextTutorialWeapon(save)).toBe('sword');
+
+    // Finish remaining damage
+    r = recordDummyDamage(save, 'sword', req);
     expect(r.advanced).toBe(true);
+    expect(r.pct).toBe(100);
     save = r.save;
     expect(nextTutorialWeapon(save)).toBe('axe');
+
+    // Full-stage helper still clears one weapon
     save = recordDummyHit(save, 'axe').save;
     save = recordDummyHit(save, 'bow').save;
     save = recordDummyHit(save, 'staff').save;
