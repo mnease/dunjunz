@@ -2071,7 +2071,7 @@ export class GameScene extends Phaser.Scene {
       if (!this.save.princessSaved) {
         this.game.events.emit(
           'toast',
-          'CASTLE LOCKED — SAVE PRIZELLA FIRST',
+          'CASTLE LOCKED — SAVE PRINCESS PRIZELLA FIRST',
         );
         return false;
       }
@@ -2084,7 +2084,7 @@ export class GameScene extends Phaser.Scene {
       if (!ok) {
         this.game.events.emit(
           'toast',
-          'SEWERZ SEALED — GET THE JOB FROM PRIZELLA',
+          'SEWERZ SEALED — GET THE JOB FROM PRINCESS PRIZELLA',
         );
         return false;
       }
@@ -2322,7 +2322,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** Prizella: rescue / Best Bud / kingdom quest board. */
+  /** Princess Prizella: rescue / Best Bud / kingdom quest board. */
   private talkToPrizella(best: Actor): void {
     this.save = ensureRunSeed(this.save);
 
@@ -2331,7 +2331,7 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit(
         'dialog-show',
         best.dialog ?? [
-          'PRIZELLA: BONK THE WRAITH FIRST!',
+          'PRINCESS PRIZELLA: BONK THE WRAITH FIRST!',
           'THEN WE TALK KINGDOM STUFF.',
         ],
       );
@@ -2349,7 +2349,7 @@ export class GameScene extends Phaser.Scene {
       this.save = unlockKingdomOnRescue(this.save);
       writeSave(this.save);
       this.game.events.emit('dialog-show', [
-        'PRIZELLA: YOU DID IT! MATHEMATICAL!',
+        'PRINCESS PRIZELLA: YOU DID IT! MATHEMATICAL!',
         'I AM FREE. MOSTLY. THERE\'S STILL SAND.',
         '',
         ...princessChampionDialog(),
@@ -2789,7 +2789,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // One Prizella: tower pre-rescue, throne post-rescue
+    // One Princess Prizella: tower pre-rescue, throne post-rescue
     if (def.kind === 'princess') {
       const onTower = this.room.id === 'dezertz_tower';
       const onThrone = this.room.id === 'kingdom_throne';
@@ -3762,7 +3762,7 @@ export class GameScene extends Phaser.Scene {
         'THE ROYAL GOOSE STOPS HONKING.',
         'TAX SCROLLS FALL OUT. GROSS. VALUABLE.',
         'EXIT PORTAL → SEWER MOUTH.',
-        'REPORT TO PRIZELLA ON THE THRONE.',
+        'REPORT TO PRINCESS PRIZELLA ON THE THRONE.',
       ]);
       this.ensureBossExitPortal(true);
       return;

@@ -10,7 +10,7 @@ import { discoverMapz } from './mapz';
 import { mintItem } from './items';
 import { autoEquipEmptySlots, syncDerivedStats } from './inventory';
 
-export const PRINCESS_NAME = 'PRINCESZ PRIZELLA';
+export const PRINCESS_NAME = 'PRINCESS PRIZELLA';
 
 export function markLandCleared(save: SaveData, land: LandId): SaveData {
   if (save.landsCleared.includes(land)) return save;
@@ -79,17 +79,17 @@ export function rewardWoodzClear(save: SaveData): {
       'YOU SCORE WOOD SHARDZ + ORE.',
       'EXIT PORTAL: ZIP TO WOODZ EDGE.',
       'DEZERTZ IS SOUTH OF THE TRAIL.',
-      'PRIZELLA\'S PROBABLY SANDY AND MAD.',
+      'PRINCESS PRIZELLA\'S PROBABLY SANDY AND MAD.',
     ],
   };
 }
 
 /**
- * Post-rescue Prizella voice — kingdom duty + champion (not "personal hero").
+ * Post-rescue Princess Prizella voice — kingdom duty + champion (not "personal hero").
  */
 export function princessChampionDialog(): string[] {
   return [
-    'PRIZELLA: OKAY. REAL TALK.',
+    'PRINCESS PRIZELLA: OKAY. REAL TALK.',
     'I GOTTA GO RULE MY KINGDOM NOW.',
     'DECREES. PARADES. WEIRD TAXES ON LAVA.',
     'SOMEBODY\'S GOTTA SIGN THE SCROLLS.',
@@ -126,7 +126,7 @@ export function rewardDezertzClear(save: SaveData): {
     dialog: [
       'THE SAND WRAITH GOES *POOF* — SANDY POOF.',
       `${PRINCESS_NAME} STEPS OUT, BRUSHING DUNES OFF HER CROWN.`,
-      'PRIZELLA: YOU CAME. THAT RULES.',
+      'PRINCESS PRIZELLA: YOU CAME. THAT RULES.',
       'YOU GOT: SAND SABER. SHINY. HISSY.',
       'I\'M GOING HOME TO RULE MY KINGDOM.',
       'CASTLE EAST OF TRAIL — KINGDOMZ.',
@@ -146,20 +146,20 @@ export function questHint(save: SaveData): string[] {
     const champ = championQuestHint(save);
     if (champ.length) return champ;
     return [
-      'PRIZELLA RULES FROM THE KINGDOMZ.',
+      'PRINCESS PRIZELLA RULES FROM THE KINGDOMZ.',
       'EAST OF THE TRAIL. CHECK THE THRONE.',
     ];
   }
   if (!save.landsCleared.includes('dunjunz')) {
     return [
-      'MAIN QUEST: SAVE PRIZELLA.',
+      'MAIN QUEST: SAVE PRINCESS PRIZELLA.',
       'STAIRS IN THE MEADOW = DUNJUNZ.',
       'BONK THE DUNJUN MASTER. POLITELY.',
     ];
   }
   if (!save.landsCleared.includes('woodz')) {
     return [
-      'PRIZELLA GOT MOVED TO THE DEZERTZ.',
+      'PRINCESS PRIZELLA GOT MOVED TO THE DEZERTZ.',
       'OPTIONAL SIDE ADVENTURE: WOODZ NORTH.',
       'OR GO SOUTH IF YOU\'RE FEELING BRAVE.',
     ];
@@ -167,11 +167,11 @@ export function questHint(save: SaveData): string[] {
   if (!save.landsCleared.includes('dezertz')) {
     return [
       'DEZERTZ = SOUTH OF THE TRAIL.',
-      'TOWER. WRAITH. PRIZELLA. PROBABLY SAND.',
+      'TOWER. WRAITH. PRINCESS PRIZELLA. PROBABLY SAND.',
       'FORJE FIRST IF YOU FEEL SQUISHY.',
     ];
   }
-  return ['FIND THE PRINCESZ. SHE\'S COUNTING ON YOU!'];
+  return ['FIND THE PRINCESS. SHE\'S COUNTING ON YOU!'];
 }
 
 /** Unlock kingdom on rescue. */

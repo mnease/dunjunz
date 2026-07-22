@@ -40,7 +40,7 @@ Keep **[`CHANGELOG.md`](./CHANGELOG.md)** current on GitHub:
 
 ### Misspellings (player-facing)
 
-Dunjunz, woodz, dezertz, mapz, forjing, Princesz Prizella — intentional.
+Dunjunz, woodz, dezertz, mapz, forjing, Princess Prizella — intentional.
 
 ## Stack
 

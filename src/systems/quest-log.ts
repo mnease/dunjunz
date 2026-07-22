@@ -65,8 +65,8 @@ function mainEntries(save: SaveData): QuestLogEntry[] {
     {
       id: 'main-dezertz',
       kind: 'main',
-      title: 'DEZERTZ + PRIZELLA',
-      blurb: 'Trail south. Sand Wraith. Save the Princesz.',
+      title: 'DEZERTZ + PRINCESS PRIZELLA',
+      blurb: 'Trail south. Sand Wraith. Save the Princess.',
       status: !dunj ? 'locked' : rescued || dez ? 'done' : 'active',
       progress: rescued ? 'RESCUED' : dunj ? 'FIND HER' : 'LOCKED',
       order: 30,
@@ -98,13 +98,13 @@ function bestBudEntry(save: SaveData): QuestLogEntry {
   let progress = 'LOCKED';
   if (!rescued) {
     status = 'locked';
-    progress = 'SAVE PRIZELLA FIRST';
+    progress = 'SAVE PRINCESS PRIZELLA FIRST';
   } else if (stage === 'complete') {
     status = 'done';
     progress = 'COMPLETE';
   } else if (stage === 'found') {
     status = 'active';
-    progress = 'REPORT TO PRIZELLA';
+    progress = 'REPORT TO PRINCESS PRIZELLA';
   } else if (stage === 'accepted') {
     status = 'active';
     progress = 'FIND BUD · WOODZ HOLLOW';
@@ -113,7 +113,7 @@ function bestBudEntry(save: SaveData): QuestLogEntry {
     progress = 'ACCEPT / FIND BUD';
   } else {
     status = 'available';
-    progress = 'TALK TO PRIZELLA';
+    progress = 'TALK TO PRINCESS PRIZELLA';
   }
   return {
     id: 'champ-best-bud',
@@ -144,10 +144,10 @@ function championEntries(save: SaveData): QuestLogEntry[] {
       progress = bossDead ? 'TURN IN AT THRONE' : 'IN THE FIELD';
     } else if (budDone && save.princessSaved) {
       status = 'available';
-      progress = 'ASK PRIZELLA';
+      progress = 'ASK PRINCESS PRIZELLA';
     } else {
       status = 'locked';
-      progress = budDone ? 'SAVE PRIZELLA' : 'FINISH BEST BUD';
+      progress = budDone ? 'SAVE PRINCESS PRIZELLA' : 'FINISH BEST BUD';
     }
     out.push({
       id: `champ-${q.id}`,
@@ -248,7 +248,7 @@ export function primaryActiveQuestLine(save: SaveData): string | null {
     return 'MAIN: DUNJUNZ · MEADOW STAIRS';
   }
   if (!save.princessSaved) {
-    return 'MAIN: SAVE PRIZELLA · DEZERTZ SOUTH';
+    return 'MAIN: SAVE PRINCESS PRIZELLA · DEZERTZ SOUTH';
   }
   return null;
 }

@@ -1055,7 +1055,7 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
         dialog: [
           'I AM THE DUNGEON MASTER!',
           'EIGHT FLOORS. YOU STILL CAME.',
-          'PRIZELLA? YEAH I SHIPPED HER',
+          'PRINCESS PRIZELLA? YEAH I SHIPPED HER',
           'TO THE DEZERTZ. HA. HA. ...HA.',
           'ROLL FOR INITIATIVE—',
           'NAT 1. AWKWARD.',
@@ -1071,7 +1071,7 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
         dialog: [
           'LEGENDARY DUNJUN LOOT. SHINY.',
           'MAPZ OF THE WIDE WEIRD WORLD...',
-          "PRIZELLA'S IN THE DEZERTZ. GO GET HER.",
+          "PRINCESS PRIZELLA'S IN THE DEZERTZ. GO GET HER.",
         ],
       },
       {
@@ -1343,7 +1343,7 @@ export function buildDezertzDeep(): Record<string, RoomDef> {
         [8, 3],
       ]),
       sign('dezertz-vault-sign', 3, 8, [
-        'SAND VAULT. PRIZELLA WAS UPSTAIRS.',
+        'SAND VAULT. PRINCESS PRIZELLA WAS UPSTAIRS.',
         'YOU DUG TOO DEEP. COOL THOUGH.',
       ]),
     ],
@@ -1438,7 +1438,7 @@ export function buildDezertzDeep(): Record<string, RoomDef> {
           dialog: [
             'LEASE WIGHT: WHERE IS THE DEPOSIT?',
             'SAND IN THE CARPETS COUNTS AS DAMAGE.',
-            'PRIZELLA WAS A MODEL TENANT. YOU ARE NOT.',
+            'PRINCESS PRIZELLA WAS A MODEL TENANT. YOU ARE NOT.',
             'FIGHT OR LEAVE. HALL WEST. NO HARD GATE.',
           ],
         },

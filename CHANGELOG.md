@@ -21,6 +21,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 ### Fixed
 
 - **Bow/staff vs dummies** — player projectiles now hit training dummies (arrows/bolts were filtered to hostiles only).
+- **Princess Prizella naming** — all player-facing copy uses **Princess Prizella** (not bare “Prizella” / “Princesz”).
 
 ### Changed
 
@@ -140,7 +141,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 - **Journal (J / top bar)** — quest list with progress (main path, champion jobs, side bits) + **Brags** achievement board (22 unlocks, `NEW BRAG:` toasts). Tone stays bard-weird, not corporate.
 - **Best Bud XP + gear** — buddies gain XP on kills and level up; inventory **Y** toggles buddy gear mode (shared bag, separate slots; no keyring). Weapon/armor boost strike damage.
 - **Progressive creep threat** — HP / contact damage / XP scale by land tier, floor depth, and world progress (later zones hurt more)
-- **Prizella's Kingdomz** (east of Trope Trail after rescue) — gate, courtyard, throne hub
+- **Princess Prizella's Kingdomz** (east of Trope Trail after rescue) — gate, courtyard, throne hub
 - **Champion quest board** — after Best Bud, throne assigns **Royal Sewerz** (Job #2)
 - **Sewerz dungeon** — mouth / pipe hall / overflow / Honk Chamber (Royal Goose boss) + exit portal + Honk Blade turn-in
 - **Best Bud combat** — companions fight with Jake-energy magic (not vibe-only)
@@ -157,8 +158,8 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 - **Kingdomz exit / map UX** — Royal Road & courtyard mid-band widened (3 tiles) so west trail exit is not a one-tile needle; mapz opens on current land (not always surface)
 - **HUD clutter / overlap** — two-row chrome (vitals | place + controls); hearts cap to numeric when many; controls no longer share a line with room titles
 - **Best Bud Hollow softlock** — continue-save default spawn was `(8,5)` inside a sealed pen (and on water). Hollow layout opened; continue spawn prefers room entrance / walkable tiles.
-- **Best Bud den empty** — den creature only spawned at stage `accepted`, but Prizella's first talk left you on `offered`, so the hollow looked empty. Bud always waits until recruited; den or one Prizella talk can start the friendship.
-- **Dezertz Sand Tower seal** — north link to Edge existed but top row was solid wall and south door had no exit; you could not leave after rescuing Prizella. North door restored; portal near north exit.
+- **Best Bud den empty** — den creature only spawned at stage `accepted`, but Princess Prizella's first talk left you on `offered`, so the hollow looked empty. Bud always waits until recruited; den or one Princess Prizella talk can start the friendship.
+- **Dezertz Sand Tower seal** — north link to Edge existed but top row was solid wall and south door had no exit; you could not leave after rescuing Princess Prizella. North door restored; portal near north exit.
 - **Game settings** (footer **Settings** modal, `localStorage`)
   - Master mute, music/SFX toggles + volume sliders
   - Reduce motion (skips camera shake)
@@ -185,7 +186,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 - **Landing at `/` + game at `/play`** — marketing welcome, how-to, philosophy, Ko-fi tip jar; see [`docs/landing-support-v1.md`](./docs/landing-support-v1.md)
 - Secondary champion quests
 - Blacksmith merchant: destroy gear for parts, optimize / craft
-- More lands / champion jobs from Prizella
+- More lands / champion jobs from Princess Prizella
 
 ---
 
@@ -195,8 +196,8 @@ Champion quests, dual-pane UI, stronger creeps, Adventure Time voice.
 
 ### Added
 
-- **Best Bud champion quest** after saving Prizella
-  - Talk Prizella (offer → accept) → **Woodz Hollow** (east of Woodz Edge) → meet bud → report back
+- **Best Bud champion quest** after saving Princess Prizella
+  - Talk Princess Prizella (offer → accept) → **Woodz Hollow** (east of Woodz Edge) → meet bud → report back
   - Six non-human best friends rolled once per playthrough (`runSeed`): Gloop, Nub, Whisp, Tater, Zorp, Pebbo
   - Companion follows the player (talk/vibe only; no combat pet in v1)
   - Design via Ema council (Scout / Waggle / Hexis)
@@ -206,12 +207,12 @@ Champion quests, dual-pane UI, stronger creeps, Adventure Time voice.
 - Inventory **bag as graphic item grid**
 - Shield + ring equip slots; richer enemy loot tables
 - Graphic **mapz** (floors, lands, fog of visited rooms)
-- Multi-land content: surface, Dunjunz, Woodz, Dezertz, Princesz Prizella
+- Multi-land content: surface, Dunjunz, Woodz, Dezertz, Princess Prizella
 
 ### Changed
 
 - Dialogue rewritten in an **Adventure Time–ish** voice (earnest, weird, cooler)
-- Post-rescue Prizella: kingdom duty + **champion hero** pitch (not “personal hero”)
+- Post-rescue Princess Prizella: kingdom duty + **champion hero** pitch (not “personal hero”)
 - Land / trail creeps **tougher** (higher base HP); contact damage by kind
 - Tinker open/close no longer same-frame double-fires on E
 - Single-tile doors/stairs with wider art (no double-door tiles)
@@ -239,7 +240,7 @@ Multi-land quest foundation (mapz, forjing, princesz).
 - Forjing system (craft / enhance / imbue) at forje stations
 - Mapz pickups and panel
 - Dunjun Master, Wolf Lord, Sand Wraith bosses
-- Princesz Prizella rescue as main quest arc
+- Princess Prizella rescue as main quest arc
 - Isolated Dunjunz Hive Mind tenant wiring (`HIVE.md`)
 
 ### Changed

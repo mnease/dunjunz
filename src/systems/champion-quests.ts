@@ -1,5 +1,5 @@
 /**
- * Prizella's champion quest board — kingdom assigns dungeons after Best Bud.
+ * Princess Prizella's champion quest board — kingdom assigns dungeons after Best Bud.
  */
 
 import type { LandId, SaveData } from '../types';
@@ -33,7 +33,7 @@ export const CHAMPION_QUESTS: readonly ChampionQuestDef[] = [
     bossId: 'royal-goose',
     bossRoomId: 'sewerz_boss',
     assignDialog: [
-      'PRIZELLA: CHAMPION JOB #2. GROSS ONE.',
+      'PRINCESS PRIZELLA: CHAMPION JOB #2. GROSS ONE.',
       'THE ROYAL SEWERZ ARE... OCCUPIED.',
       'SOMETHING HONKS. SOMETHING BITES.',
       'A GOOSE. PROBABLY MAGICAL. DEFINITELY RUDE.',
@@ -44,12 +44,12 @@ export const CHAMPION_QUESTS: readonly ChampionQuestDef[] = [
       'CREEPS DOWN THERE HIT HARDER. PACK SNACKS.',
     ],
     reminderDialog: [
-      'PRIZELLA: STILL HONKING DOWN THERE?',
+      'PRINCESS PRIZELLA: STILL HONKING DOWN THERE?',
       'COURTYARD → EAST → SEWERZ MOUTH.',
       'GOOSE. SCROLLS. DON\'T BECOME A PUDDLE.',
     ],
     completeDialog: [
-      'PRIZELLA: YOU BEAT THE ROYAL GOOSE?!',
+      'PRINCESS PRIZELLA: YOU BEAT THE ROYAL GOOSE?!',
       'MATHEMATICAL. THE PLUMBERS WILL WRITE SONGS.',
       'BAD SONGS. BUT SONGS.',
       '',
@@ -88,12 +88,12 @@ export function assignQuest(
 ): { save: SaveData; dialog: string[] } {
   const q = getQuest(questId);
   if (!q) {
-    return { save, dialog: ['PRIZELLA: UH. QUEST MISSING. AWKWARD.'] };
+    return { save, dialog: ['PRINCESS PRIZELLA: UH. QUEST MISSING. AWKWARD.'] };
   }
   if (isQuestCompleted(save, questId)) {
     return {
       save,
-      dialog: ['PRIZELLA: YOU ALREADY DID THAT ONE. CHILL.'],
+      dialog: ['PRINCESS PRIZELLA: YOU ALREADY DID THAT ONE. CHILL.'],
     };
   }
   let next: SaveData = {
@@ -119,7 +119,7 @@ export function completeActiveQuest(save: SaveData): {
 } {
   const q = getQuest(save.activeQuestId);
   if (!q) {
-    return { save, dialog: ['PRIZELLA: NO ACTIVE QUEST. WEIRD.'] };
+    return { save, dialog: ['PRINCESS PRIZELLA: NO ACTIVE QUEST. WEIRD.'] };
   }
   if (!save.killed.includes(q.bossId)) {
     return { save, dialog: q.reminderDialog };
@@ -127,7 +127,7 @@ export function completeActiveQuest(save: SaveData): {
   if (isQuestCompleted(save, q.id)) {
     return {
       save,
-      dialog: ['PRIZELLA: ALREADY TURNED IN. DOUBLE DIPPING? RUDE.'],
+      dialog: ['PRINCESS PRIZELLA: ALREADY TURNED IN. DOUBLE DIPPING? RUDE.'],
     };
   }
 
@@ -160,7 +160,7 @@ export function prizellaKingdomTalk(save: SaveData): {
   if (!save.princessSaved) {
     return {
       save,
-      dialog: ['PRIZELLA: SAVE ME FIRST. THEN CASTLE STUFF.'],
+      dialog: ['PRINCESS PRIZELLA: SAVE ME FIRST. THEN CASTLE STUFF.'],
     };
   }
 
@@ -181,7 +181,7 @@ export function prizellaKingdomTalk(save: SaveData): {
   return {
     save,
     dialog: [
-      'PRIZELLA: NO MORE JOBS ON THE BOARD. YET.',
+      'PRINCESS PRIZELLA: NO MORE JOBS ON THE BOARD. YET.',
       'THE KINGDOM IS... RELATIVELY FINE.',
       'FORJE STUFF. PET YOUR BUD. PAY WEIRD TAXES.',
       'I\'LL HONK IF I NEED YOU. METAPHORICALLY.',
@@ -194,7 +194,7 @@ export function championQuestHint(save: SaveData): string[] {
   if (save.bestBudStage !== 'complete') return [];
   if (canTurnInQuest(save)) {
     return [
-      'TURN IN AT PRIZELLA\'S THRONE.',
+      'TURN IN AT PRINCESS PRIZELLA\'S THRONE.',
       'CASTLE EAST OF THE TRAIL.',
     ];
   }
@@ -203,7 +203,7 @@ export function championQuestHint(save: SaveData): string[] {
     return [active.shortHint, 'THRONE REMINDERS IF YOU FORGET.'];
   }
   return [
-    'VISIT PRIZELLA\'S KINGDOM (EAST OF TRAIL).',
+    'VISIT PRINCESS PRIZELLA\'S KINGDOM (EAST OF TRAIL).',
     'SHE HAS CHAMPION JOBS ON THE THRONE.',
   ];
 }

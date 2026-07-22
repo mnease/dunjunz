@@ -43,7 +43,7 @@ export const LANDS: Record<LandId, LandInfo> = {
   dezertz: {
     id: 'dezertz',
     name: 'DEZERTZ MAPZ',
-    blurb: 'Hot sandz. Princesz rumors.',
+    blurb: 'Hot sandz. Princess rumors.',
     color: 0xa08040,
     fog: 0x3a3020,
     border: 0xffc857,
@@ -51,7 +51,7 @@ export const LANDS: Record<LandId, LandInfo> = {
   kingdomz: {
     id: 'kingdomz',
     name: 'KINGDOMZ MAPZ',
-    blurb: 'Prizella rules. Weird taxes. Cool quests.',
+    blurb: 'Princess Prizella rules. Weird taxes. Cool quests.',
     color: 0x6a4a9a,
     fog: 0x2a1a40,
     border: 0xffc857,

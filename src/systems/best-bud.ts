@@ -45,7 +45,7 @@ export const BEST_BUD_ROSTER: readonly BestBudDef[] = [
     tint: 0x5a5a6a,
     meetDialog: [
       'NUB: ...TOOK YOU LONG ENOUGH.',
-      'PRIZELLA SAID SOME CHAMPION WOULD SHOW.',
+      'PRINCESS PRIZELLA SAID SOME CHAMPION WOULD SHOW.',
       'I FIGHT. I CLAW. I JUDGE YOUR FORM.',
       'BEST BUDS. FINE. DON\'T MAKE IT WEIRD.',
     ],
@@ -157,7 +157,7 @@ export function isCompanionActive(save: SaveData): boolean {
 /**
  * Den creature is visible until recruited.
  * (Previously required stage === 'accepted', which left the hollow empty
- * after Prizella's first pitch (stage 'offered') or before talking to her.)
+ * after Princess Prizella's first pitch (stage 'offered') or before talking to her.)
  */
 export function shouldSpawnDenBud(save: SaveData): boolean {
   const stage = save.bestBudStage ?? 'none';
@@ -187,7 +187,7 @@ export function offerBestBudQuest(save: SaveData): {
   if (!next.princessSaved) {
     return {
       save: next,
-      dialog: ['PRIZELLA: SAVE ME FIRST. THEN WE TALK JOBS.'],
+      dialog: ['PRINCESS PRIZELLA: SAVE ME FIRST. THEN WE TALK JOBS.'],
     };
   }
   if (next.bestBudStage === 'none') {
@@ -196,7 +196,7 @@ export function offerBestBudQuest(save: SaveData): {
   return {
     save: next,
     dialog: [
-      'PRIZELLA: CHAMPION JOB #1. REAL ONE.',
+      'PRINCESS PRIZELLA: CHAMPION JOB #1. REAL ONE.',
       'THE KINGDOM\'S FINE. YOU? LONELY AS A FORJE.',
       'EVERY HERO NEEDS A BEST BUD.',
       'NOT A SIDEKICK. NOT A SERVANT. A BUD.',
@@ -215,7 +215,7 @@ export function acceptBestBudQuest(save: SaveData): {
 } {
   let next = ensureRunSeed(save);
   if (!next.princessSaved) {
-    return { save: next, dialog: ['PRIZELLA: YEAH NO. SAVE ME FIRST.'] };
+    return { save: next, dialog: ['PRINCESS PRIZELLA: YEAH NO. SAVE ME FIRST.'] };
   }
   if (!next.bestBudId) {
     next = {
@@ -228,7 +228,7 @@ export function acceptBestBudQuest(save: SaveData): {
   return {
     save: next,
     dialog: [
-      'PRIZELLA: OKAY YOU\'RE IN. MATHEMATICAL.',
+      'PRINCESS PRIZELLA: OKAY YOU\'RE IN. MATHEMATICAL.',
       'WOODZ EDGE → EAST → THE HOLLOW.',
       bud
         ? `SOMETHING ${bud.species.toUpperCase()}-ISH IS WAITING.`
@@ -259,7 +259,7 @@ export function meetBestBud(save: SaveData): {
       dialog: [
         '...A WEIRD CREATURE NAPS IN THE HOLLOW.',
         'IT OPENS ONE EYE. "SAVE SOMEONE COOL FIRST."',
-        'PROBABLY THE PRINCESZ. YEAH.',
+        'PROBABLY THE PRINCESS. YEAH.',
         'THEN COME BACK. OR TALK TO HER ABOUT CHAMPION JOBS.',
       ],
     };
@@ -325,7 +325,7 @@ export function completeBestBudQuest(save: SaveData): {
     return {
       save: next,
       dialog: [
-        'PRIZELLA: FIND YOUR BUD FIRST.',
+        'PRINCESS PRIZELLA: FIND YOUR BUD FIRST.',
         'WOODZ HOLLOW. EAST OF THE EDGE.',
       ],
     };
@@ -335,7 +335,7 @@ export function completeBestBudQuest(save: SaveData): {
     return {
       save: next,
       dialog: [
-        'PRIZELLA: STILL BUDDIES. GOOD.',
+        'PRINCESS PRIZELLA: STILL BUDDIES. GOOD.',
         bud
           ? `SAY HI TO ${bud.name} FOR ME. NOT IN A WEIRD WAY.`
           : 'SAY HI TO YOUR BUD.',
@@ -357,7 +357,7 @@ export function completeBestBudQuest(save: SaveData): {
   return {
     save: next,
     dialog: [
-      'PRIZELLA: OFFICIAL — YOU HAVE A BEST BUD.',
+      'PRINCESS PRIZELLA: OFFICIAL — YOU HAVE A BEST BUD.',
       bud ? `${bud.name}. SOLID PICK. (THE UNIVERSE PICKED. WHATEVER.)` : '',
       'CHAMPION QUEST #1: DONE. MATHEMATICAL.',
       'DON\'T MAKE IT WEIRD. IT\'S NOT A WEDDING.',
@@ -369,7 +369,7 @@ export function completeBestBudQuest(save: SaveData): {
 }
 
 /**
- * Single entry for all post-save Prizella talks — advances stages.
+ * Single entry for all post-save Princess Prizella talks — advances stages.
  */
 export function prizellaChampionTalk(save: SaveData): {
   save: SaveData;
@@ -379,7 +379,7 @@ export function prizellaChampionTalk(save: SaveData): {
   if (!next.princessSaved) {
     return {
       save: next,
-      dialog: ['PRIZELLA: UH. SAVE ME FIRST? PLEASE?'],
+      dialog: ['PRINCESS PRIZELLA: UH. SAVE ME FIRST? PLEASE?'],
     };
   }
 
@@ -391,14 +391,14 @@ export function prizellaChampionTalk(save: SaveData): {
     const pitch =
       stage === 'none'
         ? [
-            'PRIZELLA: CHAMPION JOB #1. REAL ONE.',
+            'PRINCESS PRIZELLA: CHAMPION JOB #1. REAL ONE.',
             'EVERY HERO NEEDS A BEST BUD.',
             'NOT A SIDEKICK. A BUD. WEIRD. LOYAL.',
             'ONE HANGS IN A WOODZ HOLLOW — EAST OF EDGE.',
             '',
           ]
         : [
-            'PRIZELLA: STILL HERE? COOL. LET\'S LOCK IT IN.',
+            'PRINCESS PRIZELLA: STILL HERE? COOL. LET\'S LOCK IT IN.',
             '',
           ];
     const accepted = acceptBestBudQuest(next);
@@ -411,7 +411,7 @@ export function prizellaChampionTalk(save: SaveData): {
     return {
       save: next,
       dialog: [
-        'PRIZELLA: STILL NO BUD? WOODZ. EAST OF EDGE.',
+        'PRINCESS PRIZELLA: STILL NO BUD? WOODZ. EAST OF EDGE.',
         'HOLLOW. COZY. SMELLS LIKE SNACKS AND DESTINY.',
         'THE BUD IS WAITING THERE. GO BE COOL.',
       ],
@@ -436,7 +436,7 @@ export function bestBudQuestHint(save: SaveData): string[] {
   if (stage === 'none' || stage === 'offered') {
     return [
       'CHAMPION JOB #1: FIND YOUR BEST BUD.',
-      'TALK TO PRIZELLA. THEN WOODZ HOLLOW (EAST).',
+      'TALK TO PRINCESS PRIZELLA. THEN WOODZ HOLLOW (EAST).',
     ];
   }
   if (stage === 'accepted') {
@@ -448,7 +448,7 @@ export function bestBudQuestHint(save: SaveData): string[] {
   if (stage === 'found') {
     return [
       'YOU FOUND A BEST BUD!',
-      'REPORT BACK TO PRIZELLA WHEN READY.',
+      'REPORT BACK TO PRINCESS PRIZELLA WHEN READY.',
     ];
   }
   return [

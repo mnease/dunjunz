@@ -61,13 +61,13 @@ Progress is stored in `localStorage` (`dunjunz-save-v1`). Save **v5** adds mapz,
 
 1. **Meadow** — old man, starter sword, surface mapz
 2. **Dunjunz** (stairs in meadow) — beat the Dunjun Master for **great loot** (Dunjun Cleaver + mapz of woodz/dezertz)
-3. **Woodz** (trail north) — wolves, Wolf Lord, forje, wood shardz; **Best Bud Hollow** east after Prizella
-4. **Dezertz** (trail south) — cacti, forje, Sand Wraith, **Princesz Prizella**
-5. **Champion job #1** — find your randomized non-human **Best Bud**, report back to Prizella
-6. **Kingdomz** (trail east after rescue) — throne hub; Prizella assigns more jobs
+3. **Woodz** (trail north) — wolves, Wolf Lord, forje, wood shardz; **Best Bud Hollow** east after Princess Prizella
+4. **Dezertz** (trail south) — cacti, forje, Sand Wraith, **Princess Prizella**
+5. **Champion job #1** — find your randomized non-human **Best Bud**, report back to Princess Prizella
+6. **Kingdomz** (trail east after rescue) — throne hub; Princess Prizella assigns more jobs
 7. **Sewerz** (Job #2) — Royal Goose, meaner creeps, Honk Blade
 
-Intentional spellings: Dunjunz, woodz, dezertz, mapz, forjing, Princesz Prizella.
+Intentional spellings: Dunjunz, woodz, dezertz, mapz, forjing, Princess Prizella.
 
 ## RPG systems (v0.6)
 
@@ -87,7 +87,7 @@ Intentional spellings: Dunjunz, woodz, dezertz, mapz, forjing, Princesz Prizella
 - Surface meadow + trope trail
 - Dunjunz multi-floor (B1–B2): cube, speak-friend key, redshirts, Dunjun Master
 - Woodz + Wolf Lord + forje + Best Bud Hollow
-- Dezertz + Sand Wraith + Princesz Prizella
+- Dezertz + Sand Wraith + Princess Prizella
 - Best Bud companion (6 randomized non-human friends) — **fights with you** (stretch, claws, fog, roast, blink, guard)
 - Chests, dual-pane tinkerer, graphic forje, hearts, lava, pads
 - CRT chrome UI, procedural pixel textures (no external sprite pack)

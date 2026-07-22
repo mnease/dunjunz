@@ -1366,7 +1366,7 @@ describe('princess quest land clears', () => {
     expect(r.save.bag.some((b) => b.templateId === 'dunjun_cleaver')).toBe(
       true,
     );
-    expect(r.dialog.some((l) => l.includes('PRIZELLA'))).toBe(true);
+    expect(r.dialog.some((l) => l.includes('PRINCESS PRIZELLA'))).toBe(true);
     expect(r.dialog.join(' ')).toMatch(/PORTAL/i);
   });
 
@@ -1872,7 +1872,7 @@ describe('best bud quest', () => {
 
   it('meet auto-accepts after rescue; complete requires found', () => {
     let s = { ...defaultSave(), princessSaved: true, runSeed: 7 };
-    // Den visit alone is enough — no empty hollow after one Prizella pitch
+    // Den visit alone is enough — no empty hollow after one Princess Prizella pitch
     s = meetBestBud(s).save;
     expect(s.bestBudStage).toBe('found');
     expect(s.bestBudId).not.toBeNull();
@@ -1885,7 +1885,7 @@ describe('best bud quest', () => {
     const s = { ...defaultSave(), princessSaved: false, runSeed: 3 };
     const r = meetBestBud(s);
     expect(r.save.bestBudStage).toBe('none');
-    expect(r.dialog.join(' ')).toMatch(/PRINCESZ|SAVE/i);
+    expect(r.dialog.join(' ')).toMatch(/PRINCESS|SAVE/i);
   });
 
   it('shouldSpawnDenBud until recruited', () => {
@@ -3194,7 +3194,7 @@ describe('tutorial guild hall', () => {
   it('intro welcomes to Dunjunz, then guild master, then drills', () => {
     const intro = guildMasterIntroDialog().join('\n');
     expect(intro).toMatch(/WELCOME TO DUNJUNZ/i);
-    expect(intro).toMatch(/PRIZELLA|QUEST/i);
+    expect(intro).toMatch(/PRINCESS PRIZELLA|QUEST/i);
     expect(intro).toMatch(/TRAINING GUILD/i);
     expect(intro).toMatch(/TUTORIAL GUILD MASTER/i);
     expect(intro).toMatch(/SWORD.*AXE.*BOW.*STAFF/s);

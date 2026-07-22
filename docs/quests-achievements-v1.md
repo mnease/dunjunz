@@ -154,9 +154,9 @@ export const QUEST_CATALOG: readonly QuestCatalogEntry[] = [
     id: 'main-find-prizella',
     track: 'main',
     order: 20,
-    title: 'FIND PRIZESZ PRIZELLA',
+    title: 'FIND PRINCESS PRIZELLA',
     blurb: 'She got yeeted. Follow the breadcrumb of bad news.',
-    lockedTease: 'A PRINCESZ-SHAPED HOLE IN THE PLOT.',
+    lockedTease: 'A PRINCESS-SHAPED HOLE IN THE PLOT.',
   },
   {
     id: 'main-dezertz-rescue',
@@ -170,7 +170,7 @@ export const QUEST_CATALOG: readonly QuestCatalogEntry[] = [
     id: 'main-rescue-complete',
     track: 'main',
     order: 40,
-    title: 'PRINCESZ: SAVED',
+    title: 'PRINCESS: SAVED',
     blurb: 'You did the thing. Kingdom duty resumes. Champion work opens.',
     lockedTease: 'THE SONG ENDS WHEN SHE DOESN\'T.',
   },
@@ -248,7 +248,7 @@ export function questStatus(save: SaveData, id: string): QuestListStatus {
       if (!save.princessSaved) return 'locked';
       const s = save.bestBudStage ?? 'none';
       if (s === 'complete') return 'done';
-      if (s === 'none') return 'available'; // talk to Prizella
+      if (s === 'none') return 'available'; // talk to Princess Prizella
       return 'active'; // offered|accepted|found
     }
 
@@ -290,7 +290,7 @@ export function questDetail(save: SaveData, id: string): string {
     case 'main-enter-dunjunz':
     case 'main-find-prizella':
     case 'main-dezertz-rescue':
-      return (questHint(save)[0] ?? 'SAVE THE PRINCESZ.').slice(0, 48);
+      return (questHint(save)[0] ?? 'SAVE THE PRINCESS.').slice(0, 48);
     case 'side-woodz':
       return 'WOODZ NORTH. WOLF LORD OPTIONAL.';
     case 'champ-best-bud': {
@@ -402,9 +402,9 @@ export interface UnlockResult {
 | `brag-centurion` | CENTURION OF MEH | One hundred creeps. The meadow is quieter. | `stats.kills >= 100` |
 | `brag-dunjun-master` | POLITE FACEPLANT | Dunjun Master down. She wasn't even here. | `killed` has `dungeon-master` OR `landsCleared` has dunjunz / `bossDefeated` |
 | `brag-wolf-lord` | HOWL CANCELLED | Wolf Lord hits dirt. Trees do a little clap. | `killed` has `wolf-lord` OR woodz cleared |
-| `brag-sand-wraith` | SANDY POOF | Sand Wraith *poof*. Prizella brush-off pending. | `killed` has `sand-wraith` OR dezertz/princess |
+| `brag-sand-wraith` | SANDY POOF | Sand Wraith *poof*. Princess Prizella brush-off pending. | `killed` has `sand-wraith` OR dezertz/princess |
 | `brag-royal-goose` | HONK BROKEN | You beat a magical rude goose. Plumbers will sing. | `killed` has `royal-goose` OR questsCompleted sewerz |
-| `brag-prizella-saved` | NOT A SIDEKICK | You saved the Princesz. Champion energy unlocked. | `princessSaved` |
+| `brag-prizella-saved` | NOT A SIDEKICK | You saved the Princess. Champion energy unlocked. | `princessSaved` |
 | `brag-best-buds` | PLATONIC. CRISPY. COOL. | Official Best Bud. Don't make it a wedding. | `bestBudStage === 'complete'` |
 | `brag-bud-fighter` | ELASTIC JUSTICE | Your bud landed a fight contribution (or bud level ≥ 2). | `budLevel >= 2` OR flag `bud_got_kill` if you add one — **v1:** `budLevel >= 2` |
 | `brag-mapz-nerd` | MAPZ NERD | You unfurled three land mapz. | `discoveredMapz.length >= 3` |

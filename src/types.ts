@@ -243,7 +243,7 @@ export interface SaveData {
   budLevel: number;
   /** Gear worn by the Best Bud (uids from shared bag). */
   budEquipped: EquippedMap;
-  /** Active champion quest id from Prizella's board (null = none). */
+  /** Active champion quest id from Princess Prizella's board (null = none). */
   activeQuestId: string | null;
   /** Completed champion quest ids (beyond main rescue / best bud). */
   questsCompleted: string[];

@@ -185,13 +185,13 @@ No new scripts required. Optional:
 
 ## 4. Landing sections + rough copy (game voice)
 
-Tone: Adventure Time–adjacent, bard-weird, never corporate SaaS. Intentional misspellings only where branded (Dunjunz, woodz, mapz, Princesz Prizella). Body copy stays readable IBM Plex Mono; display Press Start for titles/CTAs.
+Tone: Adventure Time–adjacent, bard-weird, never corporate SaaS. Intentional misspellings only where branded (Dunjunz, woodz, mapz, Princess Prizella). Body copy stays readable IBM Plex Mono; display Press Start for titles/CTAs.
 
 ### Meta
 
 ```html
 <title>DUNJUNZ — An epic of questionable questing</title>
-<meta name="description" content="Free browser dungeon crawler. Save Princesz Prizella, find your Best Bud, forje loot, and ignore the user agreement in the woodz." />
+<meta name="description" content="Free browser dungeon crawler. Save Princess Prizella, find your Best Bud, forje loot, and ignore the user agreement in the woodz." />
 <meta property="og:title" content="DUNJUNZ" />
 <meta property="og:description" content="An epic of questionable questing. Free in the browser." />
 <meta property="og:url" content="https://dunjunz.com/" />
@@ -204,7 +204,7 @@ Tone: Adventure Time–adjacent, bard-weird, never corporate SaaS. Intentional m
 **Tagline:** An epic of questionable questing  
 **Lede:**
 
-> A free, humorous retro dungeon crawler for your browser. Save Princesz Prizella, recruit a Best Bud who actually fights, forje questionable loot, and mapz three kinds of bad ideas: Dunjunz, woodz, and dezertz.
+> A free, humorous retro dungeon crawler for your browser. Save Princess Prizella, recruit a Best Bud who actually fights, forje questionable loot, and mapz three kinds of bad ideas: Dunjunz, woodz, and dezertz.
 
 **CTAs:**
 
@@ -243,7 +243,7 @@ Bullets (short):
 
 **Quest in one breath:**
 
-> Meadow sword → Dunjunz boss → woodz & dezertz → rescue Prizella → find your Best Bud → more champion nonsense (sewerz, geese, regret).
+> Meadow sword → Dunjunz boss → woodz & dezertz → rescue Princess Prizella → find your Best Bud → more champion nonsense (sewerz, geese, regret).
 
 **Account blurb:**
 

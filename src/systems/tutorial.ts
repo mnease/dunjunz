@@ -498,7 +498,7 @@ export function guildMasterIntroDialog(): string[] {
     'YOU WILL WALK, SWING, LOOT, AND TALK.',
     'YOU WILL GET LOST. YOU WILL GET BETTER.',
     '',
-    'YOUR QUEST: RESCUE PRIZELLA.',
+    'YOUR QUEST: RESCUE PRINCESS PRIZELLA.',
     'SHE IS LOST SOMEWHERE OUT THERE —',
     'PAST THE MEADOW, DOWN THE DUNGEONS,',
     'THROUGH WOODZ AND DEZERTZ AND WORSE.',
@@ -529,7 +529,7 @@ export function guildMasterDialog(save: SaveData): string[] {
       'EAST = MEADOW. CAVE MOUTH = DUNJUNZ.',
       'TRAIL LEADS TO WOODZ AND DEZERTZ.',
       'MOVE: WASD. ATTACK: SPACE/Z. BAG: I. TALK: E.',
-      'GO RESCUE PRIZELLA. MATHEMATICAL!',
+      'GO RESCUE PRINCESS PRIZELLA. MATHEMATICAL!',
     ];
   }
 

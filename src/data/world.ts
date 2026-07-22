@@ -235,7 +235,7 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 2,
         dialog: [
           'OFFICIAL QUEST SIGN (VERY OFFICIAL)',
-          'SAVE PRIZELLA. SHE RULES. LITERALLY.',
+          'SAVE PRINCESS PRIZELLA. SHE RULES. LITERALLY.',
           'CAVE MOUTH = DUNJUNZ B1.',
           'EAST = TRAIL. WEST = TRAINING GUILD.',
           'TRAIL NORTH: WOODZ. SOUTH: DEZERTZ.',
@@ -297,7 +297,7 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 10,
         y: 8,
         dialog: [
-          '♪ PRIZELLA LOST, THE BALLAD OF DUST ♪',
+          '♪ PRINCESS PRIZELLA LOST, THE BALLAD OF DUST ♪',
           '...sorry, still workshopping the chorus.',
           'NORTH: WOODZ PATH (TREES. HOWLS.).',
           'SOUTH: DEZERTZ DUNES (CACTI. BUGS.).',
@@ -1010,7 +1010,7 @@ export const ROOMS: Record<string, RoomDef> = {
         hp: 48,
         dialog: [
           'WOLF LORD: THIS IS MY FOREST!',
-          'THE PRINCESZ? NEVER MET HER.',
+          'THE PRINCESS? NEVER MET HER.',
           'BUT MY SHARDZ? ALL MINE.',
           'COME GET SOME. IF YOU DARE. AWOO.',
         ],
@@ -1226,7 +1226,7 @@ export const ROOMS: Record<string, RoomDef> = {
           'DEZERTZ — HOT. SANDY. DRAMATIC.',
           'SOUTH: SAND TOWER. VERY TOWER.',
           'NORTH: DUNES (MORE BUGS. FEWER FRIENDS).',
-          'PRIZELLA\'S PROBABLY IN THE TOWER. BRING WATER.',
+          'PRINCESS PRIZELLA\'S PROBABLY IN THE TOWER. BRING WATER.',
         ],
       },
       {
@@ -1309,7 +1309,7 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 3,
         hp: 56,
         dialog: [
-          'SAND WRAITH: THE PRINCESZ IS MINE!',
+          'SAND WRAITH: THE PRINCESS IS MINE!',
           'OR AT LEAST... RENTED. MONTHLY.',
           'FACE THE DUNES, LITTLE HERO!',
           'I AM VERY SANDY AND VERY SERIOUS.',
@@ -1321,7 +1321,7 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 10,
         y: 5,
         dialog: [
-          'PRIZELLA: YOU CAME! MATHEMATICAL!',
+          'PRINCESS PRIZELLA: YOU CAME! MATHEMATICAL!',
           'I WAS THIS CLOSE TO ESCAPING WITH A',
           'GRAPH SPREADSHEET AND A BAD ATTITUDE.',
           'BONK THE WRAITH FIRST. THEN WE TALK.',
@@ -1380,7 +1380,7 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 8,
         y: 2,
         dialog: [
-          'PRIZELLA\'S KINGDOMZ — KEEP RIGHT.',
+          'PRINCESS PRIZELLA\'S KINGDOMZ — KEEP RIGHT.',
           'WEST: BACK TO THE TRAIL. (WIDE PATH.)',
           'EAST: COURTYARD. NORTH OF THAT: THRONE.',
           'CREEPS HERE HIT HARDER. ROYAL SECURITY.',
@@ -1443,7 +1443,7 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 3,
         dialog: [
           'GUARD: WELCOME TO NOT DYING. PROBABLY.',
-          'THRONE: NORTH. PRIZELLA ASSIGNS JOBS.',
+          'THRONE: NORTH. PRINCESS PRIZELLA ASSIGNS JOBS.',
           'EAST: SEWERZ. GROSS. CHAMPION STUFF.',
           'DON\'T TRACK MUD ON THE RUGS. PLEASE.',
         ],
@@ -1506,7 +1506,7 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 8,
         y: 3,
         dialog: [
-          'PRIZELLA: WELCOME TO MY OFFICE.',
+          'PRINCESS PRIZELLA: WELCOME TO MY OFFICE.',
           'IT HAS A THRONE. THAT\'S THE WHOLE LOOK.',
         ],
       },
@@ -1517,7 +1517,7 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 5,
         dialog: [
           'CHAMPION BOARD (ORAL TRADITION).',
-          'TALK TO PRIZELLA. GET A JOB. DON\'T DIE.',
+          'TALK TO PRINCESS PRIZELLA. GET A JOB. DON\'T DIE.',
         ],
       },
     ],

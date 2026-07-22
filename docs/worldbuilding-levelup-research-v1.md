@@ -34,9 +34,9 @@ Dunjunz should become a funny wound in a **living map**: each land a hungry pres
 | --- | --- | --- |
 | **Keep on the Borderlands** | Hub + modular lairs + faction politics | Generic “hex only” without identity rooms |
 | **Barrowmaze** | Multi-entry, optional dens, factions, surface village loop | Megadungeon homework as critical path |
-| **Tomb of Horrors** | Builder personality in traps; optional sadism dens | Sadism on the only path to Prizella |
+| **Tomb of Horrors** | Builder personality in traps; optional sadism dens | Sadism on the only path to Princess Prizella |
 | **Veins of the Earth** | Vertical alien ecology; deep ≠ surface politics | Opacity that needs a wiki to play |
-| **Mörk Borg / Shadowdark** | Gloom-comedy salt; short sharp zones; torch fiction | Pure nihilism; lose Prizella/bud warmth |
+| **Mörk Borg / Shadowdark** | Gloom-comedy salt; short sharp zones; torch fiction | Pure nihilism; lose Princess Prizella/bud warmth |
 | **Torchbearer** | Resource fiction (even light) | Full inventory tax redesign this pass |
 
 ### 1C. LitRPG / novels
@@ -52,7 +52,7 @@ Dunjunz should become a funny wound in a **living map**: each land a hungry pres
 - **Dunjunz:** Long vertical spine (~B1–B8), deep floors largely **foyer–hall–side–descent** stamps; gel cube dual-path den; mid-wardens (Captain B4, Lawyer B6).  
 - **Woodz / Dezertz:** Short **surface** land-boss paths; deep wings post-clear optional (Howl / Lease dens).  
 - **Sewerz:** Kingdomz job path; shorter pipe spine; Assistant Honk + Goose.  
-- **Strengths already:** Quest sitcom spine, intentional misspellings, soft mid doctrine (no portal/land clear), cube dual outcome, set-pieces (redshirts, Prizella “rented monthly”).  
+- **Strengths already:** Quest sitcom spine, intentional misspellings, soft mid doctrine (no portal/land clear), cube dual outcome, set-pieces (redshirts, Princess Prizella “rented monthly”).  
 - **Weaknesses:** Cookie-cutter deep topology; land identity thinner in deep; creeps as species lists not factions; side rooms often loot closets; replay mostly modes/systems not graph.
 
 ---
@@ -97,12 +97,12 @@ Dunjunz should become a funny wound in a **living map**: each land a hungry pres
 22. **Dread is spatial** — Silence, return cost, ecology, hazards as faction tools.  
 23. **One joke layer per room max** (name *or* prop *or* dialog).  
 24. **Office comedy is Dunjunz-local** — Cap the org-chart gag; other lands use pack / lease / bilge / folk.  
-25. **Earnest goals never become bits** — Saving Prizella is sacred; HR of the underworld is the bit.
+25. **Earnest goals never become bits** — Saving Princess Prizella is sacred; HR of the underworld is the bit.
 
 ### Replay without modes
 
 26. **Knowledge, order, dual dens outcomes, secret wings, world-state lines** — Not mode forks.  
-27. **Authored landmarks + light seasoning** — Not full roguelike wipe of Prizella continuity.  
+27. **Authored landmarks + light seasoning** — Not full roguelike wipe of Princess Prizella continuity.  
 28. **Carl-lite “ordinances”** — After land clear, signs/rules reframe old rooms (hand-authored flags).  
 29. **Misspellings stay canon texture** — Never “correct” woodz/mapz/forjing.
 
@@ -229,7 +229,7 @@ Do **not** “fix” early surface bosses by forcing every land into B8-only cli
 | Hard / Army / mode APIs | Room graphs, floor counts, side contents |
 | Land clear / portal / boss meta ceremony flags | Where bosses sit *as fiction* (with careful flag mapping) |
 | Soft mid doctrine (no mid portals/land clear) | Which rooms exist, dens rules |
-| Prizella earnest quest | Path length to Prizella / surface vs deep balance |
+| Princess Prizella earnest quest | Path length to Princess Prizella / surface vs deep balance |
 | Intentional misspellings | Generator stamps, pack lists |
 
 ---
@@ -337,7 +337,7 @@ Ordered by player-felt identity gain (not code ease). **Still research output—
 
 A player can explain each land in **one sentence** by its **laws**, not its tint.  
 A friend hears a set-piece story (cube, badge, lease, goose) without being told HP numbers.  
-Skipping every den still completes Prizella’s arc; clearing dens feels like mastering a living place.  
+Skipping every den still completes Princess Prizella’s arc; clearing dens feels like mastering a living place.  
 Hard and Army still work unchanged.  
 No one needs a wiki for the critical path; dens reward cartographers and weirdos.
 

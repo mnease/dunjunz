@@ -140,7 +140,7 @@ export class TitleScene extends Phaser.Scene {
         GAME_W / 2,
         yBlurb,
         [
-          'SAVE PRIZELLA · TOAST THE TOWN',
+          'SAVE PRINCESS PRIZELLA · TOAST THE TOWN',
           'GRADUATE HEROES INTO AN UNLIMITED ARMY',
           '',
           'THREE MODES. ZERO CHILL. NO ADS.',
@@ -653,7 +653,7 @@ export class TitleScene extends Phaser.Scene {
     for (const t of this.slotTexts) t.setVisible(true);
     this.blurbText?.setText(
       [
-        'SAVE PRIZELLA · TOAST THE TOWN',
+        'SAVE PRINCESS PRIZELLA · TOAST THE TOWN',
         'GRADUATE HEROES INTO AN UNLIMITED ARMY',
         '',
         'THREE MODES. ZERO CHILL.',

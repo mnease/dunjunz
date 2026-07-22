@@ -187,7 +187,7 @@ const NAMES = [
   'SIR REGRETS',
   'NIB',
   'THUNK',
-  'PRIZELLA-B-GONE',
+  'PRINCESS PRIZELLA-B-GONE',
 ];
 
 export function defaultArmySave(): ArmySave {

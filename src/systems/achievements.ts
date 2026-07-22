@@ -45,7 +45,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   {
     id: 'brag-wraith',
     title: 'SANDY POOF',
-    blurb: 'Wraith went *poof*. Princesz un-yeeted.',
+    blurb: 'Wraith went *poof*. Princess un-yeeted.',
     test: (s) =>
       s.killed.includes('sand-wraith') ||
       (s.landsCleared ?? []).includes('dezertz') ||
@@ -67,7 +67,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   {
     id: 'brag-bud-complete',
     title: 'OFFICIAL BUDDIES',
-    blurb: 'Prizella stamped the friendship. Not a wedding.',
+    blurb: 'Princess Prizella stamped the friendship. Not a wedding.',
     test: (s) => s.bestBudStage === 'complete',
   },
   {
