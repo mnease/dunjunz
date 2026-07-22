@@ -684,7 +684,7 @@ export class GameScene extends Phaser.Scene {
     this.player = this.physics.add.sprite(0, 0, 'player');
     this.player.setScale(SPRITE_SCALE);
     this.player.setCollideWorldBounds(true);
-    this.player.setDepth(10);
+    this.applyYSortDepth(this.player);
     // Body size in source pixels (texture is 16x16); Phaser scales with the sprite
     this.player.setBodySize(10, 12, true);
     this.refreshPlayerAppearance();
@@ -1526,6 +1526,47 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
+  /**
+   * World depth from feet Y so you walk *behind* trees/props (north of them)
+   * and in front when south. Floor tiles stay at 0; FX/overlays stay high.
+   */
+  private feetY(sprite: Phaser.GameObjects.Sprite | Phaser.GameObjects.Image): number {
+    // Bottom of display box (works with center origin)
+    return sprite.y + sprite.displayHeight * (1 - sprite.originY);
+  }
+
+  private applyYSortDepth(
+    sprite: Phaser.GameObjects.Sprite | Phaser.GameObjects.Image,
+    bias = 0,
+  ): void {
+    // Base 20 keeps above floor (0) and wall tiles; bias for sword FX etc.
+    sprite.setDepth(20 + this.feetY(sprite) + bias);
+  }
+
+  /** Recompute player / companion / actor depths each frame. */
+  private updateYSortDepths(): void {
+    if (this.player?.active) {
+      this.applyYSortDepth(this.player);
+      // Attack FX rides just above the hero so it doesn't clip under props
+      if (this.swordHit?.visible) {
+        this.swordHit.setDepth(this.player.depth + 2);
+      }
+    }
+    if (this.companionSprite?.active) {
+      this.applyYSortDepth(this.companionSprite, -1); // slightly behind hero if tied
+    }
+    for (const a of this.actors) {
+      if (!a.alive || !a.sprite?.active) continue;
+      // Wall torches stay on walls (fixed mid layer)
+      if (a.kind === 'torch_wall') {
+        a.sprite.setDepth(3);
+        continue;
+      }
+      // Portals / pickups still y-sort so they sit in the world
+      this.applyYSortDepth(a.sprite);
+    }
+  }
+
   private worldToTile(x: number, y: number): { tx: number; ty: number } {
     return {
       tx: Math.floor((x - this.roomOriginX) / (TILE * SCALE)),
@@ -2346,7 +2387,8 @@ export class GameScene extends Phaser.Scene {
       const px = this.player.x - 22;
       const py = this.player.y + 4;
       this.companionSprite = this.physics.add.sprite(px, py, 'best_bud');
-      this.companionSprite.setScale(SPRITE_SCALE).setDepth(4);
+      this.companionSprite.setScale(SPRITE_SCALE);
+      this.applyYSortDepth(this.companionSprite);
       this.companionSprite.setImmovable(true);
       const body = this.companionSprite.body as Phaser.Physics.Arcade.Body;
       // Follow/fight via manual position — body off so they don't shove the hero
@@ -2723,8 +2765,8 @@ export class GameScene extends Phaser.Scene {
         ? SPRITE_SCALE * def.scale
         : SPRITE_SCALE;
     sprite.setScale(displayScale);
-    // Big trees sit above floor props so canopy reads as depth
-    sprite.setDepth(def.kind === 'tree' && (def.scale ?? 1) > 1.5 ? 6 : 5);
+    // Y-sort depth (updated every frame in updateYSortDepths)
+    this.applyYSortDepth(sprite);
 
     if (def.kind === 'best_bud') {
       const bud = getBestBud(this.save.bestBudId);
@@ -4341,9 +4383,7 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
-    // Re-depth player/actors
-    this.player.setDepth(10);
-    this.actors.forEach((a) => a.sprite.setDepth(5));
+    this.updateYSortDepths();
     writeSave(this.save);
     this.emitHud();
   }
@@ -4798,6 +4838,7 @@ export class GameScene extends Phaser.Scene {
       this.updateProjectiles(delta);
       this.rangedCd = Math.max(0, this.rangedCd - delta);
       this.updateVisualMotion(delta, false);
+      this.updateYSortDepths();
       return;
     }
 
@@ -4884,6 +4925,7 @@ export class GameScene extends Phaser.Scene {
     this.updateProjectiles(delta);
     this.rangedCd = Math.max(0, this.rangedCd - delta);
     this.updateVisualMotion(delta, vx !== 0 || vy !== 0);
+    this.updateYSortDepths();
   }
 
   /** Soft alpha/scale loop for portal rings and forje glow. */
