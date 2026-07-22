@@ -505,6 +505,11 @@ export function eastDoorBlockedToast(): string {
   return 'EAST DOOR LOCKED — FINISH WEAPON DRILLS';
 }
 
+/** Voice already sent them north; GM gives the real briefing. */
+export function guildEntranceToast(): string {
+  return 'SPEAK WITH THE TUTORIAL GUILD MASTER';
+}
+
 /**
  * First-boot Guild Master monologue:
  * Welcome → game intro → guild identity → drill briefing.

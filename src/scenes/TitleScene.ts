@@ -562,13 +562,18 @@ export class TitleScene extends Phaser.Scene {
 
   private hasDunjunzProgress(): boolean {
     const save = loadSave();
+    const startish =
+      save.roomId === 'overworld' ||
+      save.roomId === 'beach_start' ||
+      save.roomId === 'guild_hall';
     return (
       save.hasSword ||
-      save.roomId !== 'overworld' ||
+      !startish ||
       save.bossDefeated ||
       save.princessSaved ||
       (save.landsCleared?.length ?? 0) > 0 ||
-      save.xp > 0
+      save.xp > 0 ||
+      !!save.flags?.tutorial_complete
     );
   }
 

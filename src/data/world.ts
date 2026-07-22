@@ -20,10 +20,11 @@ import { buildAllDeepRooms } from './world-deep';
  *   in the texture art, not multi-tile ASCII.
  *
  * SURFACE (floor 0)
- *   guild_hall --E-- overworld --E-- overworld_east
- *                    | S cave mouth          | N woodz / S dezertz
- *                    v
- *                 b1_entrance …
+ *   beach_start --N-- overworld --E-- overworld_east
+ *                      | W guild_hall  | S cave mouth
+ *                      |               | N woodz / S dezertz (from trail)
+ *                      v
+ *                   b1_entrance …
  *
  * B1 (floor -1)
  *              (0,3) b1_descent  S down to B2
@@ -41,13 +42,52 @@ import { buildAllDeepRooms } from './world-deep';
  */
 
 export const ROOMS: Record<string, RoomDef> = {
-  // ─── TRAINING GUILD (start) ─────────────────────────────
+  // ─── BEACH START ────────────────────────────────────────
+  /**
+   * Wake-up beach south of the meadow. Crawl id assigned here.
+   * North → meadow (cave mouth + guild sign).
+   */
+  beach_start: {
+    id: 'beach_start',
+    title: 'STRANGE BEACH · SURFACE',
+    land: 'surface',
+    floor: 0,
+    mapX: 0,
+    mapY: 1,
+    north: 'overworld',
+    tiles: [
+      '#######D########',
+      '#dddddddddddddd#',
+      '#dd..........dd#',
+      '#d............d#',
+      '#..............#',
+      '#..............#',
+      '#..~~~~~~~~~~..#',
+      '#~~~~~~~~~~~~~~#',
+      '#~~~~~~~~~~~~~~#',
+      '#~~~~~~~~~~~~~~#',
+      '################',
+    ],
+    entities: [
+      {
+        kind: 'sign',
+        id: 'beach-driftwood',
+        x: 11,
+        y: 3,
+        dialog: [
+          'DRIFTWOOD SCRATCHES:',
+          '"IF YOU CAN READ THIS, WALK NORTH."',
+          '"THE VOICE IS USUALLY RIGHT."',
+        ],
+      },
+    ],
+  },
+
+  // ─── TRAINING GUILD ─────────────────────────────────────
   /**
    * Training Guild — ominous living quarters (EMA atmosphere).
-   * Perimeter bookshelves + wall torches + reading corners;
-   * center remains drill floor (dummies / racks / master).
-   * Deep ambient gloom via ambientForRoom('guild_hall') + punched fixtures;
-   * not dark:true so new players are never soft-locked without a carried torch.
+   * Enter from the meadow west; east door locks until tutorial_complete.
+   * Deep ambient gloom via ambientForRoom('guild_hall') + punched fixtures.
    */
   guild_hall: {
     id: 'guild_hall',
@@ -56,7 +96,7 @@ export const ROOMS: Record<string, RoomDef> = {
     floor: 0,
     mapX: -1,
     mapY: 0,
-    // East unlocks when tutorial_complete (locked door until then)
+    // East unlocks when tutorial_complete (locks behind you on entry)
     east: 'overworld',
     tiles: [
       '################',
@@ -79,7 +119,7 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 8,
         y: 5,
         dialog: [
-          'WELCOME TO DUNJUNZ… TALK TO ME FOR THE FULL BRIEFING.',
+          'TALK TO ME, CRAWLER. I AM THE TUTORIAL GUILD MASTER.',
         ],
       },
       { kind: 'dummy', id: 'dummy-nw', x: 4, y: 3 },
@@ -90,6 +130,17 @@ export const ROOMS: Record<string, RoomDef> = {
       { kind: 'rack', id: 'rack-axe', x: 7, y: 2 },
       { kind: 'rack', id: 'rack-bow', x: 9, y: 2 },
       { kind: 'rack', id: 'rack-staff', x: 11, y: 2 },
+      {
+        kind: 'sign',
+        id: 'guild-entrance-sign',
+        x: 13,
+        y: 5,
+        dialog: [
+          'SPEAK WITH THE TUTORIAL GUILD MASTER',
+          'HE STANDS IN THE CENTER OF THE HALL.',
+          'THE EAST DOOR STAYS LOCKED UNTIL YOU GRADUATE.',
+        ],
+      },
       {
         kind: 'sign',
         id: 'guild-rules',
@@ -211,6 +262,7 @@ export const ROOMS: Record<string, RoomDef> = {
     mapY: 0,
     west: 'guild_hall',
     east: 'overworld_east',
+    south: 'beach_start',
     stairsDown: 'b1_entrance',
     // Every row must be exactly 16 chars (VIEW_TILES_W). Short rows pad as
     // walls on the right — that silently sealed the east trail exit.
@@ -225,9 +277,20 @@ export const ROOMS: Record<string, RoomDef> = {
       '#gg........gggg#',
       '#ggg~~~~~~ggggg#',
       '#gggg~~~~gggggg#',
-      '################',
+      '#######D########',
     ],
     entities: [
+      {
+        kind: 'sign',
+        id: 'sign-guild-west',
+        x: 3,
+        y: 5,
+        dialog: [
+          'TUTORIAL GUILD — WEST',
+          'NEW CRAWLERS: WALK WEST.',
+          'THE DOOR LOCKS BEHIND YOU UNTIL YOU GRADUATE.',
+        ],
+      },
       {
         kind: 'sign',
         id: 'sign-meadow',
@@ -236,9 +299,9 @@ export const ROOMS: Record<string, RoomDef> = {
         dialog: [
           'OFFICIAL QUEST SIGN (VERY OFFICIAL)',
           'SAVE PRINCESS PRIZELLA. SHE RULES. LITERALLY.',
-          'CAVE MOUTH = DUNJUNZ B1.',
-          'EAST = TRAIL. WEST = TRAINING GUILD.',
-          'TRAIL NORTH: WOODZ. SOUTH: DEZERTZ.',
+          'CAVE MOUTH = DUNJUNZ B1 (AFTER GUILD).',
+          'WEST = TUTORIAL GUILD.',
+          'EAST = TRAIL. NORTH WOODZ / SOUTH DEZERTZ.',
           'M = MAPZ (ONCE YOU FIND SOME)',
         ],
       },
@@ -1701,7 +1764,9 @@ export function resolveRoomId(id: string): string {
   return ROOM_ALIASES[id] ?? id;
 }
 
-export const START_ROOM = 'guild_hall';
+/** New crawlers wake on the beach south of the meadow. */
+export const START_ROOM = 'beach_start';
+export const BEACH_START_ID = 'beach_start';
 
 /** Human-readable floor label for HUD. */
 export function floorLabel(floor: number | undefined): string {

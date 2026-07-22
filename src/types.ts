@@ -233,6 +233,11 @@ export interface SaveData {
   landsCleared: LandId[];
   /** Stable per-playthrough seed (best bud roll, etc.). */
   runSeed: number;
+  /**
+   * Global crawler ordinal assigned on beach wake ("CRAWLER 001").
+   * Sequential across all players when cloud allocate succeeds.
+   */
+  crawlerId?: number;
   /** Rolled once on Best Bud quest accept; null until then. */
   bestBudId: BestBudId | null;
   /** Best Bud champion quest stage. */

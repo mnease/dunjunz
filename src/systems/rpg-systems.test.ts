@@ -3068,14 +3068,34 @@ import {
 import { START_ROOM } from '../data/world';
 
 describe('tutorial guild hall', () => {
-  it('starts at guild_hall and blocks east + stairs until graduated', () => {
-    expect(START_ROOM).toBe('guild_hall');
+  it('starts on the beach and blocks east + stairs until graduated', () => {
+    expect(START_ROOM).toBe('beach_start');
     let save = defaultSave();
+    expect(save.roomId).toBe('beach_start');
     expect(canUseDungeonStairs(save)).toBe(false);
     expect(canExitGuildEast(save)).toBe(false);
     save = completeTutorial(save);
     expect(canUseDungeonStairs(save)).toBe(true);
     expect(canExitGuildEast(save)).toBe(true);
+  });
+
+  it('beach links north to meadow; meadow west to guild; cave still on meadow', async () => {
+    const { ROOMS, BEACH_START_ID } = await import('../data/world');
+    expect(ROOMS[BEACH_START_ID]?.north).toBe('overworld');
+    expect(ROOMS.overworld?.south).toBe(BEACH_START_ID);
+    expect(ROOMS.overworld?.west).toBe('guild_hall');
+    expect(ROOMS.overworld?.stairsDown).toBe('b1_entrance');
+    expect(ROOMS.guild_hall?.east).toBe('overworld');
+    const guildSign = (ROOMS.guild_hall?.entities ?? []).find(
+      (e) => e.id === 'guild-entrance-sign',
+    );
+    expect(guildSign?.dialog?.some((l) => /GUILD MASTER/i.test(l))).toBe(true);
+    const westSign = (ROOMS.overworld?.entities ?? []).find(
+      (e) => e.id === 'sign-guild-west',
+    );
+    expect(westSign?.dialog?.some((l) => /TUTORIAL GUILD/i.test(l))).toBe(
+      true,
+    );
   });
 
   it('guild hall is a decorated living quarters with light fixtures', async () => {
@@ -3208,6 +3228,18 @@ describe('tutorial guild hall', () => {
     expect(intro).toMatch(/SWORD.*AXE.*BOW.*STAFF/s);
     const lines = guildMasterDialog(defaultSave());
     expect(lines.some((l) => /SWORD|AXE|DUMMY|GUILD/i.test(l))).toBe(true);
+  });
+
+  it('beach wake voice greets crawler id and points north', async () => {
+    const { beachWakeDialog, formatCrawlerId } = await import('./crawler-id');
+    expect(formatCrawlerId(1)).toBe('001');
+    expect(formatCrawlerId(42)).toBe('042');
+    const lines = beachWakeDialog(7).join('\n');
+    expect(lines).toMatch(/WHA\?/);
+    expect(lines).toMatch(/WHERE AM I/);
+    expect(lines).toMatch(/CRAWLER 007/);
+    expect(lines).toMatch(/NORTH/);
+    expect(lines).toMatch(/TUTORIAL GUILD/);
   });
 
   it('guild dialog mentions drills; migrate veterans with dungeon visits', async () => {

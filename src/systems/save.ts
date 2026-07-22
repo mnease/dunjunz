@@ -42,6 +42,7 @@ export function defaultSave(): SaveData {
     runSeed:
       (Math.floor(Math.random() * 0xffffffff) ^ (Date.now() & 0xffffffff)) >>>
         0 || 1,
+    crawlerId: undefined,
     bestBudId: null,
     bestBudStage: 'none',
     budXp: 0,

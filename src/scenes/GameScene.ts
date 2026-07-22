@@ -253,6 +253,13 @@ import {
   type TutorialWeapon,
 } from '../systems/tutorial';
 import { ensureGuildRackTexture } from '../systems/textures';
+import {
+  beachWakeDialog,
+  ensureCrawlerId,
+  markBeachWakeSeen,
+  needsBeachWake,
+} from '../systems/crawler-id';
+import { BEACH_START_ID } from '../data/world';
 import { loadSave, writeSave } from '../systems/save';
 import {
   basementDepth,
@@ -484,6 +491,9 @@ export class GameScene extends Phaser.Scene {
     uids: string[];
     rackId: string;
   } | null = null;
+  /** Beach wake: blurry-eyes overlay (fades after intro dialog). */
+  private wakeBlurRt: Phaser.GameObjects.Rectangle | null = null;
+  private wakeBlurAlpha = 0;
   private shopPane: ShopPane = 'stock';
   private paused = false;
   /** Guards against double goToTitle / mid-update scene tears. */
@@ -1648,6 +1658,9 @@ export class GameScene extends Phaser.Scene {
 
   private clearRoomObjects(): void {
     this.clearRackPicker();
+    this.wakeBlurRt?.destroy();
+    this.wakeBlurRt = null;
+    this.wakeBlurAlpha = 0;
     for (const p of this.projectiles) p.img.destroy();
     this.projectiles = [];
     this.respawnGen.clear();
@@ -2310,14 +2323,19 @@ export class GameScene extends Phaser.Scene {
     this.syncCompanion();
     this.flushAchievements();
 
-    // First-boot guild hall intro
-    if (resolved === GUILD_HALL_ID && needsTutorialIntro(this.save)) {
-      this.time.delayedCall(400, () => {
+    // Beach wake — blurry eyes + voice assigns crawler id
+    if (resolved === BEACH_START_ID && needsBeachWake(this.save)) {
+      this.beginBeachWake();
+    }
+
+    // Guild: door is locked until graduate; no auto monologue (speak to Master)
+    if (resolved === GUILD_HALL_ID && !isTutorialComplete(this.save)) {
+      this.time.delayedCall(350, () => {
         if (this.leavingToTitle || this.room?.id !== GUILD_HALL_ID) return;
-        this.save = markTutorialIntroSeen(this.save);
-        writeSave(this.save);
-        this.game.events.emit('dialog-show', guildMasterIntroDialog());
-        this.game.events.emit('toast', 'RACKS (E) · DUMMIES (ATK) · MASTER (E)');
+        this.game.events.emit(
+          'toast',
+          'SPEAK WITH THE TUTORIAL GUILD MASTER',
+        );
       });
     }
 
@@ -3325,18 +3343,69 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private beginBeachWake(): void {
+    // Blurry eyes — dark vignette over outdoor beach
+    this.wakeBlurAlpha = 0.82;
+    if (!this.wakeBlurRt) {
+      this.wakeBlurRt = this.add
+        .rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x02040a, 0.82)
+        .setScrollFactor(0)
+        .setDepth(92)
+        .setOrigin(0.5);
+    } else {
+      this.wakeBlurRt.setVisible(true).setFillStyle(0x02040a, 0.82);
+    }
+
+    void ensureCrawlerId(this.save).then((s) => {
+      if (this.leavingToTitle || this.room?.id !== BEACH_START_ID) return;
+      this.save = s;
+      const id = this.save.crawlerId ?? 1;
+      this.save = markBeachWakeSeen(this.save);
+      writeSave(this.save);
+      this.time.delayedCall(500, () => {
+        if (this.leavingToTitle || this.room?.id !== BEACH_START_ID) return;
+        this.game.events.emit('dialog-show', beachWakeDialog(id));
+        this.game.events.emit('toast', 'NORTH → MEADOW · WEST → GUILD');
+        // Fade blur while talking / after a beat
+        this.tweens.add({
+          targets: this,
+          wakeBlurAlpha: 0,
+          duration: 4200,
+          ease: 'Sine.easeOut',
+          onUpdate: () => {
+            this.wakeBlurRt?.setFillStyle(
+              0x02040a,
+              Math.max(0, this.wakeBlurAlpha),
+            );
+          },
+          onComplete: () => {
+            this.wakeBlurRt?.setVisible(false);
+            this.wakeBlurAlpha = 0;
+          },
+        });
+      });
+    });
+  }
+
   private die(): void {
     this.dialogLocked = true;
     playSfx('death');
-    const respawn =
-      isTutorialComplete(this.save) ? 'overworld' : GUILD_HALL_ID;
+    const visited = this.save.visitedRooms ?? [];
+    const sawGuild = visited.includes(GUILD_HALL_ID);
+    const respawn = isTutorialComplete(this.save)
+      ? 'overworld'
+      : sawGuild
+        ? GUILD_HALL_ID
+        : BEACH_START_ID;
     this.game.events.emit('dialog-show', [
       'YOU HAVE DIED. BUMMER.',
       'THE BARD IS ALREADY WRITING A SONG.',
       'IT WILL NOT BE FLATTERING. AT ALL.',
       respawn === GUILD_HALL_ID
         ? 'RESPAWNING AT THE TRAINING GUILD...'
-        : 'RESPAWNING AT THE MEADOW... AGAIN...',
+        : respawn === BEACH_START_ID
+          ? 'RESPAWNING ON THE STRANGE BEACH...'
+          : 'RESPAWNING AT THE MEADOW... AGAIN...',
     ]);
     this.time.delayedCall(100, () => {
       this.save.hp = this.save.maxHp;

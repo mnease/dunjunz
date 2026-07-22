@@ -198,6 +198,11 @@ export function spawnForContinue(
   if (room.id === 'overworld') {
     if (isWalkable(grid[4]?.[8])) return { tx: 8, ty: 4 };
   }
+  // Beach wake: mid-sand, eyes open facing north
+  if (room.id === 'beach_start') {
+    if (isWalkable(grid[4]?.[8])) return { tx: 8, ty: 4 };
+    if (isWalkable(grid[5]?.[8])) return { tx: 8, ty: 5 };
+  }
 
   // Prefer walking in through a linked edge (matches how you got here)
   if (room.west) {

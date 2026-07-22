@@ -119,6 +119,13 @@ export default async function handler(
       await sql`CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions (user_id) WHERE revoked_at IS NULL`;
 
       await sql`
+        CREATE TABLE IF NOT EXISTS crawler_spawns (
+          id         BIGSERIAL PRIMARY KEY,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )`;
+      steps.push('crawler_spawns');
+
+      await sql`
         CREATE TABLE IF NOT EXISTS save_slots (
           id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
