@@ -61,14 +61,15 @@ export function drawWeaponAvatar(
   }
 
   if (look === 'axe') {
-    // Hip hatchet — wood haft + steel bit
-    fill(ctx, '#3a2010', 25, 10, 3, 16);
-    fill(ctx, '#6b4423', 26, 11, 1, 14);
-    fill(ctx, '#5a6578', 20, 8, 10, 8);
-    fill(ctx, '#8a98a8', 21, 9, 7, 5);
-    fill(ctx, '#c0c8d0', 21, 9, 3, 4);
-    fill(ctx, '#c9a227', 24, 15, 5, 2);
-    spark(ctx, 22, 10, '#ffffff');
+    // Hip hatchet — short haft + wide horizontal bit (must not read as sword)
+    fill(ctx, '#3a2010', 24, 12, 4, 14);
+    fill(ctx, '#8b5a2b', 25, 13, 2, 12);
+    // bit sticks out left of haft
+    fill(ctx, '#3a4050', 16, 8, 12, 9);
+    fill(ctx, '#9aabc0', 17, 9, 9, 6);
+    fill(ctx, '#e0e8f0', 17, 9, 3, 5);
+    fill(ctx, '#c9a227', 23, 15, 5, 2);
+    spark(ctx, 18, 10, '#ffffff');
     return;
   }
 

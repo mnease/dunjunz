@@ -382,7 +382,7 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   hornet: 'hornet',
   torch_wall: 'torch_wall',
   dummy: 'dummy',
-  rack: 'sword-item',
+  rack: 'rack_sword',
 };
 
 const MOBILE_HOSTILES = [
@@ -2749,12 +2749,24 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Captain gets gold command tunic (Kirk), not generic purple NPC
+    const rackTex =
+      def.kind === 'rack'
+        ? def.id === 'rack-axe'
+          ? 'rack_axe'
+          : def.id === 'rack-bow'
+            ? 'rack_bow'
+            : def.id === 'rack-staff'
+              ? 'rack_staff'
+              : 'rack_sword'
+        : null;
     const tex =
       def.id === 'captain' && this.textures.exists('captain')
         ? 'captain'
         : def.id === 'royal-goose' && this.textures.exists('boss')
           ? 'boss'
-          : (ENTITY_TEX[def.kind] ?? 'npc');
+          : rackTex && this.textures.exists(rackTex)
+            ? rackTex
+            : (ENTITY_TEX[def.kind] ?? 'npc');
     const placed = this.roomExpand
       ? mapEntityTile(def.x, def.y, this.roomExpand)
       : { x: def.x, y: def.y };

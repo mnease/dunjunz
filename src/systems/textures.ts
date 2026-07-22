@@ -1469,6 +1469,54 @@ export function generateTextures(scene: Phaser.Scene): void {
     spark(ctx, 11, 9, '#fff3c0');
   });
 
+  // Weapon racks — distinct silhouettes (guild hall; not all swords)
+  const drawRackStand = (ctx: CanvasRenderingContext2D) => {
+    fill(ctx, '#3a2410', 6, 26, 20, 4);
+    fill(ctx, '#5a3d1a', 7, 26, 18, 2);
+    fill(ctx, '#6b4423', 14, 18, 4, 10);
+    fill(ctx, '#8b5a2b', 15, 18, 2, 9);
+  };
+  canvasTex(scene, 'rack_sword', ART_RES, ART_RES, (ctx) => {
+    drawRackStand(ctx);
+    // vertical blade
+    fill(ctx, '#607080', 14, 4, 4, 16);
+    fill(ctx, '#dfe6f0', 15, 5, 2, 14);
+    fill(ctx, '#c9a227', 12, 18, 8, 2);
+    spark(ctx, 15, 5, '#ffffff');
+  });
+  canvasTex(scene, 'rack_axe', ART_RES, ART_RES, (ctx) => {
+    drawRackStand(ctx);
+    // haft + wide bit (reads as axe, not sword)
+    fill(ctx, '#5a3d1a', 14, 6, 3, 16);
+    fill(ctx, '#8b5a2b', 15, 7, 1, 14);
+    fill(ctx, '#5a6578', 6, 5, 14, 10);
+    fill(ctx, '#a0a8b8', 7, 6, 10, 7);
+    fill(ctx, '#e0e4ec', 7, 6, 4, 5);
+    fill(ctx, '#c9a227', 12, 14, 6, 2);
+    spark(ctx, 8, 7, '#ffffff');
+  });
+  canvasTex(scene, 'rack_bow', ART_RES, ART_RES, (ctx) => {
+    drawRackStand(ctx);
+    // recurve bow
+    fill(ctx, '#2a1810', 8, 4, 2, 18);
+    fill(ctx, '#2a1810', 22, 4, 2, 18);
+    fill(ctx, '#8b5a2b', 9, 5, 2, 16);
+    fill(ctx, '#8b5a2b', 21, 5, 2, 16);
+    fill(ctx, '#c8b090', 10, 12, 12, 2);
+    fill(ctx, '#7dffb3', 8, 11, 3, 4);
+    fill(ctx, '#ff6b9d', 21, 11, 3, 4);
+  });
+  canvasTex(scene, 'rack_staff', ART_RES, ART_RES, (ctx) => {
+    drawRackStand(ctx);
+    // staff + glowing tip
+    fill(ctx, '#3a2010', 14, 6, 4, 18);
+    fill(ctx, '#6b4423', 15, 7, 2, 16);
+    block(ctx, '#2a8a5a', '#0a4a30', 11, 2, 10, 8);
+    fill(ctx, '#7dffb3', 13, 3, 6, 5);
+    fill(ctx, '#c9ffe0', 14, 4, 3, 2);
+    spark(ctx, 15, 4, '#ffffff');
+  });
+
   canvasTex(scene, 'tile-stairs-up', ART_RES, ART_RES, (ctx) => {
     fill(ctx, '#2a3048', 0, 0, ART_RES, ART_RES);
     dither(ctx, '#2a3048', '#1a2030', 0, 0, ART_RES, ART_RES, 1);
