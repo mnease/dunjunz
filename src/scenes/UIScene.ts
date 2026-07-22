@@ -1101,34 +1101,32 @@ export class UIScene extends Phaser.Scene {
       };
     };
 
-    // Corridor links first (under rooms)
+    // Corridor links first (under rooms) — textured bridges
     for (const c of view.cells) {
       if (!c.visited && !c.current) continue;
       const p = cellPos(c.mapX, c.mapY);
       if (c.east) {
         const link = this.add
-          .rectangle(
+          .image(
             p.x + MAPZ_CELL / 2 + MAPZ_GAP / 2,
             p.y,
-            MAPZ_GAP + 4,
-            10,
-            info.border,
-            0.85,
+            'mapz_link_h',
           )
+          .setDisplaySize(MAPZ_GAP + 6, 10)
+          .setTint(info.border)
           .setScrollFactor(0);
         this.mapzLayer.add(link);
         this.mapzPieces.push(link);
       }
       if (c.north) {
         const link = this.add
-          .rectangle(
+          .image(
             p.x,
             p.y - MAPZ_CELL / 2 - MAPZ_GAP / 2,
-            10,
-            MAPZ_GAP + 4,
-            info.border,
-            0.85,
+            'mapz_link_v',
           )
+          .setDisplaySize(10, MAPZ_GAP + 6)
+          .setTint(info.border)
           .setScrollFactor(0);
         this.mapzLayer.add(link);
         this.mapzPieces.push(link);
@@ -1137,26 +1135,62 @@ export class UIScene extends Phaser.Scene {
 
     for (const c of view.cells) {
       const p = cellPos(c.mapX, c.mapY);
-      const fill = c.current
-        ? Phaser.Display.Color.IntegerToColor(info.color).brighten(20).color
+      const landTint = c.current
+        ? Phaser.Display.Color.IntegerToColor(info.color).brighten(25).color
         : c.visited
           ? info.color
           : info.fog;
       const border = c.current ? COLORS.gold : c.visited ? info.border : 0x3a4250;
 
+      // Detailed base plate, land-tinted
       const room = this.add
-        .rectangle(p.x, p.y, MAPZ_CELL, MAPZ_CELL, fill, 1)
-        .setStrokeStyle(c.current ? 3 : 2, border)
+        .image(p.x, p.y, 'mapz_cell_base')
+        .setDisplaySize(MAPZ_CELL, MAPZ_CELL)
+        .setTint(landTint)
         .setScrollFactor(0);
       this.mapzLayer.add(room);
       this.mapzPieces.push(room);
 
-      // Inner floor plate
-      const inner = this.add
-        .rectangle(p.x, p.y + 2, MAPZ_CELL - 12, MAPZ_CELL - 16, 0x000000, 0.18)
+      // Rim stroke for visited/current clarity
+      const rim = this.add
+        .rectangle(p.x, p.y, MAPZ_CELL - 2, MAPZ_CELL - 2, 0x000000, 0)
+        .setStrokeStyle(c.current ? 3 : 2, border, c.visited || c.current ? 0.95 : 0.45)
         .setScrollFactor(0);
-      this.mapzLayer.add(inner);
-      this.mapzPieces.push(inner);
+      this.mapzLayer.add(rim);
+      this.mapzPieces.push(rim);
+
+      // Door notches on visited rooms (exit hints)
+      if (c.visited || c.current) {
+        const notch = 0x0a0c10;
+        if (c.north) {
+          const n = this.add
+            .rectangle(p.x, p.y - MAPZ_CELL / 2 + 3, 10, 6, notch, 1)
+            .setScrollFactor(0);
+          this.mapzLayer.add(n);
+          this.mapzPieces.push(n);
+        }
+        if (c.south) {
+          const n = this.add
+            .rectangle(p.x, p.y + MAPZ_CELL / 2 - 3, 10, 6, notch, 1)
+            .setScrollFactor(0);
+          this.mapzLayer.add(n);
+          this.mapzPieces.push(n);
+        }
+        if (c.east) {
+          const n = this.add
+            .rectangle(p.x + MAPZ_CELL / 2 - 3, p.y, 6, 10, notch, 1)
+            .setScrollFactor(0);
+          this.mapzLayer.add(n);
+          this.mapzPieces.push(n);
+        }
+        if (c.west) {
+          const n = this.add
+            .rectangle(p.x - MAPZ_CELL / 2 + 3, p.y, 6, 10, notch, 1)
+            .setScrollFactor(0);
+          this.mapzLayer.add(n);
+          this.mapzPieces.push(n);
+        }
+      }
 
       if (!c.visited && !c.current) {
         const q = this.add
@@ -1171,12 +1205,12 @@ export class UIScene extends Phaser.Scene {
         this.mapzPieces.push(q);
       } else {
         const label = this.add
-          .text(p.x, p.y + (c.current ? 10 : 0), c.shortTitle, {
+          .text(p.x, p.y + (c.current ? 12 : 2), c.shortTitle, {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '7px',
             color: '#f4f0ff',
             align: 'center',
-            wordWrap: { width: MAPZ_CELL - 8 },
+            wordWrap: { width: MAPZ_CELL - 10 },
           })
           .setOrigin(0.5)
           .setScrollFactor(0);
@@ -1185,12 +1219,9 @@ export class UIScene extends Phaser.Scene {
 
         if (c.stairsDown || c.stairsUp) {
           const stair = this.add
-            .text(p.x, p.y - 16, c.stairsDown ? '▼' : '▲', {
-              fontFamily: 'monospace',
-              fontSize: '12px',
-              color: '#ff6b9d',
-            })
-            .setOrigin(0.5)
+            .image(p.x + (c.current ? 14 : 0), p.y - 16, 'mapz_stairs')
+            .setDisplaySize(14, 14)
+            .setTint(c.stairsDown ? 0xff6b9d : 0x7dffb3)
             .setScrollFactor(0);
           this.mapzLayer.add(stair);
           this.mapzPieces.push(stair);

@@ -21,13 +21,16 @@ import {
   block,
   dither,
   drawBrickTile,
+  drawDirtTile,
   drawFloorTile,
   drawGrassTile,
+  drawLavaTile,
+  drawWaterTile,
   fill,
+  grit,
   hex,
   shadedBlock,
   spark,
-  vgrad,
 } from './pixel-art';
 
 function canvasTex(
@@ -573,7 +576,7 @@ function drawItemIcon(
 }
 
 export function generateTextures(scene: Phaser.Scene): void {
-  // —— Map tiles @ ART_RES (16-bit density) ——
+  // —— Map tiles @ ART_RES (16-bit density, match avatar/weapon detail) ——
   canvasTex(scene, 'tile-floor', ART_RES, ART_RES, (ctx) => {
     drawFloorTile(ctx, ART_RES, hex(COLORS.floor), hex(COLORS.floorAlt), '#1a1528');
   });
@@ -594,130 +597,168 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   canvasTex(scene, 'tile-dirt', ART_RES, ART_RES, (ctx) => {
-    vgrad(ctx, ['#7a6554', hex(COLORS.dirt), '#5a4538'], 0, 0, ART_RES, ART_RES);
-    dither(ctx, hex(COLORS.dirt), '#5a4538', 2, 2, ART_RES - 4, ART_RES - 4, 1);
-    fill(ctx, '#8a7564', 6, 8, 3, 1);
-    fill(ctx, '#4a3830', 18, 20, 4, 2);
-    fill(ctx, '#9a8574', 12, 4, 2, 1);
-    fill(ctx, '#3a2820', 22, 12, 3, 1);
+    drawDirtTile(ctx, ART_RES, hex(COLORS.dirt));
   });
 
   canvasTex(scene, 'tile-water', ART_RES, ART_RES, (ctx) => {
-    vgrad(ctx, ['#3d7eb0', hex(COLORS.water), '#1a4068'], 0, 0, ART_RES, ART_RES);
-    fill(ctx, 'rgba(180,220,255,0.45)', 4, 6, 10, 2);
-    fill(ctx, 'rgba(200,230,255,0.35)', 14, 16, 12, 2);
-    fill(ctx, 'rgba(255,255,255,0.25)', 8, 8, 4, 1);
-    fill(ctx, '#2a5f8f', 2, 22, 8, 1);
-    fill(ctx, '#2a5f8f', 18, 10, 6, 1);
+    drawWaterTile(ctx, ART_RES, hex(COLORS.water), 0);
   });
 
   canvasTex(scene, 'tile-water-b', ART_RES, ART_RES, (ctx) => {
-    vgrad(ctx, ['#4a8ec0', hex(COLORS.water), '#1a4068'], 0, 0, ART_RES, ART_RES);
-    fill(ctx, 'rgba(200,230,255,0.5)', 8, 10, 12, 2);
-    fill(ctx, 'rgba(180,220,255,0.35)', 2, 20, 10, 2);
-    fill(ctx, 'rgba(255,255,255,0.3)', 16, 6, 5, 1);
-    fill(ctx, '#2a5f8f', 10, 4, 7, 1);
+    drawWaterTile(ctx, ART_RES, hex(COLORS.water), 1);
   });
 
   canvasTex(scene, 'tile-lava', ART_RES, ART_RES, (ctx) => {
-    vgrad(ctx, ['#ff8a4c', hex(COLORS.lava), '#8a2010'], 0, 0, ART_RES, ART_RES);
-    fill(ctx, '#ffcc66', 6, 8, 6, 4);
-    fill(ctx, '#ffe08a', 8, 10, 2, 2);
-    fill(ctx, '#ff8a4c', 18, 18, 8, 4);
-    fill(ctx, '#ffaa55', 4, 22, 5, 3);
-    spark(ctx, 10, 11, '#fff8c0');
+    drawLavaTile(ctx, ART_RES, hex(COLORS.lava), 0);
   });
 
   canvasTex(scene, 'tile-lava-b', ART_RES, ART_RES, (ctx) => {
-    vgrad(ctx, ['#ffaa55', '#d4542b', '#6a1808'], 0, 0, ART_RES, ART_RES);
-    fill(ctx, '#ffe08a', 12, 6, 7, 4);
-    fill(ctx, '#ffcc66', 5, 16, 6, 3);
-    fill(ctx, '#ff8a4c', 20, 12, 5, 5);
-    spark(ctx, 14, 8, '#ffffff');
+    drawLavaTile(ctx, ART_RES, hex(COLORS.lava), 1);
   });
 
   canvasTex(scene, 'tile-door', ART_RES, ART_RES, (ctx) => {
-    fill(ctx, hex(COLORS.floor), 0, 0, ART_RES, ART_RES);
-    // stone arch
-    shadedBlock(ctx, '#6a5a40', '#8a7a58', '#3a3018', 0, 0, ART_RES, 4);
-    shadedBlock(ctx, '#6a5a40', '#8a7a58', '#3a3018', 0, 0, 4, ART_RES);
-    shadedBlock(ctx, '#6a5a40', '#8a7a58', '#3a3018', ART_RES - 4, 0, 4, ART_RES);
-    // leaves
-    shadedBlock(ctx, '#8b6914', '#c9a227', '#5a4010', 5, 4, 10, 26);
-    shadedBlock(ctx, '#8b6914', '#c9a227', '#5a4010', 17, 4, 10, 26);
-    // panels
-    fill(ctx, '#a07828', 7, 7, 6, 6);
-    fill(ctx, '#a07828', 19, 7, 6, 6);
-    fill(ctx, '#5a4010', 7, 16, 6, 8);
-    fill(ctx, '#5a4010', 19, 16, 6, 8);
-    // handles
-    block(ctx, '#ffc857', '#8a6820', 13, 15, 2, 4);
-    block(ctx, '#ffc857', '#8a6820', 17, 15, 2, 4);
+    // floor behind so open sides read as passage
+    drawFloorTile(ctx, ART_RES, hex(COLORS.floor), hex(COLORS.floorAlt), '#1a1528');
+    // stone arch frame
+    shadedBlock(ctx, '#6a5a40', '#9a8a60', '#3a3018', 0, 0, ART_RES, 5);
+    shadedBlock(ctx, '#6a5a40', '#9a8a60', '#3a3018', 0, 0, 5, ART_RES);
+    shadedBlock(ctx, '#6a5a40', '#9a8a60', '#3a3018', ART_RES - 5, 0, 5, ART_RES);
+    grit(ctx, 'rgba(0,0,0,0.2)', 0, 0, ART_RES, 5, 4, 0);
+    // wood leaves with grain
+    shadedBlock(ctx, '#8b6914', '#d4b040', '#4a3010', 5, 5, 10, 25);
+    shadedBlock(ctx, '#8b6914', '#d4b040', '#4a3010', 17, 5, 10, 25);
+    // grain lines
+    fill(ctx, 'rgba(60,40,10,0.35)', 7, 8, 1, 18);
+    fill(ctx, 'rgba(60,40,10,0.3)', 12, 10, 1, 14);
+    fill(ctx, 'rgba(60,40,10,0.35)', 20, 8, 1, 18);
+    fill(ctx, 'rgba(60,40,10,0.3)', 25, 10, 1, 14);
+    // raised panels
+    shadedBlock(ctx, '#a07828', '#c9a227', '#5a4010', 7, 7, 6, 7);
+    shadedBlock(ctx, '#a07828', '#c9a227', '#5a4010', 19, 7, 6, 7);
+    shadedBlock(ctx, '#6b5018', '#8b6914', '#3a2810', 7, 17, 6, 9);
+    shadedBlock(ctx, '#6b5018', '#8b6914', '#3a2810', 19, 17, 6, 9);
+    // iron studs
+    fill(ctx, '#4a4a58', 8, 9, 2, 2);
+    fill(ctx, '#4a4a58', 11, 9, 2, 2);
+    fill(ctx, '#4a4a58', 20, 9, 2, 2);
+    fill(ctx, '#4a4a58', 23, 9, 2, 2);
+    fill(ctx, '#8a8a98', 8, 9, 1, 1);
+    // ring handles
+    block(ctx, '#ffc857', '#8a6820', 13, 15, 2, 5);
+    block(ctx, '#ffc857', '#8a6820', 17, 15, 2, 5);
     spark(ctx, 13, 16, '#fff3a0');
+    spark(ctx, 17, 16, '#fff3a0');
   });
 
   canvasTex(scene, 'tile-locked', ART_RES, ART_RES, (ctx) => {
-    fill(ctx, hex(COLORS.floor), 0, 0, ART_RES, ART_RES);
-    shadedBlock(ctx, '#4a3820', '#6a5030', '#2a1c10', 0, 0, ART_RES, 4);
-    shadedBlock(ctx, '#4a3820', '#6a5030', '#2a1c10', 0, 0, 4, ART_RES);
-    shadedBlock(ctx, '#4a3820', '#6a5030', '#2a1c10', ART_RES - 4, 0, 4, ART_RES);
-    shadedBlock(ctx, '#5a3d1a', '#7a5a28', '#3a2810', 5, 4, 22, 26);
-    // lock plate
-    block(ctx, '#9a9aa8', '#404050', 11, 10, 10, 12);
-    fill(ctx, '#ffc857', 14, 14, 4, 4);
-    fill(ctx, '#fff3a0', 15, 15, 2, 1);
-    fill(ctx, '#606070', 14, 19, 4, 2);
+    drawFloorTile(ctx, ART_RES, hex(COLORS.floor), hex(COLORS.floorAlt), '#1a1528');
+    shadedBlock(ctx, '#4a3820', '#7a5a30', '#2a1c10', 0, 0, ART_RES, 5);
+    shadedBlock(ctx, '#4a3820', '#7a5a30', '#2a1c10', 0, 0, 5, ART_RES);
+    shadedBlock(ctx, '#4a3820', '#7a5a30', '#2a1c10', ART_RES - 5, 0, 5, ART_RES);
+    // heavy door slab
+    shadedBlock(ctx, '#5a3d1a', '#8a6230', '#3a2810', 5, 5, 22, 25);
+    dither(ctx, '#5a3d1a', '#4a3014', 6, 6, 20, 23, 1);
+    // iron bands
+    fill(ctx, '#5a5a68', 6, 10, 20, 3);
+    fill(ctx, '#5a5a68', 6, 22, 20, 3);
+    fill(ctx, '#8a8a98', 6, 10, 20, 1);
+    fill(ctx, '#3a3a48', 6, 12, 20, 1);
+    // lock plate + keyhole
+    block(ctx, '#9a9aa8', '#404050', 11, 12, 10, 12);
+    fill(ctx, '#c0c0c8', 12, 13, 8, 1);
+    fill(ctx, '#ffc857', 14, 15, 4, 4);
+    fill(ctx, '#fff3a0', 15, 16, 2, 1);
+    fill(ctx, '#1a1a22', 15, 17, 2, 2);
+    fill(ctx, '#1a1a22', 14, 19, 4, 3);
+    spark(ctx, 18, 14, '#e0e0e8');
   });
 
   canvasTex(scene, 'tile-stairs', ART_RES, ART_RES, (ctx) => {
-    fill(ctx, '#2a2038', 0, 0, ART_RES, ART_RES);
-    for (let i = 0; i < 6; i++) {
-      const y = 2 + i * 5;
-      const inset = Math.floor(i * 0.6);
+    // pit behind steps
+    fill(ctx, '#1a1020', 0, 0, ART_RES, ART_RES);
+    dither(ctx, '#1a1020', '#0a0810', 0, 0, ART_RES, ART_RES, 0);
+    // side walls
+    shadedBlock(ctx, '#3a3050', '#5a4a70', '#1a1428', 0, 0, 3, ART_RES);
+    shadedBlock(ctx, '#3a3050', '#5a4a70', '#1a1428', ART_RES - 3, 0, 3, ART_RES);
+    for (let i = 0; i < 7; i++) {
+      const y = 1 + i * 4;
+      const inset = Math.floor(i * 0.7);
+      const mid = i % 2 === 0 ? '#6a5a8a' : '#5a4a78';
       shadedBlock(
         ctx,
-        '#6a5a8a',
+        mid,
         '#9a8aba',
-        '#3a3050',
-        2 + inset,
+        '#2a2038',
+        3 + inset,
         y,
-        ART_RES - 4 - inset * 2,
+        ART_RES - 6 - inset * 2,
         3,
       );
+      // tread edge
+      fill(ctx, '#4a3a60', 3 + inset, y + 3, ART_RES - 6 - inset * 2, 1);
+      grit(ctx, 'rgba(0,0,0,0.2)', 4 + inset, y, ART_RES - 8 - inset * 2, 2, 4, i);
     }
-    fill(ctx, '#ff6b9d', 12, 2, 8, 3);
-    fill(ctx, '#ffb0c8', 14, 3, 4, 1);
+    // descent marker
+    fill(ctx, '#ff6b9d', 11, 1, 10, 3);
+    fill(ctx, '#ffb0c8', 13, 2, 6, 1);
+    fill(ctx, '#c03050', 14, 4, 4, 1);
   });
 
   canvasTex(scene, 'tile-stairs-up', ART_RES, ART_RES, (ctx) => {
-    fill(ctx, '#3a4060', 0, 0, ART_RES, ART_RES);
-    for (let i = 0; i < 6; i++) {
-      const y = 27 - i * 5;
-      const inset = Math.max(0, 4 - i);
+    fill(ctx, '#2a3048', 0, 0, ART_RES, ART_RES);
+    dither(ctx, '#2a3048', '#1a2030', 0, 0, ART_RES, ART_RES, 1);
+    shadedBlock(ctx, '#4a5870', '#7a90a8', '#2a3040', 0, 0, 3, ART_RES);
+    shadedBlock(ctx, '#4a5870', '#7a90a8', '#2a3040', ART_RES - 3, 0, 3, ART_RES);
+    for (let i = 0; i < 7; i++) {
+      const y = 28 - i * 4;
+      const inset = Math.max(0, 5 - i);
+      const mid = i % 2 === 0 ? '#9ab0d0' : '#8aa0c0';
       shadedBlock(
         ctx,
-        '#9ab0d0',
+        mid,
         '#c0d8f0',
-        '#506080',
-        2 + inset,
+        '#405068',
+        3 + inset,
         y,
-        ART_RES - 4 - inset * 2,
+        ART_RES - 6 - inset * 2,
         3,
       );
+      fill(ctx, '#7088a8', 3 + inset, y + 3, ART_RES - 6 - inset * 2, 1);
+      grit(ctx, 'rgba(255,255,255,0.12)', 4 + inset, y, ART_RES - 8 - inset * 2, 2, 5, i);
     }
-    fill(ctx, '#7dffb3', 12, 2, 8, 3);
-    fill(ctx, '#c9ffe0', 14, 3, 4, 1);
+    // ascent marker
+    fill(ctx, '#7dffb3', 11, 1, 10, 3);
+    fill(ctx, '#c9ffe0', 13, 2, 6, 1);
+    fill(ctx, '#2a8a5a', 14, 4, 4, 1);
   });
 
   canvasTex(scene, 'tile-pad', ART_RES, ART_RES, (ctx) => {
-    fill(ctx, '#1a2a40', 0, 0, ART_RES, ART_RES);
-    shadedBlock(ctx, '#2a4060', '#4ecdc4', '#0a1828', 4, 4, 24, 24);
+    fill(ctx, '#0e1a28', 0, 0, ART_RES, ART_RES);
+    dither(ctx, '#0e1a28', '#1a2a40', 0, 0, ART_RES, ART_RES, 0);
+    // outer ring
+    shadedBlock(ctx, '#1a3048', '#4ecdc4', '#0a1828', 2, 2, 28, 28);
+    shadedBlock(ctx, '#243850', '#3a6078', '#102030', 5, 5, 22, 22);
+    // circuit channels
     fill(ctx, '#4ecdc4', 8, 8, 16, 2);
     fill(ctx, '#4ecdc4', 8, 22, 16, 2);
     fill(ctx, '#4ecdc4', 8, 8, 2, 16);
     fill(ctx, '#4ecdc4', 22, 8, 2, 16);
-    block(ctx, '#7dffb3', '#2a8a5a', 14, 14, 4, 4);
+    fill(ctx, '#2a8a8a', 10, 10, 12, 1);
+    fill(ctx, '#2a8a8a', 10, 21, 12, 1);
+    // corner nodes
+    for (const [x, y] of [
+      [8, 8],
+      [22, 8],
+      [8, 22],
+      [22, 22],
+    ] as const) {
+      block(ctx, '#7dffb3', '#2a6a5a', x, y, 3, 3);
+    }
+    // core gem
+    block(ctx, '#7dffb3', '#2a8a5a', 13, 13, 6, 6);
+    fill(ctx, '#c9ffe0', 14, 14, 3, 2);
     spark(ctx, 15, 15);
+    spark(ctx, 17, 16, '#ffffff');
   });
 
   // Default bare hero + keyed loadout texture (full combos generated on demand)
@@ -971,49 +1012,71 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   canvasTex(scene, 'mapz', ART_RES, ART_RES, (ctx) => {
-    fill(ctx, '#d4c4a0', 4, 6, 24, 20);
-    fill(ctx, '#8b6914', 4, 4, 24, 4);
-    fill(ctx, '#8b6914', 4, 24, 24, 4);
-    fill(ctx, '#5a8a5a', 8, 10, 8, 6);
-    fill(ctx, '#4a6a9a', 16, 14, 8, 6);
+    // rolled parchment map pickup
+    shadedBlock(ctx, '#d4c4a0', '#f0e8c8', '#8a7850', 3, 5, 26, 22);
+    fill(ctx, '#c4b490', 5, 7, 22, 18);
+    dither(ctx, '#d4c4a0', '#c4b490', 5, 7, 22, 18, 0);
+    // wooden rods
+    shadedBlock(ctx, '#8b6914', '#c9a227', '#5a4010', 2, 3, 28, 4);
+    shadedBlock(ctx, '#8b6914', '#c9a227', '#5a4010', 2, 25, 28, 4);
+    // inked land blobs
+    fill(ctx, '#5a8a5a', 7, 10, 9, 6);
+    fill(ctx, '#4a6a9a', 16, 14, 9, 7);
+    fill(ctx, '#a08040', 10, 18, 7, 4);
+    // you-are-here
     fill(ctx, '#c0392b', 14, 12, 3, 3);
+    spark(ctx, 15, 13, '#ff6b6b');
+    // crease
+    fill(ctx, 'rgba(80,60,30,0.2)', 15, 8, 1, 16);
   });
 
-  // Graphic mapz UI tiles (48×48 room cells)
-  const cell = 48;
+  // Graphic mapz UI tiles (56×56 matches UIScene MAPZ_CELL)
+  const cell = 56;
   const drawMapzCell = (
     ctx: CanvasRenderingContext2D,
     fillCol: string,
     border: string,
     mode: 'visited' | 'unknown' | 'current',
   ) => {
-    ctx.fillStyle = '#0a0c10';
-    ctx.fillRect(0, 0, cell, cell);
-    ctx.fillStyle = fillCol;
-    ctx.fillRect(4, 4, cell - 8, cell - 8);
-    ctx.strokeStyle = border;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(4.5, 4.5, cell - 9, cell - 9);
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    ctx.fillRect(8, 8, cell - 16, 4);
+    // outer void
+    fill(ctx, '#0a0c10', 0, 0, cell, cell);
+    // stone rim
+    shadedBlock(ctx, '#2a3040', border, '#12161f', 2, 2, cell - 4, cell - 4);
+    // room fill
+    fill(ctx, fillCol, 6, 6, cell - 12, cell - 12);
+    // floor plate detail
+    fill(ctx, 'rgba(0,0,0,0.2)', 10, 10, cell - 20, cell - 22);
+    dither(ctx, fillCol, 'rgba(0,0,0,0.12)', 10, 10, cell - 20, cell - 22, 0);
+    // top highlight on rim
+    fill(ctx, 'rgba(255,255,255,0.12)', 6, 6, cell - 12, 3);
+    // corner studs
+    for (const [x, y] of [
+      [4, 4],
+      [cell - 8, 4],
+      [4, cell - 8],
+      [cell - 8, cell - 8],
+    ] as const) {
+      fill(ctx, border, x, y, 3, 3);
+      fill(ctx, 'rgba(255,255,255,0.25)', x, y, 1, 1);
+    }
     if (mode === 'unknown') {
+      // hatch fog
+      grit(ctx, 'rgba(0,0,0,0.35)', 8, 8, cell - 16, cell - 16, 3, 1);
       ctx.fillStyle = border;
-      ctx.font = 'bold 22px monospace';
+      ctx.font = 'bold 24px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('?', cell / 2, cell / 2 + 1);
     }
     if (mode === 'current') {
-      ctx.fillStyle = '#ff6b9d';
-      ctx.beginPath();
-      ctx.moveTo(cell / 2, 14);
-      ctx.lineTo(cell / 2 + 8, 24);
-      ctx.lineTo(cell / 2, 34);
-      ctx.lineTo(cell / 2 - 8, 24);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(cell / 2 - 2, 20, 4, 4);
+      // gold frame pulse base
+      ctx.strokeStyle = '#ffc857';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(5, 5, cell - 10, cell - 10);
+      // player diamond
+      fill(ctx, '#ff6b9d', cell / 2 - 6, 16, 12, 12);
+      fill(ctx, '#ffc857', cell / 2 - 4, 18, 8, 8);
+      fill(ctx, '#fff', cell / 2 - 2, 20, 4, 4);
     }
   };
 
@@ -1026,19 +1089,40 @@ export function generateTextures(scene: Phaser.Scene): void {
   canvasTex(scene, 'mapz_cell_current', cell, cell, (ctx) => {
     drawMapzCell(ctx, '#3a8a55', '#ffc857', 'current');
   });
-  canvasTex(scene, 'mapz_stairs', 16, 16, (ctx) => {
-    ctx.fillStyle = '#ff6b9d';
-    for (let i = 0; i < 4; i++) {
-      ctx.fillRect(2 + i, 12 - i * 3, 12 - i * 2, 2);
+  // Base plate for land-tinted rooms (UI multiplies land color)
+  canvasTex(scene, 'mapz_cell_base', cell, cell, (ctx) => {
+    fill(ctx, '#ffffff', 0, 0, cell, cell);
+    // rim keeps some darkness after tint
+    fill(ctx, '#c8c8c8', 0, 0, cell, cell);
+    shadedBlock(ctx, '#e8e8e8', '#ffffff', '#909090', 2, 2, cell - 4, cell - 4);
+    fill(ctx, '#d0d0d0', 8, 8, cell - 16, cell - 16);
+    dither(ctx, '#d8d8d8', '#c0c0c0', 10, 10, cell - 20, cell - 20, 0);
+    fill(ctx, 'rgba(255,255,255,0.5)', 10, 10, cell - 20, 3);
+    for (const [x, y] of [
+      [4, 4],
+      [cell - 8, 4],
+      [4, cell - 8],
+      [cell - 8, cell - 8],
+    ] as const) {
+      fill(ctx, '#ffffff', x, y, 3, 3);
     }
   });
-  canvasTex(scene, 'mapz_link_h', 16, 8, (ctx) => {
-    ctx.fillStyle = '#7dffb3';
-    ctx.fillRect(0, 2, 16, 4);
+  canvasTex(scene, 'mapz_stairs', 16, 16, (ctx) => {
+    fill(ctx, '#2a1520', 0, 0, 16, 16);
+    for (let i = 0; i < 5; i++) {
+      const y = 12 - i * 2;
+      shadedBlock(ctx, '#ff6b9d', '#ffb0c8', '#a03050', 2 + i, y, 12 - i * 2, 2);
+    }
   });
-  canvasTex(scene, 'mapz_link_v', 8, 16, (ctx) => {
-    ctx.fillStyle = '#7dffb3';
-    ctx.fillRect(2, 0, 4, 16);
+  canvasTex(scene, 'mapz_link_h', 20, 10, (ctx) => {
+    fill(ctx, '#0a0c10', 0, 0, 20, 10);
+    shadedBlock(ctx, '#5a8a70', '#7dffb3', '#2a4a38', 0, 2, 20, 6);
+    fill(ctx, 'rgba(255,255,255,0.2)', 0, 3, 20, 1);
+  });
+  canvasTex(scene, 'mapz_link_v', 10, 20, (ctx) => {
+    fill(ctx, '#0a0c10', 0, 0, 10, 20);
+    shadedBlock(ctx, '#5a8a70', '#7dffb3', '#2a4a38', 2, 0, 6, 20);
+    fill(ctx, 'rgba(255,255,255,0.2)', 3, 0, 1, 20);
   });
 
   // Forje anvil + glow
