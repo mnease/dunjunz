@@ -31,9 +31,17 @@ export type WeaponLook =
   | 'honk'
   | 'phaser'
   | 'axe'
+  | 'battle_axe'
+  | 'iron_axe'
+  | 'greataxe'
   | 'bow'
+  | 'longbow'
   | 'crossbow'
-  | 'staff';
+  | 'magic_bow'
+  | 'staff'
+  | 'staff_lightning'
+  | 'staff_fire'
+  | 'staff_ice';
 export type ShieldLook = 'none' | 'wood' | 'iron' | 'tower';
 export type KeyLook = 'none' | 'key';
 
@@ -76,12 +84,28 @@ function mapWeapon(look: string | undefined): WeaponLook {
       return 'phaser';
     case 'axe':
       return 'axe';
+    case 'battle_axe':
+      return 'battle_axe';
+    case 'iron_axe':
+      return 'iron_axe';
+    case 'greataxe':
+      return 'greataxe';
     case 'bow':
       return 'bow';
+    case 'longbow':
+      return 'longbow';
     case 'crossbow':
       return 'crossbow';
+    case 'magic_bow':
+      return 'magic_bow';
     case 'staff':
       return 'staff';
+    case 'staff_lightning':
+      return 'staff_lightning';
+    case 'staff_fire':
+      return 'staff_fire';
+    case 'staff_ice':
+      return 'staff_ice';
     default:
       return look ? 'sword' : 'none';
   }

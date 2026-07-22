@@ -1392,11 +1392,13 @@ function drawRackPegWeapon(
   cx: number,
   top: number,
 ): void {
-  if (look === 'bow') {
-    fill(ctx, '#2a1810', cx - 1, top, 2, 14);
-    fill(ctx, '#8b5a2b', cx, top + 1, 1, 12);
-    fill(ctx, '#c8b090', cx - 3, top + 6, 7, 1);
-    fill(ctx, '#7dffb3', cx - 3, top + 5, 2, 2);
+  if (look === 'bow' || look === 'longbow' || look === 'magic_bow') {
+    const magic = look === 'magic_bow';
+    const tall = look === 'longbow';
+    fill(ctx, '#2a1810', cx - 1, top, 2, tall ? 16 : 14);
+    fill(ctx, magic ? '#4a3060' : '#8b5a2b', cx, top + 1, 1, tall ? 14 : 12);
+    fill(ctx, magic ? '#d0a0ff' : '#c8b090', cx - 3, top + 6, 7, 1);
+    fill(ctx, magic ? '#b070ff' : '#7dffb3', cx - 3, top + 5, 2, 2);
     return;
   }
   if (look === 'crossbow') {
@@ -1405,19 +1407,42 @@ function drawRackPegWeapon(
     fill(ctx, '#c9a227', cx - 3, top + 7, 2, 1);
     return;
   }
-  if (look === 'axe') {
-    fill(ctx, '#5a3d1a', cx, top + 2, 2, 12);
-    fill(ctx, '#8b5a2b', cx, top + 3, 1, 10);
-    fill(ctx, '#5a6578', cx - 5, top + 2, 7, 5);
-    fill(ctx, '#c0c8d0', cx - 4, top + 3, 3, 3);
+  if (
+    look === 'axe' ||
+    look === 'battle_axe' ||
+    look === 'iron_axe' ||
+    look === 'greataxe'
+  ) {
+    const iron = look === 'iron_axe';
+    const double = look === 'battle_axe' || look === 'greataxe';
+    fill(ctx, '#5a3d1a', cx, top + 2, 2, look === 'greataxe' ? 14 : 12);
+    fill(ctx, '#8b5a2b', cx, top + 3, 1, look === 'greataxe' ? 12 : 10);
+    fill(ctx, iron ? '#4a5060' : '#5a6578', cx - 5, top + 2, double ? 8 : 7, 5);
+    fill(ctx, iron ? '#e0e8f0' : '#c0c8d0', cx - 4, top + 3, 3, 3);
+    if (double) {
+      fill(ctx, '#8a98a8', cx + 1, top + 3, 3, 3);
+    }
     spark(ctx, cx - 3, top + 3, '#ffffff');
     return;
   }
-  if (look === 'staff') {
+  if (
+    look === 'staff' ||
+    look === 'staff_lightning' ||
+    look === 'staff_fire' ||
+    look === 'staff_ice'
+  ) {
+    const crystal =
+      look === 'staff_lightning'
+        ? { deep: '#1a6aaa', mid: '#4ac0ff', hi: '#c0ecff' }
+        : look === 'staff_fire'
+          ? { deep: '#8a2010', mid: '#ff5030', hi: '#ffb080' }
+          : look === 'staff_ice'
+            ? { deep: '#0a2048', mid: '#2a60a0', hi: '#80b0e0' }
+            : { deep: '#0a4a30', mid: '#2a8a5a', hi: '#7dffb3' };
     fill(ctx, '#3a2010', cx, top, 2, 15);
     fill(ctx, '#6b4423', cx, top + 1, 1, 13);
-    block(ctx, '#2a8a5a', '#0a4a30', cx - 2, top - 1, 6, 5);
-    fill(ctx, '#7dffb3', cx - 1, top, 3, 3);
+    block(ctx, crystal.mid, crystal.deep, cx - 2, top - 1, 6, 5);
+    fill(ctx, crystal.hi, cx - 1, top, 3, 3);
     spark(ctx, cx + 1, top, '#ffffff');
     return;
   }
@@ -1456,9 +1481,9 @@ function drawRackPegWeapon(
 
 const RACK_FAMILY_DEFAULTS: Record<string, string[]> = {
   sword: ['mild_sword', 'iron_blade', 'sand_saber', 'dunjun_cleaver'],
-  axe: ['training_axe'],
-  bow: ['short_bow', 'hunter_crossbow'],
-  staff: ['wizard_staff'],
+  axe: ['training_axe', 'battle_axe', 'iron_hatchet', 'great_axe'],
+  bow: ['short_bow', 'long_bow', 'hunter_crossbow', 'magic_bow'],
+  staff: ['wizard_staff', 'staff_lightning', 'staff_fire', 'staff_ice'],
 };
 
 function defaultPresentForFamily(family: string): string[] {
@@ -1872,13 +1897,21 @@ export function generateTextures(scene: Phaser.Scene): void {
     'potion',
     'mild_sword',
     'training_axe',
+    'battle_axe',
+    'iron_hatchet',
+    'great_axe',
     'iron_blade',
     'sand_saber',
     'dunjun_cleaver',
     'honk_blade',
     'short_bow',
+    'long_bow',
     'hunter_crossbow',
+    'magic_bow',
     'wizard_staff',
+    'staff_lightning',
+    'staff_fire',
+    'staff_ice',
     'phaser',
     'arrows',
     'beam_me_up',
@@ -1949,14 +1982,22 @@ export function generateTextures(scene: Phaser.Scene): void {
   const swingLooks: WeaponLook[] = [
     'sword',
     'axe',
+    'battle_axe',
+    'iron_axe',
+    'greataxe',
     'iron',
     'saber',
     'cleaver',
     'honk',
     'phaser',
     'bow',
+    'longbow',
     'crossbow',
+    'magic_bow',
     'staff',
+    'staff_lightning',
+    'staff_fire',
+    'staff_ice',
   ];
   canvasTex(scene, 'sword-swing', 20, 20, (ctx) => {
     drawWeaponSwing(ctx, 'sword');
@@ -2585,6 +2626,31 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(0, 2, 6, 2);
     ctx.fillStyle = '#fff';
     ctx.fillRect(2, 2, 2, 2);
+  });
+  canvasTex(scene, 'proj-lightning', 8, 8, (ctx) => {
+    ctx.fillStyle = '#4ac0ff';
+    ctx.fillRect(3, 0, 2, 3);
+    ctx.fillRect(2, 2, 4, 2);
+    ctx.fillRect(4, 3, 2, 3);
+    ctx.fillRect(1, 5, 5, 2);
+    ctx.fillRect(3, 6, 2, 2);
+    ctx.fillStyle = '#e0f8ff';
+    ctx.fillRect(3, 2, 2, 2);
+    ctx.fillRect(4, 4, 1, 2);
+  });
+  canvasTex(scene, 'proj-ice', 8, 8, (ctx) => {
+    ctx.fillStyle = '#2a60a0';
+    ctx.beginPath();
+    ctx.moveTo(4, 0);
+    ctx.lineTo(7, 4);
+    ctx.lineTo(4, 8);
+    ctx.lineTo(1, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#80b0e0';
+    ctx.fillRect(3, 2, 2, 4);
+    ctx.fillStyle = '#c0e0ff';
+    ctx.fillRect(3, 3, 2, 2);
   });
 
   // ── Humanz & Villagez ──────────────────────────────────

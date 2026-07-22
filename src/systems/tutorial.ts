@@ -60,9 +60,9 @@ export const TRAINING_TEMPLATES: Record<TutorialWeapon, string> = {
  */
 export const RACK_CATALOG: Record<TutorialWeapon, readonly string[]> = {
   sword: ['mild_sword', 'iron_blade', 'sand_saber', 'dunjun_cleaver'],
-  axe: ['training_axe'],
-  bow: ['short_bow', 'hunter_crossbow'],
-  staff: ['wizard_staff'],
+  axe: ['training_axe', 'battle_axe', 'iron_hatchet', 'great_axe'],
+  bow: ['short_bow', 'long_bow', 'hunter_crossbow', 'magic_bow'],
+  staff: ['wizard_staff', 'staff_lightning', 'staff_fire', 'staff_ice'],
 };
 
 /** Damage that must be dealt with a weapon to clear its drill stage. */
@@ -143,10 +143,32 @@ export function tutorialWeaponFromEquip(
 ): TutorialWeapon | null {
   const tid = (templateId ?? '').toLowerCase();
   const lk = (look ?? '').toLowerCase();
-  if (tid.includes('axe') || lk === 'axe') return 'axe';
-  if (tid.includes('bow') || tid.includes('crossbow') || lk === 'bow' || lk === 'crossbow')
+  if (
+    tid.includes('axe') ||
+    tid.includes('hatchet') ||
+    lk === 'axe' ||
+    lk === 'battle_axe' ||
+    lk === 'iron_axe' ||
+    lk === 'greataxe'
+  )
+    return 'axe';
+  if (
+    tid.includes('bow') ||
+    tid.includes('crossbow') ||
+    lk === 'bow' ||
+    lk === 'longbow' ||
+    lk === 'crossbow' ||
+    lk === 'magic_bow'
+  )
     return 'bow';
-  if (tid.includes('staff') || lk === 'staff') return 'staff';
+  if (
+    tid.includes('staff') ||
+    lk === 'staff' ||
+    lk === 'staff_lightning' ||
+    lk === 'staff_fire' ||
+    lk === 'staff_ice'
+  )
+    return 'staff';
   if (
     tid.includes('sword') ||
     tid.includes('blade') ||
@@ -628,7 +650,7 @@ export function rackDialog(
     sword: 'SWORD OF MILD ENTHUSIASM',
     axe: 'TRAINING AXE',
     bow: 'SHORT BOW (+ ARROWS)',
-    staff: 'WIZARD STAFF',
+    staff: 'EMERALD STAFF',
   };
   const goal = `DEAL ${DUMMY_DRILL_REQUIRED_PCT}% DUMMY HP (${drillDamageRequired()} DMG).`;
   const label = opts?.name ?? names[weapon];

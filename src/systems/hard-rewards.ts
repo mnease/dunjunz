@@ -70,7 +70,7 @@ export function rewardHardKing(save: SaveData): {
       'DROPS HIS DICE. FOREVER. (HARD MODE.)',
       '',
       'YOU LOOT: SHORT BOW + ARROWS ×24',
-      'AND A WIZARD STAFF (MAGIC BOLTS)',
+      'AND AN EMERALD STAFF (MAGIC BOLTS)',
       'HARD DUNJUNZ: CLEARED. YOU MONSTER.',
     ],
   };

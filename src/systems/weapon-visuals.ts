@@ -15,20 +15,25 @@ export function drawWeaponAvatar(
 ): void {
   if (look === 'none') return;
 
-  if (look === 'bow') {
-    // Vertical recurve with thicker limbs + string arc
-    fill(ctx, '#2a1810', 25, 7, 2, 18);
-    fill(ctx, '#8b5a2b', 26, 8, 3, 16);
-    fill(ctx, '#a06830', 27, 7, 2, 2);
-    fill(ctx, '#a06830', 27, 23, 2, 2);
-    fill(ctx, '#c9a070', 28, 10, 1, 12); // limb hilite
-    fill(ctx, '#e8e0d0', 24, 9, 1, 2);
-    fill(ctx, '#e8e0d0', 23, 14, 2, 3);
-    fill(ctx, '#e8e0d0', 24, 21, 1, 2);
-    fill(ctx, '#c8b090', 19, 14, 7, 2);
-    fill(ctx, '#7dffb3', 17, 14, 3, 2);
-    fill(ctx, '#ff6b9d', 25, 13, 2, 4);
-    spark(ctx, 18, 14, '#c9ffe0');
+  if (look === 'bow' || look === 'longbow' || look === 'magic_bow') {
+    const tall = look === 'longbow';
+    const magic = look === 'magic_bow';
+    const wood = magic ? '#4a3060' : '#8b5a2b';
+    const woodHi = magic ? '#7a50a0' : '#a06830';
+    const limb = magic ? '#c090ff' : '#c9a070';
+    // Vertical recurve; longbow taller; magic tinted purple
+    fill(ctx, '#2a1810', 25, tall ? 5 : 7, 2, tall ? 22 : 18);
+    fill(ctx, wood, 26, tall ? 6 : 8, 3, tall ? 20 : 16);
+    fill(ctx, woodHi, 27, tall ? 5 : 7, 2, 2);
+    fill(ctx, woodHi, 27, tall ? 25 : 23, 2, 2);
+    fill(ctx, limb, 28, tall ? 8 : 10, 1, tall ? 16 : 12);
+    fill(ctx, magic ? '#e0c0ff' : '#e8e0d0', 24, tall ? 7 : 9, 1, 2);
+    fill(ctx, magic ? '#e0c0ff' : '#e8e0d0', 23, 14, 2, 3);
+    fill(ctx, magic ? '#e0c0ff' : '#e8e0d0', 24, tall ? 23 : 21, 1, 2);
+    fill(ctx, magic ? '#d0a0ff' : '#c8b090', 19, 14, 7, 2);
+    fill(ctx, magic ? '#b070ff' : '#7dffb3', 17, 14, 3, 2);
+    fill(ctx, magic ? '#ff90e0' : '#ff6b9d', 25, 13, 2, 4);
+    spark(ctx, 18, 14, magic ? '#e8d0ff' : '#c9ffe0');
     return;
   }
 
@@ -60,30 +65,58 @@ export function drawWeaponAvatar(
     return;
   }
 
-  if (look === 'axe') {
-    // Hip hatchet — short haft + wide horizontal bit (must not read as sword)
-    fill(ctx, '#3a2010', 24, 12, 4, 14);
-    fill(ctx, '#8b5a2b', 25, 13, 2, 12);
-    // bit sticks out left of haft
-    fill(ctx, '#3a4050', 16, 8, 12, 9);
-    fill(ctx, '#9aabc0', 17, 9, 9, 6);
-    fill(ctx, '#e0e8f0', 17, 9, 3, 5);
+  if (
+    look === 'axe' ||
+    look === 'battle_axe' ||
+    look === 'iron_axe' ||
+    look === 'greataxe'
+  ) {
+    const iron = look === 'iron_axe';
+    const battle = look === 'battle_axe';
+    const great = look === 'greataxe';
+    const bit = iron ? '#9aabc0' : great ? '#c0c8d0' : '#9aabc0';
+    const bitHi = iron ? '#e0e8f0' : great ? '#ffffff' : '#e0e8f0';
+    const bitSh = iron ? '#4a5060' : '#3a4050';
+    // Hip hatchet / battle / great — bit left of haft (not a sword)
+    fill(ctx, '#3a2010', 24, great ? 10 : 12, 4, great ? 16 : 14);
+    fill(ctx, '#8b5a2b', 25, great ? 11 : 13, 2, great ? 14 : 12);
+    fill(ctx, bitSh, 16, great ? 6 : 8, battle || great ? 13 : 12, battle || great ? 11 : 9);
+    fill(ctx, bit, 17, great ? 7 : 9, battle || great ? 10 : 9, battle || great ? 8 : 6);
+    fill(ctx, bitHi, 17, great ? 7 : 9, 3, battle || great ? 6 : 5);
+    if (battle || great) {
+      // second bit (double-bit) peeks right
+      fill(ctx, bitSh, 26, great ? 8 : 10, 5, 7);
+      fill(ctx, bit, 26, great ? 9 : 11, 4, 5);
+    }
     fill(ctx, '#c9a227', 23, 15, 5, 2);
-    spark(ctx, 18, 10, '#ffffff');
+    spark(ctx, 18, great ? 8 : 10, '#ffffff');
     return;
   }
 
-  if (look === 'staff') {
+  if (
+    look === 'staff' ||
+    look === 'staff_lightning' ||
+    look === 'staff_fire' ||
+    look === 'staff_ice'
+  ) {
+    const crystal =
+      look === 'staff_lightning'
+        ? { deep: '#1a6aaa', mid: '#4ac0ff', hi: '#c0ecff', spark: '#e0f8ff' }
+        : look === 'staff_fire'
+          ? { deep: '#8a2010', mid: '#ff5030', hi: '#ffb080', spark: '#ffe0a0' }
+          : look === 'staff_ice'
+            ? { deep: '#0a2048', mid: '#2a60a0', hi: '#80b0e0', spark: '#c0e0ff' }
+            : { deep: '#0a4a30', mid: '#2a8a5a', hi: '#7dffb3', spark: '#c9ffe0' };
     fill(ctx, '#3a2010', 25, 5, 4, 23);
     fill(ctx, '#6b4423', 26, 7, 2, 19);
     fill(ctx, '#8b5a2b', 26, 9, 1, 15);
     fill(ctx, '#2a1810', 24, 13, 6, 1);
     fill(ctx, '#2a1810', 24, 19, 6, 1);
-    block(ctx, '#2a8a5a', '#0a4a30', 23, 2, 9, 8);
-    fill(ctx, '#7dffb3', 25, 3, 5, 5);
-    fill(ctx, '#c9ffe0', 26, 4, 2, 2);
+    block(ctx, crystal.mid, crystal.deep, 23, 2, 9, 8);
+    fill(ctx, crystal.hi, 25, 3, 5, 5);
+    fill(ctx, crystal.spark, 26, 4, 2, 2);
     spark(ctx, 27, 4, '#ffffff');
-    spark(ctx, 25, 6, '#7dffb3');
+    spark(ctx, 25, 6, crystal.hi);
     return;
   }
 
@@ -147,22 +180,30 @@ export function drawWeaponIcon(
   ctx: CanvasRenderingContext2D,
   look: WeaponLook | string,
 ): void {
-  if (look === 'bow') {
-    fill(ctx, '#2a1810', 7, 3, 3, 26);
-    fill(ctx, '#2a1810', 22, 3, 3, 26);
-    for (let i = 0; i < 11; i++) {
-      const y = 3 + i * 2;
+  if (look === 'bow' || look === 'longbow' || look === 'magic_bow') {
+    const tall = look === 'longbow';
+    const magic = look === 'magic_bow';
+    const wood = magic ? '#4a3060' : '#8b5a2b';
+    const woodHi = magic ? '#7a50a0' : '#a06830';
+    const tip = magic ? '#b070ff' : '#7dffb3';
+    const fletch = magic ? '#ff90e0' : '#ff6b9d';
+    const y0 = tall ? 1 : 3;
+    const h = tall ? 30 : 26;
+    fill(ctx, '#2a1810', 7, y0, 3, h);
+    fill(ctx, '#2a1810', 22, y0, 3, h);
+    for (let i = 0; i < (tall ? 13 : 11); i++) {
+      const y = y0 + i * 2;
       const inset = i < 5 ? 4 - Math.floor(i / 2) : Math.floor((i - 5) / 2);
-      fill(ctx, '#8b5a2b', 5 + inset, y, 3, 2);
-      fill(ctx, '#8b5a2b', 24 - inset, y, 3, 2);
+      fill(ctx, wood, 5 + inset, y, 3, 2);
+      fill(ctx, wood, 24 - inset, y, 3, 2);
     }
-    fill(ctx, '#a06830', 9, 5, 2, 22);
-    fill(ctx, '#a06830', 21, 5, 2, 22);
-    fill(ctx, '#e8e0d0', 12, 6, 1, 20);
-    fill(ctx, '#c8b090', 3, 13, 20, 3);
-    fill(ctx, '#7dffb3', 1, 13, 4, 3);
-    fill(ctx, '#ff6b9d', 21, 12, 5, 5);
-    spark(ctx, 2, 14, '#c9ffe0');
+    fill(ctx, woodHi, 9, y0 + 2, 2, h - 4);
+    fill(ctx, woodHi, 21, y0 + 2, 2, h - 4);
+    fill(ctx, magic ? '#e0c0ff' : '#e8e0d0', 12, y0 + 3, 1, h - 6);
+    fill(ctx, magic ? '#d0a0ff' : '#c8b090', 3, 13, 20, 3);
+    fill(ctx, tip, 1, 13, 4, 3);
+    fill(ctx, fletch, 21, 12, 5, 5);
+    spark(ctx, 2, 14, magic ? '#e8d0ff' : '#c9ffe0');
     return;
   }
 
@@ -194,28 +235,56 @@ export function drawWeaponIcon(
     return;
   }
 
-  if (look === 'axe') {
-    fill(ctx, '#3a2010', 14, 8, 5, 20);
-    fill(ctx, '#6b4423', 15, 9, 3, 18);
-    fill(ctx, '#5a6578', 6, 4, 18, 12);
-    fill(ctx, '#8a98a8', 8, 5, 13, 9);
-    fill(ctx, '#c0c8d0', 8, 5, 5, 7);
+  if (
+    look === 'axe' ||
+    look === 'battle_axe' ||
+    look === 'iron_axe' ||
+    look === 'greataxe'
+  ) {
+    const iron = look === 'iron_axe';
+    const battle = look === 'battle_axe';
+    const great = look === 'greataxe';
+    const bit = iron ? '#9aabc0' : great ? '#c0c8d0' : '#8a98a8';
+    const bitHi = iron ? '#e0e8f0' : great ? '#ffffff' : '#c0c8d0';
+    const bitSh = iron ? '#4a5060' : '#5a6578';
+    fill(ctx, '#3a2010', 14, great ? 6 : 8, 5, great ? 22 : 20);
+    fill(ctx, '#6b4423', 15, great ? 7 : 9, 3, great ? 20 : 18);
+    fill(ctx, bitSh, 6, great ? 2 : 4, battle || great ? 20 : 18, great ? 14 : 12);
+    fill(ctx, bit, 8, great ? 3 : 5, battle || great ? 15 : 13, great ? 11 : 9);
+    fill(ctx, bitHi, 8, great ? 3 : 5, 5, great ? 8 : 7);
+    if (battle || great) {
+      fill(ctx, bitSh, 20, great ? 4 : 6, 8, 10);
+      fill(ctx, bit, 21, great ? 5 : 7, 6, 7);
+    }
     fill(ctx, '#c9a227', 12, 14, 8, 3);
-    spark(ctx, 9, 6, '#ffffff');
+    spark(ctx, 9, great ? 4 : 6, '#ffffff');
     return;
   }
 
-  if (look === 'staff') {
+  if (
+    look === 'staff' ||
+    look === 'staff_lightning' ||
+    look === 'staff_fire' ||
+    look === 'staff_ice'
+  ) {
+    const crystal =
+      look === 'staff_lightning'
+        ? { deep: '#1a6aaa', mid: '#4ac0ff', hi: '#c0ecff', spark: '#e0f8ff' }
+        : look === 'staff_fire'
+          ? { deep: '#8a2010', mid: '#ff5030', hi: '#ffb080', spark: '#ffe0a0' }
+          : look === 'staff_ice'
+            ? { deep: '#0a2048', mid: '#2a60a0', hi: '#80b0e0', spark: '#c0e0ff' }
+            : { deep: '#0a4a30', mid: '#2a8a5a', hi: '#7dffb3', spark: '#c9ffe0' };
     fill(ctx, '#3a2010', 12, 7, 7, 23);
     fill(ctx, '#6b4423', 13, 9, 5, 19);
     fill(ctx, '#8b5a2b', 14, 11, 2, 15);
     fill(ctx, '#2a1810', 11, 13, 9, 2);
     fill(ctx, '#2a1810', 11, 19, 9, 2);
-    block(ctx, '#2a8a5a', '#0a4a30', 9, 1, 14, 11);
-    fill(ctx, '#7dffb3', 12, 3, 8, 7);
-    fill(ctx, '#c9ffe0', 14, 4, 3, 3);
+    block(ctx, crystal.mid, crystal.deep, 9, 1, 14, 11);
+    fill(ctx, crystal.hi, 12, 3, 8, 7);
+    fill(ctx, crystal.spark, 14, 4, 3, 3);
     spark(ctx, 15, 4, '#ffffff');
-    spark(ctx, 13, 7, '#7dffb3');
+    spark(ctx, 13, 7, crystal.hi);
     return;
   }
 
@@ -275,11 +344,22 @@ export function drawWeaponSwing(
   ctx: CanvasRenderingContext2D,
   look: WeaponLook,
 ): void {
-  if (look === 'bow' || look === 'crossbow') {
-    fill(ctx, '#c8b090', 2, 9, 16, 4);
-    fill(ctx, look === 'crossbow' ? '#ff6b9d' : '#7dffb3', 15, 7, 6, 8);
-    fill(ctx, '#ff6b9d', 1, 7, 4, 8);
-    spark(ctx, 2, 9, '#c9ffe0');
+  if (
+    look === 'bow' ||
+    look === 'longbow' ||
+    look === 'crossbow' ||
+    look === 'magic_bow'
+  ) {
+    const tip =
+      look === 'crossbow'
+        ? '#ff6b9d'
+        : look === 'magic_bow'
+          ? '#b070ff'
+          : '#7dffb3';
+    fill(ctx, look === 'magic_bow' ? '#d0a0ff' : '#c8b090', 2, 9, 16, 4);
+    fill(ctx, tip, 15, 7, 6, 8);
+    fill(ctx, look === 'magic_bow' ? '#ff90e0' : '#ff6b9d', 1, 7, 4, 8);
+    spark(ctx, 2, 9, look === 'magic_bow' ? '#e8d0ff' : '#c9ffe0');
     return;
   }
   if (look === 'phaser') {
@@ -290,16 +370,36 @@ export function drawWeaponSwing(
     spark(ctx, 18, 10, '#ffffff');
     return;
   }
-  if (look === 'axe') {
+  if (
+    look === 'axe' ||
+    look === 'battle_axe' ||
+    look === 'iron_axe' ||
+    look === 'greataxe'
+  ) {
+    const bit = look === 'iron_axe' ? '#9aabc0' : '#8a98a8';
+    const bitHi = look === 'greataxe' ? '#ffffff' : '#c0c8d0';
     fill(ctx, '#6b4423', 8, 6, 5, 12);
-    fill(ctx, '#8a98a8', 2, 2, 14, 10);
-    fill(ctx, '#c0c8d0', 3, 3, 5, 7);
+    fill(ctx, bit, 2, 2, look === 'battle_axe' || look === 'greataxe' ? 16 : 14, 10);
+    fill(ctx, bitHi, 3, 3, 5, 7);
     spark(ctx, 4, 3, '#ffffff');
     return;
   }
-  if (look === 'staff') {
+  if (
+    look === 'staff' ||
+    look === 'staff_lightning' ||
+    look === 'staff_fire' ||
+    look === 'staff_ice'
+  ) {
+    const crystal =
+      look === 'staff_lightning'
+        ? { deep: '#1a6aaa', mid: '#4ac0ff' }
+        : look === 'staff_fire'
+          ? { deep: '#8a2010', mid: '#ff5030' }
+          : look === 'staff_ice'
+            ? { deep: '#0a2048', mid: '#2a60a0' }
+            : { deep: '#2a8a5a', mid: '#7dffb3' };
     fill(ctx, '#6b4423', 9, 3, 5, 16);
-    block(ctx, '#7dffb3', '#2a8a5a', 6, 1, 12, 9);
+    block(ctx, crystal.mid, crystal.deep, 6, 1, 12, 9);
     spark(ctx, 10, 3, '#ffffff');
     return;
   }
@@ -357,6 +457,12 @@ export function weaponLookFromTemplateId(id: string): WeaponLook | null {
       return 'sword';
     case 'training_axe':
       return 'axe';
+    case 'battle_axe':
+      return 'battle_axe';
+    case 'iron_hatchet':
+      return 'iron_axe';
+    case 'great_axe':
+      return 'greataxe';
     case 'iron_blade':
     case 'bud_fang':
       return 'iron';
@@ -371,10 +477,20 @@ export function weaponLookFromTemplateId(id: string): WeaponLook | null {
       return 'phaser';
     case 'short_bow':
       return 'bow';
+    case 'long_bow':
+      return 'longbow';
     case 'hunter_crossbow':
       return 'crossbow';
+    case 'magic_bow':
+      return 'magic_bow';
     case 'wizard_staff':
       return 'staff';
+    case 'staff_lightning':
+      return 'staff_lightning';
+    case 'staff_fire':
+      return 'staff_fire';
+    case 'staff_ice':
+      return 'staff_ice';
     default:
       return null;
   }

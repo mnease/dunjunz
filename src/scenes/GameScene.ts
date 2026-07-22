@@ -5937,13 +5937,23 @@ export class GameScene extends Phaser.Scene {
           ? 'proj-phaser'
           : projKind === 'fireball'
             ? 'proj-fireball'
-            : 'proj-bolt';
+            : projKind === 'lightning'
+              ? 'proj-lightning'
+              : projKind === 'ice'
+                ? 'proj-ice'
+                : 'proj-bolt';
     // Never allow 0 / NaN damage on ranged shots
     const dmg = Math.max(1, computePlayerDamage(this.save) | 0);
     const dir = this.facingVector();
     // Phaser beams a bit faster; keep speeds hittable (no tunneling)
     const speed =
-      projKind === 'phaser' ? 220 : projKind === 'arrow' ? 200 : 180;
+      projKind === 'phaser'
+        ? 220
+        : projKind === 'arrow'
+          ? 200
+          : projKind === 'lightning'
+            ? 210
+            : 180;
     const angle =
       dir.x === 0 && dir.y === -1
         ? -90

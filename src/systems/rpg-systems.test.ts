@@ -190,14 +190,15 @@ describe('loot multi-type', () => {
     let staff = 0;
     let swordish = 0;
     const n = 200;
+    const magicSet = new Set(CLASS_WEAPON_PREFS.wizard.weapons);
     for (let i = 0; i < n; i++) {
       const w = pickWeapon(mulberry32(i * 17 + 3), {
         primaryClass: 'wizard',
       });
-      if (w === 'wizard_staff') staff += 1;
+      if (magicSet.has(w)) staff += 1;
       if (CLASS_WEAPON_PREFS.fighter.weapons.includes(w)) swordish += 1;
     }
-    // Wizard bias ~0.72 — expect staff often but not always
+    // Wizard bias ~0.72 — expect magic weapons often but not always
     expect(staff).toBeGreaterThan(n * 0.45);
     expect(staff).toBeLessThan(n);
     // Still sometimes off-class
@@ -208,7 +209,13 @@ describe('loot multi-type', () => {
       const w = pickWeapon(mulberry32(i * 19 + 5), {
         primaryClass: 'ranger',
       });
-      if (w === 'short_bow' || w === 'hunter_crossbow') ranged += 1;
+      if (
+        w === 'short_bow' ||
+        w === 'long_bow' ||
+        w === 'hunter_crossbow' ||
+        w === 'magic_bow'
+      )
+        ranged += 1;
     }
     expect(ranged).toBeGreaterThan(n * 0.25);
 
@@ -219,14 +226,21 @@ describe('loot multi-type', () => {
 
   it('openChest with wizard class can roll staff over many trials', () => {
     let staffHits = 0;
+    const staffIds = new Set([
+      'wizard_staff',
+      'staff_lightning',
+      'staff_fire',
+      'staff_ice',
+      'magic_bow',
+    ]);
     for (let i = 0; i < 120; i++) {
       const d = openChest('dungeon', mulberry32(i * 11 + 2), {
         primaryClass: 'wizard',
         secondaryClass: null,
       });
-      if (d.some((x) => x.templateId === 'wizard_staff')) staffHits += 1;
+      if (d.some((x) => staffIds.has(x.templateId))) staffHits += 1;
     }
-    // Chests often give potions not gear — just ensure staff appears sometimes
+    // Chests often give potions not gear — just ensure magic weapons appear sometimes
     expect(staffHits).toBeGreaterThan(0);
   });
 
@@ -747,9 +761,18 @@ describe('weapon visuals', () => {
       ['dunjun_cleaver', 'cleaver'],
       ['honk_blade', 'honk'],
       ['phaser', 'phaser'],
+      ['training_axe', 'axe'],
+      ['battle_axe', 'battle_axe'],
+      ['iron_hatchet', 'iron_axe'],
+      ['great_axe', 'greataxe'],
       ['short_bow', 'bow'],
+      ['long_bow', 'longbow'],
       ['hunter_crossbow', 'crossbow'],
+      ['magic_bow', 'magic_bow'],
       ['wizard_staff', 'staff'],
+      ['staff_lightning', 'staff_lightning'],
+      ['staff_fire', 'staff_fire'],
+      ['staff_ice', 'staff_ice'],
     ];
     const looks = new Set(pairs.map(([, l]) => l));
     expect(looks.size).toBe(pairs.length);
@@ -3221,8 +3244,17 @@ describe('tutorial guild hall', () => {
 
   it('maps equip templates to tutorial weapons and equips training axe', () => {
     expect(tutorialWeaponFromEquip('training_axe', 'axe')).toBe('axe');
+    expect(tutorialWeaponFromEquip('battle_axe', 'battle_axe')).toBe('axe');
+    expect(tutorialWeaponFromEquip('great_axe', 'greataxe')).toBe('axe');
     expect(tutorialWeaponFromEquip('short_bow', 'bow')).toBe('bow');
+    expect(tutorialWeaponFromEquip('long_bow', 'longbow')).toBe('bow');
+    expect(tutorialWeaponFromEquip('magic_bow', 'magic_bow')).toBe('bow');
     expect(tutorialWeaponFromEquip('wizard_staff', 'staff')).toBe('staff');
+    expect(tutorialWeaponFromEquip('staff_lightning', 'staff_lightning')).toBe(
+      'staff',
+    );
+    expect(tutorialWeaponFromEquip('staff_fire', 'staff_fire')).toBe('staff');
+    expect(tutorialWeaponFromEquip('staff_ice', 'staff_ice')).toBe('staff');
     let save = equipTrainingWeapon(defaultSave(), 'axe');
     expect(save.equipped.weapon).toBeTruthy();
     const inst = save.bag.find((b) => b.uid === save.equipped.weapon);
@@ -3231,7 +3263,9 @@ describe('tutorial guild hall', () => {
 
   it('multi-weapon racks omit only the equipped piece', () => {
     expect(RACK_CATALOG.sword.length).toBeGreaterThanOrEqual(3);
-    expect(RACK_CATALOG.bow.length).toBeGreaterThanOrEqual(2);
+    expect(RACK_CATALOG.axe.length).toBeGreaterThanOrEqual(3);
+    expect(RACK_CATALOG.bow.length).toBeGreaterThanOrEqual(3);
+    expect(RACK_CATALOG.staff.length).toBeGreaterThanOrEqual(3);
     let save = defaultSave();
     expect(rackPresentTemplates(save, 'sword')).toEqual([...RACK_CATALOG.sword]);
     expect(isRackEmpty(save, 'sword')).toBe(false);
@@ -3248,10 +3282,13 @@ describe('tutorial guild hall', () => {
     expect(isRackEmpty(save, 'sword')).toBe(false);
     expect(save.hasSword).toBe(true);
 
-    // Switch to axe: sword pegs refill; axe peg empties (only one catalog axe)
+    // Switch to axe: sword pegs refill; only training_axe leaves axe rack
     save = equipTrainingWeapon(save, 'axe');
     expect(rackPresentTemplates(save, 'sword')).toContain('mild_sword');
-    expect(isRackEmpty(save, 'axe')).toBe(true);
+    expect(rackPresentTemplates(save, 'axe')).not.toContain('training_axe');
+    expect(rackPresentTemplates(save, 'axe')).toContain('battle_axe');
+    expect(rackPresentTemplates(save, 'axe')).toContain('great_axe');
+    expect(isRackEmpty(save, 'axe')).toBe(false);
     const axe = save.bag.find((b) => b.uid === save.equipped.weapon);
     expect(axe?.templateId).toBe('training_axe');
   });

@@ -31,7 +31,7 @@ export interface ItemTemplate {
   /** Stack template consumed per ranged shot (e.g. arrows). */
   ammoId?: string;
   /** Projectile visual key for player shots. */
-  projectile?: 'arrow' | 'phaser' | 'fireball' | 'bolt';
+  projectile?: 'arrow' | 'phaser' | 'fireball' | 'bolt' | 'lightning' | 'ice';
   /**
    * Armor category for proficiency (cloth / light / medium / heavy).
    * Weapons omit this.
@@ -205,6 +205,33 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     baseAtk: 1,
     look: 'axe',
   },
+  battle_axe: {
+    id: 'battle_axe',
+    name: 'BATTLE AXE',
+    blurb: 'Wide bit. Space/Z to cleave. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 2,
+    look: 'battle_axe',
+  },
+  iron_hatchet: {
+    id: 'iron_hatchet',
+    name: 'IRON HATCHET',
+    blurb: 'Forjed iron head. Space/Z to chop. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 2,
+    look: 'iron_axe',
+  },
+  great_axe: {
+    id: 'great_axe',
+    name: 'GREAT AXE',
+    blurb: 'Two-handed lumberjack energy. Space/Z to smash. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 3,
+    look: 'greataxe',
+  },
   iron_blade: {
     id: 'iron_blade',
     name: 'IRON BLADE',
@@ -275,6 +302,18 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     ammoId: 'arrows',
     projectile: 'arrow',
   },
+  long_bow: {
+    id: 'long_bow',
+    name: 'LONG BOW',
+    blurb: 'Tall yew. Needs ARROWS. Space/Z looses a shot. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 4,
+    look: 'longbow',
+    weaponStyle: 'ranged',
+    ammoId: 'arrows',
+    projectile: 'arrow',
+  },
   hunter_crossbow: {
     id: 'hunter_crossbow',
     name: 'HUNTER CROSSBOW',
@@ -287,6 +326,17 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     ammoId: 'arrows',
     projectile: 'arrow',
   },
+  magic_bow: {
+    id: 'magic_bow',
+    name: 'MAGICAL BOW',
+    blurb: 'Glows. Space/Z looses an arcane arrow. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 3,
+    look: 'magic_bow',
+    weaponStyle: 'magic',
+    projectile: 'bolt',
+  },
   arrows: {
     id: 'arrows',
     name: 'ARROWS',
@@ -296,14 +346,47 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   },
   wizard_staff: {
     id: 'wizard_staff',
-    name: 'WIZARD STAFF',
-    blurb: 'INT-powered sparkles. Space/Z casts. [W]',
+    name: 'EMERALD STAFF',
+    blurb: 'Green crystal. INT sparkles. Space/Z casts. [W]',
     kind: 'gear',
     slot: 'weapon',
     baseAtk: 2,
     look: 'staff',
     weaponStyle: 'magic',
     projectile: 'bolt',
+  },
+  staff_lightning: {
+    id: 'staff_lightning',
+    name: 'LIGHTNING STAFF',
+    blurb: 'Light-blue crystal. Space/Z zaps. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 3,
+    look: 'staff_lightning',
+    weaponStyle: 'magic',
+    projectile: 'lightning',
+  },
+  staff_fire: {
+    id: 'staff_fire',
+    name: 'FIRE STAFF',
+    blurb: 'Red crystal. Space/Z hurls flame. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 3,
+    look: 'staff_fire',
+    weaponStyle: 'magic',
+    projectile: 'fireball',
+  },
+  staff_ice: {
+    id: 'staff_ice',
+    name: 'ICE STAFF',
+    blurb: 'Dark-blue crystal. Space/Z freezes. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 3,
+    look: 'staff_ice',
+    weaponStyle: 'magic',
+    projectile: 'ice',
   },
   leather_helmet: {
     id: 'leather_helmet',
