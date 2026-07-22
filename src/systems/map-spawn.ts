@@ -44,16 +44,31 @@ export function spawnInsideEntryEdge(
     const y = 0;
     for (let x = 0; x < w; x++) {
       const k = grid[y]?.[x];
-      if (isWalkable(k)) {
-        candidates.push({ tx: x, ty: 1, door: k === 'door' });
+      if (isWalkable(k) || k === 'door') {
+        let ty = 1;
+        while (ty < h - 1 && !isWalkable(grid[ty]?.[x])) ty++;
+        if (ty >= h - 1 || !isWalkable(grid[ty]?.[x])) continue;
+        candidates.push({
+          tx: x,
+          ty,
+          door: k === 'door' || grid[y]?.[x] === 'door',
+        });
       }
     }
   } else if (entryFrom === 'south') {
     const y = h - 1;
     for (let x = 0; x < w; x++) {
       const k = grid[y]?.[x];
-      if (isWalkable(k)) {
-        candidates.push({ tx: x, ty: h - 2, door: k === 'door' });
+      if (isWalkable(k) || k === 'door') {
+        // Walk inward until a truly walkable cell (skip water/lava)
+        let ty = h - 2;
+        while (ty > 0 && !isWalkable(grid[ty]?.[x])) ty--;
+        if (ty <= 0 || !isWalkable(grid[ty]?.[x])) continue;
+        candidates.push({
+          tx: x,
+          ty,
+          door: k === 'door' || grid[y]?.[x] === 'door',
+        });
       }
     }
   } else if (entryFrom === 'west') {

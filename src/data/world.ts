@@ -298,6 +298,8 @@ export const ROOMS: Record<string, RoomDef> = {
     stairsDown: 'b1_entrance',
     // Every row must be exactly 16 chars (VIEW_TILES_W). Short rows pad as
     // walls on the right — that silently sealed the east trail exit.
+    // Bridge (dd) crosses the pond so beach→meadow doesn't dump you in water.
+    // South door D lines up under the dirt path to the cave mouth (S).
     tiles: [
       '################',
       '#gggggggggggggg#',
@@ -306,9 +308,9 @@ export const ROOMS: Record<string, RoomDef> = {
       '....dddddd..ggg.',
       '....d.S.d...ggg.',
       '....dddd....ggg.',
-      '#gg........gggg#',
-      '#ggg~~~~~~ggggg#',
-      '#gggg~~~~gggggg#',
+      '#gg..dd....gggg#',
+      '#ggg.dd~~~ggggg#',
+      '#ggggdd~~gggggg#',
       '#######D########',
     ],
     entities: [
@@ -325,6 +327,18 @@ export const ROOMS: Record<string, RoomDef> = {
       },
       {
         kind: 'sign',
+        id: 'sign-beach-bridge',
+        x: 9,
+        y: 8,
+        dialog: [
+          'BEACH BRIDGE',
+          'SOUTH → STRANGE BEACH.',
+          'NORTH → MEADOW & CAVE MOUTH.',
+          'WEST → TUTORIAL GUILD.',
+        ],
+      },
+      {
+        kind: 'sign',
         id: 'sign-meadow',
         x: 11,
         y: 2,
@@ -333,6 +347,7 @@ export const ROOMS: Record<string, RoomDef> = {
           'SAVE PRINCESS PRIZELLA. SHE RULES. LITERALLY.',
           'CAVE MOUTH = DUNJUNZ B1 (AFTER GUILD).',
           'WEST = TUTORIAL GUILD.',
+          'SOUTH BRIDGE = BEACH.',
           'EAST = TRAIL. NORTH WOODZ / SOUTH DEZERTZ.',
           'M = MAPZ (ONCE YOU FIND SOME)',
         ],
