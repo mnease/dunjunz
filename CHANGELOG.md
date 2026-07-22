@@ -11,6 +11,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ## [Unreleased]
 
+### Changed
+
+- **Unlimited wall torches** — no per-room place cap; still one mount per wall cell, dark rooms only, 1 stack each.
+
 ### Added
 
 - **Universal shadows & positional lighting (EMA council)** — soft light cookies on every crawl room (surface soft day ambient → B1 architecture torches → B2+ survival dark). **Place torch** with `T` (max 2/room, permanent, save `placedTorches`). Carried fuel pauses in sconce light. Shadow stalkers (skeleton/slime/scorpion/tarantula) hide in deep dark with telegraph before contact. Gear can emit weak glow. Tinkerer **torch pack ×3 @ 12c** + lantern/flashlight; chest torch rate bumped. Title/Army/Village soft vignette; inventory/shop/forje lift the crawl veil. Design: `docs/shadows-lighting-v1.md`, `docs/lighting-v2-model.md`.

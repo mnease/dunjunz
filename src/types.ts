@@ -256,7 +256,7 @@ export interface SaveData {
   lightFuelMs?: number;
   /**
    * Player-placed permanent wall torches (per room id).
-   * Dark rooms only; max 2 per room. Does not burn fuel.
+   * Dark rooms only; unlimited per room. Does not burn fuel.
    */
   placedTorches?: Record<
     string,

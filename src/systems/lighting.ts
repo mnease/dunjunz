@@ -5,7 +5,7 @@
  * Soft gradient falloff (smoothstep). Never pure black.
  * Carried torches/lanterns/flashlights burn fuel when the hero is not
  * already bright from placed/wall/gear light. Player can place permanent
- * wall torches (max 2/room) in dark rooms.
+ * wall torches (unlimited per room) in dark rooms.
  */
 
 import type { SaveData } from '../types';
@@ -242,7 +242,8 @@ export const LIGHT_PEAK = {
 
 export const FUEL_PAUSE_B = 0.55;
 export const ALPHA_NONE = 0.88;
-export const MAX_PLACED_TORCHES_PER_ROOM = 2;
+/** @deprecated No per-room cap — kept for any old imports; place never rejects on count. */
+export const MAX_PLACED_TORCHES_PER_ROOM = Number.POSITIVE_INFINITY;
 
 function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
@@ -463,7 +464,6 @@ export type PlaceFail =
   | 'not_dark_room'
   | 'not_wall_adjacent'
   | 'occupied'
-  | 'max_per_room'
   | 'oob';
 
 const DIR_DELTA: Record<0 | 1 | 2 | 3, { x: number; y: number }> = {
@@ -489,9 +489,6 @@ export function canPlaceTorch(
   | { ok: false; reason: PlaceFail } {
   if (ctx.torchStacks < 1) return { ok: false, reason: 'no_torch' };
   if (!ctx.darkRoom) return { ok: false, reason: 'not_dark_room' };
-  if (ctx.existing.length >= MAX_PLACED_TORCHES_PER_ROOM) {
-    return { ok: false, reason: 'max_per_room' };
-  }
   if (!ctx.isInBounds(ctx.tx, ctx.ty)) return { ok: false, reason: 'oob' };
 
   const tryDir = (dir: 0 | 1 | 2 | 3) => {
@@ -545,8 +542,6 @@ export function placeFailToast(reason: PlaceFail): string {
       return 'NO WALL NEAR';
     case 'occupied':
       return 'WALL ALREADY LIT';
-    case 'max_per_room':
-      return 'MAX 2 WALL TORCHES';
     case 'oob':
       return 'NO WALL NEAR';
   }

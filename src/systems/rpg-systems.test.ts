@@ -2902,7 +2902,6 @@ import {
   LIGHT_BURN_MS,
   lightBurnMs,
   lightTierRank,
-  MAX_PLACED_TORCHES_PER_ROOM,
   roomIsDark,
   roomNeedsCarriedLight,
   sampleBrightness,
@@ -3065,7 +3064,7 @@ describe('universal positional lighting v2', () => {
     ).toBe(false);
   });
 
-  it('canPlaceTorch requires dark room, stack, wall adjacency, max 2', () => {
+  it('canPlaceTorch requires dark room, stack, wall adjacency; no count cap', () => {
     const walls = new Set(['5,3']);
     const base = {
       darkRoom: true,
@@ -3085,13 +3084,21 @@ describe('universal positional lighting v2', () => {
     }
     expect(canPlaceTorch({ ...base, torchStacks: 0 }).ok).toBe(false);
     expect(canPlaceTorch({ ...base, darkRoom: false }).ok).toBe(false);
+    // Many already placed is fine (no per-room limit)
     expect(
       canPlaceTorch({
         ...base,
-        existing: Array.from({ length: MAX_PLACED_TORCHES_PER_ROOM }, (_, i) => ({
+        existing: Array.from({ length: 20 }, (_, i) => ({
           x: i,
           y: 0,
         })),
+      }).ok,
+    ).toBe(true);
+    // Same wall cell still blocked as occupied
+    expect(
+      canPlaceTorch({
+        ...base,
+        existing: [{ x: 5, y: 3 }],
       }).ok,
     ).toBe(false);
   });
