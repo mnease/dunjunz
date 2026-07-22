@@ -3856,18 +3856,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Guild Master — graduate after all four weapon dummy hits.
+   * Guild Master — first talk = full welcome intro; later = drills / graduate.
    */
   private talkToGuildMaster(_npc: Actor): void {
-    this.save = markTutorialIntroSeen(this.save);
-
     if (isTutorialComplete(this.save)) {
       this.game.events.emit('dialog-show', [
         ...guildMasterDialog(this.save),
         '',
         ...questHint(this.save),
       ]);
+      return;
+    }
+
+    // Full welcome if they never heard the opener (or talked before auto-dialog)
+    if (needsTutorialIntro(this.save)) {
+      this.save = markTutorialIntroSeen(this.save);
       writeSave(this.save);
+      this.game.events.emit('dialog-show', guildMasterIntroDialog());
+      this.game.events.emit('toast', 'RACKS (E) · DUMMIES (ATK) · MASTER (E)');
       return;
     }
 
@@ -3883,7 +3889,6 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    writeSave(this.save);
     const need = nextTutorialWeapon(this.save);
     this.game.events.emit('dialog-show', guildMasterDialog(this.save));
     if (need) {

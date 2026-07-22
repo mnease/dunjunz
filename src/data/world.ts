@@ -71,7 +71,7 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 8,
         y: 5,
         dialog: [
-          'GUILD MASTER. WEAPON DRILLS. EAST DOOR STAYS LOCKED.',
+          'WELCOME TO DUNJUNZ… TALK TO ME FOR THE FULL BRIEFING.',
         ],
       },
       { kind: 'dummy', id: 'dummy-nw', x: 3, y: 3 },

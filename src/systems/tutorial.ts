@@ -189,16 +189,35 @@ export function eastDoorBlockedToast(): string {
   return 'EAST DOOR LOCKED — FINISH WEAPON DRILLS';
 }
 
+/**
+ * First-boot Guild Master monologue:
+ * Welcome → game intro → guild identity → drill briefing.
+ */
 export function guildMasterIntroDialog(): string[] {
   return [
-    'WELCOME TO THE TRAINING GUILD.',
-    'I AM THE GUILD MASTER.',
-    'YOU WILL HIT DUMMIES WITH FOUR WEAPONS.',
-    'ORDER: SWORD → AXE → BOW → STAFF.',
-    'USE THE RACKS (E) TO EQUIP EACH ONE.',
-    'THEN SMACK A DUMMY (SPACE / Z).',
+    'WELCOME TO DUNJUNZ…',
+    '',
+    'THIS IS A LAND OF MEADOWS, CAVES,',
+    'AND THINGS THAT BITE BACK.',
+    'YOU WILL WALK, SWING, LOOT, AND TALK.',
+    'YOU WILL GET LOST. YOU WILL GET BETTER.',
+    '',
+    'YOUR QUEST: RESCUE PRIZELLA.',
+    'SHE IS LOST SOMEWHERE OUT THERE —',
+    'PAST THE MEADOW, DOWN THE DUNGEONS,',
+    'THROUGH WOODZ AND DEZERTZ AND WORSE.',
+    '',
+    'THIS IS THE TRAINING GUILD.',
+    'I AM THE TUTORIAL GUILD MASTER.',
+    'BEFORE THE EAST DOOR OPENS,',
+    'YOU TRAIN HERE.',
+    '',
+    'HIT DUMMIES WITH FOUR WEAPONS:',
+    'SWORD → AXE → BOW → STAFF.',
+    'RACKS (E) EQUIP EACH ONE.',
+    'DUMMIES (SPACE / Z) TAKE THE HIT.',
     'WHEN ALL FOUR COUNT, TALK TO ME.',
-    'I UNLOCK THE EAST DOOR TO THE MEADOW.',
+    'THEN: EAST DOOR → MEADOW. MATHEMATICAL!',
   ];
 }
 
@@ -224,7 +243,7 @@ export function guildMasterDialog(save: SaveData): string[] {
 
   const need = nextTutorialWeapon(save);
   const lines: string[] = [
-    'GUILD MASTER: WEAPON DRILLS IN PROGRESS.',
+    'GUILD MASTER: BACK TO DRILLS.',
     'HIT A DUMMY WITH EACH WEAPON IN ORDER.',
     '',
   ];

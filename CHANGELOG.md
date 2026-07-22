@@ -20,6 +20,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Guild Master intro** — first message is Welcome to Dunjunz → game/quest pitch → Training Guild + Guild Master identity → weapon drill briefing (then normal drill progress on re-talk).
 - **Solid props** — hero cannot walk through dummies, weapon racks, signs, chests, forje, NPCs, merchants, princess, or trees. Footprint-sized immovable Arcade colliders; talk/use still uses reach radius. Cactus stays overlap-only (spines).
 - **Unlimited wall torches** — no per-room place cap; still one mount per wall cell, dark rooms only, 1 stack each.
 - **Env / creature light** — lava tiles cast a warm local glow; gel creeps (slime, gelatinous cube) bioluminesce weakly so you can spot them in the dark without full torch light.
