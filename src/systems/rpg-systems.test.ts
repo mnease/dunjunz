@@ -2985,6 +2985,57 @@ describe('lighting model', () => {
   });
 });
 
+import {
+  castTreeShadowCenter,
+  cloudShadowCenters,
+  isOutdoorSurface,
+  makeCloudField,
+  sampleCloudDarkness,
+  sampleSurfaceShade,
+  sampleTreeShadowDarkness,
+  SUN_DIR,
+} from './surface-sun';
+
+describe('surface sun + cloud shade', () => {
+  it('marks surface/woodz outdoor, not basements or kingdom', () => {
+    expect(isOutdoorSurface({ floor: 0, land: 'surface' })).toBe(true);
+    expect(isOutdoorSurface({ floor: 0, land: 'woodz' })).toBe(true);
+    expect(isOutdoorSurface({ floor: -2, land: 'dunjunz' })).toBe(false);
+    expect(isOutdoorSurface({ floor: 0, land: 'kingdom' })).toBe(false);
+    expect(isOutdoorSurface({ floor: 0, dark: true })).toBe(false);
+  });
+
+  it('casts tree shadows SE of trunk along sun dir', () => {
+    const sh = castTreeShadowCenter(100, 100, 2.5);
+    expect(sh.x).toBeGreaterThan(100);
+    expect(sh.y).toBeGreaterThan(100);
+    expect(sh.rx).toBeGreaterThan(20);
+    expect(sh.alpha).toBeGreaterThan(0.15);
+    expect(SUN_DIR.x).toBeGreaterThan(0);
+  });
+
+  it('drifts cloud centers over time and soft-samples darkness', () => {
+    const blobs = makeCloudField(42, 4);
+    expect(blobs.length).toBe(4);
+    const a = cloudShadowCenters(blobs, 0, 1280, 656);
+    const b = cloudShadowCenters(blobs, 5000, 1280, 656);
+    expect(a[0].x).not.toBe(b[0].x);
+    const d = sampleCloudDarkness(a[0].x, a[0].y, a);
+    expect(d).toBeGreaterThan(0);
+    const far = sampleCloudDarkness(-500, -500, a);
+    expect(far).toBeLessThan(d);
+  });
+
+  it('combines tree + cloud shade with a readable cap', () => {
+    const trees = [{ x: 200, y: 200, scale: 2.5 }];
+    const clouds = cloudShadowCenters(makeCloudField(7, 3), 0, 1280, 656);
+    const under = sampleTreeShadowDarkness(200 + 40, 200 + 30, trees);
+    const combined = sampleSurfaceShade(200 + 40, 200 + 30, trees, clouds);
+    expect(under).toBeGreaterThan(0);
+    expect(combined).toBeLessThanOrEqual(0.58);
+  });
+});
+
 describe('universal positional lighting v2', () => {
   it('ambient is high on surface, low in deep basements', () => {
     expect(ambientForRoom({ floor: 0, land: 'woodz' })).toBeGreaterThanOrEqual(

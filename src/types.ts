@@ -135,6 +135,11 @@ export interface EntityDef {
   mapzId?: LandId;
   /** Room id for portal entities (boss exit → dungeon mouth). */
   portalTarget?: string;
+  /**
+   * Optional display scale multiplier (1 = normal).
+   * Big meadow trees use ~2.2–2.8.
+   */
+  scale?: number;
 }
 
 /** Side chamber content role (P0 world grammar). */

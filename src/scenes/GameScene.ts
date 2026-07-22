@@ -145,6 +145,13 @@ import {
   type LightSource,
   type PlacedTorch,
 } from '../systems/lighting';
+import {
+  castTreeShadowCenter,
+  cloudShadowCenters,
+  isOutdoorSurface,
+  makeCloudField,
+  type CloudBlob,
+} from '../systems/surface-sun';
 import { tickCombatBuffs } from '../systems/scrolls';
 import {
   bestBudBanter,
@@ -287,6 +294,8 @@ interface Actor {
   ambush?: AmbushState;
   /** True if this creep uses shadow hide/reveal. */
   shadowStalker?: boolean;
+  /** Display scale mult (trees). */
+  displayScale?: number;
 }
 
 const SOLID: TileKind[] = ['wall', 'water', 'void', 'locked'];
@@ -413,6 +422,13 @@ export class GameScene extends Phaser.Scene {
   private lightRt: Phaser.GameObjects.RenderTexture | null = null;
   private lightCookie: Phaser.GameObjects.Image | null = null;
   private wallTorchCount = 0;
+  /**
+   * Outdoor surface: soft dark cookies for tree cast + drifting cloud shade.
+   * Separate from dungeon lightRt (bright ambient + subtractive shade).
+   */
+  private surfaceShadowRt: Phaser.GameObjects.RenderTexture | null = null;
+  private cloudField: CloudBlob[] = [];
+  private surfaceSunTimeMs = 0;
 
   private shopId: string | null = null;
   private shopSelected = 0;
@@ -1658,6 +1674,94 @@ export class GameScene extends Phaser.Scene {
     return { sources, ambient };
   }
 
+  /** Outdoor sun shade layer (tree cast + cloud blobs). */
+  private ensureSurfaceShadowRt(): void {
+    if (!this.surfaceShadowRt) {
+      this.surfaceShadowRt = this.add
+        .renderTexture(0, 0, GAME_W, GAME_H)
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setDepth(88); // under dungeon light veil (90), over world
+    }
+    if (!this.lightCookie && this.textures.exists('light_cookie')) {
+      this.lightCookie = this.add
+        .image(0, 0, 'light_cookie')
+        .setVisible(false)
+        .setScrollFactor(0);
+    }
+  }
+
+  /**
+   * Bright outdoor: soft dark cookies for sun-cast tree shadows + drifting clouds.
+   * Clouds are never drawn — only their shade.
+   */
+  private refreshSurfaceShadows(delta: number): void {
+    const outdoor = this.room ? isOutdoorSurface(this.room) : false;
+    if (!outdoor) {
+      this.surfaceShadowRt?.setVisible(false);
+      return;
+    }
+    this.ensureSurfaceShadowRt();
+    const rt = this.surfaceShadowRt!;
+    if (this.panelOpen()) {
+      rt.clear();
+      rt.setVisible(false);
+      return;
+    }
+    // reduceMotion: freeze cloud drift (still show static shade)
+    const reduce = loadSettings().reduceMotion;
+    if (!reduce) this.surfaceSunTimeMs += delta;
+
+    if (!this.cloudField.length) {
+      const seed =
+        (this.save?.runSeed ?? 1) ^
+        (this.room?.id ?? '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+      this.cloudField = makeCloudField(seed, 5);
+    }
+
+    const cookie = this.lightCookie;
+    if (!cookie || !this.textures.exists('light_cookie')) {
+      rt.setVisible(false);
+      return;
+    }
+
+    rt.clear();
+    rt.setVisible(true);
+    const cam = this.cameras.main;
+
+    // Cloud shade — screen space, slow drift
+    const clouds = cloudShadowCenters(
+      this.cloudField,
+      this.surfaceSunTimeMs,
+      GAME_W,
+      GAME_H - HUD_H,
+    );
+    for (const c of clouds) {
+      const diam = c.radius * 2;
+      cookie.setTint(0x0a1420);
+      cookie.setAlpha(c.alpha);
+      cookie.setScale(diam / 256, (diam * 0.55) / 256);
+      // Offset Y by HUD so shade sits on playfield
+      rt.draw(cookie, c.x, c.y + HUD_H);
+    }
+
+    // Tree cast shadows (world → screen)
+    for (const a of this.actors) {
+      if (!a.alive || a.kind !== 'tree' || !a.sprite?.active) continue;
+      const sc = a.displayScale ?? 1;
+      const sh = castTreeShadowCenter(a.sprite.x, a.sprite.y, sc);
+      const sx = sh.x - cam.scrollX;
+      const sy = sh.y - cam.scrollY;
+      cookie.setTint(0x0a1420);
+      cookie.setAlpha(sh.alpha);
+      cookie.setScale((sh.rx * 2) / 256, (sh.ry * 2) / 256);
+      rt.draw(cookie, sx, sy);
+    }
+
+    cookie.clearTint();
+    cookie.setAlpha(1);
+  }
+
   /**
    * Universal soft-cookie lighting for every room (all lands / depths).
    * Screen-space RT: dark fill at ambient α, erase radial cookies at lights.
@@ -1676,6 +1780,13 @@ export class GameScene extends Phaser.Scene {
         .image(0, 0, 'light_cookie')
         .setVisible(false)
         .setScrollFactor(0);
+    }
+
+    // Outdoor surface uses subtractive shade layer (not dungeon veil)
+    if (this.room && isOutdoorSurface(this.room)) {
+      this.lightRt.clear();
+      this.lightRt.setVisible(false);
+      return;
     }
 
     // Inventory / shop / mapz / forje: lift veil so bag/shop chrome stays readable.
@@ -2011,6 +2122,9 @@ export class GameScene extends Phaser.Scene {
     this.maybePromoteCaptain();
     this.startRoomAmbience();
     this.spawnSavedPlacedTorches();
+    // New outdoor cloud field per room
+    this.cloudField = [];
+    this.surfaceSunTimeMs = 0;
     this.wallTorchCount =
       (room.entities ?? []).filter((e) => e.kind === 'torch_wall').length +
       getPlacedForRoom(this.save, room.id).length;
@@ -2578,8 +2692,13 @@ export class GameScene extends Phaser.Scene {
       : { x: def.x, y: def.y };
     const pos = this.tileToWorld(placed.x, placed.y);
     const sprite = this.physics.add.sprite(pos.x, pos.y, tex);
-    sprite.setScale(SPRITE_SCALE);
-    sprite.setDepth(5);
+    const displayScale =
+      typeof def.scale === 'number' && def.scale > 0
+        ? SPRITE_SCALE * def.scale
+        : SPRITE_SCALE;
+    sprite.setScale(displayScale);
+    // Big trees sit above floor props so canopy reads as depth
+    sprite.setDepth(def.kind === 'tree' && (def.scale ?? 1) > 1.5 ? 6 : 5);
 
     if (def.kind === 'best_bud') {
       const bud = getBestBud(this.save.bestBudId);
@@ -2676,8 +2795,10 @@ export class GameScene extends Phaser.Scene {
       const body = sprite.body as Phaser.Physics.Arcade.Body;
       body.moves = false;
       body.enable = true;
-      body.setSize(12, 14);
-      body.setOffset(2, 1);
+      // Trunk-sized collider (not full canopy) so big trees don't block whole meadows
+      const trunk = isTree && (def.scale ?? 1) > 1.5 ? 10 : 12;
+      body.setSize(trunk, isTree ? 12 : 14);
+      body.setOffset((sprite.frame.width - trunk) / 2, sprite.frame.height - 14);
       // Trees block the hero; cactus is overlap-only (spines)
       if (isTree) {
         this.physics.add.collider(this.player, sprite);
@@ -2756,6 +2877,7 @@ export class GameScene extends Phaser.Scene {
           ? false
           : true,
       respawnGen: generation,
+      displayScale: def.scale,
     };
 
     if (contactHostile) {
@@ -4390,9 +4512,11 @@ export class GameScene extends Phaser.Scene {
       if (lit.expired || hadBuff) writeSave(this.save);
       this.updateShadowAmbush(delta);
       this.refreshLighting();
+      this.refreshSurfaceShadows(delta);
     } else if (!this.leavingToTitle) {
       // Still refresh veil when paused panels so lights don't freeze wrong
       this.refreshLighting();
+      this.refreshSurfaceShadows(0);
     }
 
     // ESC / MENU: close dialog → close panels → pause (never trap talk mode)

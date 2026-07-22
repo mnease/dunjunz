@@ -113,6 +113,12 @@ export const ROOMS: Record<string, RoomDef> = {
           'PRESS M TO UNFURL IT.',
         ],
       },
+      // Big meadow trees — sun cast shadows + depth (EMA surface sun pass)
+      { kind: 'tree', id: 'meadow-oak-1', x: 2, y: 2, scale: 2.6 },
+      { kind: 'tree', id: 'meadow-oak-2', x: 13, y: 2, scale: 2.4 },
+      { kind: 'tree', id: 'meadow-oak-3', x: 12, y: 7, scale: 2.5 },
+      { kind: 'tree', id: 'meadow-oak-4', x: 3, y: 7, scale: 2.3 },
+      { kind: 'tree', id: 'meadow-oak-5', x: 14, y: 5, scale: 2.2 },
     ],
   },
 
@@ -192,6 +198,12 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 3,
         chestTable: 'dungeon',
       },
+      // Trail trees (big) — leave path center clear for combat
+      { kind: 'tree', id: 'trail-oak-1', x: 2, y: 2, scale: 2.5 },
+      { kind: 'tree', id: 'trail-oak-2', x: 13, y: 2, scale: 2.4 },
+      { kind: 'tree', id: 'trail-oak-3', x: 2, y: 8, scale: 2.3 },
+      { kind: 'tree', id: 'trail-oak-4', x: 13, y: 8, scale: 2.6 },
+      { kind: 'tree', id: 'trail-oak-5', x: 7, y: 2, scale: 2.2 },
     ],
   },
 
