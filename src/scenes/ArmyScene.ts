@@ -428,6 +428,7 @@ export class ArmyScene extends Phaser.Scene {
   private goTitle(): void {
     this.saveArmy();
     playSfx('ui_close');
+    if (this.scene.isActive('UI')) this.scene.stop('UI');
     this.scene.start('Title');
   }
 }

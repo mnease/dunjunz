@@ -574,11 +574,13 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on('shop-cursor', this.onShopCursor, this);
     this.game.events.on('inventory-bag-activate', this.onBagActivate, this);
     window.addEventListener('dunjunz-auto-stats-enabled', this.onAutoStatsEnabled);
+    window.addEventListener('dunjunz-save-updated', this.onSaveUpdated);
     this.events.once('shutdown', () => {
       window.removeEventListener(
         'dunjunz-auto-stats-enabled',
         this.onAutoStatsEnabled,
       );
+      window.removeEventListener('dunjunz-save-updated', this.onSaveUpdated);
       this.game.events.off('dialog-state', this.onDialogState, this);
       this.game.events.off('inventory-state', this.onInventoryState, this);
       this.game.events.off('mapz-state', this.onMapzState, this);
@@ -615,10 +617,37 @@ export class GameScene extends Phaser.Scene {
     this.loadRoom(this.save.roomId, true);
     this.emitHud();
     this.time.delayedCall(500, () => this.checkHeroPick());
-    window.addEventListener('dunjunz-save-updated', () => {
-      this.save = loadSave();
-      this.emitHud();
-    });
+  }
+
+  /** Cloud/local save mutated outside the scene (account import, etc.). */
+  private onSaveUpdated = (): void => {
+    // Scene may be shut down; ignore late cloud-save events
+    if (!this.sys.isActive()) return;
+    this.save = loadSave();
+    this.emitHud();
+  };
+
+  /**
+   * Leave crawl cleanly: save, clear pad, stop HUD scene, then Title.
+   * Leaving UI running buried the title under hearts/chrome (looked frozen).
+   */
+  private goToTitle(): void {
+    writeSave(this.save);
+    this.paused = false;
+    this.dialogLocked = false;
+    this.inventoryOpen = false;
+    this.mapzOpen = false;
+    this.forjingOpen = false;
+    this.shopOpen = false;
+    this.transitionLock = false;
+    clearAllTouch();
+    setTouchPadVisible(false);
+    this.game.events.emit('ui-reset');
+    this.game.events.emit('pause-ui', false);
+    if (this.scene.isActive('UI')) {
+      this.scene.stop('UI');
+    }
+    this.scene.start('Title');
   }
 
   private onMapzNav(
@@ -3527,12 +3556,7 @@ export class GameScene extends Phaser.Scene {
         Phaser.Input.Keyboard.JustDown(this.keys.m) ||
         consumeTouchAction('map')
       ) {
-        writeSave(this.save);
-        // Soft-reset UI — do not stop (listener/chrome race kills dialog)
-        this.game.events.emit('ui-reset');
-        setTouchPadVisible(false);
-        clearAllTouch();
-        this.scene.start('Title');
+        this.goToTitle();
       }
       return;
     }

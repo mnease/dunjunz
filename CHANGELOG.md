@@ -27,6 +27,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Fixed
 
+- **ESC → title freeze** — pause **M** (main title) stopped Game but left the UI HUD scene running over the title (looked frozen / unresponsive). Now stops UI, clears pause/pad state, and removes a leaked save listener before starting Title.
 - **Single doorways** — room stretch no longer paints three D tiles in a row; each authored door is one rim tile with wall flanks.
 - **Tinkerer shop pagination** — shop stock and player bag grids paginate (3×4 / 4×4). Labels show range + page; `[` `]` / Page Up·Down / on-screen ◀▶ flip pages on the focused pane.
 - **Level-scaled tinkerer stock** — shop listings unlock with hero level (L1 basics → L15 endgame). Better armor/weapons/mats appear as you grow.

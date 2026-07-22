@@ -371,6 +371,7 @@ export class VillageScene extends Phaser.Scene {
       gold: this.battle.gold,
     });
     playSfx('ui_close');
+    if (this.scene.isActive('UI')) this.scene.stop('UI');
     this.scene.start('Title');
   }
 }

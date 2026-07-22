@@ -270,14 +270,20 @@ export class UIScene extends Phaser.Scene {
     this.buildShopPanel();
 
     this.pauseText = this.add
-      .text(GAME_W / 2, GAME_H / 2, 'PAUSED\n\nESC RESUME  ·  M TITLE', {
-        fontFamily: '"Press Start 2P", monospace',
-        fontSize: '14px',
-        color: '#7dffb3',
-        align: 'center',
-        backgroundColor: '#0a0c10cc',
-        padding: { x: 20, y: 16 },
-      })
+      .text(
+        GAME_W / 2,
+        GAME_H / 2,
+        'PAUSED\n\nESC — RESUME\nM — MAIN TITLE',
+        {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '14px',
+          color: '#7dffb3',
+          align: 'center',
+          backgroundColor: '#0a0c10cc',
+          padding: { x: 20, y: 16 },
+          lineSpacing: 8,
+        },
+      )
       .setOrigin(0.5)
       .setVisible(false)
       .setDepth(130)

@@ -48,6 +48,10 @@ export class TitleScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(COLORS.black);
+    // Crawl UI must not sit on top of title (ESC→M used to leave HUD alive)
+    if (this.scene.isActive('UI')) {
+      this.scene.stop('UI');
+    }
     // Hide crawl pad on title (tap slots / keyboard)
     setTouchPadVisible(false);
     clearAllTouch();
