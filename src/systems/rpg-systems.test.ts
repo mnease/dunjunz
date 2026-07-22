@@ -3277,6 +3277,8 @@ describe('universal positional lighting v2', () => {
     expect(a).toBe(AMBIENT_GUILD_HALL);
     expect(a).toBeLessThan(AMBIENT_SURFACE);
     expect(a).toBeGreaterThan(AMBIENT_DARK);
+    // Deep gloom: veil should be heavy away from lights
+    expect(visionOverlayAlpha(a)).toBeGreaterThan(0.55);
     // Wall fixture still lifts brightness near the torch
     const sources = buildLightSources({
       darkRoom: false,
@@ -3292,6 +3294,8 @@ describe('universal positional lighting v2', () => {
     const far = sampleBrightness(800, 800, sources, a);
     expect(near).toBeGreaterThan(far);
     expect(near).toBeGreaterThan(a);
+    // Clear light vs shadow contrast in the guild
+    expect(near - far).toBeGreaterThan(0.35);
   });
 
   it('smoothstep falloff is 1 at center and 0 at rim', () => {

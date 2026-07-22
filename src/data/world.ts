@@ -46,8 +46,8 @@ export const ROOMS: Record<string, RoomDef> = {
    * Training Guild — ominous living quarters (EMA atmosphere).
    * Perimeter bookshelves + wall torches + reading corners;
    * center remains drill floor (dummies / racks / master).
-   * Ambient gloom via ambientForRoom('guild_hall'); not dark:true
-   * so new players are never soft-locked without a carried torch.
+   * Deep ambient gloom via ambientForRoom('guild_hall') + punched fixtures;
+   * not dark:true so new players are never soft-locked without a carried torch.
    */
   guild_hall: {
     id: 'guild_hall',

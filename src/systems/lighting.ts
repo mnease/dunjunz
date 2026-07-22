@@ -58,10 +58,13 @@ export const AMBIENT_INDOOR_SURFACE = 0.78;
 /** B1 / authored-lit basements (depth via cookies, not full bright). */
 export const AMBIENT_LIT_DUNGEON = 0.58;
 /**
- * Training Guild living quarters — ominous, not pitch black.
- * Low enough that wall torch / lamp cookies read clearly.
+ * Training Guild living quarters — deep gloom so torch/lamp pools read hard.
+ * Slightly above AMBIENT_DARK so silhouettes stay readable without carried light.
  */
-export const AMBIENT_GUILD_HALL = 0.26;
+export const AMBIENT_GUILD_HALL = 0.13;
+/** Boost authored fixtures in the guild so cookies punch through the veil. */
+export const GUILD_FIXTURE_INTENSITY_MUL = 1.35;
+export const GUILD_FIXTURE_RADIUS_MUL = 1.2;
 /** Boss rooms slightly moodier than floor peers. */
 export const AMBIENT_BOSS_MUL = 0.92;
 

@@ -136,6 +136,8 @@ import {
   placedEmissionWorld,
   roomIsDark,
   roomNeedsCarriedLight,
+  GUILD_FIXTURE_INTENSITY_MUL,
+  GUILD_FIXTURE_RADIUS_MUL,
   sampleBrightness,
   shouldBurnCarriedFuel,
   stepAmbushState,
@@ -1790,6 +1792,14 @@ export class GameScene extends Phaser.Scene {
       creatures,
       cell,
     });
+    // Training Guild: punchier torch/lamp cookies against deeper ambient gloom
+    if (this.room.id === GUILD_HALL_ID) {
+      for (const s of sources) {
+        if (s.kind !== 'wall_fixture' && s.kind !== 'wall_placed') continue;
+        s.intensity = Math.min(1, s.intensity * GUILD_FIXTURE_INTENSITY_MUL);
+        s.radiusPx *= GUILD_FIXTURE_RADIUS_MUL;
+      }
+    }
     return { sources, ambient };
   }
 
@@ -1932,6 +1942,7 @@ export class GameScene extends Phaser.Scene {
     const cookie = this.lightCookie;
     if (!cookie) return;
 
+    const guildMood = this.room?.id === GUILD_HALL_ID;
     for (const s of sources) {
       if (!Number.isFinite(s.radiusPx) || s.radiusPx <= 0) {
         // full ambient — clear veil
@@ -1944,8 +1955,10 @@ export class GameScene extends Phaser.Scene {
       // Scale cookie so diameter ≈ 2 * radius
       const diam = s.radiusPx * 2;
       const scale = diam / 256;
-      // Intensity: stronger erase near peak
-      cookie.setAlpha(Math.min(1, 0.55 + s.intensity * 0.5));
+      // Intensity: stronger erase near peak (guild: harder falloff punch)
+      const base = guildMood ? 0.72 : 0.55;
+      const peak = guildMood ? 0.58 : 0.5;
+      cookie.setAlpha(Math.min(1, base + s.intensity * peak));
       cookie.setScale(scale);
       this.lightRt.erase(cookie, sx, sy);
     }

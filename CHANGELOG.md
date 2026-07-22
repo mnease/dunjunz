@@ -18,6 +18,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 - **Landing page images** — hero banner + 3-card gallery (hero loadout, meadow/sun trees, dark dungeon) on `/`; CRT-framed figures, lazy-loaded cards, clickable hero → `/play`.
 - **Surface sun depth (EMA council)** — big meadow/trail oaks (`scale` 2.2–2.6), sun-cast elongated ground shadows, and **moving cloud shade** (no cloud sprites) drifting slowly across outdoor surface lands. Trunk-sized colliders so canopies don't brick the meadow. `prefers-reduced-motion` freezes cloud drift.
 
+### Changed
+
+- **Guild hall shadows** — deeper ambient (`0.13`), stronger torch/lamp cookies (intensity + radius + erase punch) so light pools and dark corners read clearly.
+
 ### Fixed
 
 - **Title save slots after ESC → main menu** — TitleScene reuses its Phaser instance; slot text handles were stale after crawl return so cloud slots never re-drew. Reset GO lists on create and re-fetch `/api/auth/me` for live slot data.
