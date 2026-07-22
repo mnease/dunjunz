@@ -61,32 +61,65 @@ function drawWeapon(
   drawWeaponAvatar(ctx, look);
 }
 
-/** Left-arm shield — 32×32 avatar space. */
+/**
+ * Left-arm shield silhouettes — must read as a shield (rim, boss, shape),
+ * not a vertical bar.
+ */
 function drawShield(
   ctx: CanvasRenderingContext2D,
   look: ShieldLook,
 ): void {
   if (look === 'none') return;
   if (look === 'tower') {
-    block(ctx, '#5a6578', '#2a3040', 1, 10, 8, 16);
-    fill(ctx, '#3a4558', 2, 12, 6, 12);
-    fill(ctx, '#ffc857', 3, 16, 4, 2);
-    fill(ctx, '#8a98a8', 2, 11, 6, 1);
-    spark(ctx, 4, 14, '#c0d0e0');
+    // Tall heater: wide top, taper bottom, bands + boss
+    fill(ctx, '#2a3040', 0, 8, 10, 18);
+    fill(ctx, '#5a6578', 1, 9, 8, 16);
+    fill(ctx, '#8a98a8', 1, 9, 8, 2); // top rim
+    fill(ctx, '#3a4558', 2, 11, 6, 12);
+    // gothic point bottom
+    fill(ctx, '#5a6578', 2, 24, 6, 2);
+    fill(ctx, '#5a6578', 3, 26, 4, 1);
+    fill(ctx, '#5a6578', 4, 27, 2, 1);
+    // cross bands
+    fill(ctx, '#c0c8d0', 1, 15, 8, 2);
+    fill(ctx, '#c0c8d0', 4, 9, 2, 16);
+    fill(ctx, '#ffc857', 3, 14, 4, 4); // boss
+    fill(ctx, '#fff3a0', 4, 15, 2, 1);
+    spark(ctx, 4, 12, '#e0e8f0');
     return;
   }
   if (look === 'iron') {
-    block(ctx, '#9aabc0', '#3a4050', 2, 12, 7, 12);
-    fill(ctx, '#c0d0e0', 4, 15, 3, 4);
-    fill(ctx, '#6a7888', 2, 12, 1, 12);
-    spark(ctx, 5, 14);
+    // Heater / kite shield
+    fill(ctx, '#3a4050', 1, 10, 9, 14);
+    fill(ctx, '#9aabc0', 2, 11, 7, 12);
+    // rounded top corners
+    fill(ctx, '#9aabc0', 2, 10, 7, 1);
+    fill(ctx, '#c0d0e0', 2, 11, 7, 1);
+    // taper tip
+    fill(ctx, '#9aabc0', 3, 23, 5, 1);
+    fill(ctx, '#9aabc0', 4, 24, 3, 1);
+    // metal rim
+    fill(ctx, '#6a7888', 2, 11, 1, 12);
+    fill(ctx, '#6a7888', 8, 11, 1, 12);
+    // center boss
+    fill(ctx, '#d0d8e8', 4, 15, 3, 4);
+    fill(ctx, '#ffffff', 5, 16, 1, 1);
+    fill(ctx, '#ffc857', 4, 14, 3, 1);
     return;
   }
-  // wood
-  block(ctx, '#a07828', '#4a3010', 2, 13, 7, 11);
-  fill(ctx, '#c9a227', 3, 15, 5, 2);
-  fill(ctx, '#6b4423', 4, 18, 3, 4);
-  fill(ctx, '#5a3d1a', 5, 19, 1, 2);
+  // Wood round / kite
+  fill(ctx, '#4a3010', 1, 11, 9, 13);
+  fill(ctx, '#a07828', 2, 12, 7, 11);
+  fill(ctx, '#c9a227', 2, 12, 7, 1);
+  // grain
+  fill(ctx, '#6b4423', 3, 14, 1, 8);
+  fill(ctx, '#6b4423', 6, 15, 1, 7);
+  // round-ish bottom
+  fill(ctx, '#a07828', 3, 23, 5, 1);
+  // boss + strap hint
+  fill(ctx, '#8a6820', 4, 16, 3, 3);
+  fill(ctx, '#ffc857', 5, 17, 1, 1);
+  fill(ctx, '#5a3d1a', 3, 18, 5, 1);
 }
 
 function drawAmulet(
@@ -94,24 +127,28 @@ function drawAmulet(
   look: AmuletLook,
 ): void {
   if (look === 'none') return;
+  // chain across collar
+  fill(ctx, '#c9a227', 11, 12, 10, 1);
+  fill(ctx, '#8a6820', 11, 13, 10, 1);
   if (look === 'cube') {
-    block(ctx, '#5ad45a', '#2a6a2a', 12, 12, 8, 6);
-    fill(ctx, '#9ef09e', 13, 13, 4, 2);
-    fill(ctx, '#2a8a2a', 12, 16, 8, 1);
-    spark(ctx, 14, 14, '#e0ffe0');
+    block(ctx, '#5ad45a', '#2a6a2a', 13, 13, 6, 6);
+    fill(ctx, '#9ef09e', 14, 14, 3, 2);
+    fill(ctx, '#2a8a2a', 13, 17, 6, 1);
+    spark(ctx, 15, 15, '#e0ffe0');
     return;
   }
   if (look === 'bauble') {
-    fill(ctx, '#c07090', 14, 12, 4, 1);
-    block(ctx, '#ff6b9d', '#8a2040', 12, 13, 8, 5);
-    spark(ctx, 14, 14);
-    fill(ctx, '#ffb0c8', 15, 15, 2, 1);
+    block(ctx, '#ff6b9d', '#8a2040', 13, 13, 6, 6);
+    fill(ctx, '#ffb0c8', 14, 14, 3, 2);
+    spark(ctx, 15, 15);
+    fill(ctx, '#c07090', 14, 18, 4, 1);
     return;
   }
-  // gold
-  fill(ctx, '#c9a227', 14, 12, 4, 1);
-  block(ctx, '#ffc857', '#8a6820', 13, 13, 6, 5);
-  spark(ctx, 15, 14, '#fff3a0');
+  // gold medallion
+  block(ctx, '#ffc857', '#8a6820', 13, 13, 6, 6);
+  fill(ctx, '#fff3a0', 14, 14, 3, 2);
+  fill(ctx, '#c9a227', 15, 16, 2, 2);
+  spark(ctx, 14, 14, '#ffffff');
 }
 
 function drawRing(
@@ -119,42 +156,345 @@ function drawRing(
   look: RingLook,
 ): void {
   if (look === 'none') return;
+  // on right hand knuckles (near glove)
   if (look === 'luck') {
-    fill(ctx, '#7dffb3', 22, 20, 4, 2);
-    fill(ctx, '#c9ffe0', 23, 18, 2, 6);
-    spark(ctx, 24, 19);
+    fill(ctx, '#2a6a50', 24, 19, 5, 4);
+    fill(ctx, '#7dffb3', 25, 18, 3, 5);
+    fill(ctx, '#c9ffe0', 26, 19, 1, 3);
+    spark(ctx, 26, 18);
     return;
   }
   if (look === 'silver') {
-    block(ctx, '#d0d8e8', '#607080', 22, 20, 5, 4);
-    spark(ctx, 23, 21);
+    block(ctx, '#d0d8e8', '#607080', 24, 19, 5, 4);
+    fill(ctx, '#ffffff', 25, 20, 2, 1);
+    spark(ctx, 26, 20);
     return;
   }
-  block(ctx, '#c07040', '#603010', 22, 20, 5, 4);
-  fill(ctx, '#e09060', 23, 21, 2, 1);
+  block(ctx, '#c07040', '#603010', 24, 19, 5, 4);
+  fill(ctx, '#e09060', 25, 20, 2, 1);
 }
 
+/**
+ * Boots with ankle shaft + sole + forward toe box (clearly feet, not gloves).
+ */
 function drawShoes(
   ctx: CanvasRenderingContext2D,
   look: ShoesLook,
 ): void {
+  const drawBoot = (
+    x: number,
+    mid: string,
+    light: string,
+    dark: string,
+    sole: string,
+    fancy = false,
+  ) => {
+    // ankle shaft (up the shin)
+    shadedBlock(ctx, mid, light, dark, x, 25, 5, 4);
+    // foot body
+    shadedBlock(ctx, mid, light, dark, x, 28, 7, 3);
+    // toe box pointing forward (right-ish for both — read as feet)
+    fill(ctx, mid, x + 5, 29, 3, 2);
+    fill(ctx, light, x + 5, 29, 2, 1);
+    // sole
+    fill(ctx, sole, x, 31, 8, 1);
+    // lace / buckle
+    fill(ctx, dark, x + 1, 27, 3, 1);
+    if (fancy) {
+      fill(ctx, '#ff6b9d', x + 1, 26, 2, 1);
+      fill(ctx, '#9ef0c8', x + 2, 29, 2, 1);
+    }
+  };
+
   if (look === 'apology') {
-    block(ctx, '#5ad4a0', '#2a6a50', 8, 26, 6, 5);
-    block(ctx, '#5ad4a0', '#2a6a50', 18, 26, 6, 5);
-    fill(ctx, '#9ef0c8', 8, 26, 6, 1);
-    fill(ctx, '#9ef0c8', 18, 26, 6, 1);
+    drawBoot(8, '#5ad4a0', '#9ef0c8', '#2a6a50', '#1a4030', true);
+    drawBoot(17, '#5ad4a0', '#9ef0c8', '#2a6a50', '#1a4030', true);
     return;
   }
   if (look === 'leather') {
-    block(ctx, '#6b4423', '#2a1810', 8, 26, 6, 5);
-    block(ctx, '#6b4423', '#2a1810', 18, 26, 6, 5);
-    fill(ctx, '#3d2b1f', 8, 29, 6, 2);
-    fill(ctx, '#3d2b1f', 18, 29, 6, 2);
+    drawBoot(8, '#6b4423', '#a06830', '#2a1810', '#1a1008');
+    drawBoot(17, '#6b4423', '#a06830', '#2a1810', '#1a1008');
     return;
   }
-  // bare boots
-  block(ctx, '#3d2b1f', '#1a1008', 9, 27, 5, 4);
-  block(ctx, '#3d2b1f', '#1a1008', 18, 27, 5, 4);
+  // bare shoes (simple soft boots)
+  drawBoot(9, '#3d2b1f', '#5a4030', '#1a1008', '#0a0804');
+  drawBoot(17, '#3d2b1f', '#5a4030', '#1a1008', '#0a0804');
+}
+
+/** Shin guards — knee cap + shin plate, not rectangular mittens. */
+function drawGreaves(
+  ctx: CanvasRenderingContext2D,
+  look: AppearanceSpec['greaves'],
+): void {
+  if (look === 'plate') {
+    for (const x of [10, 17]) {
+      // knee cap
+      block(ctx, '#a8b8c8', '#4a5060', x, 21, 5, 3);
+      fill(ctx, '#c0d0e0', x + 1, 21, 3, 1);
+      // shin plate
+      shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#3a4050', x, 24, 5, 5);
+      fill(ctx, '#6a7888', x + 2, 25, 1, 3);
+    }
+  } else if (look === 'leather') {
+    for (const x of [10, 17]) {
+      shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', x, 22, 5, 6);
+      fill(ctx, '#5a3d1a', x + 1, 24, 3, 1); // strap
+      fill(ctx, '#c9a227', x + 2, 24, 1, 1); // buckle
+    }
+  } else {
+    // pants
+    shadedBlock(ctx, '#2d6cdf', '#4a8cff', '#1a3a8a', 10, 23, 5, 5);
+    shadedBlock(ctx, '#2d6cdf', '#4a8cff', '#1a3a8a', 17, 23, 5, 5);
+  }
+}
+
+/**
+ * Gloves = hands with fingers at the ends of arms (mid torso sides),
+ * never boot-shaped blocks at the feet.
+ */
+function drawGloves(
+  ctx: CanvasRenderingContext2D,
+  look: AppearanceSpec['gloves'],
+): void {
+  const hand = (
+    x: number,
+    mid: string,
+    light: string,
+    dark: string,
+    sheath = false,
+  ) => {
+    // forearm cuff
+    shadedBlock(ctx, mid, light, dark, x, 14, 4, 5);
+    // palm
+    shadedBlock(ctx, mid, light, dark, x - (x < 16 ? 1 : 0), 18, 5, 4);
+    // fingers (3 stubs) — horizontal/down, glove signature
+    fill(ctx, mid, x - (x < 16 ? 1 : 0), 22, 2, 2);
+    fill(ctx, mid, x + 1, 22, 2, 2);
+    fill(ctx, mid, x + 3, 22, 1, 2);
+    fill(ctx, light, x, 18, 3, 1);
+    if (sheath) {
+      // arrow nock peeking
+      fill(ctx, '#c8b090', x + (x < 16 ? 3 : -1), 12, 2, 5);
+      fill(ctx, '#7dffb3', x + (x < 16 ? 3 : -1), 11, 2, 2);
+    }
+  };
+
+  if (look === 'sheath') {
+    hand(4, '#5a3d1a', '#8b5a2b', '#2a1810', true);
+    hand(24, '#5a3d1a', '#8b5a2b', '#2a1810', true);
+  } else if (look === 'leather') {
+    hand(4, '#8b5a2b', '#a06830', '#5a3d1a');
+    hand(24, '#8b5a2b', '#a06830', '#5a3d1a');
+  } else {
+    // bare hands (skin)
+    hand(5, '#f0c8a4', '#ffe0c0', '#c09070');
+    hand(23, '#f0c8a4', '#ffe0c0', '#c09070');
+  }
+}
+
+/** Torso armor — real breastplate silhouette vs jackets/cloaks. */
+function drawBreastplate(
+  ctx: CanvasRenderingContext2D,
+  look: AppearanceSpec['breastplate'],
+): void {
+  if (look === 'plate') {
+    // neck opening
+    fill(ctx, '#1a1a2e', 13, 11, 6, 2);
+    // main cuirass (tapered waist)
+    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', 8, 12, 16, 11);
+    fill(ctx, '#a8b8c8', 10, 13, 12, 4);
+    // chest ridge / muscle line
+    fill(ctx, '#c0d0e0', 15, 14, 2, 6);
+    fill(ctx, '#6a7888', 10, 18, 12, 1);
+    // fauld (bottom plates)
+    fill(ctx, '#7a8a9a', 9, 22, 14, 2);
+    fill(ctx, '#5a6878', 10, 24, 12, 1);
+    // pauldrons
+    block(ctx, '#c0d0e0', '#4a5060', 5, 11, 5, 6);
+    block(ctx, '#c0d0e0', '#4a5060', 22, 11, 5, 6);
+    fill(ctx, '#e0e8f0', 6, 12, 3, 1);
+    fill(ctx, '#e0e8f0', 23, 12, 3, 1);
+    // rivets
+    spark(ctx, 11, 15, '#ffffff');
+    spark(ctx, 20, 15, '#ffffff');
+    spark(ctx, 15, 13, '#ffffff');
+    return;
+  }
+  if (look === 'reinforced') {
+    shadedBlock(ctx, '#5c4030', '#8a7a60', '#3a2a18', 8, 12, 16, 12);
+    // metal chest plate inset
+    block(ctx, '#a8b0b8', '#4a5060', 11, 14, 10, 7);
+    fill(ctx, '#c0c8d0', 12, 15, 8, 2);
+    fill(ctx, '#ffc857', 14, 17, 4, 3);
+    fill(ctx, '#fff3a0', 15, 18, 2, 1);
+    // shoulder cops
+    block(ctx, '#c0b090', '#6a6040', 6, 12, 4, 5);
+    block(ctx, '#c0b090', '#6a6040', 22, 12, 4, 5);
+    fill(ctx, '#3d2b1f', 9, 22, 14, 2); // belt
+    return;
+  }
+  if (look === 'leather') {
+    // jacket with collar + straps (not a metal plate)
+    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 8, 12, 16, 12);
+    // open collar V
+    fill(ctx, '#f0c8a4', 13, 12, 6, 3);
+    fill(ctx, '#5a3d1a', 12, 12, 1, 4);
+    fill(ctx, '#5a3d1a', 19, 12, 1, 4);
+    // cross straps
+    fill(ctx, '#3d2b1f', 10, 16, 12, 2);
+    fill(ctx, '#c9a227', 14, 16, 4, 2); // buckle
+    fill(ctx, '#5a3d1a', 10, 15, 2, 6);
+    fill(ctx, '#5a3d1a', 20, 15, 2, 6);
+    dither(ctx, '#8b5a2b', '#7a4a20', 11, 19, 10, 3);
+    fill(ctx, '#3d2b1f', 9, 23, 14, 1);
+    return;
+  }
+  if (look === 'cloth_arcane') {
+    // draped cloak — wide shoulders, starfield, hanging sleeves
+    shadedBlock(ctx, '#4a2a7a', '#7a5ab0', '#2a1848', 6, 11, 20, 14);
+    fill(ctx, '#6a4a9a', 8, 12, 16, 4);
+    // hood collar
+    fill(ctx, '#2a1848', 11, 11, 10, 3);
+    fill(ctx, '#5a3a8a', 12, 12, 8, 1);
+    spark(ctx, 10, 16, '#ffc857');
+    spark(ctx, 20, 18, '#7dffb3');
+    spark(ctx, 14, 20, '#ffc857');
+    spark(ctx, 17, 15, '#c9a0ff');
+    // hanging cloth flaps
+    fill(ctx, '#3a1a60', 6, 22, 4, 3);
+    fill(ctx, '#3a1a60', 22, 22, 4, 3);
+    return;
+  }
+  if (look === 'cloak_ranger') {
+    // hooded forest cloak
+    shadedBlock(ctx, '#3a5a38', '#5a8a50', '#1a3018', 6, 11, 20, 14);
+    // hood shape over shoulders
+    fill(ctx, '#2a4a28', 9, 10, 14, 4);
+    fill(ctx, '#1a3018', 12, 11, 8, 2);
+    // clasp
+    fill(ctx, '#8b5a2b', 14, 14, 4, 3);
+    fill(ctx, '#c9a227', 15, 15, 2, 1);
+    // leaf dither
+    dither(ctx, '#3a5a38', '#2a4a28', 8, 17, 16, 5);
+    return;
+  }
+  if (look === 'holy') {
+    shadedBlock(ctx, '#e8e0d0', '#ffffff', '#8a8070', 8, 12, 16, 12);
+    fill(ctx, '#f8f0e0', 10, 13, 12, 3);
+    // gold cross breastplate
+    fill(ctx, '#ffc857', 14, 15, 4, 7);
+    fill(ctx, '#ffc857', 12, 17, 8, 3);
+    fill(ctx, '#fff3a0', 15, 16, 2, 2);
+    fill(ctx, '#c9a227', 9, 23, 14, 1);
+    return;
+  }
+  if (look === 'hide') {
+    // fur pelt cuirass with ragged edge + bone pin
+    shadedBlock(ctx, '#6a4a30', '#8a6a48', '#3a2818', 7, 12, 18, 12);
+    dither(ctx, '#6a4a30', '#5a3a28', 9, 14, 14, 7);
+    // fur tufts on shoulders
+    fill(ctx, '#8a6a48', 6, 11, 3, 3);
+    fill(ctx, '#8a6a48', 23, 11, 3, 3);
+    fill(ctx, '#a08060', 7, 12, 2, 1);
+    fill(ctx, '#a08060', 24, 12, 2, 1);
+    // bone pin
+    fill(ctx, '#e8e0d0', 14, 15, 4, 2);
+    fill(ctx, '#c0392b', 15, 17, 2, 3);
+    // ragged hem
+    fill(ctx, '#3a2818', 8, 23, 2, 2);
+    fill(ctx, '#3a2818', 12, 24, 3, 1);
+    fill(ctx, '#3a2818', 18, 23, 2, 2);
+    fill(ctx, '#3a2818', 22, 24, 2, 1);
+    return;
+  }
+  // default tunic
+  shadedBlock(ctx, '#2d6cdf', '#5a9aff', '#1a4aaf', 8, 12, 16, 12);
+  fill(ctx, '#4a8cef', 10, 14, 12, 3);
+  fill(ctx, '#1a4aaf', 14, 18, 4, 5);
+  fill(ctx, '#1a3a8a', 12, 12, 8, 2);
+  fill(ctx, '#c9a227', 13, 20, 6, 2); // belt
+  spark(ctx, 11, 15, '#a0c8ff');
+}
+
+/**
+ * Helmets: closed plate with horns, leather cheek-guards, wizard hat with brim.
+ */
+function drawHelmet(
+  ctx: CanvasRenderingContext2D,
+  look: AppearanceSpec['helmet'],
+): void {
+  // face always under helm
+  shadedBlock(ctx, '#f0c8a4', '#ffe0c8', '#c09070', 10, 5, 12, 8);
+  fill(ctx, '#1a1a2e', 12, 8, 2, 2);
+  fill(ctx, '#1a1a2e', 18, 8, 2, 2);
+  spark(ctx, 13, 8, '#ffffff');
+  spark(ctx, 19, 8, '#ffffff');
+  fill(ctx, '#d09080', 14, 11, 4, 1);
+
+  if (look === 'plate') {
+    // closed great-helm dome
+    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', 8, 1, 16, 10);
+    fill(ctx, '#a8b8c8', 10, 2, 12, 3);
+    // visor slit
+    fill(ctx, '#0a0a12', 11, 7, 10, 2);
+    fill(ctx, '#1a1a2e', 12, 7, 3, 2);
+    fill(ctx, '#1a1a2e', 17, 7, 3, 2);
+    // nasal
+    fill(ctx, '#6a7888', 15, 6, 2, 5);
+    // cheek plates
+    fill(ctx, '#7a8a9a', 8, 8, 3, 4);
+    fill(ctx, '#7a8a9a', 21, 8, 3, 4);
+    // HORNS
+    fill(ctx, '#e8e0d0', 6, 0, 3, 5);
+    fill(ctx, '#e8e0d0', 23, 0, 3, 5);
+    fill(ctx, '#c0b8a0', 5, 0, 2, 3);
+    fill(ctx, '#c0b8a0', 25, 0, 2, 3);
+    fill(ctx, '#ffffff', 6, 1, 1, 2);
+    fill(ctx, '#ffffff', 25, 1, 1, 2);
+    // brow ridge
+    fill(ctx, '#c0d0e0', 10, 5, 12, 1);
+    spark(ctx, 14, 3, '#ffffff');
+    return;
+  }
+  if (look === 'leather') {
+    // open-face leather cap + cheek guards + stub horns
+    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 8, 2, 16, 7);
+    fill(ctx, '#a06830', 10, 3, 12, 2);
+    // cheek flaps
+    fill(ctx, '#6b4423', 7, 7, 4, 5);
+    fill(ctx, '#6b4423', 21, 7, 4, 5);
+    fill(ctx, '#5a3d1a', 8, 9, 2, 2);
+    fill(ctx, '#5a3d1a', 22, 9, 2, 2);
+    // chin strap
+    fill(ctx, '#3d2b1f', 12, 12, 8, 1);
+    // short bone/horn studs
+    fill(ctx, '#e8e0d0', 9, 0, 2, 3);
+    fill(ctx, '#e8e0d0', 21, 0, 2, 3);
+    fill(ctx, '#c9a227', 14, 4, 4, 1); // band
+    return;
+  }
+  if (look === 'cloth_arcane') {
+    // wide brim + tall cone + star
+    fill(ctx, '#2a1848', 6, 5, 20, 3); // brim
+    fill(ctx, '#4a2a7a', 7, 5, 18, 2);
+    // cone
+    fill(ctx, '#4a2a7a', 11, 0, 10, 6);
+    fill(ctx, '#7a5ab0', 13, 0, 6, 7);
+    fill(ctx, '#5a3a8a', 14, 0, 4, 2);
+    fill(ctx, '#2a1848', 15, 0, 2, 1); // tip
+    spark(ctx, 16, 1, '#ffc857');
+    spark(ctx, 12, 4, '#c9a0ff');
+    // band
+    fill(ctx, '#c9a227', 11, 5, 10, 1);
+    return;
+  }
+  // bare: gold circlet crown
+  shadedBlock(ctx, '#c9a227', '#e8c050', '#8a7010', 8, 3, 16, 3);
+  fill(ctx, '#e8c050', 10, 3, 12, 1);
+  fill(ctx, '#ffc857', 9, 2, 2, 3);
+  fill(ctx, '#ffc857', 14, 1, 4, 3);
+  fill(ctx, '#ffc857', 21, 2, 2, 3);
+  fill(ctx, '#fff3a0', 15, 1, 2, 1);
 }
 
 /**
@@ -165,125 +505,24 @@ export function drawPlayerLook(
   ctx: CanvasRenderingContext2D,
   spec: AppearanceSpec,
 ): void {
-  // —— Legs ——
-  if (spec.greaves === 'plate') {
-    shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#4a5060', 10, 22, 5, 6);
-    shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#4a5060', 17, 22, 5, 6);
-  } else if (spec.greaves === 'leather') {
-    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 10, 22, 5, 6);
-    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 17, 22, 5, 6);
-  } else {
-    shadedBlock(ctx, '#2d6cdf', '#4a8cff', '#1a3a8a', 10, 23, 5, 5);
-    shadedBlock(ctx, '#2d6cdf', '#4a8cff', '#1a3a8a', 17, 23, 5, 5);
-  }
-
+  drawGreaves(ctx, spec.greaves);
   drawShoes(ctx, spec.shoes);
-
-  // —— Torso (class clothing + armor) ——
-  if (spec.breastplate === 'leather') {
-    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 8, 12, 16, 12);
-    fill(ctx, '#a06830', 10, 14, 12, 3);
-    fill(ctx, '#5a3d1a', 8, 20, 16, 1);
-    fill(ctx, '#3d2b1f', 10, 15, 2, 6);
-    fill(ctx, '#3d2b1f', 20, 15, 2, 6);
-    dither(ctx, '#8b5a2b', '#7a4a20', 11, 18, 10, 2);
-  } else if (spec.breastplate === 'reinforced') {
-    shadedBlock(ctx, '#5c4030', '#8a7a60', '#3a2a18', 8, 12, 16, 12);
-    fill(ctx, '#8a7a60', 10, 14, 12, 5);
-    fill(ctx, '#ffc857', 14, 16, 4, 4);
-    fill(ctx, '#fff3a0', 15, 17, 2, 1);
-    block(ctx, '#c0b090', '#6a6040', 7, 12, 4, 6);
-    block(ctx, '#c0b090', '#6a6040', 21, 12, 4, 6);
-  } else if (spec.breastplate === 'cloth_arcane') {
-    // Wizard cloak — purple stars
-    shadedBlock(ctx, '#4a2a7a', '#7a5ab0', '#2a1848', 7, 11, 18, 14);
-    fill(ctx, '#6a4a9a', 9, 13, 14, 4);
-    spark(ctx, 12, 16, '#ffc857');
-    spark(ctx, 18, 19, '#7dffb3');
-    spark(ctx, 14, 21, '#ffc857');
-    fill(ctx, '#2a1848', 12, 12, 8, 2);
-  } else if (spec.breastplate === 'cloak_ranger') {
-    shadedBlock(ctx, '#3a5a38', '#5a8a50', '#1a3018', 7, 11, 18, 14);
-    fill(ctx, '#2a4a28', 8, 12, 16, 3);
-    fill(ctx, '#8b5a2b', 14, 18, 4, 4);
-    fill(ctx, '#c9a227', 15, 19, 2, 1);
-  } else if (spec.breastplate === 'plate') {
-    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', 8, 12, 16, 12);
-    fill(ctx, '#a8b8c8', 10, 14, 12, 5);
-    block(ctx, '#c0d0e0', '#5a6878', 6, 12, 5, 7);
-    block(ctx, '#c0d0e0', '#5a6878', 21, 12, 5, 7);
-    spark(ctx, 15, 16);
-  } else if (spec.breastplate === 'holy') {
-    shadedBlock(ctx, '#e8e0d0', '#ffffff', '#8a8070', 8, 12, 16, 12);
-    fill(ctx, '#ffc857', 13, 15, 6, 6);
-    fill(ctx, '#fff3a0', 15, 17, 2, 2);
-  } else if (spec.breastplate === 'hide') {
-    shadedBlock(ctx, '#6a4a30', '#8a6a48', '#3a2818', 8, 12, 16, 12);
-    dither(ctx, '#6a4a30', '#5a3a28', 10, 14, 12, 6);
-    fill(ctx, '#c0392b', 14, 16, 4, 3);
-  } else {
-    shadedBlock(ctx, '#2d6cdf', '#5a9aff', '#1a4aaf', 8, 12, 16, 12);
-    fill(ctx, '#4a8cef', 10, 14, 12, 3);
-    fill(ctx, '#1a4aaf', 14, 18, 4, 5);
-    fill(ctx, '#1a3a8a', 12, 12, 8, 2);
-    spark(ctx, 11, 15, '#a0c8ff');
-  }
-
-  // —— Arms / gloves ——
-  if (spec.gloves === 'sheath') {
-    shadedBlock(ctx, '#5a3d1a', '#8b5a2b', '#2a1810', 4, 14, 5, 8);
-    shadedBlock(ctx, '#5a3d1a', '#8b5a2b', '#2a1810', 23, 14, 5, 8);
-    fill(ctx, '#c8b090', 25, 12, 2, 6); // arrow nocks
-    fill(ctx, '#7dffb3', 25, 11, 2, 2);
-  } else if (spec.gloves === 'leather') {
-    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 5, 15, 4, 7);
-    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 23, 15, 4, 7);
-  } else {
-    shadedBlock(ctx, '#f0c8a4', '#ffe0c0', '#c09070', 5, 16, 3, 5);
-    shadedBlock(ctx, '#f0c8a4', '#ffe0c0', '#c09070', 24, 16, 3, 5);
-  }
-
-  // —— Head ——
-  shadedBlock(ctx, '#f0c8a4', '#ffe0c8', '#c09070', 10, 4, 12, 9);
-  fill(ctx, '#1a1a2e', 12, 7, 2, 2);
-  fill(ctx, '#1a1a2e', 18, 7, 2, 2);
-  spark(ctx, 13, 7, '#ffffff');
-  spark(ctx, 19, 7, '#ffffff');
-  fill(ctx, '#c9a227', 12, 6, 2, 1);
-  fill(ctx, '#c9a227', 18, 6, 2, 1);
-  fill(ctx, '#d09080', 14, 10, 4, 1);
-
-  if (spec.helmet === 'plate') {
-    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', 8, 1, 16, 8);
-    fill(ctx, '#1a1a2e', 12, 6, 3, 2);
-    fill(ctx, '#1a1a2e', 17, 6, 3, 2);
-    spark(ctx, 14, 3);
-  } else if (spec.helmet === 'cloth_arcane') {
-    // Pointed mage hat
-    fill(ctx, '#4a2a7a', 10, 0, 12, 6);
-    fill(ctx, '#7a5ab0', 14, 0, 4, 8);
-    fill(ctx, '#2a1848', 15, 0, 2, 3);
-    spark(ctx, 16, 1, '#ffc857');
-  } else if (spec.helmet === 'leather') {
-    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 8, 2, 16, 6);
-    fill(ctx, '#8b5a2b', 7, 6, 3, 4);
-    fill(ctx, '#8b5a2b', 22, 6, 3, 4);
-  } else {
-    shadedBlock(ctx, '#c9a227', '#e8c050', '#8a7010', 8, 2, 16, 4);
-    fill(ctx, '#e8c050', 10, 2, 12, 2);
-    fill(ctx, '#c9a227', 8, 5, 3, 3);
-    fill(ctx, '#c9a227', 21, 5, 3, 3);
-  }
-
+  drawBreastplate(ctx, spec.breastplate);
+  drawGloves(ctx, spec.gloves);
+  drawHelmet(ctx, spec.helmet);
   drawAmulet(ctx, spec.amulet);
   drawRing(ctx, spec.ring);
   drawShield(ctx, spec.shield);
   drawWeapon(ctx, spec.weapon);
 
   if (spec.key === 'key') {
-    block(ctx, '#ffc857', '#8a6820', 6, 21, 4, 6);
-    fill(ctx, '#fff3a0', 6, 21, 2, 2);
-    fill(ctx, '#ffc857', 5, 21, 2, 3);
+    // key on belt left hip
+    fill(ctx, '#8a6820', 5, 21, 3, 2);
+    block(ctx, '#ffc857', '#8a6820', 5, 22, 5, 5);
+    fill(ctx, '#fff3a0', 6, 23, 2, 2);
+    fill(ctx, '#ffc857', 9, 24, 3, 1);
+    fill(ctx, '#ffc857', 10, 25, 1, 2);
+    spark(ctx, 6, 23, '#ffffff');
   }
 }
 
@@ -421,120 +660,148 @@ export function drawBuddyGear(
   const bodyX = 8 - Math.min(2, sx);
   const bodyW = 16 + sx;
 
-  // —— Greaves (leg bands) ——
+  // —— Greaves: shin plates on lower legs ——
   if (spec.greaves === 'plate') {
-    shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#4a5060', 10, 24, 5, 4);
-    shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#4a5060', 18, 24, 5, 4);
+    for (const x of [10, 18]) {
+      block(ctx, '#a8b8c8', '#4a5060', x, 23, 4, 2);
+      shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#3a4050', x, 25, 4, 4);
+    }
   } else if (spec.greaves === 'leather') {
-    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 10, 24, 5, 4);
-    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 18, 24, 5, 4);
+    for (const x of [10, 18]) {
+      shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', x, 24, 4, 5);
+      fill(ctx, '#c9a227', x + 1, 26, 2, 1);
+    }
   }
 
-  // —— Shoes over feet ——
-  if (spec.shoes === 'apology') {
-    block(ctx, '#5ad4a0', '#2a6a50', 9, 27, 6, 4);
-    block(ctx, '#5ad4a0', '#2a6a50', 18, 27, 6, 4);
-    fill(ctx, '#9ef0c8', 9, 27, 6, 1);
-    fill(ctx, '#9ef0c8', 18, 27, 6, 1);
-  } else if (spec.shoes === 'leather') {
-    block(ctx, '#6b4423', '#2a1810', 9, 27, 6, 4);
-    block(ctx, '#6b4423', '#2a1810', 18, 27, 6, 4);
+  // —— Boots with toe + sole ——
+  if (spec.shoes === 'apology' || spec.shoes === 'leather') {
+    const mid = spec.shoes === 'apology' ? '#5ad4a0' : '#6b4423';
+    const light = spec.shoes === 'apology' ? '#9ef0c8' : '#a06830';
+    const dark = spec.shoes === 'apology' ? '#2a6a50' : '#2a1810';
+    for (const x of [9, 18]) {
+      shadedBlock(ctx, mid, light, dark, x, 27, 5, 3);
+      fill(ctx, mid, x + 4, 28, 2, 2); // toe
+      fill(ctx, dark, x, 30, 6, 1); // sole
+      if (spec.shoes === 'apology') fill(ctx, '#ff6b9d', x + 1, 28, 2, 1);
+    }
   }
 
-  // —— Vest / armor on body (leave head free) ——
-  if (spec.breastplate === 'leather') {
-    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', bodyX, 14, bodyW, 10);
-    fill(ctx, '#a06830', bodyX + 2, 15, bodyW - 4, 2);
-    fill(ctx, '#3d2b1f', bodyX + 2, 18, 2, 4);
-    fill(ctx, '#3d2b1f', bodyX + bodyW - 4, 18, 2, 4);
+  // —— Body armor (distinct shapes) ——
+  if (spec.breastplate === 'plate') {
+    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', bodyX, 14, bodyW, 10);
+    fill(ctx, '#c0d0e0', bodyX + bodyW / 2 - 1, 15, 2, 6);
+    block(ctx, '#c0d0e0', '#4a5060', bodyX - 2, 13, 4, 5);
+    block(ctx, '#c0d0e0', '#4a5060', bodyX + bodyW - 2, 13, 4, 5);
+    spark(ctx, bodyX + 3, 16, '#ffffff');
   } else if (spec.breastplate === 'reinforced') {
     shadedBlock(ctx, '#5c4030', '#8a7a60', '#3a2a18', bodyX, 14, bodyW, 10);
+    block(ctx, '#a8b0b8', '#4a5060', bodyX + 3, 16, bodyW - 6, 5);
     fill(ctx, '#ffc857', bodyX + bodyW / 2 - 2, 17, 4, 3);
-    fill(ctx, '#fff3a0', bodyX + bodyW / 2 - 1, 18, 2, 1);
+  } else if (spec.breastplate === 'leather') {
+    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', bodyX, 14, bodyW, 10);
+    fill(ctx, '#f0c8a4', bodyX + bodyW / 2 - 2, 14, 4, 2); // collar V
+    fill(ctx, '#3d2b1f', bodyX + 2, 17, bodyW - 4, 2);
+    fill(ctx, '#c9a227', bodyX + bodyW / 2 - 1, 17, 2, 2);
   } else if (spec.breastplate === 'cloth_arcane') {
     shadedBlock(ctx, '#4a2a7a', '#7a5ab0', '#2a1848', bodyX - 1, 13, bodyW + 2, 12);
-    spark(ctx, bodyX + 4, 16, '#ffc857');
-    spark(ctx, bodyX + bodyW - 4, 19, '#7dffb3');
+    spark(ctx, bodyX + 3, 16, '#ffc857');
+    spark(ctx, bodyX + bodyW - 3, 19, '#7dffb3');
   } else if (spec.breastplate === 'cloak_ranger') {
     shadedBlock(ctx, '#3a5a38', '#5a8a50', '#1a3018', bodyX - 1, 13, bodyW + 2, 12);
-    fill(ctx, '#8b5a2b', bodyX + bodyW / 2 - 2, 18, 4, 3);
-  } else if (spec.breastplate === 'plate') {
-    shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#4a5060', bodyX, 14, bodyW, 10);
-    fill(ctx, '#c0c8d0', bodyX + 2, 15, bodyW - 4, 2);
-    fill(ctx, '#ffc857', bodyX + bodyW / 2 - 2, 18, 4, 2);
+    fill(ctx, '#2a4a28', bodyX + 2, 13, bodyW - 4, 3);
+    fill(ctx, '#c9a227', bodyX + bodyW / 2 - 1, 16, 2, 2);
   } else if (spec.breastplate === 'holy') {
     shadedBlock(ctx, '#e8e0d0', '#ffffff', '#a09080', bodyX, 14, bodyW, 10);
-    fill(ctx, '#ffc857', bodyX + bodyW / 2 - 2, 17, 4, 4);
-    spark(ctx, bodyX + bodyW / 2, 18, '#fff3a0');
+    fill(ctx, '#ffc857', bodyX + bodyW / 2 - 1, 16, 2, 5);
+    fill(ctx, '#ffc857', bodyX + bodyW / 2 - 3, 18, 6, 2);
   } else if (spec.breastplate === 'hide') {
     shadedBlock(ctx, '#6a4020', '#8a5a30', '#3a2010', bodyX, 14, bodyW, 10);
-    dither(ctx, '#6a4020', '#5a3818', bodyX + 1, 15, bodyW - 2, 8, 0);
+    dither(ctx, '#6a4020', '#5a3818', bodyX + 1, 15, bodyW - 2, 7, 0);
+    fill(ctx, '#e8e0d0', bodyX + bodyW / 2 - 2, 16, 4, 2);
   }
 
-  // —— Gloves / paw wraps ——
-  if (spec.gloves === 'leather') {
-    block(ctx, '#8b5a2b', '#5a3d1a', 6, 18, 4, 4);
-    block(ctx, '#8b5a2b', '#5a3d1a', 22 + Math.min(4, sx), 18, 4, 4);
-  } else if (spec.gloves === 'sheath') {
-    block(ctx, '#3a5a38', '#1a3018', 6, 17, 4, 5);
-    block(ctx, '#3a5a38', '#1a3018', 22 + Math.min(4, sx), 17, 4, 5);
-    fill(ctx, '#c9a227', 7, 19, 2, 1);
+  // —— Paw gloves with finger stubs ——
+  if (spec.gloves === 'leather' || spec.gloves === 'sheath') {
+    const mid = spec.gloves === 'sheath' ? '#3a5a38' : '#8b5a2b';
+    const dark = spec.gloves === 'sheath' ? '#1a3018' : '#5a3d1a';
+    const rx = 22 + Math.min(4, sx);
+    for (const x of [5, rx]) {
+      block(ctx, mid, dark, x, 17, 4, 4);
+      fill(ctx, mid, x, 21, 1, 2);
+      fill(ctx, mid, x + 2, 21, 1, 2);
+    }
+    if (spec.gloves === 'sheath') {
+      fill(ctx, '#c8b090', rx + 1, 14, 2, 4);
+      fill(ctx, '#7dffb3', rx + 1, 13, 2, 2);
+    }
   }
 
-  // —— Helmet / hat (between ears) ——
+  // —— Helmets with horns / brim ——
   if (spec.helmet === 'plate') {
-    shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#4a5060', 10, 4, 12, 7);
-    fill(ctx, '#c0c8d0', 12, 5, 8, 2);
-    fill(ctx, '#ffc857', 14, 8, 4, 2);
+    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', 9, 3, 14, 8);
+    fill(ctx, '#0a0a12', 12, 7, 8, 2); // visor
+    fill(ctx, '#e8e0d0', 7, 1, 3, 4); // horn L
+    fill(ctx, '#e8e0d0', 22, 1, 3, 4); // horn R
+    fill(ctx, '#c0b8a0', 6, 1, 2, 2);
+    fill(ctx, '#c0b8a0', 24, 1, 2, 2);
   } else if (spec.helmet === 'leather') {
-    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 10, 5, 12, 6);
-    fill(ctx, '#5a3d1a', 14, 8, 4, 2);
+    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 9, 4, 14, 7);
+    fill(ctx, '#6b4423', 8, 8, 3, 4);
+    fill(ctx, '#6b4423', 21, 8, 3, 4);
+    fill(ctx, '#e8e0d0', 10, 2, 2, 3);
+    fill(ctx, '#e8e0d0', 20, 2, 2, 3);
   } else if (spec.helmet === 'cloth_arcane') {
-    // wizard hat
-    fill(ctx, '#2a1848', 12, 2, 8, 2);
-    shadedBlock(ctx, '#4a2a7a', '#7a5ab0', '#2a1848', 11, 3, 10, 8);
-    fill(ctx, '#ffc857', 14, 1, 4, 3);
-    spark(ctx, 15, 2, '#fff3a0');
+    fill(ctx, '#2a1848', 8, 5, 16, 2); // brim
+    shadedBlock(ctx, '#4a2a7a', '#7a5ab0', '#2a1848', 11, 0, 10, 7);
+    spark(ctx, 15, 1, '#ffc857');
   }
 
   // —— Collar amulet ——
-  if (spec.amulet === 'gold') {
+  if (spec.amulet !== 'none') {
     fill(ctx, '#c9a227', 12, 13, 8, 1);
-    block(ctx, '#ffc857', '#8a6820', 14, 13, 4, 4);
-    spark(ctx, 15, 14, '#fff3a0');
-  } else if (spec.amulet === 'bauble') {
-    fill(ctx, '#c07090', 12, 13, 8, 1);
-    block(ctx, '#ff6b9d', '#8a2040', 13, 13, 6, 4);
-    spark(ctx, 15, 14);
-  } else if (spec.amulet === 'cube') {
-    fill(ctx, '#5ad45a', 12, 13, 8, 1);
-    block(ctx, '#5ad45a', '#2a6a2a', 13, 13, 6, 4);
-    spark(ctx, 15, 14, '#e0ffe0');
+    if (spec.amulet === 'gold') {
+      block(ctx, '#ffc857', '#8a6820', 13, 13, 6, 5);
+      spark(ctx, 15, 14, '#fff3a0');
+    } else if (spec.amulet === 'bauble') {
+      block(ctx, '#ff6b9d', '#8a2040', 13, 13, 6, 5);
+      spark(ctx, 15, 14);
+    } else {
+      block(ctx, '#5ad45a', '#2a6a2a', 13, 13, 6, 5);
+      spark(ctx, 15, 14, '#e0ffe0');
+    }
   }
 
   // —— Ring on paw ——
   if (spec.ring === 'luck') {
-    fill(ctx, '#7dffb3', 24 + Math.min(2, sx), 22, 4, 2);
+    fill(ctx, '#7dffb3', 24 + Math.min(2, sx), 21, 4, 3);
     spark(ctx, 25 + Math.min(2, sx), 21);
   } else if (spec.ring === 'silver') {
-    block(ctx, '#d0d8e8', '#607080', 24 + Math.min(2, sx), 22, 4, 3);
+    block(ctx, '#d0d8e8', '#607080', 24 + Math.min(2, sx), 21, 4, 3);
   } else if (spec.ring === 'copper') {
-    block(ctx, '#c07040', '#603010', 24 + Math.min(2, sx), 22, 4, 3);
+    block(ctx, '#c07040', '#603010', 24 + Math.min(2, sx), 21, 4, 3);
   }
 
-  // —— Shield (left flank) ——
+  // —— Shield (true shield shapes on left flank) ——
   if (spec.shield === 'tower') {
-    block(ctx, '#5a6578', '#2a3040', 2, 12, 6, 12);
-    fill(ctx, '#ffc857', 3, 16, 4, 2);
+    fill(ctx, '#2a3040', 0, 11, 7, 14);
+    fill(ctx, '#5a6578', 1, 12, 5, 12);
+    fill(ctx, '#c0c8d0', 1, 16, 5, 2);
+    fill(ctx, '#ffc857', 2, 15, 3, 3);
+    fill(ctx, '#5a6578', 2, 24, 3, 1);
   } else if (spec.shield === 'iron') {
-    block(ctx, '#9aabc0', '#3a4050', 2, 13, 6, 10);
-    spark(ctx, 4, 15);
+    fill(ctx, '#3a4050', 0, 12, 8, 12);
+    fill(ctx, '#9aabc0', 1, 13, 6, 10);
+    fill(ctx, '#9aabc0', 2, 23, 4, 1);
+    fill(ctx, '#d0d8e8', 3, 16, 2, 3);
+    spark(ctx, 3, 15);
   } else if (spec.shield === 'wood') {
-    block(ctx, '#a07828', '#4a3010', 2, 13, 6, 10);
-    fill(ctx, '#c9a227', 3, 16, 4, 2);
+    fill(ctx, '#4a3010', 0, 12, 8, 12);
+    fill(ctx, '#a07828', 1, 13, 6, 10);
+    fill(ctx, '#6b4423', 2, 15, 1, 6);
+    fill(ctx, '#c9a227', 3, 17, 2, 2);
   }
 
-  // —— Weapon (shared hip silhouettes; critter scale still readable) ——
+  // —— Weapon (shared hip silhouettes) ——
   if (spec.weapon !== 'none') {
     drawWeaponAvatar(ctx, spec.weapon);
   }
@@ -660,10 +927,15 @@ function drawItemIcon(
     return;
   }
   if (itemId === 'leather_helmet') {
-    block(ctx, '#8b5a2b', '#3d2b1f', 6, 6, 20, 12);
-    fill(ctx, '#a06830', 8, 8, 16, 4);
-    fill(ctx, '#5a3d1a', 6, 14, 6, 8);
-    fill(ctx, '#5a3d1a', 20, 14, 6, 8);
+    // open-face cap + cheek guards + stub horns
+    fill(ctx, '#3d2b1f', 6, 8, 20, 10);
+    fill(ctx, '#8b5a2b', 7, 9, 18, 8);
+    fill(ctx, '#a06830', 9, 10, 14, 3);
+    fill(ctx, '#6b4423', 5, 14, 6, 8);
+    fill(ctx, '#6b4423', 21, 14, 6, 8);
+    fill(ctx, '#e8e0d0', 8, 4, 3, 5);
+    fill(ctx, '#e8e0d0', 21, 4, 3, 5);
+    fill(ctx, '#c9a227', 12, 12, 8, 2);
     return;
   }
   if (
@@ -677,101 +949,185 @@ function drawItemIcon(
     itemId === 'barbarian_hide'
   ) {
     if (itemId === 'wizard_cloak') {
-      block(ctx, '#4a2a7a', '#2a1848', 6, 6, 20, 22);
+      fill(ctx, '#2a1848', 4, 8, 24, 20);
+      fill(ctx, '#4a2a7a', 6, 6, 20, 20);
       fill(ctx, '#7a5ab0', 9, 10, 14, 6);
+      fill(ctx, '#2a1848', 10, 6, 12, 4); // hood
       spark(ctx, 12, 14, '#ffc857');
       spark(ctx, 18, 18, '#7dffb3');
+      fill(ctx, '#3a1a60', 4, 24, 5, 4);
+      fill(ctx, '#3a1a60', 23, 24, 5, 4);
       return;
     }
     if (itemId === 'ranger_cloak') {
-      block(ctx, '#3a5a38', '#1a3018', 6, 6, 20, 22);
-      fill(ctx, '#5a8a50', 9, 10, 14, 5);
-      fill(ctx, '#8b5a2b', 14, 18, 4, 4);
+      fill(ctx, '#1a3018', 4, 8, 24, 20);
+      fill(ctx, '#3a5a38', 6, 6, 20, 20);
+      fill(ctx, '#2a4a28', 8, 6, 16, 6); // hood
+      fill(ctx, '#5a8a50', 9, 12, 14, 5);
+      fill(ctx, '#8b5a2b', 14, 16, 4, 4);
+      fill(ctx, '#c9a227', 15, 17, 2, 2);
       return;
     }
     if (itemId === 'fighter_plate') {
-      block(ctx, '#8a98a8', '#3a4050', 6, 6, 20, 22);
-      fill(ctx, '#c0d0e0', 9, 10, 14, 8);
-      spark(ctx, 15, 14);
+      // cuirass with pauldrons + fauld
+      fill(ctx, '#3a4050', 5, 8, 22, 20);
+      fill(ctx, '#8a98a8', 7, 8, 18, 16);
+      fill(ctx, '#c0d0e0', 10, 10, 12, 6);
+      fill(ctx, '#a8b8c8', 15, 11, 2, 8); // ridge
+      // pauldrons
+      fill(ctx, '#c0d0e0', 3, 8, 6, 8);
+      fill(ctx, '#c0d0e0', 23, 8, 6, 8);
+      fill(ctx, '#5a6878', 8, 22, 16, 3); // fauld
+      spark(ctx, 12, 12);
+      spark(ctx, 19, 12);
       return;
     }
     if (itemId === 'cleric_vestments') {
-      block(ctx, '#e8e0d0', '#8a8070', 6, 6, 20, 22);
-      fill(ctx, '#ffc857', 12, 12, 8, 8);
+      fill(ctx, '#8a8070', 6, 6, 20, 22);
+      fill(ctx, '#e8e0d0', 7, 7, 18, 20);
+      fill(ctx, '#ffffff', 9, 9, 14, 4);
+      fill(ctx, '#ffc857', 14, 12, 4, 10);
+      fill(ctx, '#ffc857', 11, 15, 10, 4);
+      fill(ctx, '#fff3a0', 15, 14, 2, 2);
       return;
     }
     if (itemId === 'barbarian_hide') {
-      block(ctx, '#6a4a30', '#3a2818', 6, 6, 20, 22);
-      fill(ctx, '#c0392b', 13, 14, 6, 5);
+      fill(ctx, '#3a2818', 5, 6, 22, 22);
+      fill(ctx, '#6a4a30', 7, 7, 18, 18);
+      dither(ctx, '#6a4a30', '#5a3a28', 9, 10, 14, 10, 0);
+      fill(ctx, '#8a6a48', 5, 6, 5, 5);
+      fill(ctx, '#8a6a48', 22, 6, 5, 5);
+      fill(ctx, '#e8e0d0', 13, 12, 6, 3);
+      fill(ctx, '#c0392b', 14, 16, 4, 5);
       return;
     }
-    const base = itemId === 'reinforced_leather' ? '#5c4030' : '#8b5a2b';
-    const hi = itemId === 'reinforced_leather' ? '#8a7a60' : '#a06830';
-    block(ctx, base, '#2a1810', 6, 6, 20, 20);
-    fill(ctx, hi, 9, 10, 14, 8);
     if (itemId === 'reinforced_leather') {
-      fill(ctx, '#ffc857', 13, 13, 6, 6);
-      spark(ctx, 15, 14);
-    } else if (itemId === 'studded_leather') {
-      fill(ctx, '#c0c0c0', 10, 12, 2, 2);
-      fill(ctx, '#c0c0c0', 16, 14, 2, 2);
-      fill(ctx, '#c0c0c0', 20, 12, 2, 2);
-    } else {
-      fill(ctx, '#5a3d1a', 10, 12, 3, 10);
-      fill(ctx, '#5a3d1a', 19, 12, 3, 10);
+      fill(ctx, '#2a1810', 6, 6, 20, 22);
+      fill(ctx, '#5c4030', 7, 7, 18, 20);
+      fill(ctx, '#8a7a60', 9, 10, 14, 6);
+      fill(ctx, '#a8b0b8', 11, 12, 10, 7);
+      fill(ctx, '#ffc857', 13, 14, 6, 4);
+      fill(ctx, '#c0b090', 5, 8, 5, 7);
+      fill(ctx, '#c0b090', 22, 8, 5, 7);
+      return;
     }
+    if (itemId === 'studded_leather') {
+      fill(ctx, '#2a1810', 6, 6, 20, 22);
+      fill(ctx, '#8b5a2b', 7, 7, 18, 20);
+      fill(ctx, '#a06830', 9, 10, 14, 8);
+      for (const [x, y] of [
+        [10, 12],
+        [16, 14],
+        [20, 12],
+        [12, 18],
+        [18, 18],
+      ] as const) {
+        fill(ctx, '#c0c0c0', x, y, 2, 2);
+      }
+      return;
+    }
+    // leather jacket + straps
+    fill(ctx, '#2a1810', 6, 6, 20, 22);
+    fill(ctx, '#8b5a2b', 7, 7, 18, 20);
+    fill(ctx, '#a06830', 9, 10, 14, 6);
+    fill(ctx, '#f0c8a4', 13, 7, 6, 4); // collar V
+    fill(ctx, '#3d2b1f', 9, 14, 14, 2);
+    fill(ctx, '#c9a227', 13, 14, 6, 2);
+    fill(ctx, '#5a3d1a', 10, 12, 3, 10);
+    fill(ctx, '#5a3d1a', 19, 12, 3, 10);
     return;
   }
   if (itemId === 'mage_hat') {
-    fill(ctx, '#4a2a7a', 8, 4, 16, 10);
-    fill(ctx, '#7a5ab0', 14, 2, 4, 14);
+    fill(ctx, '#2a1848', 4, 14, 24, 5); // brim
+    fill(ctx, '#4a2a7a', 5, 14, 22, 3);
+    fill(ctx, '#4a2a7a', 10, 2, 12, 14);
+    fill(ctx, '#7a5ab0', 13, 2, 6, 14);
+    fill(ctx, '#2a1848', 15, 1, 2, 3);
+    fill(ctx, '#c9a227', 10, 14, 12, 2);
     spark(ctx, 16, 3, '#ffc857');
     return;
   }
   if (itemId === 'plate_helm') {
-    block(ctx, '#8a98a8', '#3a4050', 6, 6, 20, 18);
-    fill(ctx, '#1a1a2e', 10, 14, 4, 3);
-    fill(ctx, '#1a1a2e', 18, 14, 4, 3);
-    spark(ctx, 15, 10);
+    // great-helm + horns
+    fill(ctx, '#3a4050', 6, 8, 20, 18);
+    fill(ctx, '#8a98a8', 7, 9, 18, 16);
+    fill(ctx, '#c0d0e0', 9, 10, 14, 4);
+    fill(ctx, '#0a0a12', 10, 16, 12, 3); // visor
+    fill(ctx, '#6a7888', 15, 14, 2, 6); // nasal
+    fill(ctx, '#e8e0d0', 4, 2, 5, 10);
+    fill(ctx, '#e8e0d0', 23, 2, 5, 10);
+    fill(ctx, '#c0b8a0', 3, 2, 3, 5);
+    fill(ctx, '#c0b8a0', 26, 2, 3, 5);
+    spark(ctx, 15, 11);
     return;
   }
   if (itemId === 'plate_greaves') {
-    block(ctx, '#8a98a8', '#3a4050', 6, 8, 8, 18);
-    block(ctx, '#8a98a8', '#3a4050', 18, 8, 8, 18);
+    // knee + shin pair
+    for (const x of [5, 18]) {
+      fill(ctx, '#3a4050', x, 6, 9, 22);
+      fill(ctx, '#a8b8c8', x + 1, 7, 7, 5); // knee
+      fill(ctx, '#8a98a8', x + 1, 13, 7, 13); // shin
+      fill(ctx, '#c0c8d0', x + 3, 14, 2, 10);
+    }
     return;
   }
   if (itemId === 'ranger_sheath') {
-    block(ctx, '#5a3d1a', '#2a1810', 6, 10, 10, 14);
-    block(ctx, '#5a3d1a', '#2a1810', 16, 10, 10, 14);
-    fill(ctx, '#c8b090', 18, 6, 3, 10);
-    fill(ctx, '#7dffb3', 18, 4, 3, 3);
+    // gloves with arrow nocks (hands, not boots)
+    for (const x of [5, 18]) {
+      fill(ctx, '#2a1810', x, 8, 9, 16);
+      fill(ctx, '#5a3d1a', x + 1, 9, 7, 10);
+      fill(ctx, '#8b5a2b', x + 1, 18, 7, 5); // palm
+      fill(ctx, '#5a3d1a', x + 1, 23, 2, 3);
+      fill(ctx, '#5a3d1a', x + 4, 23, 2, 3);
+      fill(ctx, '#5a3d1a', x + 6, 23, 2, 2);
+    }
+    fill(ctx, '#c8b090', 20, 4, 3, 10);
+    fill(ctx, '#7dffb3', 20, 2, 3, 3);
     return;
   }
   if (itemId === 'leather_greaves') {
-    block(ctx, '#8b5a2b', '#3d2b1f', 7, 8, 7, 18);
-    block(ctx, '#8b5a2b', '#3d2b1f', 18, 8, 7, 18);
-    fill(ctx, '#a06830', 8, 10, 5, 4);
-    fill(ctx, '#a06830', 19, 10, 5, 4);
+    for (const x of [5, 18]) {
+      fill(ctx, '#3d2b1f', x, 6, 9, 22);
+      fill(ctx, '#8b5a2b', x + 1, 7, 7, 18);
+      fill(ctx, '#a06830', x + 2, 10, 5, 4);
+      fill(ctx, '#5a3d1a', x + 2, 16, 5, 2);
+      fill(ctx, '#c9a227', x + 3, 16, 3, 2);
+    }
     return;
   }
   if (itemId === 'leather_shoes' || itemId === 'sorry_boots') {
+    // pair of boots: shaft + foot + toe + sole
     const c = itemId === 'sorry_boots' ? '#5ad4a0' : '#8b5a2b';
+    const hi = itemId === 'sorry_boots' ? '#9ef0c8' : '#a06830';
     const e = itemId === 'sorry_boots' ? '#2a6a50' : '#3d2b1f';
-    block(ctx, c, e, 5, 14, 10, 12);
-    block(ctx, c, e, 17, 14, 10, 12);
-    fill(ctx, itemId === 'sorry_boots' ? '#9ef0c8' : '#a06830', 5, 14, 10, 3);
-    fill(ctx, itemId === 'sorry_boots' ? '#9ef0c8' : '#a06830', 17, 14, 10, 3);
-    if (itemId === 'sorry_boots') {
-      fill(ctx, '#ff6b9d', 8, 20, 4, 2);
-      fill(ctx, '#ff6b9d', 20, 20, 4, 2);
+    for (const x of [3, 17]) {
+      fill(ctx, e, x, 8, 12, 20);
+      fill(ctx, c, x + 1, 9, 8, 10); // shaft
+      fill(ctx, c, x + 1, 18, 11, 7); // foot
+      fill(ctx, hi, x + 2, 10, 6, 3);
+      fill(ctx, c, x + 10, 20, 3, 4); // toe box
+      fill(ctx, e, x + 1, 26, 12, 2); // sole
+      if (itemId === 'sorry_boots') {
+        fill(ctx, '#ff6b9d', x + 3, 14, 4, 2);
+        fill(ctx, hi, x + 3, 20, 4, 2);
+      } else {
+        fill(ctx, e, x + 3, 14, 5, 2); // laces
+      }
     }
     return;
   }
   if (itemId === 'leather_gloves') {
-    block(ctx, '#8b5a2b', '#3d2b1f', 6, 10, 8, 14);
-    block(ctx, '#8b5a2b', '#3d2b1f', 18, 10, 8, 14);
-    fill(ctx, '#a06830', 7, 12, 6, 4);
-    fill(ctx, '#a06830', 19, 12, 6, 4);
+    // hands with fingers (clearly not boots)
+    for (const x of [4, 18]) {
+      fill(ctx, '#3d2b1f', x, 6, 10, 20);
+      fill(ctx, '#8b5a2b', x + 1, 7, 8, 10); // cuff + palm
+      fill(ctx, '#a06830', x + 2, 9, 6, 4);
+      // fingers
+      fill(ctx, '#8b5a2b', x + 1, 18, 2, 7);
+      fill(ctx, '#8b5a2b', x + 4, 18, 2, 8);
+      fill(ctx, '#8b5a2b', x + 7, 18, 2, 6);
+      fill(ctx, '#a06830', x + 1, 18, 2, 2);
+    }
     return;
   }
   if (itemId === 'cube_core') {
@@ -812,28 +1168,41 @@ function drawItemIcon(
     itemId === 'iron_shield' ||
     itemId === 'tower_shield'
   ) {
-    const c =
-      itemId === 'tower_shield'
-        ? '#6a7080'
-        : itemId === 'iron_shield'
-          ? '#a0b0c0'
-          : '#8b5a2b';
-    const e =
-      itemId === 'tower_shield'
-        ? '#2a3040'
-        : itemId === 'iron_shield'
-          ? '#405060'
-          : '#3d2b1f';
     if (itemId === 'tower_shield') {
-      block(ctx, c, e, 8, 4, 16, 24);
-      fill(ctx, '#ffc857', 12, 12, 8, 3);
+      // tall heater, taper base
+      fill(ctx, '#2a3040', 7, 3, 18, 26);
+      fill(ctx, '#5a6578', 8, 4, 16, 24);
+      fill(ctx, '#8a98a8', 8, 4, 16, 3);
+      fill(ctx, '#3a4558', 10, 8, 12, 14);
+      fill(ctx, '#c0c8d0', 8, 14, 16, 3);
+      fill(ctx, '#c0c8d0', 14, 4, 4, 22);
+      fill(ctx, '#ffc857', 12, 13, 8, 6);
+      fill(ctx, '#5a6578', 10, 26, 12, 2);
+      fill(ctx, '#5a6578', 12, 28, 8, 1);
+      spark(ctx, 15, 8, '#e0e8f0');
+    } else if (itemId === 'iron_shield') {
+      // kite heater
+      fill(ctx, '#405060', 8, 4, 16, 22);
+      fill(ctx, '#a0b0c0', 9, 5, 14, 20);
+      fill(ctx, '#c0d0e0', 9, 5, 14, 3);
+      fill(ctx, '#a0b0c0', 11, 24, 10, 2);
+      fill(ctx, '#a0b0c0', 13, 26, 6, 1);
+      fill(ctx, '#6a7888', 9, 5, 2, 20);
+      fill(ctx, '#6a7888', 21, 5, 2, 20);
+      fill(ctx, '#d0d8e8', 13, 12, 6, 6);
+      fill(ctx, '#ffc857', 14, 11, 4, 2);
+      spark(ctx, 15, 13);
     } else {
-      // kite
-      fill(ctx, e, 10, 4, 12, 4);
-      block(ctx, c, e, 8, 6, 16, 20);
-      fill(ctx, '#ffc857', 14, 12, 4, 8);
+      // round wood
+      fill(ctx, '#3d2b1f', 6, 5, 20, 22);
+      fill(ctx, '#8b5a2b', 7, 6, 18, 20);
+      fill(ctx, '#a07828', 9, 8, 14, 16);
+      fill(ctx, '#6b4423', 11, 10, 2, 12);
+      fill(ctx, '#6b4423', 19, 11, 2, 10);
+      fill(ctx, '#c9a227', 13, 14, 6, 6);
+      fill(ctx, '#8a6820', 14, 15, 4, 4);
+      spark(ctx, 15, 12, '#e8c050');
     }
-    spark(ctx, 14, 10);
     return;
   }
   if (
