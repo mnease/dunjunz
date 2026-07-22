@@ -19,6 +19,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 ### Added
 
 - **Mobile mode (explicit)** — force on-screen D-pad + buttons via **MOBILE** topbar toggle, Settings checkbox, or `/play?mobile=1` (persists in browser). Auto-detect still works; forced mode no longer depends on flaky pointer media queries.
+- **Title menu touch path** — big **PLAY / CONTINUE** and **NEW GAME / MODES** buttons; tap mode rows to start; pad ATK/TALK confirms, ↑↓ moves, MENU back. No keyboard required to leave the title screen.
 
 ### Changed
 

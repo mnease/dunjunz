@@ -21,7 +21,13 @@ import { defaultCampaign } from '../systems/village-battle';
 import { clearSave, loadSave, writeSave } from '../systems/save';
 import type { SaveData } from '../types';
 import { getLastAuthMe } from '../ui/auth';
-import { clearAllTouch, setTouchPadVisible } from '../systems/touch-input';
+import {
+  clearAllTouch,
+  consumeTouchAction,
+  isTouchUiPreferred,
+  setTouchPadVisible,
+  touchAxisDown,
+} from '../systems/touch-input';
 
 const MODE_COUNT = 3;
 
@@ -41,6 +47,9 @@ export class TitleScene extends Phaser.Scene {
   private modeLines: Phaser.GameObjects.Text[] = [];
   /** When true, next confirm starts fresh; when false, continue preferred mode. */
   private wantFresh = false;
+  /** Large on-canvas touch buttons (title menu). */
+  private touchLayer: Phaser.GameObjects.Container | null = null;
+  private touchAxisLatch = { up: false, down: false };
 
   constructor() {
     super('Title');
@@ -52,9 +61,9 @@ export class TitleScene extends Phaser.Scene {
     if (this.scene.isActive('UI')) {
       this.scene.stop('UI');
     }
-    // Hide crawl pad on title (tap slots / keyboard)
-    setTouchPadVisible(false);
     clearAllTouch();
+    // Show mobile pad on title so ATK/↑↓ work; also build big TAP buttons
+    setTouchPadVisible(isTouchUiPreferred());
     void unlockAudio().then(() => playMusic('title'));
     this.phase = 'main';
     this.modeCursor = 0;
@@ -312,9 +321,190 @@ export class TitleScene extends Phaser.Scene {
       }
     });
 
+    // Pointer / touch: tap lines + big buttons (primary mobile path)
+    this.wireTitleTouchTargets(onEnter, onNew, onUp, onDown);
+    this.rebuildTouchButtons(onEnter, onNew);
+
     this.events.once('shutdown', () => {
       this.input.keyboard?.removeAllListeners();
+      this.touchLayer?.destroy(true);
+      this.touchLayer = null;
+      clearAllTouch();
     });
+  }
+
+  update(): void {
+    // On-screen pad on title: ATK/TALK = confirm, MENU = back, ↑↓ = navigate
+    if (!isTouchUiPreferred()) return;
+    if (consumeTouchAction('attack') || consumeTouchAction('interact')) {
+      void unlockAudio();
+      playSfx('ui_click');
+      if (this.phase === 'modeSelect') this.confirmMode();
+      else if (this.cloudMode) void this.activateCloudSlot(false);
+      else this.onLocalEnter();
+    }
+    if (consumeTouchAction('menu') || consumeTouchAction('use')) {
+      if (this.phase === 'modeSelect') {
+        playSfx('ui_close');
+        this.leaveModeSelect();
+      } else {
+        void unlockAudio();
+        playSfx('ui_click');
+        this.wantFresh = true;
+        this.openModeSelect();
+      }
+    }
+    const up = touchAxisDown('up');
+    const down = touchAxisDown('down');
+    if (up && !this.touchAxisLatch.up) {
+      if (this.phase === 'modeSelect') {
+        this.modeCursor = (this.modeCursor + MODE_COUNT - 1) % MODE_COUNT;
+        playSfx('ui_click');
+        this.renderModeSelect();
+      } else if (this.cloudMode) {
+        this.slotCursor = (this.slotCursor + 2) % 3;
+        playSfx('ui_click');
+        this.renderCloudSlots();
+      }
+    }
+    if (down && !this.touchAxisLatch.down) {
+      if (this.phase === 'modeSelect') {
+        this.modeCursor = (this.modeCursor + 1) % MODE_COUNT;
+        playSfx('ui_click');
+        this.renderModeSelect();
+      } else if (this.cloudMode) {
+        this.slotCursor = (this.slotCursor + 1) % 3;
+        playSfx('ui_click');
+        this.renderCloudSlots();
+      }
+    }
+    this.touchAxisLatch.up = up;
+    this.touchAxisLatch.down = down;
+  }
+
+  private wireTitleTouchTargets(
+    onEnter: () => void,
+    onNew: () => void,
+    onUp: () => void,
+    onDown: () => void,
+  ): void {
+    // Mode rows: tap to select + confirm
+    this.modeLines.forEach((line, i) => {
+      line.setInteractive({ useHandCursor: true });
+      line.on('pointerdown', () => {
+        void unlockAudio();
+        playSfx('ui_click');
+        this.modeCursor = i;
+        this.renderModeSelect();
+        this.confirmMode();
+      });
+    });
+    // Cloud slots: tap to select; second path is PLAY button
+    this.slotTexts.forEach((line, i) => {
+      line.setInteractive({ useHandCursor: true });
+      line.on('pointerdown', () => {
+        if (this.phase !== 'main' || !this.cloudMode) return;
+        void unlockAudio();
+        playSfx('ui_click');
+        this.slotCursor = i;
+        this.renderCloudSlots();
+      });
+      line.on('pointerup', () => {
+        /* selection only; load via PLAY */
+      });
+    });
+    // Whole canvas double-safety: tap prompt to continue
+    this.prompt?.setInteractive({ useHandCursor: true });
+    this.prompt?.on('pointerdown', () => {
+      void unlockAudio();
+      playSfx('ui_click');
+      onEnter();
+    });
+    void onNew;
+    void onUp;
+    void onDown;
+  }
+
+  private rebuildTouchButtons(
+    onEnter: () => void,
+    onNew: () => void,
+  ): void {
+    this.touchLayer?.destroy(true);
+    this.touchLayer = this.add.container(0, 0).setDepth(40);
+
+    const touchy = isTouchUiPreferred();
+    // Always show big buttons on touch UIs; also show when mobile forced
+    if (!touchy) {
+      // Desktop still gets a clickable PLAY hit zone under the prompt
+      const hit = this.add
+        .rectangle(GAME_W / 2, GAME_H - 150, Math.min(420, GAME_W - 80), 56, 0x1a4030, 0.85)
+        .setStrokeStyle(2, COLORS.green)
+        .setInteractive({ useHandCursor: true });
+      const label = this.add
+        .text(GAME_W / 2, GAME_H - 150, '▶  PLAY / CONTINUE', {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '12px',
+          color: '#7dffb3',
+        })
+        .setOrigin(0.5);
+      hit.on('pointerdown', () => {
+        void unlockAudio();
+        playSfx('ui_click');
+        onEnter();
+      });
+      hit.on('pointerover', () => hit.setFillStyle(0x2a6040, 0.95));
+      hit.on('pointerout', () => hit.setFillStyle(0x1a4030, 0.85));
+      this.touchLayer.add([hit, label]);
+      return;
+    }
+
+    const btnW = Math.min(520, GAME_W - 48);
+    const btnH = 52;
+    const yPlay = GAME_H - 168;
+    const yNew = GAME_H - 104;
+
+    const mkBtn = (
+      y: number,
+      text: string,
+      fill: number,
+      stroke: number,
+      color: string,
+      fn: () => void,
+    ) => {
+      const bg = this.add
+        .rectangle(GAME_W / 2, y, btnW, btnH, fill, 0.95)
+        .setStrokeStyle(3, stroke)
+        .setInteractive({ useHandCursor: true });
+      const tx = this.add
+        .text(GAME_W / 2, y, text, {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '13px',
+          color,
+          align: 'center',
+        })
+        .setOrigin(0.5);
+      bg.on('pointerdown', () => {
+        void unlockAudio();
+        playSfx('ui_click');
+        fn();
+      });
+      bg.on('pointerover', () => bg.setAlpha(1));
+      bg.on('pointerout', () => bg.setAlpha(0.95));
+      this.touchLayer!.add([bg, tx]);
+    };
+
+    if (this.phase === 'modeSelect') {
+      mkBtn(yPlay, '▶  CONFIRM MODE', 0x1a4030, COLORS.green, '#7dffb3', () =>
+        this.confirmMode(),
+      );
+      mkBtn(yNew, '◀  BACK', 0x2a2030, 0x8a6a9a, '#e0c0ff', () => {
+        playSfx('ui_close');
+        this.leaveModeSelect();
+      });
+    } else {
+      mkBtn(yPlay, '▶  PLAY / CONTINUE', 0x1a4030, COLORS.green, '#7dffb3', onEnter);
+      mkBtn(yNew, '✦  NEW GAME / MODES', 0x3a2810, 0xffc857, '#ffc857', onNew);
+    }
   }
 
   private hasDunjunzProgress(): boolean {
@@ -336,17 +526,37 @@ export class TitleScene extends Phaser.Scene {
     const h = hasHumanzProgress();
     const a = armySize(loadArmySave()) > 0;
     const last = getLastMode();
+    const touch = isTouchUiPreferred();
     if (d || h || a) {
       const lastLabel =
         last === 'humanz' ? 'HUMANZ' : last === 'army' ? 'ARMY' : 'DUNJUNZ';
       this.prompt?.setText(
-        `ENTER - CONTINUE (${lastLabel})\nR - NEW GAME / MODE SELECT   LAST: ${last.toUpperCase()}`,
+        touch
+          ? `TAP PLAY TO CONTINUE (${lastLabel})\nOR TAP NEW GAME FOR MODES`
+          : `ENTER - CONTINUE (${lastLabel})\nR - NEW GAME / MODE SELECT   LAST: ${last.toUpperCase()}`,
       );
     } else {
       this.prompt?.setText(
-        'ENTER OR R — CHOOSE MODE\nDUNJUNZ · HUMANZ · ARMY',
+        touch
+          ? 'TAP PLAY OR NEW GAME — PICK A MODE\nDUNJUNZ · HUMANZ · ARMY'
+          : 'ENTER OR R — CHOOSE MODE\nDUNJUNZ · HUMANZ · ARMY',
       );
     }
+    this.rebuildTouchButtons(
+      () => {
+        if (this.phase === 'modeSelect') this.confirmMode();
+        else if (this.cloudMode) void this.activateCloudSlot(false);
+        else this.onLocalEnter();
+      },
+      () => {
+        if (this.phase === 'modeSelect') this.leaveModeSelect();
+        else if (this.cloudMode) void this.activateCloudSlot(true);
+        else {
+          this.wantFresh = true;
+          this.openModeSelect();
+        }
+      },
+    );
   }
 
   private renderCloudSlots(): void {
@@ -365,6 +575,15 @@ export class TitleScene extends Phaser.Scene {
       this.slotTexts[i]?.setText(line);
       this.slotTexts[i]?.setColor(i === this.slotCursor ? '#ffc857' : '#c5cde0');
     }
+    this.prompt?.setText(
+      isTouchUiPreferred()
+        ? 'TAP A SLOT · TAP PLAY TO LOAD · NEW FOR EMPTY/WIPE'
+        : '↑↓ SELECT SLOT   ENTER LOAD/NEW   R WIPE SLOT\nTOP BAR: ACCOUNT FOR GUEST / MAGIC LINK',
+    );
+    this.rebuildTouchButtons(
+      () => void this.activateCloudSlot(false),
+      () => void this.activateCloudSlot(true),
+    );
   }
 
   private openModeSelect(): void {
@@ -384,7 +603,16 @@ export class TitleScene extends Phaser.Scene {
     for (const t of this.modeLines) t.setVisible(true);
     this.renderModeSelect();
     this.prompt?.setText(
-      '↑↓ OR 1/2/3 SELECT    ENTER CONFIRM    ESC/R BACK',
+      isTouchUiPreferred()
+        ? 'TAP A MODE TO START · OR CONFIRM / BACK BELOW'
+        : '↑↓ OR 1/2/3 SELECT    ENTER CONFIRM    ESC/R BACK',
+    );
+    this.rebuildTouchButtons(
+      () => this.confirmMode(),
+      () => {
+        playSfx('ui_close');
+        this.leaveModeSelect();
+      },
     );
   }
 
@@ -424,8 +652,15 @@ export class TitleScene extends Phaser.Scene {
     ];
     modes.forEach((m, i) => {
       const sel = i === this.modeCursor;
-      this.modeLines[i]?.setText(`${sel ? '▶ ' : '  '}${m.title}\n   ${m.sub}`);
+      const touch = isTouchUiPreferred();
+      this.modeLines[i]?.setText(
+        touch
+          ? `${sel ? '▶ ' : '  '}${m.title}\n   ${m.sub}\n   (TAP)`
+          : `${sel ? '▶ ' : '  '}${m.title}\n   ${m.sub}`,
+      );
       this.modeLines[i]?.setColor(sel ? '#ffc857' : '#c5cde0');
+      // Enlarge hit area for fat fingers
+      this.modeLines[i]?.setPadding(12, 10, 12, 10);
     });
   }
 
