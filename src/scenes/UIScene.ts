@@ -132,6 +132,11 @@ export class UIScene extends Phaser.Scene {
   private static readonly BAG_ROWS = 3;
   /** 8×3 visible cells per page. */
   private static readonly BAG_PAGE_SIZE = 24;
+  /** Bag cell size (px) — large enough to read 32×32 craft icons. */
+  private static readonly BAG_CELL = 68;
+  private static readonly BAG_GAP = 12;
+  /** Icon display scale (ART_RES 32 → ~66px in cell). */
+  private static readonly BAG_ICON_SCALE = 2.05;
   private invSlotFrames: Partial<Record<EquipSlot, Phaser.GameObjects.Image>> = {};
   private invSlotIcons: Partial<Record<EquipSlot, Phaser.GameObjects.Image>> = {};
   private invSlotLabels: Partial<Record<EquipSlot, Phaser.GameObjects.Text>> = {};
@@ -665,7 +670,7 @@ export class UIScene extends Phaser.Scene {
     const startX = 220;
     const startY = HUD_H + 36;
     const colW = 280;
-    const rowH = 36;
+    const rowH = 42;
     slots.forEach((slot, i) => {
       const col = i < 5 ? 0 : 1;
       const row = i % 5;
@@ -673,21 +678,21 @@ export class UIScene extends Phaser.Scene {
       const y = startY + row * rowH;
       this.invSlotFrames[slot] = this.add
         .image(x, y, 'slot_frame')
-        .setScale(0.95)
+        .setScale(1.2)
         .setScrollFactor(0)
         .setDepth(d + 1);
       this.invSlotIcons[slot] = this.add
         .image(x, y, 'icon_empty')
-        .setScale(1.15)
+        .setScale(1.55)
         .setScrollFactor(0)
         .setDepth(d + 2);
       this.invSlotLabels[slot] = this.add
-        .text(x + 28, y - 8, `${slot.toUpperCase()} [${SLOT_KEYS[slot]}]\n(empty)`, {
+        .text(x + 34, y - 8, `${slot.toUpperCase()} [${SLOT_KEYS[slot]}]\n(empty)`, {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '8px',
           color: '#c5cde0',
           lineSpacing: 8,
-          wordWrap: { width: colW - 48 },
+          wordWrap: { width: colW - 56 },
         })
         .setScrollFactor(0)
         .setDepth(d + 2);
@@ -2181,14 +2186,14 @@ export class UIScene extends Phaser.Scene {
     );
 
     // Vertical band: title → grid → pager → detail → help (no overlap)
-    const bagTitleY = HUD_H + 230;
+    const bagTitleY = HUD_H + 228;
     const helpY = GAME_H - 28;
-    const detailY = GAME_H - 108;
-    const pagerReserve = 28;
-    const gridTop = bagTitleY + 22;
+    const detailY = GAME_H - 100;
+    const pagerReserve = 30;
+    const gridTop = bagTitleY + 20;
     const cols = UIScene.BAG_COLS;
-    const cell = 48;
-    const gap = 10;
+    const cell = UIScene.BAG_CELL;
+    const gap = UIScene.BAG_GAP;
     const gridH = UIScene.BAG_ROWS * cell + (UIScene.BAG_ROWS - 1) * gap;
     // Keep pager above detail
     const originY = Math.min(
@@ -2302,8 +2307,8 @@ export class UIScene extends Phaser.Scene {
       const k = itemIconKey(item.templateId);
       const tex = this.textures.exists(k) ? k : 'icon_empty';
       const icon = this.add
-        .image(x, y - 4, tex)
-        .setScale(1.4)
+        .image(x, y - 2, tex)
+        .setScale(UIScene.BAG_ICON_SCALE)
         .setScrollFactor(0)
         .setAlpha(classBlocked ? 0.32 : item.equipped ? 1 : 0.95)
         .setTint(classBlocked ? 0x667788 : 0xffffff);
@@ -2312,9 +2317,9 @@ export class UIScene extends Phaser.Scene {
 
       if (item.count > 1) {
         const cnt = this.add
-          .text(x + 14, y + 12, `x${item.count}`, {
+          .text(x + 22, y + 20, `x${item.count}`, {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '6px',
+            fontSize: '8px',
             color: '#ffc857',
           })
           .setOrigin(0.5)
@@ -2325,9 +2330,9 @@ export class UIScene extends Phaser.Scene {
 
       if (item.equipped) {
         const tag = this.add
-          .text(x, y + 16, 'E', {
+          .text(x, y + 24, 'E', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '6px',
+            fontSize: '8px',
             color: '#7dffb3',
           })
           .setOrigin(0.5)
@@ -2340,9 +2345,9 @@ export class UIScene extends Phaser.Scene {
         const cmp = compareToEquipped(save, inst, this.gearTarget);
         if (cmp.dir === 'up' || cmp.dir === 'down') {
           const arrow = this.add
-            .text(x + 16, y - 16, cmp.arrow, {
+            .text(x + 24, y - 24, cmp.arrow, {
               fontFamily: '"Press Start 2P", monospace',
-              fontSize: '8px',
+              fontSize: '10px',
               color: cmp.dir === 'up' ? '#7dffb3' : '#ff6b6b',
             })
             .setOrigin(0.5)
