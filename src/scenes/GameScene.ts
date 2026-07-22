@@ -90,6 +90,7 @@ import {
 import { actorHasLiveBody } from '../systems/actor-combat';
 import {
   autoEquipEmptySlots,
+  computeArmor,
   computePlayerDamage,
   consumeWeaponAmmo,
   equippedWeaponIsRanged,
@@ -2595,7 +2596,8 @@ export class GameScene extends Phaser.Scene {
         from.kind,
         threatForRoom(this.room, this.save),
       );
-    const dmg = Math.max(1, baseDmg - this.save.armor);
+    // Live armor (includes temporary scroll/tome DEF buffs)
+    const dmg = Math.max(1, baseDmg - computeArmor(this.save));
     this.save.hp = Math.max(0, this.save.hp - dmg);
     this.invuln = 900;
     this.emitHud();
@@ -3975,9 +3977,14 @@ export class GameScene extends Phaser.Scene {
       this.save = lit.save;
       if (lit.expired) {
         this.game.events.emit('toast', 'YOUR LIGHT DIED — LIT ANOTHER');
-        writeSave(this.save);
       }
+      const hadBuff = (this.save.buffMs ?? 0) > 0;
       this.save = tickCombatBuffs(this.save, delta);
+      // Recompute armor when buffs expire (or still active) so DEF buffs don't stick
+      if (hadBuff || (this.save.buffDef ?? 0) || (this.save.buffAtk ?? 0)) {
+        this.save = syncDerivedStats(this.save);
+      }
+      if (lit.expired || hadBuff) writeSave(this.save);
       this.refreshDarkOverlay();
     }
 
@@ -4655,7 +4662,7 @@ export class GameScene extends Phaser.Scene {
       }
       return;
     }
-    const final = Math.max(1, dmg - this.save.armor);
+    const final = Math.max(1, dmg - computeArmor(this.save));
     this.save.hp = Math.max(0, this.save.hp - final);
     this.invuln = 700;
     this.emitHud();

@@ -2907,7 +2907,7 @@ import {
 } from './scrolls';
 import { landPackRecipe, sideRoleForDepth } from '../data/world-deep';
 import { forjeCraft, CRAFT_RECIPES } from './forjing';
-import { useInventoryItem } from './inventory';
+import { computeArmor, syncDerivedStats, useInventoryItem } from './inventory';
 import { computePlayerDamage } from './attributes';
 
 describe('lighting model', () => {
@@ -3086,6 +3086,29 @@ describe('scrolls and tomes', () => {
     save = tickCombatBuffs(save, 200);
     expect(save.buffAtk).toBe(0);
     expect(save.buffMs).toBe(0);
+  });
+
+  it('DEF buff raises computeArmor and expires so armor drops', () => {
+    let save = defaultSave();
+    save = syncDerivedStats(save);
+    const baseArmor = computeArmor(save);
+    save = {
+      ...save,
+      stacks: { scroll_ward: 1 },
+      primaryClass: 'fighter',
+    };
+    const r = useScrollOrTome(save, 'scroll_ward');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    let next = syncDerivedStats(r.save);
+    expect(computeArmor(next)).toBe(baseArmor + 2);
+    expect(next.armor).toBe(baseArmor + 2);
+    // Expire buff fully, then re-sync (GameScene path)
+    next = tickCombatBuffs(next, (next.buffMs ?? 0) + 1);
+    expect(next.buffDef).toBe(0);
+    next = syncDerivedStats(next);
+    expect(computeArmor(next)).toBe(baseArmor);
+    expect(next.armor).toBe(baseArmor);
   });
 });
 
