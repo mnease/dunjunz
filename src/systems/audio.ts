@@ -1,6 +1,6 @@
 /**
- * Procedural Web Audio SFX + simple looping music beds.
- * No external audio files required (retro synth).
+ * Procedural Web Audio SFX + multi-voice looping music beds.
+ * No external audio files required (retro synth adventure score).
  */
 
 import {
@@ -42,6 +42,8 @@ let musicNodes: AudioNode[] = [];
 let musicTimer: number | null = null;
 let currentMusic: MusicId = 'none';
 let step = 0;
+/** Soft low-pass on music bus for less harsh square leads. */
+let musicFilter: BiquadFilterNode | null = null;
 
 function ensureCtx(): AudioCtx | null {
   if (typeof window === 'undefined') return null;
@@ -55,7 +57,12 @@ function ensureCtx(): AudioCtx | null {
     masterGain = ctx.createGain();
     musicGain = ctx.createGain();
     sfxGain = ctx.createGain();
-    musicGain.connect(masterGain);
+    musicFilter = ctx.createBiquadFilter();
+    musicFilter.type = 'lowpass';
+    musicFilter.frequency.value = 2400;
+    musicFilter.Q.value = 0.7;
+    musicGain.connect(musicFilter);
+    musicFilter.connect(masterGain);
     sfxGain.connect(masterGain);
     masterGain.connect(ctx.destination);
     applyVolumes(loadSettings());
@@ -220,12 +227,250 @@ function stopMusicInternal(): void {
   step = 0;
 }
 
-/** Simple arpeggio beds — different roots per zone. */
-const MUSIC_SEQ: Record<Exclude<MusicId, 'none'>, number[]> = {
-  title: [262, 330, 392, 523, 392, 330],
-  overworld: [294, 370, 440, 587, 440, 370, 330, 392],
-  dungeon: [196, 233, 262, 311, 262, 233, 220, 196],
+/** Note helpers (Hz) — equal temperament, A4 = 440. */
+const N = {
+  C2: 65.41,
+  D2: 73.42,
+  E2: 82.41,
+  F2: 87.31,
+  G2: 98.0,
+  A2: 110.0,
+  B2: 123.47,
+  C3: 130.81,
+  D3: 146.83,
+  E3: 164.81,
+  F3: 174.61,
+  Fs3: 185.0,
+  G3: 196.0,
+  A3: 220.0,
+  B3: 246.94,
+  C4: 261.63,
+  D4: 293.66,
+  E4: 329.63,
+  F4: 349.23,
+  Fs4: 369.99,
+  G4: 392.0,
+  A4: 440.0,
+  B4: 493.88,
+  C5: 523.25,
+  D5: 587.33,
+  E5: 659.25,
+  F5: 698.46,
+  G5: 783.99,
+  A5: 880.0,
+} as const;
+
+/** 0 = rest. */
+type Note = number;
+
+interface MusicVoice {
+  /** Pitch sequence (Hz); 0 = rest. */
+  seq: readonly Note[];
+  type: OscillatorType;
+  /** Peak gain per note. */
+  gain: number;
+  /** Play this voice every Nth step (1 = every beat). */
+  every: number;
+  /** Note length as fraction of beat (0.5 = staccato, 1.4 = legato overlap). */
+  sustain: number;
+  /** Optional detune cents for chorus thickness. */
+  detune?: number;
+}
+
+interface MusicBed {
+  beatMs: number;
+  /** Low-pass cutoff for this bed. */
+  filterHz: number;
+  voices: readonly MusicVoice[];
+}
+
+/**
+ * Multi-voice beds — adventurer overworld is the star:
+ * walking bass + heroic lead + soft harmony (Zelda/SNES-ish energy, still pure synth).
+ */
+const MUSIC_BEDS: Record<Exclude<MusicId, 'none'>, MusicBed> = {
+  // Title — bright invitation, short loop
+  title: {
+    beatMs: 200,
+    filterHz: 2800,
+    voices: [
+      {
+        // Rising call
+        seq: [
+          N.G3, N.B3, N.D4, N.G4, N.D4, N.B3, N.G3, 0, N.A3, N.C4, N.E4, N.A4,
+          N.E4, N.C4, N.A3, 0,
+        ],
+        type: 'triangle',
+        gain: 0.07,
+        every: 1,
+        sustain: 0.85,
+      },
+      {
+        seq: [
+          N.G2, N.G2, N.G2, N.G2, N.C3, N.C3, N.D3, N.D3, N.G2, N.G2, N.G2, N.G2,
+          N.A2, N.A2, N.D3, N.D3,
+        ],
+        type: 'triangle',
+        gain: 0.05,
+        every: 1,
+        sustain: 1.1,
+      },
+      {
+        seq: [N.D5, 0, 0, N.B4, 0, 0, N.G4, 0, N.E5, 0, 0, N.C5, 0, 0, N.A4, 0],
+        type: 'sine',
+        gain: 0.035,
+        every: 1,
+        sustain: 0.6,
+      },
+    ],
+  },
+
+  // Overworld / beach / meadow / guild — adventurous crawler theme
+  overworld: {
+    beatMs: 210,
+    filterHz: 2600,
+    voices: [
+      {
+        // Heroic lead — 32-step phrase in D major
+        seq: [
+          N.A4, N.Fs4, N.D4, N.Fs4, N.G4, N.A4, N.B4, N.A4, N.Fs4, N.D4, N.E4,
+          N.Fs4, N.G4, N.E4, N.A4, 0, N.B4, N.A4, N.G4, N.Fs4, N.E4, N.D4, N.E4,
+          N.Fs4, N.G4, N.A4, N.B4, N.A4, N.Fs4, N.D5, N.A4, 0,
+        ],
+        type: 'triangle',
+        gain: 0.075,
+        every: 1,
+        sustain: 0.9,
+        detune: 4,
+      },
+      {
+        // Soft fifth harmony (every other note feel)
+        seq: [
+          N.D4, 0, N.A3, 0, N.B3, 0, N.D4, 0, N.A3, 0, N.B3, 0, N.C4, 0, N.D4, 0,
+          N.E4, 0, N.D4, 0, N.C4, 0, N.B3, 0, N.A3, 0, N.G3, 0, N.A3, 0, N.D4, 0,
+        ],
+        type: 'sine',
+        gain: 0.04,
+        every: 1,
+        sustain: 1.05,
+      },
+      {
+        // Walking bass — sturdy adventurer boots
+        seq: [
+          N.D2, N.D2, N.D3, N.D2, N.G2, N.G2, N.G3, N.G2, N.A2, N.A2, N.A3, N.A2,
+          N.D2, N.D3, N.A2, N.D2, N.G2, N.G2, N.G3, N.G2, N.E2, N.E2, N.E3, N.E2,
+          N.A2, N.A2, N.A3, N.A2, N.D2, N.A2, N.D3, N.D2,
+        ],
+        type: 'triangle',
+        gain: 0.065,
+        every: 1,
+        sustain: 1.15,
+      },
+      {
+        // Light high sparkle (adventure “shine”)
+        seq: [
+          0, 0, N.A5, 0, 0, 0, N.Fs5, 0, 0, 0, N.D5, 0, 0, 0, N.A5, 0, 0, 0,
+          N.B5, 0, 0, 0, N.A5, 0, 0, 0, N.Fs5, 0, 0, N.D5, 0, 0,
+        ],
+        type: 'sine',
+        gain: 0.028,
+        every: 1,
+        sustain: 0.45,
+      },
+    ],
+  },
+
+  // Dungeon — darker, minor, slower pulse
+  dungeon: {
+    beatMs: 260,
+    filterHz: 1800,
+    voices: [
+      {
+        seq: [
+          N.D3, N.F3, N.A3, N.D4, N.A3, N.F3, N.E3, N.G3, N.C3, N.E3, N.G3, N.C4,
+          N.G3, N.E3, N.D3, 0, N.F3, N.A3, N.C4, N.A3, N.F3, N.D3, N.E3, N.F3,
+          N.G3, N.A3, N.G3, N.F3, N.E3, N.D3, N.C3, 0,
+        ],
+        type: 'triangle',
+        gain: 0.06,
+        every: 1,
+        sustain: 1.0,
+      },
+      {
+        seq: [
+          N.D2, N.D2, N.D2, N.D2, N.C2, N.C2, N.C2, N.C2, N.A2, N.A2, N.A2, N.A2,
+          N.D2, N.D2, N.A2, N.D2, N.F2, N.F2, N.F2, N.F2, N.E2, N.E2, N.E2, N.E2,
+          N.G2, N.G2, N.G2, N.G2, N.D2, N.D2, N.D2, N.D2,
+        ],
+        type: 'sawtooth',
+        gain: 0.035,
+        every: 1,
+        sustain: 1.2,
+      },
+      {
+        seq: [
+          0, 0, N.A4, 0, 0, 0, N.F4, 0, 0, 0, N.G4, 0, 0, 0, N.E4, 0, 0, 0, N.F4,
+          0, 0, 0, N.D4, 0, 0, 0, N.E4, 0, 0, N.D4, 0, 0,
+        ],
+        type: 'sine',
+        gain: 0.03,
+        every: 1,
+        sustain: 0.7,
+      },
+    ],
+  },
 };
+
+function playMusicNote(
+  c: AudioCtx,
+  dest: GainNode,
+  freq: number,
+  type: OscillatorType,
+  peak: number,
+  durSec: number,
+  detune = 0,
+): void {
+  if (freq <= 0 || peak <= 0) return;
+  const t0 = c.currentTime;
+  const osc = c.createOscillator();
+  const g = c.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  if (detune) osc.detune.setValueAtTime(detune, t0);
+  const attack = Math.min(0.03, durSec * 0.15);
+  const release = Math.min(0.08, durSec * 0.35);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak), t0 + attack);
+  g.gain.exponentialRampToValueAtTime(
+    Math.max(0.0001, peak * 0.55),
+    t0 + Math.max(attack, durSec - release),
+  );
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + durSec);
+  osc.connect(g);
+  g.connect(dest);
+  musicNodes.push(osc, g);
+  osc.start(t0);
+  osc.stop(t0 + durSec + 0.02);
+  // Optional slight chorus double for lead richness
+  if (detune) {
+    const osc2 = c.createOscillator();
+    const g2 = c.createGain();
+    osc2.type = type;
+    osc2.frequency.setValueAtTime(freq, t0);
+    osc2.detune.setValueAtTime(-detune, t0);
+    g2.gain.setValueAtTime(0.0001, t0);
+    g2.gain.exponentialRampToValueAtTime(
+      Math.max(0.0001, peak * 0.45),
+      t0 + attack,
+    );
+    g2.gain.exponentialRampToValueAtTime(0.0001, t0 + durSec);
+    osc2.connect(g2);
+    g2.connect(dest);
+    musicNodes.push(osc2, g2);
+    osc2.start(t0);
+    osc2.stop(t0 + durSec + 0.02);
+  }
+}
 
 export function playMusic(id: MusicId): void {
   if (id === currentMusic && musicTimer != null) {
@@ -241,37 +486,42 @@ export function playMusic(id: MusicId): void {
     if (!c || !musicGain || !unlocked) return;
     if (currentMusic !== id) return;
 
-    const seq = MUSIC_SEQ[id];
-    const beatMs = id === 'dungeon' ? 280 : id === 'title' ? 220 : 240;
+    const bed = MUSIC_BEDS[id];
+    if (musicFilter) {
+      musicFilter.frequency.setValueAtTime(bed.filterHz, c.currentTime);
+    }
 
     const tick = () => {
       if (effectiveMusicVolume() <= 0 || currentMusic === 'none') return;
       const c2 = ensureCtx();
       if (!c2 || !musicGain) return;
-      const f = seq[step % seq.length]!;
+      const i = step;
       step += 1;
-      const t0 = c2.currentTime;
-      const osc = c2.createOscillator();
-      const g = c2.createGain();
-      osc.type = id === 'dungeon' ? 'triangle' : 'square';
-      osc.frequency.setValueAtTime(f, t0);
-      // soft pulse
-      g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(0.08, t0 + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + beatMs / 1000 - 0.02);
-      osc.connect(g);
-      g.connect(musicGain);
-      musicNodes.push(osc, g);
-      osc.start(t0);
-      osc.stop(t0 + beatMs / 1000);
-      // prune old nodes
-      if (musicNodes.length > 40) {
-        musicNodes.splice(0, 20);
+      const beatSec = bed.beatMs / 1000;
+
+      for (const voice of bed.voices) {
+        if (i % voice.every !== 0) continue;
+        const f = voice.seq[i % voice.seq.length] ?? 0;
+        if (!f) continue;
+        playMusicNote(
+          c2,
+          musicGain,
+          f,
+          voice.type,
+          voice.gain,
+          beatSec * voice.sustain,
+          voice.detune ?? 0,
+        );
+      }
+
+      // Prune disconnected node refs (oscillators finish on their own)
+      if (musicNodes.length > 120) {
+        musicNodes.splice(0, 60);
       }
     };
 
     tick();
-    musicTimer = window.setInterval(tick, beatMs);
+    musicTimer = window.setInterval(tick, bed.beatMs);
   });
 }
 
