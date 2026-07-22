@@ -2897,11 +2897,13 @@ import {
   ambushCanDealContact,
   buildLightSources,
   canPlaceTorch,
+  creatureLightSpec,
   hasActiveCarriedLight,
   igniteLight,
   LIGHT_BURN_MS,
   lightBurnMs,
   lightTierRank,
+  LIGHT_PEAK,
   roomIsDark,
   roomNeedsCarriedLight,
   sampleBrightness,
@@ -3123,6 +3125,36 @@ describe('universal positional lighting v2', () => {
     expect(pack).toBeTruthy();
     expect(pack?.stackCount).toBe(3);
     expect(pack?.price).toBe(12);
+  });
+
+  it('lava and gel creeps emit weaker light than a torch', () => {
+    expect(creatureLightSpec('slime')).toBe('gel_slime');
+    expect(creatureLightSpec('cube')).toBe('gel_cube');
+    expect(creatureLightSpec('skeleton')).toBeNull();
+    expect(LIGHT_PEAK.lava).toBeLessThan(LIGHT_PEAK.torch);
+    expect(LIGHT_PEAK.gel_slime).toBeLessThan(LIGHT_PEAK.lava);
+    const ambient = 0.12;
+    const sources = buildLightSources({
+      darkRoom: true,
+      ambient,
+      player: { x: 0, y: 0 },
+      activeTier: 'none',
+      fuelMs: 0,
+      wallFixtures: [],
+      placed: [],
+      gear: [],
+      env: [{ id: 'lava-1', x: 200, y: 200, spec: 'lava' }],
+      creatures: [
+        { id: 's1', x: 400, y: 400, spec: 'gel_slime' },
+        { id: 'c1', x: 600, y: 600, spec: 'gel_cube' },
+      ],
+    });
+    expect(sources.some((s) => s.kind === 'env')).toBe(true);
+    expect(sources.filter((s) => s.kind === 'creature').length).toBe(2);
+    const nearLava = sampleBrightness(200, 200, sources, ambient);
+    const far = sampleBrightness(50, 50, sources, ambient);
+    expect(nearLava).toBeGreaterThan(far);
+    expect(nearLava).toBeGreaterThan(0.4);
   });
 });
 

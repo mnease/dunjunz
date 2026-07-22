@@ -204,7 +204,9 @@ export type LightSourceKind =
   | 'wall_placed'
   | 'wall_fixture' // authored torch_wall — positional cookie
   | 'wall_ambient' // legacy full-room (rare)
-  | 'gear_emit';
+  | 'gear_emit'
+  | 'env' // lava / hazards
+  | 'creature'; // gel creeps, etc.
 
 export type LightSource = {
   kind: LightSourceKind;
@@ -226,6 +228,12 @@ export const LIGHT_RADIUS_TILES = {
   gear_amulet: 3.0,
   gear_minor: 2.0,
   gear_afterglow: 3.5,
+  /** Lava tile glow — local pool. */
+  lava: 2.4,
+  /** Small gel slime. */
+  gel_slime: 2.0,
+  /** Gelatinous cube / large gel. */
+  gel_cube: 2.8,
 } as const;
 
 export const LIGHT_PEAK = {
@@ -238,7 +246,31 @@ export const LIGHT_PEAK = {
   gear_amulet: 0.45,
   gear_minor: 0.3,
   gear_afterglow: 0.55,
+  lava: 0.48,
+  gel_slime: 0.28,
+  gel_cube: 0.38,
 } as const;
+
+/** Cap lava cookies so big lakes don't thrash the RT erase path. */
+export const MAX_LAVA_LIGHTS = 28;
+
+/**
+ * Creature kinds / ids that bioluminesce (weak).
+ * Cube + slime = gel family; id gel-* also matches.
+ */
+export function creatureLightSpec(
+  kind: string,
+  id?: string,
+): 'gel_slime' | 'gel_cube' | null {
+  const kid = (id ?? '').toLowerCase();
+  if (kind === 'cube' || kid.includes('gel-cube') || kid === 'gel_cube') {
+    return 'gel_cube';
+  }
+  if (kind === 'slime' || kid.includes('gel') || kid.includes('slime')) {
+    return 'gel_slime';
+  }
+  return null;
+}
 
 export const FUEL_PAUSE_B = 0.55;
 export const ALPHA_NONE = 0.88;
@@ -346,6 +378,20 @@ export type BuildLightsInput = {
     y: number;
     spec: 'flame' | 'amulet' | 'minor' | 'afterglow';
   }[];
+  /** Hazard / world emitters (lava tile centers, etc.). */
+  env?: {
+    id: string;
+    x: number;
+    y: number;
+    spec: 'lava';
+  }[];
+  /** Living emitters (gel creeps). */
+  creatures?: {
+    id: string;
+    x: number;
+    y: number;
+    spec: 'gel_slime' | 'gel_cube';
+  }[];
   cell?: number;
   /**
    * When true (default for lit rooms with many walls), fixtures stay cookies.
@@ -410,6 +456,31 @@ export function buildLightSources(input: BuildLightsInput): LightSource[] {
       intensity: LIGHT_PEAK[key],
       radiusPx: tilesToPx(LIGHT_RADIUS_TILES[key], cell),
       id: g.id,
+    });
+  }
+
+  for (const e of input.env ?? []) {
+    if (e.spec === 'lava') {
+      out.push({
+        kind: 'env',
+        x: e.x,
+        y: e.y,
+        intensity: LIGHT_PEAK.lava,
+        radiusPx: tilesToPx(LIGHT_RADIUS_TILES.lava, cell),
+        id: e.id,
+      });
+    }
+  }
+
+  for (const c of input.creatures ?? []) {
+    const key = c.spec === 'gel_cube' ? 'gel_cube' : 'gel_slime';
+    out.push({
+      kind: 'creature',
+      x: c.x,
+      y: c.y,
+      intensity: LIGHT_PEAK[key],
+      radiusPx: tilesToPx(LIGHT_RADIUS_TILES[key], cell),
+      id: c.id,
     });
   }
 

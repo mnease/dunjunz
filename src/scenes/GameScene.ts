@@ -125,10 +125,12 @@ import {
   buildLightSources,
   canPlaceTorch,
   CELL_PX_DEFAULT,
+  creatureLightSpec,
   gearLightSpecsFromSave,
   getPlacedForRoom,
   hasActiveCarriedLight,
   inferOutwardFromWalls,
+  MAX_LAVA_LIGHTS,
   placeFailToast,
   placedEmissionWorld,
   roomIsDark,
@@ -1594,6 +1596,50 @@ export class GameScene extends Phaser.Scene {
       y: this.player.y,
       spec: g.spec,
     }));
+    // Lava tiles — warm hazard glow (cap for perf)
+    const env: { id: string; x: number; y: number; spec: 'lava' }[] = [];
+    if (this.tileGrid.length) {
+      const lavaCells: { x: number; y: number }[] = [];
+      for (let ty = 0; ty < this.tileGrid.length; ty++) {
+        const row = this.tileGrid[ty];
+        for (let tx = 0; tx < row.length; tx++) {
+          if (row[tx] === 'lava') lavaCells.push({ x: tx, y: ty });
+        }
+      }
+      // Evenly sample if lake is huge
+      const step =
+        lavaCells.length <= MAX_LAVA_LIGHTS
+          ? 1
+          : Math.ceil(lavaCells.length / MAX_LAVA_LIGHTS);
+      for (let i = 0; i < lavaCells.length; i += step) {
+        const c = lavaCells[i];
+        env.push({
+          id: `lava-${c.x}-${c.y}`,
+          x: this.roomOriginX + (c.x + 0.5) * cell,
+          y: this.roomOriginY + (c.y + 0.5) * cell,
+          spec: 'lava',
+        });
+        if (env.length >= MAX_LAVA_LIGHTS) break;
+      }
+    }
+    // Gel creeps (slime / cube) emit weak biolum
+    const creatures: {
+      id: string;
+      x: number;
+      y: number;
+      spec: 'gel_slime' | 'gel_cube';
+    }[] = [];
+    for (const a of this.actors) {
+      if (!a.alive || !a.sprite?.active) continue;
+      const spec = creatureLightSpec(a.kind, a.id);
+      if (!spec) continue;
+      creatures.push({
+        id: a.id,
+        x: a.sprite.x,
+        y: a.sprite.y,
+        spec,
+      });
+    }
     const tier = includeCarried ? activeLightTier(this.save) : 'none';
     const fuel = includeCarried ? (this.save.lightFuelMs ?? 0) : 0;
     const sources = buildLightSources({
@@ -1605,6 +1651,8 @@ export class GameScene extends Phaser.Scene {
       wallFixtures,
       placed,
       gear,
+      env,
+      creatures,
       cell,
     });
     return { sources, ambient };
