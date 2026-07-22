@@ -21,6 +21,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Buddy shows equipped gear** — Best Bud world sprite + inventory doll paint weapon, armor, helm, shield, amulet, ring, gloves, greaves, and shoes from `budEquipped` (same look IDs as the hero, fitted to the critter). Pose swaps keep gear via on-demand pose+loadout textures.
 - **Map tile detail (16-bit)** — dungeon floors (irregular cobbles, cracks, moss), walls (3-row staggered brick + grit), grass (dense blades + flowers), dirt ruts, water/lava frames, doors/stairs/pads, and mapz cells/links all redrawn to match avatar/weapon density.
 
 - **Class clothing & D&D armor categories** — gear is **cloth / light / medium / heavy**. Class proficiency (primary *or* secondary) keeps full DEF; wrong category soft-nerfs DEF (×0.65). Affinity pieces (wizard cloak, ranger cloak/sheath, fighter plate, cleric vestments, barbarian hide…) grant **+1 DEF** when you have that class. Loot biases armor by class.

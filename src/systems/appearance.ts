@@ -137,31 +137,36 @@ function mapGloves(look: string | undefined): GlovesLook {
   return look ? 'leather' : 'none';
 }
 
-export function appearanceFromSave(save: SaveData): AppearanceSpec {
-  const breastplate = mapBreast(lookFromUid(save, save.equipped.breastplate));
-  const helmet = mapHelmet(lookFromUid(save, save.equipped.helmet));
-  const greaves = mapGreaves(lookFromUid(save, save.equipped.greaves));
-  const shoes = mapShoes(lookFromUid(save, save.equipped.shoes));
-  const gloves = mapGloves(lookFromUid(save, save.equipped.gloves));
+function appearanceFromEquipped(
+  save: SaveData,
+  equipped: SaveData['equipped'],
+  opts?: { allowKey?: boolean },
+): AppearanceSpec {
+  const breastplate = mapBreast(lookFromUid(save, equipped.breastplate));
+  const helmet = mapHelmet(lookFromUid(save, equipped.helmet));
+  const greaves = mapGreaves(lookFromUid(save, equipped.greaves));
+  const shoes = mapShoes(lookFromUid(save, equipped.shoes));
+  const gloves = mapGloves(lookFromUid(save, equipped.gloves));
 
-  const amulet = mapAmulet(lookFromUid(save, save.equipped.amulet));
-  const ring = mapRing(lookFromUid(save, save.equipped.ring));
+  const amulet = mapAmulet(lookFromUid(save, equipped.amulet));
+  const ring = mapRing(lookFromUid(save, equipped.ring));
 
-  const wUid = save.equipped.weapon;
+  const wUid = equipped.weapon;
   const weapon =
     wUid && findInBag(save, wUid)
       ? mapWeapon(lookFromUid(save, wUid))
       : 'none';
 
-  const sUid = save.equipped.shield;
+  const sUid = equipped.shield;
   const shield =
     sUid && findInBag(save, sUid)
       ? mapShield(lookFromUid(save, sUid))
       : 'none';
 
-  const kUid = save.equipped.key;
+  const allowKey = opts?.allowKey !== false;
+  const kUid = equipped.key;
   const key: KeyLook =
-    kUid && findInBag(save, kUid) ? 'key' : 'none';
+    allowKey && kUid && findInBag(save, kUid) ? 'key' : 'none';
 
   return {
     breastplate,
@@ -175,6 +180,27 @@ export function appearanceFromSave(save: SaveData): AppearanceSpec {
     shield,
     key,
   };
+}
+
+export function appearanceFromSave(save: SaveData): AppearanceSpec {
+  return appearanceFromEquipped(save, save.equipped, { allowKey: true });
+}
+
+/** Best Bud loadout from shared bag / budEquipped (no keyring). */
+export function budAppearanceFromSave(save: SaveData): AppearanceSpec {
+  const equipped = save.budEquipped ?? {
+    weapon: null,
+    shield: null,
+    breastplate: null,
+    helmet: null,
+    greaves: null,
+    shoes: null,
+    gloves: null,
+    amulet: null,
+    ring: null,
+    key: null,
+  };
+  return appearanceFromEquipped(save, equipped, { allowKey: false });
 }
 
 /** Stable texture key for a full gear loadout. */
@@ -196,6 +222,47 @@ export function playerTextureKey(spec: AppearanceSpec): string {
 
 export function playerTextureKeyFromSave(save: SaveData): string {
   return playerTextureKey(appearanceFromSave(save));
+}
+
+/** Pose names that share canvas frames with gear overlays. */
+export type BuddyPoseName =
+  | 'idle'
+  | 'chase'
+  | 'stretch'
+  | 'grab'
+  | 'strike'
+  | 'spit'
+  | 'blink'
+  | 'guard'
+  | 'heal';
+
+/** Stable texture key for buddy pose + gear loadout. */
+export function buddyTextureKey(
+  spec: AppearanceSpec,
+  pose: BuddyPoseName = 'idle',
+): string {
+  const poseTag =
+    pose === 'idle' || pose === 'chase' ? 'idle' : pose;
+  return [
+    'bud',
+    poseTag,
+    spec.breastplate,
+    spec.helmet,
+    spec.greaves,
+    spec.shoes,
+    spec.gloves,
+    spec.amulet,
+    spec.ring,
+    spec.weapon,
+    spec.shield,
+  ].join('_');
+}
+
+export function buddyTextureKeyFromSave(
+  save: SaveData,
+  pose: BuddyPoseName = 'idle',
+): string {
+  return buddyTextureKey(budAppearanceFromSave(save), pose);
 }
 
 export function itemIconKey(itemId: string | null | undefined): string {

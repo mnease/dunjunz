@@ -39,7 +39,12 @@ import {
   useInventoryItem,
 } from './inventory';
 import { spendAttrPoint, computePlayerDamage } from './attributes';
-import { appearanceFromSave, playerTextureKeyFromSave } from './appearance';
+import {
+  appearanceFromSave,
+  budAppearanceFromSave,
+  buddyTextureKeyFromSave,
+  playerTextureKeyFromSave,
+} from './appearance';
 import { budPoseTextureKey, poseForAttackStyle } from './bud-anim';
 import {
   swingTextureKey,
@@ -534,6 +539,54 @@ describe('bud anim poses', () => {
     expect(budPoseTextureKey('stretch')).toBe('best_bud_stretch');
     expect(budPoseTextureKey('grab')).toBe('best_bud_grab');
     expect(budPoseTextureKey('idle')).toBe('best_bud');
+  });
+});
+
+describe('buddy gear appearance', () => {
+  it('reads budEquipped (not hero) and encodes weapon on texture key', () => {
+    const iron = {
+      uid: 'b-iron',
+      templateId: 'iron_blade',
+      rarity: 'common' as const,
+      enhancement: 0,
+    };
+    const leather = {
+      uid: 'b-leather',
+      templateId: 'leather_armor',
+      rarity: 'common' as const,
+      enhancement: 0,
+    };
+    const heroSword = {
+      uid: 'h-sword',
+      templateId: 'mild_sword',
+      rarity: 'common' as const,
+      enhancement: 0,
+    };
+    const save = {
+      ...defaultSave(),
+      bag: [iron, leather, heroSword],
+      equipped: {
+        ...defaultSave().equipped,
+        weapon: heroSword.uid,
+      },
+      budEquipped: {
+        ...defaultSave().budEquipped,
+        weapon: iron.uid,
+        breastplate: leather.uid,
+      },
+    };
+    const hero = appearanceFromSave(save);
+    const bud = budAppearanceFromSave(save);
+    expect(hero.weapon).toBe('sword');
+    expect(bud.weapon).toBe('iron');
+    expect(bud.breastplate).toBe('leather');
+    expect(bud.key).toBe('none');
+    const key = buddyTextureKeyFromSave(save, 'idle');
+    expect(key).toContain('bud_idle_');
+    expect(key).toContain('_iron_');
+    expect(key).toContain('_leather_');
+    expect(buddyTextureKeyFromSave(save, 'stretch')).toContain('bud_stretch_');
+    expect(buddyTextureKeyFromSave(save, 'stretch')).not.toBe(key);
   });
 });
 

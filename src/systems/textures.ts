@@ -2,8 +2,10 @@ import type Phaser from 'phaser';
 import { ART_RES, COLORS } from '../config';
 import {
   BARE_APPEARANCE,
+  buddyTextureKey,
   playerTextureKey,
   type AppearanceSpec,
+  type BuddyPoseName,
   type WeaponLook,
   type ShieldLook,
   type AmuletLook,
@@ -297,6 +299,287 @@ export function ensurePlayerTexture(
   if (!scene.textures.exists(key)) {
     canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
       drawPlayerLook(ctx, spec);
+    });
+  }
+  return key;
+}
+
+/** Pose body flags for Best Bud canvas frames. */
+export interface BuddyDrawOpts {
+  stretchX?: number;
+  armReach?: number;
+  claw?: boolean;
+  puffed?: boolean;
+  coil?: boolean;
+  soft?: boolean;
+  squint?: boolean;
+}
+
+export function buddyDrawOptsForPose(pose: BuddyPoseName): BuddyDrawOpts {
+  switch (pose) {
+    case 'stretch':
+      return { stretchX: 2, armReach: 3, claw: false };
+    case 'grab':
+      return { stretchX: 1, armReach: 4, claw: true };
+    case 'strike':
+      return { armReach: 3, claw: true };
+    case 'spit':
+      return { puffed: true };
+    case 'blink':
+      return { squint: true, stretchX: 0 };
+    case 'guard':
+      return { coil: true };
+    case 'heal':
+      return { soft: true };
+    case 'chase':
+    case 'idle':
+    default:
+      return {};
+  }
+}
+
+/** Critter body (untinted greys — species tint applied on the sprite). */
+export function drawBuddyBase(
+  ctx: CanvasRenderingContext2D,
+  opts: BuddyDrawOpts = {},
+): void {
+  const sx = (opts.stretchX ?? 0) * 2;
+  // body
+  shadedBlock(
+    ctx,
+    '#d0d0d8',
+    '#e8e8f0',
+    '#909098',
+    8 - Math.min(2, sx),
+    12,
+    16 + sx,
+    14,
+  );
+  fill(ctx, '#c0c0c8', 10, 24, 12 + Math.floor(sx / 2), 2);
+  // ears
+  fill(ctx, '#d0d0d8', 6, 6, 6, 8);
+  fill(ctx, '#d0d0d8', 20 + Math.min(4, sx), 6, 6, 8);
+  fill(ctx, '#b0b0b8', 5, 4, 4, 4);
+  fill(ctx, '#b0b0b8', 23 + Math.min(4, sx), 4, 4, 4);
+  // face
+  if (opts.squint) {
+    fill(ctx, '#222', 12, 16, 4, 2);
+    fill(ctx, '#222', 18, 16, 4, 2);
+  } else {
+    fill(ctx, '#222', 12, 15, 3, 3);
+    fill(ctx, '#222', 18, 15, 3, 3);
+    spark(ctx, 13, 15);
+    spark(ctx, 19, 15);
+  }
+  fill(ctx, opts.soft ? '#ffb0c8' : '#ff6b9d', 14, 20, 4, 2);
+  fill(ctx, 'rgba(255,107,157,0.45)', 10, 18, 3, 2);
+  fill(ctx, 'rgba(255,107,157,0.45)', 20, 18, 3, 2);
+  const reach = (opts.armReach ?? 0) * 2;
+  if (reach > 0) {
+    fill(ctx, '#c8c8d0', 24, 16, reach, 4);
+    fill(ctx, '#c8c8d0', 24 + reach - 2, 14, 4, 8);
+    if (opts.claw) {
+      fill(ctx, '#222', 24 + reach, 12, 2, 4);
+      fill(ctx, '#222', 26 + reach, 14, 2, 2);
+      fill(ctx, '#222', 24 + reach, 20, 2, 4);
+    }
+  }
+  if (opts.puffed) {
+    fill(ctx, '#e8d0b0', 8, 18, 4, 4);
+    fill(ctx, '#e8d0b0', 20, 18, 4, 4);
+    fill(ctx, '#ff8844', 28, 16, 4, 4);
+  }
+  if (opts.coil) {
+    fill(ctx, '#b0b0b8', 4, 14, 24, 10);
+    fill(ctx, '#888890', 6, 16, 20, 2);
+    fill(ctx, '#888890', 8, 20, 16, 2);
+  }
+  if (opts.soft) {
+    fill(ctx, 'rgba(232,240,255,0.55)', 4, 10, 24, 16);
+  }
+  // feet
+  fill(ctx, '#a0a0a8', 10, 26, 5, 4);
+  fill(ctx, '#a0a0a8', 18, 26, 5, 4);
+  if (opts.squint && !opts.stretchX) {
+    // blink afterimage streaks (Zorp)
+    ctx.fillStyle = 'rgba(125,92,255,0.5)';
+    ctx.fillRect(0, 7, 3, 3);
+    ctx.fillRect(1, 6, 2, 1);
+  }
+}
+
+/**
+ * Gear overlays for a critter frame — same look IDs as the hero, fitted to
+ * the buddy silhouette so weapons/armor read at a glance.
+ */
+export function drawBuddyGear(
+  ctx: CanvasRenderingContext2D,
+  spec: AppearanceSpec,
+  opts: BuddyDrawOpts = {},
+): void {
+  const sx = (opts.stretchX ?? 0) * 2;
+  const bodyX = 8 - Math.min(2, sx);
+  const bodyW = 16 + sx;
+
+  // —— Greaves (leg bands) ——
+  if (spec.greaves === 'plate') {
+    shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#4a5060', 10, 24, 5, 4);
+    shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#4a5060', 18, 24, 5, 4);
+  } else if (spec.greaves === 'leather') {
+    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 10, 24, 5, 4);
+    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 18, 24, 5, 4);
+  }
+
+  // —— Shoes over feet ——
+  if (spec.shoes === 'apology') {
+    block(ctx, '#5ad4a0', '#2a6a50', 9, 27, 6, 4);
+    block(ctx, '#5ad4a0', '#2a6a50', 18, 27, 6, 4);
+    fill(ctx, '#9ef0c8', 9, 27, 6, 1);
+    fill(ctx, '#9ef0c8', 18, 27, 6, 1);
+  } else if (spec.shoes === 'leather') {
+    block(ctx, '#6b4423', '#2a1810', 9, 27, 6, 4);
+    block(ctx, '#6b4423', '#2a1810', 18, 27, 6, 4);
+  }
+
+  // —— Vest / armor on body (leave head free) ——
+  if (spec.breastplate === 'leather') {
+    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', bodyX, 14, bodyW, 10);
+    fill(ctx, '#a06830', bodyX + 2, 15, bodyW - 4, 2);
+    fill(ctx, '#3d2b1f', bodyX + 2, 18, 2, 4);
+    fill(ctx, '#3d2b1f', bodyX + bodyW - 4, 18, 2, 4);
+  } else if (spec.breastplate === 'reinforced') {
+    shadedBlock(ctx, '#5c4030', '#8a7a60', '#3a2a18', bodyX, 14, bodyW, 10);
+    fill(ctx, '#ffc857', bodyX + bodyW / 2 - 2, 17, 4, 3);
+    fill(ctx, '#fff3a0', bodyX + bodyW / 2 - 1, 18, 2, 1);
+  } else if (spec.breastplate === 'cloth_arcane') {
+    shadedBlock(ctx, '#4a2a7a', '#7a5ab0', '#2a1848', bodyX - 1, 13, bodyW + 2, 12);
+    spark(ctx, bodyX + 4, 16, '#ffc857');
+    spark(ctx, bodyX + bodyW - 4, 19, '#7dffb3');
+  } else if (spec.breastplate === 'cloak_ranger') {
+    shadedBlock(ctx, '#3a5a38', '#5a8a50', '#1a3018', bodyX - 1, 13, bodyW + 2, 12);
+    fill(ctx, '#8b5a2b', bodyX + bodyW / 2 - 2, 18, 4, 3);
+  } else if (spec.breastplate === 'plate') {
+    shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#4a5060', bodyX, 14, bodyW, 10);
+    fill(ctx, '#c0c8d0', bodyX + 2, 15, bodyW - 4, 2);
+    fill(ctx, '#ffc857', bodyX + bodyW / 2 - 2, 18, 4, 2);
+  } else if (spec.breastplate === 'holy') {
+    shadedBlock(ctx, '#e8e0d0', '#ffffff', '#a09080', bodyX, 14, bodyW, 10);
+    fill(ctx, '#ffc857', bodyX + bodyW / 2 - 2, 17, 4, 4);
+    spark(ctx, bodyX + bodyW / 2, 18, '#fff3a0');
+  } else if (spec.breastplate === 'hide') {
+    shadedBlock(ctx, '#6a4020', '#8a5a30', '#3a2010', bodyX, 14, bodyW, 10);
+    dither(ctx, '#6a4020', '#5a3818', bodyX + 1, 15, bodyW - 2, 8, 0);
+  }
+
+  // —— Gloves / paw wraps ——
+  if (spec.gloves === 'leather') {
+    block(ctx, '#8b5a2b', '#5a3d1a', 6, 18, 4, 4);
+    block(ctx, '#8b5a2b', '#5a3d1a', 22 + Math.min(4, sx), 18, 4, 4);
+  } else if (spec.gloves === 'sheath') {
+    block(ctx, '#3a5a38', '#1a3018', 6, 17, 4, 5);
+    block(ctx, '#3a5a38', '#1a3018', 22 + Math.min(4, sx), 17, 4, 5);
+    fill(ctx, '#c9a227', 7, 19, 2, 1);
+  }
+
+  // —— Helmet / hat (between ears) ——
+  if (spec.helmet === 'plate') {
+    shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#4a5060', 10, 4, 12, 7);
+    fill(ctx, '#c0c8d0', 12, 5, 8, 2);
+    fill(ctx, '#ffc857', 14, 8, 4, 2);
+  } else if (spec.helmet === 'leather') {
+    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 10, 5, 12, 6);
+    fill(ctx, '#5a3d1a', 14, 8, 4, 2);
+  } else if (spec.helmet === 'cloth_arcane') {
+    // wizard hat
+    fill(ctx, '#2a1848', 12, 2, 8, 2);
+    shadedBlock(ctx, '#4a2a7a', '#7a5ab0', '#2a1848', 11, 3, 10, 8);
+    fill(ctx, '#ffc857', 14, 1, 4, 3);
+    spark(ctx, 15, 2, '#fff3a0');
+  }
+
+  // —— Collar amulet ——
+  if (spec.amulet === 'gold') {
+    fill(ctx, '#c9a227', 12, 13, 8, 1);
+    block(ctx, '#ffc857', '#8a6820', 14, 13, 4, 4);
+    spark(ctx, 15, 14, '#fff3a0');
+  } else if (spec.amulet === 'bauble') {
+    fill(ctx, '#c07090', 12, 13, 8, 1);
+    block(ctx, '#ff6b9d', '#8a2040', 13, 13, 6, 4);
+    spark(ctx, 15, 14);
+  } else if (spec.amulet === 'cube') {
+    fill(ctx, '#5ad45a', 12, 13, 8, 1);
+    block(ctx, '#5ad45a', '#2a6a2a', 13, 13, 6, 4);
+    spark(ctx, 15, 14, '#e0ffe0');
+  }
+
+  // —— Ring on paw ——
+  if (spec.ring === 'luck') {
+    fill(ctx, '#7dffb3', 24 + Math.min(2, sx), 22, 4, 2);
+    spark(ctx, 25 + Math.min(2, sx), 21);
+  } else if (spec.ring === 'silver') {
+    block(ctx, '#d0d8e8', '#607080', 24 + Math.min(2, sx), 22, 4, 3);
+  } else if (spec.ring === 'copper') {
+    block(ctx, '#c07040', '#603010', 24 + Math.min(2, sx), 22, 4, 3);
+  }
+
+  // —— Shield (left flank) ——
+  if (spec.shield === 'tower') {
+    block(ctx, '#5a6578', '#2a3040', 2, 12, 6, 12);
+    fill(ctx, '#ffc857', 3, 16, 4, 2);
+  } else if (spec.shield === 'iron') {
+    block(ctx, '#9aabc0', '#3a4050', 2, 13, 6, 10);
+    spark(ctx, 4, 15);
+  } else if (spec.shield === 'wood') {
+    block(ctx, '#a07828', '#4a3010', 2, 13, 6, 10);
+    fill(ctx, '#c9a227', 3, 16, 4, 2);
+  }
+
+  // —— Weapon (shared hip silhouettes; critter scale still readable) ——
+  if (spec.weapon !== 'none') {
+    drawWeaponAvatar(ctx, spec.weapon);
+  }
+}
+
+/** Full buddy frame: body pose + equipped gear. */
+export function drawBuddyLook(
+  ctx: CanvasRenderingContext2D,
+  spec: AppearanceSpec,
+  pose: BuddyPoseName = 'idle',
+): void {
+  const opts = buddyDrawOptsForPose(pose);
+  drawBuddyBase(ctx, opts);
+  // Gear under coil so guard pose still reads as coiled; weapon/shield on top of soft aura
+  if (!opts.coil) {
+    drawBuddyGear(ctx, spec, opts);
+  } else {
+    // light collar/helm still peek for identity
+    drawBuddyGear(
+      ctx,
+      {
+        ...spec,
+        breastplate: 'none',
+        greaves: 'none',
+        gloves: 'none',
+        weapon: 'none',
+        shield: 'none',
+      },
+      opts,
+    );
+  }
+}
+
+/**
+ * On-demand buddy texture for pose + gear (avoids combinatorial boot cost).
+ */
+export function ensureBuddyTexture(
+  scene: Phaser.Scene,
+  spec: AppearanceSpec,
+  pose: BuddyPoseName = 'idle',
+): string {
+  const key = buddyTextureKey(spec, pose);
+  if (!scene.textures.exists(key)) {
+    canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
+      drawBuddyLook(ctx, spec, pose);
     });
   }
   return key;
@@ -1221,102 +1504,30 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#222', 22, 16, 6, 2);
   });
 
-  const drawBudBase = (
-    ctx: CanvasRenderingContext2D,
-    opts: {
-      stretchX?: number;
-      armReach?: number;
-      claw?: boolean;
-      puffed?: boolean;
-      coil?: boolean;
-      soft?: boolean;
-      squint?: boolean;
-    } = {},
-  ): void => {
-    const sx = (opts.stretchX ?? 0) * 2;
-    // body
-    shadedBlock(ctx, '#d0d0d8', '#e8e8f0', '#909098', 8 - Math.min(2, sx), 12, 16 + sx, 14);
-    fill(ctx, '#c0c0c8', 10, 24, 12 + Math.floor(sx / 2), 2);
-    // ears
-    fill(ctx, '#d0d0d8', 6, 6, 6, 8);
-    fill(ctx, '#d0d0d8', 20 + Math.min(4, sx), 6, 6, 8);
-    fill(ctx, '#b0b0b8', 5, 4, 4, 4);
-    fill(ctx, '#b0b0b8', 23 + Math.min(4, sx), 4, 4, 4);
-    // face
-    if (opts.squint) {
-      fill(ctx, '#222', 12, 16, 4, 2);
-      fill(ctx, '#222', 18, 16, 4, 2);
-    } else {
-      fill(ctx, '#222', 12, 15, 3, 3);
-      fill(ctx, '#222', 18, 15, 3, 3);
-      spark(ctx, 13, 15);
-      spark(ctx, 19, 15);
-    }
-    fill(ctx, opts.soft ? '#ffb0c8' : '#ff6b9d', 14, 20, 4, 2);
-    fill(ctx, 'rgba(255,107,157,0.45)', 10, 18, 3, 2);
-    fill(ctx, 'rgba(255,107,157,0.45)', 20, 18, 3, 2);
-    const reach = (opts.armReach ?? 0) * 2;
-    if (reach > 0) {
-      fill(ctx, '#c8c8d0', 24, 16, reach, 4);
-      fill(ctx, '#c8c8d0', 24 + reach - 2, 14, 4, 8);
-      if (opts.claw) {
-        fill(ctx, '#222', 24 + reach, 12, 2, 4);
-        fill(ctx, '#222', 26 + reach, 14, 2, 2);
-        fill(ctx, '#222', 24 + reach, 20, 2, 4);
-      }
-    }
-    if (opts.puffed) {
-      fill(ctx, '#e8d0b0', 8, 18, 4, 4);
-      fill(ctx, '#e8d0b0', 20, 18, 4, 4);
-      fill(ctx, '#ff8844', 28, 16, 4, 4);
-    }
-    if (opts.coil) {
-      fill(ctx, '#b0b0b8', 4, 14, 24, 10);
-      fill(ctx, '#888890', 6, 16, 20, 2);
-      fill(ctx, '#888890', 8, 20, 16, 2);
-    }
-    if (opts.soft) {
-      fill(ctx, 'rgba(232,240,255,0.55)', 4, 10, 24, 16);
-    }
-    // feet
-    fill(ctx, '#a0a0a8', 10, 26, 5, 4);
-    fill(ctx, '#a0a0a8', 18, 26, 5, 4);
-  };
-
+  // Bare buddy frames (no gear) — gear combos generated on demand via ensureBuddyTexture
   canvasTex(scene, 'best_bud', ART_RES, ART_RES, (ctx) => {
-    drawBudBase(ctx);
+    drawBuddyBase(ctx);
   });
-  // Stretch lash pose — elongated body + reaching arm
   canvasTex(scene, 'best_bud_stretch', ART_RES, ART_RES, (ctx) => {
-    drawBudBase(ctx, { stretchX: 2, armReach: 3, claw: false });
+    drawBuddyBase(ctx, buddyDrawOptsForPose('stretch'));
   });
-  // Grab loot — both arms forward
   canvasTex(scene, 'best_bud_grab', ART_RES, ART_RES, (ctx) => {
-    drawBudBase(ctx, { stretchX: 1, armReach: 4, claw: true });
+    drawBuddyBase(ctx, buddyDrawOptsForPose('grab'));
   });
-  // Melee strike / claw
   canvasTex(scene, 'best_bud_strike', ART_RES, ART_RES, (ctx) => {
-    drawBudBase(ctx, { armReach: 3, claw: true });
+    drawBuddyBase(ctx, buddyDrawOptsForPose('strike'));
   });
-  // Spit / roast
   canvasTex(scene, 'best_bud_spit', ART_RES, ART_RES, (ctx) => {
-    drawBudBase(ctx, { puffed: true });
+    drawBuddyBase(ctx, buddyDrawOptsForPose('spit'));
   });
-  // Blink hop
   canvasTex(scene, 'best_bud_blink', ART_RES, ART_RES, (ctx) => {
-    drawBudBase(ctx, { squint: true, stretchX: 0 });
-    // afterimage streaks
-    ctx.fillStyle = 'rgba(125,92,255,0.5)';
-    ctx.fillRect(0, 7, 3, 3);
-    ctx.fillRect(1, 6, 2, 1);
+    drawBuddyBase(ctx, buddyDrawOptsForPose('blink'));
   });
-  // Guard coil
   canvasTex(scene, 'best_bud_guard', ART_RES, ART_RES, (ctx) => {
-    drawBudBase(ctx, { coil: true });
+    drawBuddyBase(ctx, buddyDrawOptsForPose('guard'));
   });
-  // Heal aura
   canvasTex(scene, 'best_bud_heal', ART_RES, ART_RES, (ctx) => {
-    drawBudBase(ctx, { soft: true });
+    drawBuddyBase(ctx, buddyDrawOptsForPose('heal'));
   });
   // Elastic limb for stretch ghost (wide strip, tinted in anim)
   canvasTex(scene, 'bud_stretch_limb', 24, 8, (ctx) => {

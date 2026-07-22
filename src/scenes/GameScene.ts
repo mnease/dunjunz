@@ -51,9 +51,10 @@ import {
 } from '../systems/shop';
 import {
   appearanceFromSave,
+  budAppearanceFromSave,
   withHiddenWeapon,
 } from '../systems/appearance';
-import { ensurePlayerTexture } from '../systems/textures';
+import { ensureBuddyTexture, ensurePlayerTexture } from '../systems/textures';
 import { swingTextureKey } from '../systems/weapon-visuals';
 import {
   ATTR_IDS,
@@ -175,6 +176,7 @@ import {
   playBuddyGrabAnim,
   playBuddyGuardAnim,
   playBuddyHealAnim,
+  setBuddyGearSpec,
   setBuddyPose,
 } from '../systems/bud-anim';
 import {
@@ -1035,6 +1037,8 @@ export class GameScene extends Phaser.Scene {
       this.save = result.save;
       writeSave(this.save);
       this.emitHud();
+      this.refreshPlayerAppearance();
+      this.refreshCompanionAppearance();
       playSfx('success');
       this.game.events.emit('inventory-refresh', this.save);
       this.game.events.emit('toast', result.message);
@@ -1059,6 +1063,8 @@ export class GameScene extends Phaser.Scene {
     this.save = result.save;
     writeSave(this.save);
     this.emitHud();
+    this.refreshPlayerAppearance();
+    this.refreshCompanionAppearance();
     this.game.events.emit('inventory-refresh', this.save);
     this.game.events.emit('toast', result.message);
   }
@@ -1473,8 +1479,24 @@ export class GameScene extends Phaser.Scene {
       this.budAnimLock = 0;
       this.budIdleMs = 0;
     }
+    this.refreshCompanionAppearance();
     if (bud) this.companionSprite.setTint(bud.tint);
     else this.companionSprite.clearTint();
+  }
+
+  /**
+   * Swap companion texture so bud-equipped gear shows (weapon, armor, etc.).
+   * Pose anims keep gear via setBuddyGearSpec on the sprite.
+   */
+  private refreshCompanionAppearance(): void {
+    if (!this.companionSprite?.active || !isCompanionActive(this.save)) return;
+    const spec = budAppearanceFromSave(this.save);
+    setBuddyGearSpec(this.companionSprite, spec);
+    // Don't stomp mid-attack pose — only refresh when not locked in an anim
+    if (this.budAnimLock <= 0) {
+      const key = ensureBuddyTexture(this, spec, 'idle');
+      this.companionSprite.setTexture(key);
+    }
   }
 
   private updateCompanionFollow(): void {

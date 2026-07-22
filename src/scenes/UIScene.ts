@@ -1,8 +1,12 @@
 import Phaser from 'phaser';
 import { COLORS, GAME_W, GAME_H, HUD_H, SPRITE_SCALE } from '../config';
 import { ROOMS } from '../data/world';
-import { appearanceFromSave, itemIconKey } from '../systems/appearance';
-import { ensurePlayerTexture } from '../systems/textures';
+import {
+  appearanceFromSave,
+  budAppearanceFromSave,
+  itemIconKey,
+} from '../systems/appearance';
+import { ensureBuddyTexture, ensurePlayerTexture } from '../systems/textures';
 import {
   inventorySortLabel,
   listInventory,
@@ -1863,8 +1867,9 @@ export class UIScene extends Phaser.Scene {
     const budMode =
       this.gearTarget === 'bud' && isCompanionActive(s);
     if (this.invAvatar) {
-      if (budMode && this.textures.exists('best_bud')) {
-        this.invAvatar.setTexture('best_bud');
+      if (budMode) {
+        const look = ensureBuddyTexture(this, budAppearanceFromSave(s), 'idle');
+        this.invAvatar.setTexture(look);
         const bud = getBestBud(s.bestBudId);
         if (bud) this.invAvatar.setTint(bud.tint);
         else this.invAvatar.clearTint();

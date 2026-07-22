@@ -6,7 +6,9 @@
 
 import type Phaser from 'phaser';
 import { SPRITE_SCALE } from '../config';
+import type { AppearanceSpec, BuddyPoseName } from './appearance';
 import type { BudAttackStyle } from './best-bud-combat';
+import { ensureBuddyTexture } from './textures';
 import { motionAllowed, sparkBurst } from './vfx';
 
 export type BudPose =
@@ -19,6 +21,8 @@ export type BudPose =
   | 'guard'
   | 'heal'
   | 'chase';
+
+const BUD_GEAR_DATA = 'budGear';
 
 /** How long each pose holds (ms) unless overridden. */
 export const BUD_POSE_MS: Record<BudPose, number> = {
@@ -37,6 +41,21 @@ export function budPoseTextureKey(pose: BudPose): string {
   if (pose === 'idle' || pose === 'chase') return 'best_bud';
   const key = `best_bud_${pose}`;
   return key;
+}
+
+/** Attach current gear loadout so pose swaps keep weapons/armor visible. */
+export function setBuddyGearSpec(
+  sprite: Phaser.GameObjects.Sprite,
+  spec: AppearanceSpec | null,
+): void {
+  if (spec) sprite.setData(BUD_GEAR_DATA, spec);
+  else sprite.setData(BUD_GEAR_DATA, undefined);
+}
+
+export function getBuddyGearSpec(
+  sprite: Phaser.GameObjects.Sprite,
+): AppearanceSpec | undefined {
+  return sprite.getData(BUD_GEAR_DATA) as AppearanceSpec | undefined;
 }
 
 export function poseForAttackStyle(style: BudAttackStyle): BudPose {
@@ -70,6 +89,7 @@ export function faceBuddyToward(
 
 /**
  * Apply pose texture if it exists; fall back to base best_bud.
+ * When gear is attached via setBuddyGearSpec, builds pose+gear canvas on demand.
  * Returns the texture key used.
  */
 export function setBuddyPose(
@@ -77,8 +97,14 @@ export function setBuddyPose(
   sprite: Phaser.GameObjects.Sprite,
   pose: BudPose,
 ): string {
-  const key = budPoseTextureKey(pose);
-  const use = scene.textures.exists(key) ? key : 'best_bud';
+  const gear = getBuddyGearSpec(sprite);
+  let use: string;
+  if (gear) {
+    use = ensureBuddyTexture(scene, gear, pose as BuddyPoseName);
+  } else {
+    const key = budPoseTextureKey(pose);
+    use = scene.textures.exists(key) ? key : 'best_bud';
+  }
   if (sprite.texture.key !== use) sprite.setTexture(use);
   return use;
 }
