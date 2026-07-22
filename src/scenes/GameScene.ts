@@ -2611,17 +2611,6 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private findTile(
-    kind: TileKind,
-  ): { tx: number; ty: number } | null {
-    for (let y = 0; y < VIEW_TILES_H; y++) {
-      for (let x = 0; x < VIEW_TILES_W; x++) {
-        if (this.tileGrid[y][x] === kind) return { tx: x, ty: y };
-      }
-    }
-    return null;
-  }
-
   private findSpawn(
     entryFrom?: string,
     fromSave?: boolean,
