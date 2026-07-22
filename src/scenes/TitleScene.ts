@@ -57,10 +57,18 @@ export class TitleScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(COLORS.black);
-    // Crawl UI must not sit on top of title (ESC→M used to leave HUD alive)
-    if (this.scene.isActive('UI')) {
-      this.scene.stop('UI');
+    // Crawl UI / Game must not sit on top of title (ESC→M freeze)
+    try {
+      if (this.scene.isActive('UI') || this.scene.isSleeping('UI')) {
+        this.scene.stop('UI');
+      }
+      if (this.scene.isActive('Game') || this.scene.isSleeping('Game')) {
+        this.scene.stop('Game');
+      }
+    } catch {
+      /* scene manager race */
     }
+    this.game.events.emit('pause-ui', false);
     clearAllTouch();
     // Show mobile pad on title so ATK/↑↓ work; also build big TAP buttons
     setTouchPadVisible(isTouchUiPreferred());

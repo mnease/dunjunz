@@ -21,6 +21,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 - **Mobile mode (explicit)** — force on-screen D-pad + buttons via **MOBILE** topbar toggle, Settings checkbox, or `/play?mobile=1` (persists in browser). Auto-detect still works; forced mode no longer depends on flaky pointer media queries.
 - **Title menu touch path** — big **PLAY / CONTINUE** and **NEW GAME / MODES** buttons; tap mode rows to start; pad ATK/TALK confirms, ↑↓ moves, MENU back. No keyboard required to leave the title screen.
 
+### Fixed
+
+- **ESC → Main Title freeze** — `scene.start('Title')` mid-`update` after pause could hang Phaser. Title exit is deferred one tick, Game+UI fully stopped, pause overlay has tappable **RESUME** / **MAIN MENU**.
+
 ### Changed
 
 - **Larger inventory icons** — bag cells ~68px with ~2× icon scale; equip-slot frames/icons enlarged so gear silhouettes are readable.

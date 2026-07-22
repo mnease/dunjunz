@@ -360,6 +360,8 @@ export class GameScene extends Phaser.Scene {
   private shopBagSelected = 0;
   private shopPane: ShopPane = 'stock';
   private paused = false;
+  /** Guards against double goToTitle / mid-update scene tears. */
+  private leavingToTitle = false;
   private transitionLock = false;
   private roomOriginX = 0;
   private roomOriginY = 0;
@@ -431,6 +433,7 @@ export class GameScene extends Phaser.Scene {
     this.shopBagSelected = 0;
     this.shopPane = 'stock';
     this.paused = false;
+    this.leavingToTitle = false;
     this.attacking = false;
     this.invuln = 0;
     this.transitionLock = false;
@@ -590,6 +593,7 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on('shop-state', this.onShopState, this);
     this.game.events.on('shop-cursor', this.onShopCursor, this);
     this.game.events.on('inventory-bag-activate', this.onBagActivate, this);
+    this.game.events.on('pause-action', this.onPauseAction, this);
     window.addEventListener('dunjunz-auto-stats-enabled', this.onAutoStatsEnabled);
     window.addEventListener('dunjunz-save-updated', this.onSaveUpdated);
     this.events.once('shutdown', () => {
@@ -606,6 +610,7 @@ export class GameScene extends Phaser.Scene {
       this.game.events.off('shop-state', this.onShopState, this);
       this.game.events.off('shop-cursor', this.onShopCursor, this);
       this.game.events.off('inventory-bag-activate', this.onBagActivate, this);
+      this.game.events.off('pause-action', this.onPauseAction, this);
       kb.off('keydown-SPACE', this.onAttackKey, this);
       kb.off('keydown-Z', this.onAttackKey, this);
       kb.off('keydown-E', this.onInteractKey, this);
@@ -644,11 +649,28 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
   };
 
+  /** Pause overlay buttons (UIScene) or keyboard M. */
+  private onPauseAction = (action: 'resume' | 'title'): void => {
+    if (!this.sys.isActive() || this.leavingToTitle) return;
+    if (action === 'resume') {
+      this.paused = false;
+      this.game.events.emit('pause-ui', false);
+      return;
+    }
+    if (action === 'title') {
+      this.goToTitle();
+    }
+  };
+
   /**
-   * Leave crawl cleanly: save, clear pad, stop HUD scene, then Title.
-   * Leaving UI running buried the title under hearts/chrome (looked frozen).
+   * Leave crawl cleanly: save, clear pad, stop HUD + Game, then Title.
+   * Must NOT call scene.start mid-update — that freezes Phaser (ESC→M bug).
+   * Leaving UI running also buried the title under hearts/chrome.
    */
   private goToTitle(): void {
+    if (this.leavingToTitle) return;
+    this.leavingToTitle = true;
+
     writeSave(this.save);
     this.paused = false;
     this.dialogLocked = false;
@@ -659,12 +681,51 @@ export class GameScene extends Phaser.Scene {
     this.transitionLock = false;
     clearAllTouch();
     setTouchPadVisible(false);
-    this.game.events.emit('ui-reset');
     this.game.events.emit('pause-ui', false);
-    if (this.scene.isActive('UI')) {
-      this.scene.stop('UI');
+    this.game.events.emit('ui-reset');
+
+    // Freeze local sim so this update frame can't re-enter combat/input
+    try {
+      this.physics?.world?.pause();
+      if (this.player?.body) {
+        (this.player.body as Phaser.Physics.Arcade.Body).enable = false;
+      }
+    } catch {
+      /* scene may already be tearing down */
     }
-    this.scene.start('Title');
+
+    let ran = false;
+    const run = () => {
+      if (ran) return;
+      ran = true;
+      try {
+        if (this.game.scene.isActive('UI') || this.game.scene.isSleeping('UI')) {
+          this.game.scene.stop('UI');
+        }
+      } catch {
+        /* ignore */
+      }
+      try {
+        // Prefer manager APIs so we aren't mid-GameScene.update
+        if (this.game.scene.isActive('Game') || this.game.scene.isSleeping('Game')) {
+          this.game.scene.stop('Game');
+        }
+        this.game.scene.start('Title');
+      } catch {
+        // Last resort
+        try {
+          this.scene.start('Title');
+        } catch {
+          /* give up cleanly */
+        }
+      }
+    };
+
+    // Next tick — out of the input/update stack (scene.start mid-update freezes)
+    if (this.time && this.sys.isActive()) {
+      this.time.delayedCall(0, run);
+    }
+    window.setTimeout(run, 0);
   }
 
   private onMapzNav(
@@ -3603,6 +3664,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    if (this.leavingToTitle) return;
     if (!this.player?.body) return;
 
     // Pause / panel close (ESC or touch MENU)
@@ -3627,11 +3689,22 @@ export class GameScene extends Phaser.Scene {
       }
     }
     if (this.paused) {
+      // M / MAP / USE / ATK-hold path to title; also ESC already toggled resume above
       if (
         Phaser.Input.Keyboard.JustDown(this.keys.m) ||
-        consumeTouchAction('map')
+        consumeTouchAction('map') ||
+        consumeTouchAction('use')
       ) {
         this.goToTitle();
+        return;
+      }
+      // ATK / TALK while paused = resume (mobile-friendly)
+      if (
+        consumeTouchAction('attack') ||
+        consumeTouchAction('interact')
+      ) {
+        this.paused = false;
+        this.game.events.emit('pause-ui', false);
       }
       return;
     }

@@ -108,6 +108,10 @@ export class UIScene extends Phaser.Scene {
   private dialogIndex = 0;
   private dialogOpen = false;
   private pauseText: Phaser.GameObjects.Text | null = null;
+  private pauseResumeHit: Phaser.GameObjects.Rectangle | null = null;
+  private pauseTitleHit: Phaser.GameObjects.Rectangle | null = null;
+  private pauseResumeLabel: Phaser.GameObjects.Text | null = null;
+  private pauseTitleLabel: Phaser.GameObjects.Text | null = null;
   private toastText: Phaser.GameObjects.Text | null = null;
 
   private invBg: Phaser.GameObjects.Rectangle | null = null;
@@ -205,6 +209,10 @@ export class UIScene extends Phaser.Scene {
       this.dialogBg?.setVisible(false);
       this.dialogText?.setVisible(false);
       this.pauseText?.setVisible(false);
+      this.pauseResumeHit?.setVisible(false);
+      this.pauseTitleHit?.setVisible(false);
+      this.pauseResumeLabel?.setVisible(false);
+      this.pauseTitleLabel?.setVisible(false);
       this.toastText?.setAlpha(0);
       this.setInventoryVisible(false);
       this.ensureMapzChrome();
@@ -281,8 +289,8 @@ export class UIScene extends Phaser.Scene {
     this.pauseText = this.add
       .text(
         GAME_W / 2,
-        GAME_H / 2,
-        'PAUSED\n\nESC — RESUME\nM — MAIN TITLE',
+        GAME_H / 2 - 70,
+        'PAUSED\n\nESC / ATK — RESUME\nM / MAP — MAIN TITLE',
         {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '14px',
@@ -297,6 +305,53 @@ export class UIScene extends Phaser.Scene {
       .setVisible(false)
       .setDepth(130)
       .setScrollFactor(0);
+
+    // Big touch targets so mobile can leave pause without a keyboard
+    const btnW = Math.min(420, GAME_W - 64);
+    const btnH = 52;
+    const yResume = GAME_H / 2 + 40;
+    const yTitle = GAME_H / 2 + 110;
+    this.pauseResumeHit = this.add
+      .rectangle(GAME_W / 2, yResume, btnW, btnH, 0x1a4030, 0.98)
+      .setStrokeStyle(3, COLORS.green)
+      .setVisible(false)
+      .setDepth(131)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    this.pauseResumeLabel = this.add
+      .text(GAME_W / 2, yResume, '▶  RESUME', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '14px',
+        color: '#7dffb3',
+      })
+      .setOrigin(0.5)
+      .setVisible(false)
+      .setDepth(132)
+      .setScrollFactor(0);
+    this.pauseTitleHit = this.add
+      .rectangle(GAME_W / 2, yTitle, btnW, btnH, 0x3a2810, 0.98)
+      .setStrokeStyle(3, 0xffc857)
+      .setVisible(false)
+      .setDepth(131)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    this.pauseTitleLabel = this.add
+      .text(GAME_W / 2, yTitle, '⌂  MAIN MENU', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '14px',
+        color: '#ffc857',
+      })
+      .setOrigin(0.5)
+      .setVisible(false)
+      .setDepth(132)
+      .setScrollFactor(0);
+
+    this.pauseResumeHit.on('pointerdown', () => {
+      this.game.events.emit('pause-action', 'resume');
+    });
+    this.pauseTitleHit.on('pointerdown', () => {
+      this.game.events.emit('pause-action', 'title');
+    });
 
     this.toastText = this.add
       .text(GAME_W / 2, HUD_H + 28, '', {
@@ -2640,5 +2695,9 @@ export class UIScene extends Phaser.Scene {
     if (paused && this.forjingOpen) this.closeForjingPanel();
     if (paused && this.shopOpen) this.closeShopPanel();
     this.pauseText?.setVisible(paused);
+    this.pauseResumeHit?.setVisible(paused);
+    this.pauseTitleHit?.setVisible(paused);
+    this.pauseResumeLabel?.setVisible(paused);
+    this.pauseTitleLabel?.setVisible(paused);
   };
 }
