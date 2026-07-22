@@ -959,9 +959,34 @@ describe('room expand to 16:9 view', () => {
     }
     expect(walkMid).toBeGreaterThan(VIEW_TILES_W * 0.6);
 
-    // West door present on outer edge
-    const doorRows = ex.tiles.filter((r) => r[0] === 'D');
+    // West door present on outer edge (may span multiple tiles)
+    const doorRows = ex.tiles.filter((r) => r[0] === 'D' || r[0] === 'L');
     expect(doorRows.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('door edges have no floor gaps beside the door (solid wall or door only)', async () => {
+    const { expandRoomTiles } = await import('./room-expand');
+    const src = [
+      '################',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '########D#######',
+    ];
+    const ex = expandRoomTiles(src);
+    const south = ex.tiles[ex.tiles.length - 1]!;
+    for (let i = 0; i < south.length; i++) {
+      const c = south[i]!;
+      // Rim: wall or door glyph only — never a lone floor hole next to D
+      expect(['#', 'D', 'L'].includes(c)).toBe(true);
+    }
+    expect(south.includes('D')).toBe(true);
   });
 
   it('keeps meadow east trail open on outer edge after stretch', async () => {

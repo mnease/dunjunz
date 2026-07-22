@@ -1,9 +1,9 @@
 /**
  * Deep dungeon expansion — 4× floors for each dunjun land.
  *
- * Dunjunz: B1 (authored) + B2…B8 generated (was B1–B2 only).
- * Woodz / Dezertz: surface authored + B1–B3 deep wings.
- * Sewerz: B1 authored chain remapped; B2–B4 generated to the goose.
+ * Dunjunz: B1 (authored) + B2…B8 generated (4× the old B1–B2 depth).
+ * Woodz / Dezertz: surface + B1–B3 deep wings (4 floors total).
+ * Sewerz: B1 authored + B2–B4 to the goose (4 floors).
  */
 
 import type { EntityDef, EntityKind, LandId, RoomDef } from '../types';
