@@ -1391,7 +1391,7 @@ export class UIScene extends Phaser.Scene {
   /** Keep visible pages aligned with focused indices. */
   private syncShopPagesFromSelection(): void {
     if (!this.shopPayload) return;
-    const shop = getShop(this.shopPayload.shopId);
+    const shop = getShop(this.shopPayload.shopId, this.shopPayload.save.level);
     const stockLen = shop?.stock.length ?? 0;
     const bagLen = listPlayerSellables(
       this.shopPayload.save,
@@ -1411,7 +1411,7 @@ export class UIScene extends Phaser.Scene {
 
   private onShopPage = (dir: number): void => {
     if (!this.shopOpen || !this.shopPayload) return;
-    const shop = getShop(this.shopPayload.shopId);
+    const shop = getShop(this.shopPayload.shopId, this.shopPayload.save.level);
     if (!shop) return;
     if (this.shopPane === 'stock') {
       const count = shop.stock.length;
@@ -1456,7 +1456,7 @@ export class UIScene extends Phaser.Scene {
     payload: number | { index: number; pane?: ShopPane },
   ): void => {
     if (!this.shopOpen || !this.shopPayload) return;
-    const shop = getShop(this.shopPayload.shopId);
+    const shop = getShop(this.shopPayload.shopId, this.shopPayload.save.level);
     if (!shop) return;
     const index = typeof payload === 'number' ? payload : payload.index;
     const pane =
@@ -1525,7 +1525,7 @@ export class UIScene extends Phaser.Scene {
   private renderShopGrid(): void {
     if (!this.shopPayload || !this.shopLayer) return;
     this.clearShopPieces();
-    const shop = getShop(this.shopPayload.shopId);
+    const shop = getShop(this.shopPayload.shopId, this.shopPayload.save.level);
     const save = this.shopPayload.save;
     if (!shop) {
       this.shopDetail?.setText('NO SHOP HERE.');
@@ -1628,6 +1628,19 @@ export class UIScene extends Phaser.Scene {
         .setScrollFactor(0);
       this.shopLayer!.add(price);
       this.shopPieces.push(price);
+
+      if (item.buddyOnly) {
+        const bud = this.add
+          .text(x - 16, y - 18, 'BUD', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '5px',
+            color: '#ffc857',
+          })
+          .setOrigin(0.5)
+          .setScrollFactor(0);
+        this.shopLayer!.add(bud);
+        this.shopPieces.push(bud);
+      }
     }
 
     // Stock page buttons
@@ -1768,14 +1781,20 @@ export class UIScene extends Phaser.Scene {
       const sel = stock[this.shopSelected] ?? stock[0];
       if (sel) {
         const afford = canAfford(save, sel);
+        const budNote = sel.buddyOnly
+          ? 'BUDDY ONLY — equip with Y (buddy gear mode)'
+          : null;
         this.shopDetail?.setText(
           [
-            `[BUY] ${sel.name}`,
+            `[BUY] ${sel.name}${sel.buddyOnly ? ' [BUD]' : ''}`,
             sel.description,
+            budNote,
             afford
-              ? `BUY FOR ${sel.price}c  (you have ${save.coins}c)`
-              : `NEED ${sel.price}c  (you have ${save.coins}c)`,
-          ].join('\n'),
+              ? `BUY FOR ${sel.price}c  (you have ${save.coins}c · LV${save.level})`
+              : `NEED ${sel.price}c  (you have ${save.coins}c · LV${save.level})`,
+          ]
+            .filter(Boolean)
+            .join('\n'),
         );
         this.shopDetail?.setColor(afford ? '#f4f0ff' : '#ff8a8a');
       }

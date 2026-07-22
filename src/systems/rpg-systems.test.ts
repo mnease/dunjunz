@@ -313,6 +313,7 @@ describe('shop purchase', () => {
   it('potion pack grants stackCount 3', () => {
     let save = defaultSave();
     save.coins = 100;
+    save.level = 3; // pack unlocks at L3
     const pack = SHOPS.tinkerer.stock.find((s) => s.id === 'buy_potion_3');
     expect(pack).toBeTruthy();
     const r = attemptPurchase(save, 'tinkerer', pack!.id);
@@ -1361,7 +1362,7 @@ describe('shop pagination helpers', () => {
       shopPageCount,
       shopPageOf,
       clampShopPage,
-      SHOPS,
+      buildTinkererStock,
     } = await import('./shop');
     expect(SHOP_STOCK_PAGE_SIZE).toBe(12);
     expect(SHOP_BAG_PAGE_SIZE).toBe(16);
@@ -1371,8 +1372,61 @@ describe('shop pagination helpers', () => {
     expect(shopPageOf(11, 12)).toBe(0);
     expect(shopPageOf(12, 12)).toBe(1);
     expect(clampShopPage(9, 13, 12)).toBe(1);
-    // Tinkerer stock needs more than one page of the 3×4 grid
-    expect(SHOPS.tinkerer.stock.length).toBeGreaterThan(SHOP_STOCK_PAGE_SIZE);
+    // High-level stock needs more than one page of the 3×4 grid
+    expect(buildTinkererStock(99).length).toBeGreaterThan(SHOP_STOCK_PAGE_SIZE);
+  });
+});
+
+describe('level-scaled shop + buddy-only gear', () => {
+  it('unlocks more stock as level rises and tags buddy SKUs', async () => {
+    const { buildTinkererStock, getShop, attemptPurchase } = await import(
+      './shop'
+    );
+    const l1 = buildTinkererStock(1);
+    const l12 = buildTinkererStock(12);
+    expect(l12.length).toBeGreaterThan(l1.length);
+    expect(l1.some((s) => s.id === 'buy_fighter_plate')).toBe(false);
+    expect(l12.some((s) => s.id === 'buy_fighter_plate')).toBe(true);
+    expect(l1.some((s) => s.buddyOnly)).toBe(true);
+    expect(getShop('tinkerer', 1)!.stock.length).toBe(l1.length);
+
+    // L1 cannot buy high-tier SKU
+    let save = defaultSave();
+    save.level = 1;
+    save.coins = 9999;
+    const denied = attemptPurchase(save, 'tinkerer', 'buy_fighter_plate');
+    expect(denied.ok).toBe(false);
+
+    save.level = 12;
+    const ok = attemptPurchase(save, 'tinkerer', 'buy_bud_collar');
+    expect(ok.ok).toBe(true);
+    if (ok.ok) {
+      expect(ok.save.bag.some((b) => b.templateId === 'bud_collar')).toBe(true);
+      // buddy gear must not auto-equip on hero
+      expect(Object.values(ok.save.equipped).includes(
+        ok.save.bag.find((b) => b.templateId === 'bud_collar')!.uid,
+      )).toBe(false);
+    }
+  });
+
+  it('heroes cannot equip buddy-only; buds can', async () => {
+    const { mintItem } = await import('./items');
+    const { equipUid } = await import('./inventory');
+    const { equipBudUid, equipHeroUid } = await import('./best-bud-gear');
+    let save = defaultSave();
+    save.bestBudId = 'gloop';
+    save.bestBudStage = 'complete';
+    const m = mintItem(save, 'bud_collar', 'common', 0);
+    save = m.save;
+    const hero = equipHeroUid(save, m.instance.uid);
+    expect(hero.ok).toBe(false);
+    const legacy = equipUid(save, m.instance.uid);
+    expect(legacy.ok).toBe(false);
+    const bud = equipBudUid(save, m.instance.uid);
+    expect(bud.ok).toBe(true);
+    if (bud.ok) {
+      expect(bud.save.budEquipped.amulet).toBe(m.instance.uid);
+    }
   });
 });
 

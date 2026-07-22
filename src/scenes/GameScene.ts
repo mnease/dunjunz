@@ -2883,7 +2883,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (this.shopOpen) return;
-    const shop = getShop(shopId);
+    const shop = getShop(shopId, this.save.level);
     if (!shop) {
       this.game.events.emit('toast', 'SHOP CLOSED');
       return;
@@ -2915,7 +2915,7 @@ export class GameScene extends Phaser.Scene {
 
   private buySelectedShopItem(): void {
     if (!this.shopId) return;
-    const shop = getShop(this.shopId);
+    const shop = getShop(this.shopId, this.save.level);
     const item = shop?.stock[this.shopSelected];
     if (!item) return;
     const result = attemptPurchase(this.save, this.shopId, item.id);
@@ -2938,9 +2938,12 @@ export class GameScene extends Phaser.Scene {
     writeSave(this.save);
     this.emitHud();
     playSfx('coin');
+    const bought = result.item;
     this.game.events.emit(
       'toast',
-      `BOUGHT ${result.item.name} (-${result.item.price}c)`,
+      bought.buddyOnly
+        ? `BOUGHT ${bought.name} [BUD] · Y TO EQUIP BUDDY (-${bought.price}c)`
+        : `BOUGHT ${bought.name} (-${bought.price}c)`,
     );
     this.game.events.emit('shop-refresh', this.save);
     this.game.events.emit('inventory-refresh', this.save);
@@ -2989,7 +2992,7 @@ export class GameScene extends Phaser.Scene {
 
   private navShop(dir: 'up' | 'down' | 'left' | 'right'): void {
     if (!this.shopOpen || !this.shopId) return;
-    const shop = getShop(this.shopId);
+    const shop = getShop(this.shopId, this.save.level);
     if (!shop) return;
 
     if (this.shopPane === 'stock') {

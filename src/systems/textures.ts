@@ -1130,6 +1130,48 @@ function drawItemIcon(
     }
     return;
   }
+  // —— Buddy-only kit icons (cute + gold BUD vibe) ——
+  if (itemId.startsWith('bud_')) {
+    fill(ctx, '#1a1528', 0, 0, 32, 32);
+    fill(ctx, '#ffc857', 1, 1, 30, 2);
+    fill(ctx, '#ffc857', 1, 29, 30, 2);
+    if (itemId === 'bud_collar') {
+      fill(ctx, '#ff6b9d', 6, 12, 20, 8);
+      fill(ctx, '#ffc857', 12, 16, 8, 6);
+      spark(ctx, 15, 14);
+    } else if (itemId === 'bud_sash' || itemId === 'bud_mail') {
+      const c = itemId === 'bud_mail' ? '#8a98a8' : '#6a4a30';
+      fill(ctx, c, 6, 8, 20, 18);
+      fill(ctx, '#ffc857', 10, 12, 12, 3);
+    } else if (itemId === 'bud_paws') {
+      fill(ctx, '#f0c8a4', 6, 10, 8, 12);
+      fill(ctx, '#f0c8a4', 18, 10, 8, 12);
+      fill(ctx, '#ff6b9d', 8, 20, 4, 3);
+      fill(ctx, '#ff6b9d', 20, 20, 4, 3);
+    } else if (itemId === 'bud_booties') {
+      fill(ctx, '#5ad4a0', 5, 14, 10, 12);
+      fill(ctx, '#5ad4a0', 17, 14, 10, 12);
+      fill(ctx, '#ff6b9d', 8, 20, 4, 2);
+    } else if (itemId === 'bud_spike') {
+      fill(ctx, '#8a98a8', 8, 10, 16, 14);
+      fill(ctx, '#e8e0d0', 6, 4, 4, 10);
+      fill(ctx, '#e8e0d0', 22, 4, 4, 10);
+    } else if (itemId === 'bud_charm') {
+      fill(ctx, '#7dffb3', 10, 10, 12, 12);
+      spark(ctx, 14, 12);
+    } else if (itemId === 'bud_claw' || itemId === 'bud_fang') {
+      fill(ctx, '#c0c0c8', 14, 6, 4, 18);
+      fill(ctx, itemId === 'bud_fang' ? '#9aabc0' : '#ff6b9d', 16, 4, 10, 8);
+    } else if (itemId === 'bud_shell') {
+      fill(ctx, '#a07828', 8, 6, 16, 20);
+      fill(ctx, '#c9a227', 12, 12, 8, 8);
+    } else {
+      fill(ctx, '#ffc857', 10, 10, 12, 12);
+    }
+    fill(ctx, '#0a0c10', 22, 22, 8, 8);
+    fill(ctx, '#ffc857', 23, 24, 6, 4);
+    return;
+  }
   if (itemId === 'cube_core') {
     block(ctx, '#5ad45a', '#2a6a2a', 6, 6, 20, 20);
     fill(ctx, 'rgba(255,255,255,0.45)', 9, 9, 8, 8);
@@ -1472,6 +1514,16 @@ export function generateTextures(scene: Phaser.Scene): void {
     'wolf_pelt',
     'cactus_spine',
     'ensign_badge',
+    'bud_collar',
+    'bud_sash',
+    'bud_paws',
+    'bud_booties',
+    'bud_spike',
+    'bud_charm',
+    'bud_claw',
+    'bud_shell',
+    'bud_mail',
+    'bud_fang',
   ];
   for (const id of iconIds) {
     canvasTex(scene, `icon_${id}`, 32, 32, (ctx) => drawItemIcon(ctx, id));

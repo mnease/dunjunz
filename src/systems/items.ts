@@ -41,6 +41,11 @@ export interface ItemTemplate {
    * Classes that get affinity DEF bonus when worn (primary or secondary).
    */
   classAffinity?: ClassId[];
+  /**
+   * Critter-only kit. Heroes cannot wear it; Best Buds can.
+   * Shop labels show BUD; equip via inventory Y (buddy gear mode).
+   */
+  buddyOnly?: boolean;
 }
 
 export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
@@ -517,6 +522,117 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     slot: 'key',
     look: 'key',
   },
+  /** —— Buddy-only kit (heroes cannot equip) —— */
+  bud_collar: {
+    id: 'bud_collar',
+    name: 'BEST BUD COLLAR',
+    blurb: 'BUD ONLY. Amulet slot. Tag says "GOOD". [N]',
+    kind: 'gear',
+    slot: 'amulet',
+    baseDef: 1,
+    look: 'bauble',
+    armorCategory: 'cloth',
+    buddyOnly: true,
+  },
+  bud_sash: {
+    id: 'bud_sash',
+    name: 'STRETCH SASH',
+    blurb: 'BUD ONLY. Elastic chest wrap. [C]',
+    kind: 'gear',
+    slot: 'breastplate',
+    baseDef: 2,
+    look: 'hide',
+    armorCategory: 'light',
+    buddyOnly: true,
+  },
+  bud_paws: {
+    id: 'bud_paws',
+    name: 'PADDED PAWS',
+    blurb: 'BUD ONLY. Soft gloves slot. [G]',
+    kind: 'gear',
+    slot: 'gloves',
+    baseDef: 1,
+    look: 'leather',
+    armorCategory: 'light',
+    buddyOnly: true,
+  },
+  bud_booties: {
+    id: 'bud_booties',
+    name: 'CRITTER BOOTIES',
+    blurb: 'BUD ONLY. Tiny shoes. Very serious. [F]',
+    kind: 'gear',
+    slot: 'shoes',
+    baseDef: 1,
+    look: 'apology',
+    armorCategory: 'light',
+    buddyOnly: true,
+  },
+  bud_spike: {
+    id: 'bud_spike',
+    name: 'BUDDY SPIKE HAT',
+    blurb: 'BUD ONLY. Horned helm energy. [H]',
+    kind: 'gear',
+    slot: 'helmet',
+    baseDef: 2,
+    look: 'plate',
+    armorCategory: 'medium',
+    buddyOnly: true,
+  },
+  bud_charm: {
+    id: 'bud_charm',
+    name: 'BUDDY CHARM RING',
+    blurb: 'BUD ONLY. Lucky paw ring. [R]',
+    kind: 'gear',
+    slot: 'ring',
+    baseDef: 1,
+    look: 'luck',
+    armorCategory: 'cloth',
+    buddyOnly: true,
+  },
+  bud_claw: {
+    id: 'bud_claw',
+    name: 'BUDDY CLAW',
+    blurb: 'BUD ONLY. Weapon slot. Sharp friendship. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 2,
+    look: 'cleaver',
+    weaponStyle: 'melee',
+    buddyOnly: true,
+  },
+  bud_shell: {
+    id: 'bud_shell',
+    name: 'BUDDY SHELL',
+    blurb: 'BUD ONLY. Tiny shield. [O]',
+    kind: 'gear',
+    slot: 'shield',
+    baseDef: 2,
+    look: 'wood',
+    armorCategory: 'light',
+    buddyOnly: true,
+  },
+  bud_mail: {
+    id: 'bud_mail',
+    name: 'BUDDY MAIL',
+    blurb: 'BUD ONLY. Fancy plate-ish vest. [C]',
+    kind: 'gear',
+    slot: 'breastplate',
+    baseDef: 3,
+    look: 'plate',
+    armorCategory: 'medium',
+    buddyOnly: true,
+  },
+  bud_fang: {
+    id: 'bud_fang',
+    name: 'BUDDY FANG BLADE',
+    blurb: 'BUD ONLY. Serious weapon. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 4,
+    look: 'iron',
+    weaponStyle: 'melee',
+    buddyOnly: true,
+  },
 };
 
 export function getTemplate(id: string): ItemTemplate {
@@ -530,9 +646,14 @@ export function getTemplate(id: string): ItemTemplate {
   );
 }
 
+export function isBuddyOnlyTemplate(templateId: string): boolean {
+  return !!getTemplate(templateId).buddyOnly;
+}
+
 export function displayItemName(inst: ItemInstance): string {
   const t = getTemplate(inst.templateId);
   const bits = [t.name];
+  if (t.buddyOnly) bits.push('[BUD]');
   if (inst.enhancement > 0) bits.push(`+${inst.enhancement}`);
   if (inst.attrBonuses) {
     for (const [k, v] of Object.entries(inst.attrBonuses)) {

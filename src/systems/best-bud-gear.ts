@@ -248,6 +248,13 @@ export function equipHeroUid(save: SaveData, uid: string): BudEquipResult {
   if (!inst) return { ok: false, save, reason: 'NOT IN BAG' };
   const t = getTemplate(inst.templateId);
   if (!t.slot) return { ok: false, save, reason: 'CANNOT EQUIP THAT' };
+  if (t.buddyOnly) {
+    return {
+      ok: false,
+      save,
+      reason: 'BUDDY ONLY — Y FOR BUD GEAR MODE',
+    };
+  }
   let next = ensureBudProgress(save);
   const budEq = clearUidFromEquipped(next.budEquipped, uid);
   const equipped = { ...next.equipped, [t.slot]: uid };
@@ -267,9 +274,10 @@ export function cycleHeroSlotEquip(
   save: SaveData,
   slot: EquipSlot,
 ): BudEquipResult {
-  const options = save.bag.filter(
-    (i) => getTemplate(i.templateId).slot === slot,
-  );
+  const options = save.bag.filter((i) => {
+    const t = getTemplate(i.templateId);
+    return t.slot === slot && !t.buddyOnly;
+  });
   if (!options.length) {
     return { ok: false, save, reason: `NO ${slot.toUpperCase()} IN BAG` };
   }

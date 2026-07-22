@@ -309,6 +309,13 @@ export function equipUid(save: SaveData, uid: string): EquipResult {
   if (!inst) return { ok: false, save, reason: 'NOT IN BAG' };
   const t = getTemplate(inst.templateId);
   if (!t.slot) return { ok: false, save, reason: 'CANNOT EQUIP THAT' };
+  if (t.buddyOnly) {
+    return {
+      ok: false,
+      save,
+      reason: 'BUDDY ONLY — PRESS Y IN BAG FOR BUD GEAR',
+    };
+  }
   const equipped = { ...save.equipped, [t.slot]: uid };
   const next = syncDerivedStats({ ...save, equipped });
   return {
@@ -332,7 +339,11 @@ export function unequipSlot(save: SaveData, slot: EquipSlot): EquipResult {
 }
 
 export function bagItemsForSlot(save: SaveData, slot: EquipSlot): ItemInstance[] {
-  return save.bag.filter((i) => getTemplate(i.templateId).slot === slot);
+  // Hero equip cycles skip critter-only kit
+  return save.bag.filter((i) => {
+    const t = getTemplate(i.templateId);
+    return t.slot === slot && !t.buddyOnly;
+  });
 }
 
 export function cycleSlotEquip(save: SaveData, slot: EquipSlot): EquipResult {

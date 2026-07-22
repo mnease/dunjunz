@@ -29,6 +29,8 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 - **Single doorways** — room stretch no longer paints three D tiles in a row; each authored door is one rim tile with wall flanks.
 - **Tinkerer shop pagination** — shop stock and player bag grids paginate (3×4 / 4×4). Labels show range + page; `[` `]` / Page Up·Down / on-screen ◀▶ flip pages on the focused pane.
+- **Level-scaled tinkerer stock** — shop listings unlock with hero level (L1 basics → L15 endgame). Better armor/weapons/mats appear as you grow.
+- **Buddy-only gear** — critter kit (collar, sash, paws, booties, spike hat, claw, shell, mail, fang…) sells with a **BUD** tag. Heroes cannot equip it; Best Buds can (inventory **Y**).
 - **Map tile detail (16-bit)** — dungeon floors (irregular cobbles, cracks, moss), walls (3-row staggered brick + grit), grass (dense blades + flowers), dirt ruts, water/lava frames, doors/stairs/pads, and mapz cells/links all redrawn to match avatar/weapon density.
 
 - **Class clothing & D&D armor categories** — gear is **cloth / light / medium / heavy**. Class proficiency (primary *or* secondary) keeps full DEF; wrong category soft-nerfs DEF (×0.65). Affinity pieces (wizard cloak, ranger cloak/sheath, fighter plate, cleric vestments, barbarian hide…) grant **+1 DEF** when you have that class. Loot biases armor by class.

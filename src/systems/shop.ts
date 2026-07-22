@@ -32,6 +32,10 @@ export interface ShopItem {
   description: string;
   /** Texture key fragment: icon_${iconId} */
   iconId: string;
+  /** Min hero level to list this SKU (default 1). */
+  minLevel?: number;
+  /** Critter-only gear (same as template.buddyOnly). */
+  buddyOnly?: boolean;
 }
 
 export interface ShopDef {
@@ -39,6 +43,11 @@ export interface ShopDef {
   name: string;
   greeting: string[];
   stock: ShopItem[];
+}
+
+/** Catalog row for level-gated stock. */
+interface CatalogEntry extends ShopItem {
+  minLevel: number;
 }
 
 /** Which dual-pane side has keyboard focus. */
@@ -59,147 +68,445 @@ export interface SellTarget {
   blurb: string;
 }
 
-export const SHOPS: Record<string, ShopDef> = {
+/**
+ * Full tinkerer catalog. Rows unlock when hero level ≥ minLevel.
+ * Buddy SKUs always tag BUD ONLY (heroes cannot wear them).
+ */
+const TINKERER_CATALOG: CatalogEntry[] = [
+  // —— Always (L1) ——
+  {
+    id: 'buy_potion',
+    minLevel: 1,
+    name: 'HEALING POTION',
+    price: 15,
+    stackId: 'potion',
+    heal: 4,
+    iconId: 'potion',
+    description: 'Restores a few hearts. Smells like mint.',
+  },
+  {
+    id: 'buy_oil',
+    minLevel: 1,
+    name: 'TINKER OIL',
+    price: 20,
+    stackId: 'tinker_oil',
+    iconId: 'tinker_oil',
+    description: 'Keeps hinges quiet and skelebones squeaky.',
+  },
+  {
+    id: 'buy_gloves',
+    minLevel: 1,
+    name: 'LEATHER GLOVES',
+    price: 35,
+    templateId: 'leather_gloves',
+    iconId: 'leather_gloves',
+    description: 'One more layer between you and regret.',
+  },
+  {
+    id: 'buy_helmet',
+    minLevel: 1,
+    name: 'LEATHER CAP',
+    price: 30,
+    templateId: 'leather_helmet',
+    iconId: 'leather_helmet',
+    description: 'Stops light bonks. Heavy ones still hurt.',
+  },
+  {
+    id: 'buy_shoes',
+    minLevel: 1,
+    name: 'LEATHER BOOTS',
+    price: 28,
+    templateId: 'leather_shoes',
+    iconId: 'leather_shoes',
+    description: 'Better than bare feet in a dunjun.',
+  },
+  {
+    id: 'buy_armor',
+    minLevel: 1,
+    name: 'LEATHER BREASTPLATE',
+    price: 45,
+    templateId: 'leather_armor',
+    iconId: 'leather_armor',
+    description: 'Fashionable protection. Mostly.',
+  },
+  {
+    id: 'buy_wood_shield',
+    minLevel: 1,
+    name: 'WOOD SHIELD',
+    price: 32,
+    templateId: 'wood_shield',
+    iconId: 'wood_shield',
+    description: 'Shield slot. Better than blocking with your face.',
+  },
+  {
+    id: 'buy_copper_ring',
+    minLevel: 1,
+    name: 'COPPER RING',
+    price: 28,
+    templateId: 'copper_ring',
+    iconId: 'copper_ring',
+    description: 'Ring slot. Cheap shine, real DEF.',
+  },
+  {
+    id: 'buy_wood',
+    minLevel: 1,
+    name: 'WOOD SHARD',
+    price: 18,
+    stackId: 'wood_shard',
+    iconId: 'wood_shard',
+    description: 'From the woodz. Good kindling / handles.',
+  },
+  {
+    id: 'buy_bud_collar',
+    minLevel: 1,
+    name: 'BEST BUD COLLAR',
+    price: 22,
+    templateId: 'bud_collar',
+    iconId: 'bud_collar',
+    buddyOnly: true,
+    description: 'BUD ONLY. Amulet for your Best Bud. [Y gear mode]',
+  },
+  {
+    id: 'buy_bud_paws',
+    minLevel: 1,
+    name: 'PADDED PAWS',
+    price: 24,
+    templateId: 'bud_paws',
+    iconId: 'bud_paws',
+    buddyOnly: true,
+    description: 'BUD ONLY. Soft paw gloves. Heroes cannot wear.',
+  },
+  // —— L3 ——
+  {
+    id: 'buy_potion_3',
+    minLevel: 3,
+    name: 'POTION PACK x3',
+    price: 40,
+    stackId: 'potion',
+    stackCount: 3,
+    iconId: 'potion',
+    description: 'Three potions. Bulk discount, kind of.',
+  },
+  {
+    id: 'buy_iron',
+    minLevel: 3,
+    name: 'IRON ORE',
+    price: 25,
+    stackId: 'ore_iron',
+    iconId: 'ore_iron',
+    description: 'Forjing material. Heavy for its size.',
+  },
+  {
+    id: 'buy_trinket',
+    minLevel: 3,
+    name: 'GOLD TRINKET',
+    price: 50,
+    templateId: 'gold_trinket',
+    iconId: 'gold_trinket',
+    description: 'Amulet. +DEF. Shiny enough to distract wolves.',
+  },
+  {
+    id: 'buy_iron_shield',
+    minLevel: 3,
+    name: 'IRON SHIELD',
+    price: 55,
+    templateId: 'iron_shield',
+    iconId: 'iron_shield',
+    description: 'Shield slot. Proper iron. Heavy pride.',
+  },
+  {
+    id: 'buy_silver_ring',
+    minLevel: 3,
+    name: 'SILVER RING',
+    price: 48,
+    templateId: 'silver_ring',
+    iconId: 'silver_ring',
+    description: 'Ring slot. Tinkerer swears it is real silver.',
+  },
+  {
+    id: 'buy_reinforced',
+    minLevel: 3,
+    name: 'REINFORCED BREASTPLATE',
+    price: 70,
+    templateId: 'reinforced_leather',
+    iconId: 'reinforced_leather',
+    description: 'Medium chest. For heroes who keep dying.',
+  },
+  {
+    id: 'buy_bud_sash',
+    minLevel: 3,
+    name: 'STRETCH SASH',
+    price: 40,
+    templateId: 'bud_sash',
+    iconId: 'bud_sash',
+    buddyOnly: true,
+    description: 'BUD ONLY. Elastic chest wrap for stretchy friends.',
+  },
+  {
+    id: 'buy_bud_booties',
+    minLevel: 3,
+    name: 'CRITTER BOOTIES',
+    price: 32,
+    templateId: 'bud_booties',
+    iconId: 'bud_booties',
+    buddyOnly: true,
+    description: 'BUD ONLY. Tiny serious shoes.',
+  },
+  // —— L5 ——
+  {
+    id: 'buy_spark',
+    minLevel: 5,
+    name: 'SPARK ORE',
+    price: 35,
+    stackId: 'ore_spark',
+    iconId: 'ore_spark',
+    description: 'Magic dust for forjing imbues.',
+  },
+  {
+    id: 'buy_sand',
+    minLevel: 5,
+    name: 'SAND CRYSTAL',
+    price: 30,
+    stackId: 'sand_crystal',
+    iconId: 'sand_crystal',
+    description: 'Dezertz glass. Hisses near forjes.',
+  },
+  {
+    id: 'buy_mild_sword',
+    minLevel: 5,
+    name: 'SWORD OF MILD ENTHUSIASM',
+    price: 65,
+    templateId: 'mild_sword',
+    iconId: 'mild_sword',
+    description: 'Backup blade. Mild. Enthusiastic enough.',
+  },
+  {
+    id: 'buy_studded',
+    minLevel: 5,
+    name: 'STUDDED LEATHER',
+    price: 80,
+    templateId: 'studded_leather',
+    iconId: 'studded_leather',
+    description: 'Light chest with attitude studs.',
+  },
+  {
+    id: 'buy_greaves',
+    minLevel: 5,
+    name: 'LEATHER GREAVES',
+    price: 45,
+    templateId: 'leather_greaves',
+    iconId: 'leather_greaves',
+    description: 'Leg slot. Stops shin regret.',
+  },
+  {
+    id: 'buy_bud_spike',
+    minLevel: 5,
+    name: 'BUDDY SPIKE HAT',
+    price: 55,
+    templateId: 'bud_spike',
+    iconId: 'bud_spike',
+    buddyOnly: true,
+    description: 'BUD ONLY. Horned hat. Looks intimidating on a slime.',
+  },
+  {
+    id: 'buy_bud_claw',
+    minLevel: 5,
+    name: 'BUDDY CLAW',
+    price: 60,
+    templateId: 'bud_claw',
+    iconId: 'bud_claw',
+    buddyOnly: true,
+    description: 'BUD ONLY. Weapon. Friendship with edges.',
+  },
+  // —— L8 ——
+  {
+    id: 'buy_iron_blade',
+    minLevel: 8,
+    name: 'IRON BLADE',
+    price: 95,
+    templateId: 'iron_blade',
+    iconId: 'iron_blade',
+    description: 'Real iron. Realer than your first sword.',
+  },
+  {
+    id: 'buy_plate_helm',
+    minLevel: 8,
+    name: 'PLATE HELM',
+    price: 90,
+    templateId: 'plate_helm',
+    iconId: 'plate_helm',
+    description: 'Heavy head. Comes with horns energy.',
+  },
+  {
+    id: 'buy_bauble',
+    minLevel: 8,
+    name: 'SHINY BAUBLE',
+    price: 75,
+    templateId: 'shiny_bauble',
+    iconId: 'shiny_bauble',
+    description: 'Amulet. Better potions. Pink.',
+  },
+  {
+    id: 'buy_luck_ring',
+    minLevel: 8,
+    name: 'RING OF MILD LUCK',
+    price: 70,
+    templateId: 'luck_ring',
+    iconId: 'luck_ring',
+    description: 'Ring. Feels lucky. Probably is not.',
+  },
+  {
+    id: 'buy_bud_shell',
+    minLevel: 8,
+    name: 'BUDDY SHELL',
+    price: 70,
+    templateId: 'bud_shell',
+    iconId: 'bud_shell',
+    buddyOnly: true,
+    description: 'BUD ONLY. Tiny shield for tiny heroes.',
+  },
+  {
+    id: 'buy_bud_charm',
+    minLevel: 8,
+    name: 'BUDDY CHARM RING',
+    price: 55,
+    templateId: 'bud_charm',
+    iconId: 'bud_charm',
+    buddyOnly: true,
+    description: 'BUD ONLY. Lucky paw ring.',
+  },
+  // —— L12 ——
+  {
+    id: 'buy_fighter_plate',
+    minLevel: 12,
+    name: 'FIGHTER PLATE',
+    price: 140,
+    templateId: 'fighter_plate',
+    iconId: 'fighter_plate',
+    description: 'Heavy chest. Clanks of confidence.',
+  },
+  {
+    id: 'buy_tower_shield',
+    minLevel: 12,
+    name: 'TOWER SHIELD',
+    price: 120,
+    templateId: 'tower_shield',
+    iconId: 'tower_shield',
+    description: 'Shield. Door energy. Carry with pride.',
+  },
+  {
+    id: 'buy_plate_greaves',
+    minLevel: 12,
+    name: 'PLATE GREAVES',
+    price: 100,
+    templateId: 'plate_greaves',
+    iconId: 'plate_greaves',
+    description: 'Heavy legs. Slow but shiny.',
+  },
+  {
+    id: 'buy_ranger_cloak',
+    minLevel: 12,
+    name: 'RANGER CLOAK',
+    price: 110,
+    templateId: 'ranger_cloak',
+    iconId: 'ranger_cloak',
+    description: 'Trail cloak. Leaves optional.',
+  },
+  {
+    id: 'buy_bud_mail',
+    minLevel: 12,
+    name: 'BUDDY MAIL',
+    price: 110,
+    templateId: 'bud_mail',
+    iconId: 'bud_mail',
+    buddyOnly: true,
+    description: 'BUD ONLY. Fancy plate-ish vest for champions.',
+  },
+  {
+    id: 'buy_bud_fang',
+    minLevel: 12,
+    name: 'BUDDY FANG BLADE',
+    price: 125,
+    templateId: 'bud_fang',
+    iconId: 'bud_fang',
+    buddyOnly: true,
+    description: 'BUD ONLY. Serious critter weapon.',
+  },
+  // —— L15 ——
+  {
+    id: 'buy_wizard_cloak',
+    minLevel: 15,
+    name: 'WIZARD CLOAK',
+    price: 150,
+    templateId: 'wizard_cloak',
+    iconId: 'wizard_cloak',
+    description: 'Stars included. Spells not.',
+  },
+  {
+    id: 'buy_mage_hat',
+    minLevel: 15,
+    name: 'POINTED MAGE HAT',
+    price: 90,
+    templateId: 'mage_hat',
+    iconId: 'mage_hat',
+    description: 'Very on-brand. Slightly crooked.',
+  },
+  {
+    id: 'buy_cleric_vest',
+    minLevel: 15,
+    name: 'CLERIC VESTMENTS',
+    price: 145,
+    templateId: 'cleric_vestments',
+    iconId: 'cleric_vestments',
+    description: 'Holy cloth-mail. Smells like incense.',
+  },
+  {
+    id: 'buy_potion_5',
+    minLevel: 15,
+    name: 'POTION CRATE x5',
+    price: 70,
+    stackId: 'potion',
+    stackCount: 5,
+    iconId: 'potion',
+    description: 'Five potions. Bulk bulk.',
+  },
+];
+
+/** Build level-gated stock (prices fixed per SKU; higher tiers unlock later). */
+export function buildTinkererStock(level: number): ShopItem[] {
+  const lv = Math.max(1, Math.floor(level || 1));
+  return TINKERER_CATALOG.filter((e) => e.minLevel <= lv).map(
+    ({ minLevel: _m, ...item }) => ({
+      ...item,
+      buddyOnly:
+        item.buddyOnly ||
+        (!!item.templateId && !!getTemplate(item.templateId).buddyOnly),
+    }),
+  );
+}
+
+const SHOP_META: Record<
+  string,
+  Omit<ShopDef, 'stock'> & { stockBuilder?: (level: number) => ShopItem[] }
+> = {
   tinkerer: {
     id: 'tinkerer',
     name: 'TRAVELING TINKERER',
     greeting: [
       'TINKERER: BUY LEFT · SELL RIGHT!',
-      'FAIR-ISH PRICES. I DON\'T JUDGE. MUCH.',
+      'STOCK GROWS WITH YOUR LEVEL.',
+      'BUD GEAR = CRITTERS ONLY · Y IN BAG',
       'TAB PANE · [ ] PAGE · ENTER TRADE',
     ],
-    stock: [
-      {
-        id: 'buy_potion',
-        name: 'HEALING POTION',
-        price: 15,
-        stackId: 'potion',
-        heal: 4,
-        iconId: 'potion',
-        description: 'Restores a few hearts. Smells like mint.',
-      },
-      {
-        id: 'buy_potion_3',
-        name: 'POTION PACK x3',
-        price: 40,
-        stackId: 'potion',
-        stackCount: 3,
-        iconId: 'potion',
-        description: 'Three potions. Bulk discount, kind of.',
-      },
-      {
-        id: 'buy_oil',
-        name: 'TINKER OIL',
-        price: 20,
-        stackId: 'tinker_oil',
-        iconId: 'tinker_oil',
-        description: 'Keeps hinges quiet and skelebones squeaky.',
-      },
-      {
-        id: 'buy_gloves',
-        name: 'LEATHER GLOVES',
-        price: 35,
-        templateId: 'leather_gloves',
-        iconId: 'leather_gloves',
-        description: 'One more layer between you and regret.',
-      },
-      {
-        id: 'buy_helmet',
-        name: 'LEATHER CAP',
-        price: 30,
-        templateId: 'leather_helmet',
-        iconId: 'leather_helmet',
-        description: 'Stops light bonks. Heavy ones still hurt.',
-      },
-      {
-        id: 'buy_shoes',
-        name: 'LEATHER BOOTS',
-        price: 28,
-        templateId: 'leather_shoes',
-        iconId: 'leather_shoes',
-        description: 'Better than bare feet in a dunjun.',
-      },
-      {
-        id: 'buy_armor',
-        name: 'LEATHER BREASTPLATE',
-        price: 45,
-        templateId: 'leather_armor',
-        iconId: 'leather_armor',
-        description: 'Fashionable protection. Mostly.',
-      },
-      {
-        id: 'buy_trinket',
-        name: 'GOLD TRINKET',
-        price: 50,
-        templateId: 'gold_trinket',
-        iconId: 'gold_trinket',
-        description: 'Amulet. +DEF. Shiny enough to distract wolves.',
-      },
-      {
-        id: 'buy_wood_shield',
-        name: 'WOOD SHIELD',
-        price: 32,
-        templateId: 'wood_shield',
-        iconId: 'wood_shield',
-        description: 'Shield slot. Better than blocking with your face.',
-      },
-      {
-        id: 'buy_iron_shield',
-        name: 'IRON SHIELD',
-        price: 55,
-        templateId: 'iron_shield',
-        iconId: 'iron_shield',
-        description: 'Shield slot. Proper iron. Heavy pride.',
-      },
-      {
-        id: 'buy_copper_ring',
-        name: 'COPPER RING',
-        price: 28,
-        templateId: 'copper_ring',
-        iconId: 'copper_ring',
-        description: 'Ring slot. Cheap shine, real DEF.',
-      },
-      {
-        id: 'buy_silver_ring',
-        name: 'SILVER RING',
-        price: 48,
-        templateId: 'silver_ring',
-        iconId: 'silver_ring',
-        description: 'Ring slot. Tinkerer swears it is real silver.',
-      },
-      {
-        id: 'buy_iron',
-        name: 'IRON ORE',
-        price: 25,
-        stackId: 'ore_iron',
-        iconId: 'ore_iron',
-        description: 'Forjing material. Heavy for its size.',
-      },
-      {
-        id: 'buy_spark',
-        name: 'SPARK ORE',
-        price: 35,
-        stackId: 'ore_spark',
-        iconId: 'ore_spark',
-        description: 'Magic dust for forjing imbues.',
-      },
-      {
-        id: 'buy_wood',
-        name: 'WOOD SHARD',
-        price: 18,
-        stackId: 'wood_shard',
-        iconId: 'wood_shard',
-        description: 'From the woodz. Good kindling / handles.',
-      },
-      {
-        id: 'buy_sand',
-        name: 'SAND CRYSTAL',
-        price: 30,
-        stackId: 'sand_crystal',
-        iconId: 'sand_crystal',
-        description: 'Dezertz glass. Hisses near forjes.',
-      },
-    ],
+    stockBuilder: buildTinkererStock,
+  },
+};
+
+/** @deprecated Prefer getShop(id, level). Static full catalog for tests. */
+export const SHOPS: Record<string, ShopDef> = {
+  tinkerer: {
+    ...SHOP_META.tinkerer!,
+    stock: buildTinkererStock(99),
   },
 };
 
@@ -219,7 +526,23 @@ export type SellResult =
       save: SaveData;
     };
 
-export function getShop(shopId: string): ShopDef | undefined {
+/**
+ * Resolve shop definition. Pass hero level so tinkerer stock unlocks
+ * better gear as you grow (buddy kit included when minLevel met).
+ */
+export function getShop(
+  shopId: string,
+  level: number = 1,
+): ShopDef | undefined {
+  const meta = SHOP_META[shopId];
+  if (meta?.stockBuilder) {
+    return {
+      id: meta.id,
+      name: meta.name,
+      greeting: meta.greeting,
+      stock: meta.stockBuilder(level),
+    };
+  }
   return SHOPS[shopId];
 }
 
@@ -362,7 +685,7 @@ export function attemptPurchase(
   shopId: string,
   itemId: string,
 ): PurchaseResult {
-  const shop = SHOPS[shopId];
+  const shop = getShop(shopId, save.level);
   if (!shop) return { ok: false, reason: 'unknown_shop', save };
   const item = shop.stock.find((s) => s.id === itemId);
   if (!item) return { ok: false, reason: 'not_in_stock', save };
@@ -389,6 +712,7 @@ export function attemptPurchase(
     const m = mintItem(next, item.templateId, 'common', 0);
     next = m.save;
   }
+  // Buddy-only gear must not auto-stick to the hero
   next = autoEquipEmptySlots(next);
   next = syncDerivedStats(next);
   return { ok: true, save: next, item };
@@ -398,19 +722,20 @@ export function attemptFeaturedPurchase(
   save: SaveData,
   shopId: string,
 ): PurchaseResult {
-  const shop = SHOPS[shopId];
+  const shop = getShop(shopId, save.level);
   if (!shop?.stock.length) {
     return { ok: false, reason: 'unknown_shop', save };
   }
-  return attemptPurchase(save, shopId, shop.stock[0].id);
+  return attemptPurchase(save, shopId, shop.stock[0]!.id);
 }
 
-export function shopCatalogLines(shopId: string): string[] {
-  const shop = SHOPS[shopId];
+export function shopCatalogLines(shopId: string, level = 1): string[] {
+  const shop = getShop(shopId, level);
   if (!shop) return ['NO SHOP HERE.'];
   const lines = [...shop.greeting];
   for (const s of shop.stock.slice(0, 6)) {
-    lines.push(`${s.name}: ${s.price}c`);
+    const tag = s.buddyOnly ? ' [BUD]' : '';
+    lines.push(`${s.name}${tag}: ${s.price}c`);
   }
   if (shop.stock.length > 6) lines.push(`...+${shop.stock.length - 6} more`);
   lines.push('E = OPEN SHOP · LEFT BUY · RIGHT SELL');
