@@ -50,6 +50,8 @@ export class TitleScene extends Phaser.Scene {
   /** Large on-canvas touch buttons (title menu). */
   private touchLayer: Phaser.GameObjects.Container | null = null;
   private touchAxisLatch = { up: false, down: false };
+  /** Slot list Y — PLAY button sits below this band on desktop. */
+  private ySlots = 0;
 
   constructor() {
     super('Title');
@@ -93,8 +95,10 @@ export class TitleScene extends Phaser.Scene {
     const yBlurb = yNoAds + 52;
     const yStatus = yBlurb + 78;
     const ySlots = yStatus + 36;
+    this.ySlots = ySlots;
     const yModes = yStatus + 28;
-    const yPrompt = GAME_H - 110;
+    // Room for PLAY button under slots; hints sit lower
+    const yPrompt = GAME_H - 88;
     const yFooter = GAME_H - 36;
 
     this.add
@@ -441,15 +445,27 @@ export class TitleScene extends Phaser.Scene {
     this.touchLayer = this.add.container(0, 0).setDepth(40);
 
     const touchy = isTouchUiPreferred();
-    // Always show big buttons on touch UIs; also show when mobile forced
+    // Desktop: under slot list (not over keyboard-hint prompt)
+    // Slots: ySlots + 0/36/72; button clears last row + gap
+    const yPlayDesktop = Math.min(
+      this.ySlots + 3 * 36 + 56,
+      GAME_H - 200,
+    );
     if (!touchy) {
-      // Desktop still gets a clickable PLAY hit zone under the prompt
+      this.prompt?.setY(GAME_H - 88);
       const hit = this.add
-        .rectangle(GAME_W / 2, GAME_H - 150, Math.min(420, GAME_W - 80), 56, 0x1a4030, 0.85)
+        .rectangle(
+          GAME_W / 2,
+          yPlayDesktop,
+          Math.min(420, GAME_W - 80),
+          56,
+          0x1a4030,
+          0.85,
+        )
         .setStrokeStyle(2, COLORS.green)
         .setInteractive({ useHandCursor: true });
       const label = this.add
-        .text(GAME_W / 2, GAME_H - 150, '▶  PLAY / CONTINUE', {
+        .text(GAME_W / 2, yPlayDesktop, '▶  PLAY / CONTINUE', {
           fontFamily: '"Press Start 2P", monospace',
           fontSize: '12px',
           color: '#7dffb3',
