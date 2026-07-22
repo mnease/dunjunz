@@ -108,11 +108,37 @@ const SLOT_SHORT: Record<EquipSlot, string> = {
   key: 'KEY',
 };
 
-/** Press Start 2P ~7px/char at 8px — hard-cap equip name line. */
+/**
+ * Press Start 2P ~7–8px/char at 8px — hard-cap one equip name line.
+ * Prefer word-boundary ellipsis so we never show mid-token trash like "(LE…".
+ */
 function truncateInvName(name: string, maxChars: number): string {
-  if (name.length <= maxChars) return name;
+  const s = name.trim();
+  if (s.length <= maxChars) return s;
   if (maxChars <= 1) return '…';
-  return `${name.slice(0, maxChars - 1)}…`;
+  const budget = maxChars - 1;
+  const cut = s.slice(0, budget);
+  const sp = cut.lastIndexOf(' ');
+  // Only break on a space if we keep a useful prefix
+  const base =
+    sp >= Math.max(4, Math.floor(budget * 0.4)) ? cut.slice(0, sp) : cut;
+  return `${base.trimEnd()}…`;
+}
+
+/**
+ * Equip-column name only: template + enhancement.
+ * Omit rarity / attr noise — full detail lives in bag INSPECT.
+ */
+function equipListItemName(inst: {
+  templateId: string;
+  enhancement: number;
+}): string {
+  const t = getTemplate(inst.templateId);
+  const bits = [t.name];
+  if (t.buddyOnly) bits.push('[BUD]');
+  if (inst.enhancement > 0) bits.push(`+${inst.enhancement}`);
+  // No rarity / attr tokens — those overflow the strip; bag INSPECT has full name
+  return bits.join(' ');
 }
 
 /**
@@ -190,13 +216,23 @@ export class UIScene extends Phaser.Scene {
    */
   private static readonly INV_DOLL_X = 100;
   private static readonly INV_DOLL_Y = 190;
-  private static readonly INV_EQUIP_X0 = 210;
+  private static readonly INV_EQUIP_X0 = 200;
   private static readonly INV_EQUIP_Y0 = HUD_H + 36;
-  private static readonly INV_EQUIP_COL_W = 210;
+  /** Col pitch: col1 icon at 392; name max R ~566 before 14px gutter to stats. */
+  private static readonly INV_EQUIP_COL_W = 192;
   private static readonly INV_EQUIP_ROW_H = 36;
-  /** Max chars for equip name line (Press Start ~7px @ 8px). */
-  private static readonly INV_EQUIP_NAME_CHARS = 22;
-  private static readonly INV_STATS_X = 640;
+  /**
+   * Max chars for equip name line (~148px advance @ Press Start 8px).
+   * No wordWrap — one line only so text cannot overflow the row box.
+   */
+  private static readonly INV_EQUIP_NAME_CHARS = 18;
+  /** Stats text = well L + 12 (well L = 580). */
+  private static readonly INV_STATS_X = 592;
+  /** Content-hugging stats well (was 600×160 void at cx 928). */
+  private static readonly INV_STATS_PLATE_CX = 740;
+  private static readonly INV_STATS_PLATE_CY = 178;
+  private static readonly INV_STATS_PLATE_W = 320;
+  private static readonly INV_STATS_PLATE_H = 148;
   private static readonly INV_BAG_LEFT = 48;
   /** Content inset under bag plate top (plate top = 308). */
   private static readonly INV_BAG_TITLE_Y = 324;
@@ -823,9 +859,16 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(d + 1);
 
-    // Stats inset well (tertiary group inside character strip)
+    // Stats inset well — hug vitals text (Comb/Pollen: kill empty void plate)
     this.invStatsPlate = this.add
-      .rectangle(928, 180, 600, 160, 0x0c0e14, 1)
+      .rectangle(
+        UIScene.INV_STATS_PLATE_CX,
+        UIScene.INV_STATS_PLATE_CY,
+        UIScene.INV_STATS_PLATE_W,
+        UIScene.INV_STATS_PLATE_H,
+        0x0c0e14,
+        1,
+      )
       .setStrokeStyle(1, 0x3a3150)
       .setScrollFactor(0)
       .setDepth(d + 1);
@@ -933,42 +976,42 @@ export class UIScene extends Phaser.Scene {
         .setDepth(d + 3);
       this.invSlotLabels[slot] = this.add
         .text(
-          x + 28,
+          x + 26,
           y - 10,
           `${SLOT_SHORT[slot]} [${SLOT_KEYS[slot]}]\n(empty)`,
           {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '8px',
             color: '#c5cde0',
-            // 2 lines only — lineSpacing 2 keeps block ≪ rowH 36
+            // Exactly 2 lines via \n only — NO wordWrap (prevents row overflow)
             lineSpacing: 2,
-            wordWrap: { width: colW - 44 },
           },
         )
         .setScrollFactor(0)
         .setDepth(d + 3);
     });
 
-    // Stats / attrs — half-screen rail (aligned with bag/inspect column contract)
+    // Stats / attrs — inside content-hugging well (wrap clamped to plate width)
     const railX = UIScene.INV_STATS_X;
+    const statsWrap = UIScene.INV_STATS_PLATE_W - 24;
     this.invStats = this.add
-      .text(railX, startY - 4, '', {
+      .text(railX, startY + 4, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#ffc857',
-        lineSpacing: 8,
-        wordWrap: { width: GAME_W - railX - 40 },
+        lineSpacing: 6,
+        wordWrap: { width: statsWrap },
       })
       .setScrollFactor(0)
       .setDepth(d + 2);
 
     this.invAttrs = this.add
-      .text(railX, startY + 88, '', {
+      .text(railX, startY + 78, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#7dffb3',
-        lineSpacing: 8,
-        wordWrap: { width: GAME_W - railX - 40 },
+        lineSpacing: 6,
+        wordWrap: { width: statsWrap },
       })
       .setScrollFactor(0)
       .setDepth(d + 2);
@@ -2429,13 +2472,13 @@ export class UIScene extends Phaser.Scene {
         icon.setAlpha(budMode && slot === 'key' ? 0.35 : 1);
       }
       if (label) {
+        // Compact equip label: chrome + name/+enh only (no rarity overflow)
         const rawName =
           budMode && slot === 'key'
             ? '(n/a)'
             : inst
-              ? displayItemName(inst)
+              ? equipListItemName(inst)
               : '(empty)';
-        // Hard-cap 2 lines: short chrome + ellipsized name (no row collision)
         const name = truncateInvName(rawName, UIScene.INV_EQUIP_NAME_CHARS);
         label.setText(`${SLOT_SHORT[slot]} [${SLOT_KEYS[slot]}]\n${name}`);
         label.setAlpha(budMode && slot === 'key' ? 0.4 : 1);
