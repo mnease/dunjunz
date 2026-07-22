@@ -244,7 +244,7 @@ body {
   }
 }
 
-/* Stage: canvas + optional touch dock (iPhone-friendly) */
+/* Stage: canvas; touch pad overlays inside #game-frame */
 .game-stage {
   display: flex;
   flex-direction: column;
@@ -267,27 +267,27 @@ body {
   flex: 0 1 auto;
 }
 
-/* —— Touch pad dock (below canvas on phone; not over letterboxed 16:9) —— */
+/* —— Touch pad: translucent overlay HUD (not a dock) —— */
 .touch-pad {
   display: none;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.45rem;
-  width: 100%;
+  position: absolute;
+  inset: 0;
+  z-index: 50;
   box-sizing: border-box;
-  padding: 0.45rem 0.55rem max(0.55rem, env(safe-area-inset-bottom, 0px));
-  padding-left: max(0.55rem, env(safe-area-inset-left, 0px));
-  padding-right: max(0.55rem, env(safe-area-inset-right, 0px));
-  background: linear-gradient(180deg, #12161fcc 0%, #0a0c10f2 100%);
-  border: 2px solid #2a3448;
-  border-top: none;
-  border-radius: 0 0 10px 10px;
+  pointer-events: none;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  z-index: 40;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem max(0.55rem, env(safe-area-inset-right, 0px))
+    max(0.75rem, env(safe-area-inset-bottom, 0px))
+    max(0.55rem, env(safe-area-inset-left, 0px));
+  background: transparent;
+  border: none;
 }
 
 .touch-pad:not([hidden]) {
@@ -301,10 +301,10 @@ body {
 
 .touch-dpad {
   display: grid;
-  grid-template-columns: 3.1rem 3.1rem 3.1rem;
-  grid-template-rows: 3.1rem 3.1rem 3.1rem;
-  gap: 0.12rem;
-  width: 9.54rem;
+  grid-template-columns: 3.25rem 3.25rem 3.25rem;
+  grid-template-rows: 3.25rem 3.25rem 3.25rem;
+  gap: 0.14rem;
+  width: 10rem;
 }
 
 .touch-dpad #touch-up {
@@ -326,60 +326,67 @@ body {
 
 .touch-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(3rem, 3.4rem));
-  gap: 0.3rem;
+  grid-template-columns: repeat(3, minmax(3.1rem, 3.5rem));
+  gap: 0.35rem;
   justify-items: stretch;
 }
 
 .touch-btn {
   pointer-events: auto;
-  min-width: 2.95rem;
-  min-height: 2.95rem;
+  min-width: 3.1rem;
+  min-height: 3.1rem;
   padding: 0.2rem;
-  border: 2px solid #3a9a68;
-  border-radius: 14px;
-  background: rgba(18, 22, 31, 0.92);
+  border: 2px solid rgba(58, 154, 104, 0.85);
+  border-radius: 16px;
+  background: rgba(12, 16, 24, 0.42);
   color: var(--neon);
   font-family: var(--font-display);
   font-size: 0.52rem;
   line-height: 1.15;
   letter-spacing: 0.02em;
-  box-shadow: 0 2px 0 #0a0c10, inset 0 0 12px rgba(125, 255, 179, 0.08);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.35),
+    inset 0 0 14px rgba(125, 255, 179, 0.1);
   -webkit-tap-highlight-color: transparent;
-  /* none = no pan/zoom steal; do not use manipulation here */
   touch-action: none;
   cursor: pointer;
+  backdrop-filter: blur(2px);
 }
 
 .touch-btn:active,
 .touch-btn.is-down {
-  background: rgba(125, 255, 179, 0.28);
+  background: rgba(125, 255, 179, 0.42);
   transform: translateY(1px);
-  box-shadow: 0 1px 0 #0a0c10;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 .touch-dir {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: var(--amber);
-  border-color: #8a7020;
-  min-width: 3.1rem;
-  min-height: 3.1rem;
+  border-color: rgba(138, 112, 32, 0.9);
+  min-width: 3.25rem;
+  min-height: 3.25rem;
+  background: rgba(20, 16, 8, 0.4);
 }
 
 .touch-a {
-  min-height: 3.2rem;
+  min-height: 3.35rem;
   color: #0a0c10;
-  background: #5ad49a;
+  background: rgba(90, 212, 154, 0.72);
   border-color: #7dffb3;
   font-size: 0.58rem;
 }
 
 .touch-b {
-  min-height: 3.2rem;
-  background: #ffc857;
+  min-height: 3.35rem;
+  background: rgba(255, 200, 87, 0.72);
   color: #0a0c10;
   border-color: #ffe08a;
   font-size: 0.52rem;
+}
+
+.touch-c {
+  background: rgba(18, 22, 31, 0.5);
 }
 
 /* —— iPhone / phone play shell —— */
@@ -481,7 +488,7 @@ body.touch-play #game-container canvas {
   image-rendering: crisp-edges;
 }
 
-/* Overlay pad: no solid bar, corners only */
+/* Overlay pad: corners only + light bottom vignette */
 body.touch-play .touch-pad {
   position: absolute;
   inset: 0;
@@ -489,16 +496,17 @@ body.touch-play .touch-pad {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  background: transparent;
   border: none;
   pointer-events: none;
-  /* Soft vignette at bottom so buttons read without a dock bar */
   background: linear-gradient(
     to top,
     rgba(0, 0, 0, 0.28) 0%,
     rgba(0, 0, 0, 0.08) 28%,
     transparent 48%
   );
+  padding: 0.5rem max(0.55rem, env(safe-area-inset-right, 0px))
+    max(0.75rem, env(safe-area-inset-bottom, 0px))
+    max(0.55rem, env(safe-area-inset-left, 0px));
 }
 
 body.touch-play .touch-cluster {
