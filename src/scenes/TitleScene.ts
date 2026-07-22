@@ -20,7 +20,7 @@ import { loadArmySave, armySize } from '../systems/army';
 import { defaultCampaign } from '../systems/village-battle';
 import { clearSave, loadSave, writeSave } from '../systems/save';
 import type { SaveData } from '../types';
-import { getLastAuthMe } from '../ui/auth';
+import { getLastAuthMe, refreshAuthUi } from '../ui/auth';
 import {
   clearAllTouch,
   consumeTouchAction,
@@ -72,6 +72,18 @@ export class TitleScene extends Phaser.Scene {
     }
     this.game.events.emit('pause-ui', false);
     clearAllTouch();
+    // Scene instances are reused on restart — wipe GO handles from last visit
+    // (otherwise slotTexts[0..2] stay dead and cloud slots never re-render)
+    this.touchLayer?.destroy(true);
+    this.touchLayer = null;
+    this.slotTexts = [];
+    this.modeLines = [];
+    this.statusText = null;
+    this.prompt = null;
+    this.blurbText = null;
+    this.slots = [];
+    this.slotCursor = 0;
+    this.cloudMode = false;
     // Show mobile pad on title so ATK/↑↓ work; also build big TAP buttons
     setTouchPadVisible(isTouchUiPreferred());
     void unlockAudio().then(() => playMusic('title'));
@@ -219,7 +231,7 @@ export class TitleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const refreshFromAuth = () => {
+    const applyAuthMe = () => {
       if (this.phase !== 'main') return;
       const me = getLastAuthMe();
       if (me?.authenticated && me.slots) {
@@ -227,9 +239,6 @@ export class TitleScene extends Phaser.Scene {
         this.slots = me.slots;
         setCloudSyncEnabled(true);
         this.renderCloudSlots();
-        this.prompt?.setText(
-          '↑↓ SELECT SLOT   ENTER LOAD/NEW   R WIPE SLOT\nTOP BAR: ACCOUNT FOR GUEST / MAGIC LINK',
-        );
       } else {
         this.cloudMode = false;
         setCloudSyncEnabled(false);
@@ -237,11 +246,25 @@ export class TitleScene extends Phaser.Scene {
       }
     };
 
-    refreshFromAuth();
+    // Paint from cache immediately, then re-fetch so return-from-game has live slots
+    applyAuthMe();
+    void refreshAuthUi()
+      .then(() => {
+        if (!this.sys.isActive()) return;
+        applyAuthMe();
+      })
+      .catch(() => {
+        /* offline / API — keep cache or local mode */
+      });
     this.time.addEvent({
-      delay: 800,
-      repeat: 6,
-      callback: refreshFromAuth,
+      delay: 900,
+      repeat: 4,
+      callback: () => {
+        if (!this.sys.isActive() || this.phase !== 'main') return;
+        void refreshAuthUi()
+          .then(() => applyAuthMe())
+          .catch(() => applyAuthMe());
+      },
     });
 
     const onEnter = () => {
