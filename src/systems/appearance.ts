@@ -203,9 +203,18 @@ export function budAppearanceFromSave(save: SaveData): AppearanceSpec {
   return appearanceFromEquipped(save, equipped, { allowKey: false });
 }
 
-/** Stable texture key for a full gear loadout. */
-export function playerTextureKey(spec: AppearanceSpec): string {
-  return [
+/**
+ * Walk foot frames for the hero (front view).
+ * 0 = idle plant, 1 = left step, 2 = right step.
+ */
+export type PlayerWalkFrame = 0 | 1 | 2;
+
+/** Stable texture key for a full gear loadout (+ optional walk frame). */
+export function playerTextureKey(
+  spec: AppearanceSpec,
+  walk: PlayerWalkFrame = 0,
+): string {
+  const base = [
     'player',
     spec.breastplate,
     spec.helmet,
@@ -218,10 +227,14 @@ export function playerTextureKey(spec: AppearanceSpec): string {
     spec.shield,
     spec.key,
   ].join('_');
+  return walk === 0 ? base : `${base}_w${walk}`;
 }
 
-export function playerTextureKeyFromSave(save: SaveData): string {
-  return playerTextureKey(appearanceFromSave(save));
+export function playerTextureKeyFromSave(
+  save: SaveData,
+  walk: PlayerWalkFrame = 0,
+): string {
+  return playerTextureKey(appearanceFromSave(save), walk);
 }
 
 /** Pose names that share canvas frames with gear overlays. */

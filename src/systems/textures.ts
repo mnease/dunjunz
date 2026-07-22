@@ -6,6 +6,7 @@ import {
   playerTextureKey,
   type AppearanceSpec,
   type BuddyPoseName,
+  type PlayerWalkFrame,
   type WeaponLook,
   type ShieldLook,
   type AmuletLook,
@@ -177,76 +178,114 @@ function drawRing(
 }
 
 /**
+ * Per-foot offsets for walk cycle (front view).
+ * Left index 0, right index 1: { dx, dy } plant lower = dy+1, lift = dy-1.
+ */
+function footOffsets(walk: PlayerWalkFrame): [{ dx: number; dy: number }, { dx: number; dy: number }] {
+  if (walk === 1) {
+    // left plant / step down-forward, right lifted back
+    return [
+      { dx: -1, dy: 1 },
+      { dx: 1, dy: -1 },
+    ];
+  }
+  if (walk === 2) {
+    // right plant, left lift
+    return [
+      { dx: 1, dy: -1 },
+      { dx: -1, dy: 1 },
+    ];
+  }
+  return [
+    { dx: 0, dy: 0 },
+    { dx: 0, dy: 0 },
+  ];
+}
+
+/**
  * Boots with ankle shaft + sole + forward toe box (clearly feet, not gloves).
+ * `walk` animates left/right plant and lift.
  */
 function drawShoes(
   ctx: CanvasRenderingContext2D,
   look: ShoesLook,
+  walk: PlayerWalkFrame = 0,
 ): void {
+  const [lo, ro] = footOffsets(walk);
   const drawBoot = (
     x: number,
+    yOff: number,
     mid: string,
     light: string,
     dark: string,
     sole: string,
     fancy = false,
   ) => {
+    const y = 25 + yOff;
     // ankle shaft (up the shin)
-    shadedBlock(ctx, mid, light, dark, x, 25, 5, 4);
+    shadedBlock(ctx, mid, light, dark, x, y, 5, 4);
     // foot body
-    shadedBlock(ctx, mid, light, dark, x, 28, 7, 3);
-    // toe box pointing forward (right-ish for both — read as feet)
-    fill(ctx, mid, x + 5, 29, 3, 2);
-    fill(ctx, light, x + 5, 29, 2, 1);
+    shadedBlock(ctx, mid, light, dark, x, y + 3, 7, 3);
+    // toe box pointing forward
+    fill(ctx, mid, x + 5, y + 4, 3, 2);
+    fill(ctx, light, x + 5, y + 4, 2, 1);
     // sole
-    fill(ctx, sole, x, 31, 8, 1);
+    fill(ctx, sole, x, y + 6, 8, 1);
     // lace / buckle
-    fill(ctx, dark, x + 1, 27, 3, 1);
+    fill(ctx, dark, x + 1, y + 2, 3, 1);
     if (fancy) {
-      fill(ctx, '#ff6b9d', x + 1, 26, 2, 1);
-      fill(ctx, '#9ef0c8', x + 2, 29, 2, 1);
+      fill(ctx, '#ff6b9d', x + 1, y + 1, 2, 1);
+      fill(ctx, '#9ef0c8', x + 2, y + 4, 2, 1);
     }
   };
 
   if (look === 'apology') {
-    drawBoot(8, '#5ad4a0', '#9ef0c8', '#2a6a50', '#1a4030', true);
-    drawBoot(17, '#5ad4a0', '#9ef0c8', '#2a6a50', '#1a4030', true);
+    drawBoot(8 + lo.dx, lo.dy, '#5ad4a0', '#9ef0c8', '#2a6a50', '#1a4030', true);
+    drawBoot(17 + ro.dx, ro.dy, '#5ad4a0', '#9ef0c8', '#2a6a50', '#1a4030', true);
     return;
   }
   if (look === 'leather') {
-    drawBoot(8, '#6b4423', '#a06830', '#2a1810', '#1a1008');
-    drawBoot(17, '#6b4423', '#a06830', '#2a1810', '#1a1008');
+    drawBoot(8 + lo.dx, lo.dy, '#6b4423', '#a06830', '#2a1810', '#1a1008');
+    drawBoot(17 + ro.dx, ro.dy, '#6b4423', '#a06830', '#2a1810', '#1a1008');
     return;
   }
-  // bare shoes (simple soft boots)
-  drawBoot(9, '#3d2b1f', '#5a4030', '#1a1008', '#0a0804');
-  drawBoot(17, '#3d2b1f', '#5a4030', '#1a1008', '#0a0804');
+  // bare shoes
+  drawBoot(9 + lo.dx, lo.dy, '#3d2b1f', '#5a4030', '#1a1008', '#0a0804');
+  drawBoot(17 + ro.dx, ro.dy, '#3d2b1f', '#5a4030', '#1a1008', '#0a0804');
 }
 
-/** Shin guards — knee cap + shin plate, not rectangular mittens. */
+/** Shin guards — knee cap + shin plate; walk shortens the lifting leg. */
 function drawGreaves(
   ctx: CanvasRenderingContext2D,
   look: AppearanceSpec['greaves'],
+  walk: PlayerWalkFrame = 0,
 ): void {
+  const [lo, ro] = footOffsets(walk);
+  const legs: [number, number][] = [
+    [10 + lo.dx, lo.dy],
+    [17 + ro.dx, ro.dy],
+  ];
   if (look === 'plate') {
-    for (const x of [10, 17]) {
-      // knee cap
-      block(ctx, '#a8b8c8', '#4a5060', x, 21, 5, 3);
-      fill(ctx, '#c0d0e0', x + 1, 21, 3, 1);
-      // shin plate
-      shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#3a4050', x, 24, 5, 5);
-      fill(ctx, '#6a7888', x + 2, 25, 1, 3);
+    for (const [x, dy] of legs) {
+      const y = 21 + dy;
+      block(ctx, '#a8b8c8', '#4a5060', x, y, 5, 3);
+      fill(ctx, '#c0d0e0', x + 1, y, 3, 1);
+      shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#3a4050', x, y + 3, 5, 5);
+      fill(ctx, '#6a7888', x + 2, y + 4, 1, 3);
     }
   } else if (look === 'leather') {
-    for (const x of [10, 17]) {
-      shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', x, 22, 5, 6);
-      fill(ctx, '#5a3d1a', x + 1, 24, 3, 1); // strap
-      fill(ctx, '#c9a227', x + 2, 24, 1, 1); // buckle
+    for (const [x, dy] of legs) {
+      const y = 22 + dy;
+      shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', x, y, 5, 6);
+      fill(ctx, '#5a3d1a', x + 1, y + 2, 3, 1);
+      fill(ctx, '#c9a227', x + 2, y + 2, 1, 1);
     }
   } else {
     // pants
-    shadedBlock(ctx, '#2d6cdf', '#4a8cff', '#1a3a8a', 10, 23, 5, 5);
-    shadedBlock(ctx, '#2d6cdf', '#4a8cff', '#1a3a8a', 17, 23, 5, 5);
+    for (const [x, dy] of legs) {
+      const y = 23 + dy;
+      shadedBlock(ctx, '#2d6cdf', '#4a8cff', '#1a3a8a', x, y, 5, 5);
+    }
   }
 }
 
@@ -503,13 +542,15 @@ function drawHelmet(
 /**
  * 32×32 SNES-density hero. Layer order:
  * greaves → shoes → torso → gloves → head/helm → amulet → ring → shield → weapon → key.
+ * `walk` 1/2 = alternating foot plant for walk cycle.
  */
 export function drawPlayerLook(
   ctx: CanvasRenderingContext2D,
   spec: AppearanceSpec,
+  walk: PlayerWalkFrame = 0,
 ): void {
-  drawGreaves(ctx, spec.greaves);
-  drawShoes(ctx, spec.shoes);
+  drawGreaves(ctx, spec.greaves, walk);
+  drawShoes(ctx, spec.shoes, walk);
   drawBreastplate(ctx, spec.breastplate);
   drawGloves(ctx, spec.gloves);
   drawHelmet(ctx, spec.helmet);
@@ -530,17 +571,18 @@ export function drawPlayerLook(
 }
 
 /**
- * Ensure a canvas texture exists for this loadout (on-demand; avoids
- * combinatorial explosion at boot).
+ * Ensure a canvas texture exists for this loadout (+ walk frame).
+ * Walk frames are generated on demand for the current gear only.
  */
 export function ensurePlayerTexture(
   scene: Phaser.Scene,
   spec: AppearanceSpec,
+  walk: PlayerWalkFrame = 0,
 ): string {
-  const key = playerTextureKey(spec);
+  const key = playerTextureKey(spec, walk);
   if (!scene.textures.exists(key)) {
     canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
-      drawPlayerLook(ctx, spec);
+      drawPlayerLook(ctx, spec, walk);
     });
   }
   return key;

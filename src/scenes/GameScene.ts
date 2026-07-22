@@ -53,6 +53,7 @@ import {
   appearanceFromSave,
   budAppearanceFromSave,
   withHiddenWeapon,
+  type PlayerWalkFrame,
 } from '../systems/appearance';
 import { ensureBuddyTexture, ensurePlayerTexture } from '../systems/textures';
 import { swingTextureKey } from '../systems/weapon-visuals';
@@ -334,6 +335,9 @@ export class GameScene extends Phaser.Scene {
     n: Phaser.Input.Keyboard.Key;
   };
   private facing: 'up' | 'down' | 'left' | 'right' = 'down';
+  /** Foot walk cycle: 0 idle, 1 left plant, 2 right plant. */
+  private walkFrame: PlayerWalkFrame = 0;
+  private walkAnimMs = 0;
   private attacking = false;
   private invuln = 0;
   private dialogLocked = false;
@@ -2164,14 +2168,17 @@ export class GameScene extends Phaser.Scene {
   /**
    * Swap player texture so gear shows on the avatar.
    * While swinging, hip sword is hidden (it's in the hand as sword-swing).
+   * `walk` selects idle vs alternating foot plant frames.
    */
-  private refreshPlayerAppearance(): void {
+  private refreshPlayerAppearance(walk: PlayerWalkFrame = this.walkFrame): void {
     if (!this.player) return;
     let spec = appearanceFromSave(this.save);
     // Hide hip weapon while the swing FX is out
     if (this.attacking) spec = withHiddenWeapon(spec);
-    const key = ensurePlayerTexture(this, spec);
-    this.player.setTexture(key);
+    // reduce-motion: no foot cycle
+    const frame: PlayerWalkFrame = motionAllowed() ? walk : 0;
+    const key = ensurePlayerTexture(this, spec, frame);
+    if (this.player.texture.key !== key) this.player.setTexture(key);
   }
 
   private hurtPlayer(from: Actor): void {
@@ -3641,6 +3648,28 @@ export class GameScene extends Phaser.Scene {
       vy *= 0.707;
     }
     body.setVelocity(vx, vy);
+
+    // Foot walk cycle while moving (texture frames for plant/lift)
+    const moving = vx !== 0 || vy !== 0;
+    if (moving && motionAllowed() && !this.attacking) {
+      this.walkAnimMs += delta;
+      const stepMs = 140;
+      if (this.walkAnimMs >= stepMs) {
+        this.walkAnimMs = 0;
+        this.walkFrame = this.walkFrame === 1 ? 2 : 1;
+        this.refreshPlayerAppearance(this.walkFrame);
+      }
+      // face left/right for silhouette
+      if (this.facing === 'left') this.player.setFlipX(true);
+      else if (this.facing === 'right') this.player.setFlipX(false);
+    } else {
+      this.walkAnimMs = 0;
+      if (this.walkFrame !== 0) {
+        this.walkFrame = 0;
+        this.refreshPlayerAppearance(0);
+      }
+      if (!moving) this.player.setFlipX(false);
+    }
 
     // Blink while invuln
     this.player.setAlpha(this.invuln > 0 && Math.floor(_time / 80) % 2 === 0 ? 0.4 : 1);
