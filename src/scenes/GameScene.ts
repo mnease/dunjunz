@@ -1630,8 +1630,9 @@ export class GameScene extends Phaser.Scene {
         .setScrollFactor(0);
     }
 
-    // UI modals / dialog: lift veil entirely (Comb/Waggle a11y)
-    if (this.panelOpen() || this.dialogLocked || this.paused) {
+    // Inventory / shop / mapz / forje / pause: lift veil so chrome stays readable.
+    // Sign/talk dialog keeps the crawl veil — reading a sign must not brighten the room.
+    if (this.panelOpen() || this.paused) {
       this.lightRt.clear();
       this.lightRt.setVisible(false);
       return;
