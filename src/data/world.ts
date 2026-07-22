@@ -298,8 +298,8 @@ export const ROOMS: Record<string, RoomDef> = {
     stairsDown: 'b1_entrance',
     // Every row must be exactly 16 chars (VIEW_TILES_W). Short rows pad as
     // walls on the right — that silently sealed the east trail exit.
-    // Bridge (dd) crosses the pond so beach→meadow doesn't dump you in water.
-    // South door D lines up under the dirt path to the cave mouth (S).
+    // Bridge (dd at x=6–7) under south door D (x=7) → dirt to cave mouth.
+    // Index: 0123456789ABCDEF  (D at column 7)
     tiles: [
       '################',
       '#gggggggggggggg#',
@@ -308,9 +308,9 @@ export const ROOMS: Record<string, RoomDef> = {
       '....dddddd..ggg.',
       '....d.S.d...ggg.',
       '....dddd....ggg.',
-      '#gg..dd....gggg#',
-      '#ggg.dd~~~ggggg#',
-      '#ggggdd~~gggggg#',
+      '#gg...dd...gggg#',
+      '#ggg..dd~~ggggg#',
+      '#gggg.dd~gggggg#',
       '#######D########',
     ],
     entities: [
