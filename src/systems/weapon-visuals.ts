@@ -1,10 +1,10 @@
 /**
  * Shared weapon silhouettes — avatar hip (32×32), inventory icons (32×32),
- * and swing FX. Each look must read at a glance (16-bit density).
+ * and swing FX. 32-bit craft density (EMA): edge hilite, tip gleam, clear guard.
  */
 
 import type { WeaponLook } from './appearance';
-import { block, fill, spark } from './pixel-art';
+import { bladeVertical, block, fill, hiltBelow, spark } from './pixel-art';
 
 /**
  * Hip weapon on the 32×32 player sprite (right side, high contrast).
@@ -16,107 +16,115 @@ export function drawWeaponAvatar(
   if (look === 'none') return;
 
   if (look === 'bow') {
-    // Vertical recurve D
-    fill(ctx, '#3a2410', 26, 8, 2, 18);
-    fill(ctx, '#8b5a2b', 27, 10, 2, 14);
-    fill(ctx, '#a06830', 28, 8, 2, 2);
-    fill(ctx, '#a06830', 28, 24, 2, 2);
-    fill(ctx, '#6b4423', 29, 12, 2, 10);
-    // string
-    fill(ctx, '#e8e0d0', 25, 10, 1, 2);
-    fill(ctx, '#e8e0d0', 24, 15, 2, 2);
-    fill(ctx, '#e8e0d0', 25, 22, 1, 2);
-    // arrow
-    fill(ctx, '#c8b090', 20, 15, 6, 2);
-    fill(ctx, '#7dffb3', 18, 15, 3, 2);
-    fill(ctx, '#ff6b9d', 26, 14, 2, 4);
+    // Vertical recurve with thicker limbs + string arc
+    fill(ctx, '#2a1810', 25, 7, 2, 18);
+    fill(ctx, '#8b5a2b', 26, 8, 3, 16);
+    fill(ctx, '#a06830', 27, 7, 2, 2);
+    fill(ctx, '#a06830', 27, 23, 2, 2);
+    fill(ctx, '#c9a070', 28, 10, 1, 12); // limb hilite
+    fill(ctx, '#e8e0d0', 24, 9, 1, 2);
+    fill(ctx, '#e8e0d0', 23, 14, 2, 3);
+    fill(ctx, '#e8e0d0', 24, 21, 1, 2);
+    fill(ctx, '#c8b090', 19, 14, 7, 2);
+    fill(ctx, '#7dffb3', 17, 14, 3, 2);
+    fill(ctx, '#ff6b9d', 25, 13, 2, 4);
+    spark(ctx, 18, 14, '#c9ffe0');
     return;
   }
 
   if (look === 'crossbow') {
-    fill(ctx, '#5a3d1a', 20, 16, 11, 5);
-    fill(ctx, '#8b5a2b', 24, 10, 3, 16);
-    fill(ctx, '#a06830', 21, 10, 9, 2);
-    fill(ctx, '#a06830', 21, 24, 9, 2);
-    fill(ctx, '#3a2410', 20, 11, 2, 12);
-    fill(ctx, '#3a2410', 29, 11, 2, 12);
-    fill(ctx, '#d0d0d8', 25, 12, 1, 10);
-    fill(ctx, '#c8b090', 27, 17, 5, 2);
-    fill(ctx, '#ff6b9d', 30, 16, 2, 4);
-    fill(ctx, '#c9a227', 22, 18, 3, 2);
+    fill(ctx, '#5a3d1a', 19, 15, 12, 5);
+    fill(ctx, '#8b5a2b', 23, 9, 4, 17);
+    fill(ctx, '#a06830', 20, 9, 10, 2);
+    fill(ctx, '#a06830', 20, 24, 10, 2);
+    fill(ctx, '#3a2410', 19, 10, 2, 13);
+    fill(ctx, '#3a2410', 29, 10, 2, 13);
+    fill(ctx, '#e8e0d0', 24, 11, 1, 11);
+    fill(ctx, '#c8b090', 26, 16, 5, 2);
+    fill(ctx, '#ff6b9d', 29, 15, 3, 4);
+    fill(ctx, '#c9a227', 21, 17, 3, 2);
+    spark(ctx, 30, 16, '#ffb0c8');
     return;
   }
 
   if (look === 'phaser') {
-    block(ctx, '#1a1a22', '#0a0a10', 20, 16, 5, 9);
-    block(ctx, '#3a3a48', '#1a1a22', 22, 12, 9, 7);
-    fill(ctx, '#5a5a68', 22, 12, 9, 2);
-    fill(ctx, '#2a2a35', 24, 15, 5, 2);
-    block(ctx, '#ff2030', '#8a1018', 29, 14, 4, 4);
-    fill(ctx, '#ff8890', 30, 15, 2, 2);
-    fill(ctx, '#ffc857', 25, 14, 2, 2);
-    fill(ctx, '#aaa', 23, 11, 2, 2);
+    block(ctx, '#1a1a22', '#0a0a10', 20, 15, 5, 10);
+    block(ctx, '#3a3a48', '#1a1a22', 21, 11, 10, 8);
+    fill(ctx, '#6a6a78', 21, 11, 10, 2);
+    fill(ctx, '#2a2a35', 23, 14, 6, 2);
+    block(ctx, '#ff2030', '#8a1018', 28, 13, 4, 5);
+    fill(ctx, '#ff8890', 29, 14, 2, 2);
+    fill(ctx, '#ffc857', 24, 13, 2, 2);
+    fill(ctx, '#d0d0d8', 22, 10, 2, 2);
+    spark(ctx, 30, 14, '#ffffff');
     return;
   }
 
   if (look === 'staff') {
-    fill(ctx, '#4a3018', 26, 6, 3, 22);
-    fill(ctx, '#6b4423', 26, 10, 2, 16);
-    fill(ctx, '#3a2010', 25, 14, 5, 1);
-    fill(ctx, '#3a2010', 25, 20, 5, 1);
-    block(ctx, '#2a8a5a', '#0a4a30', 24, 3, 8, 7);
-    fill(ctx, '#7dffb3', 26, 4, 4, 4);
-    spark(ctx, 27, 5, '#c9ffe0');
+    fill(ctx, '#3a2010', 25, 5, 4, 23);
+    fill(ctx, '#6b4423', 26, 7, 2, 19);
+    fill(ctx, '#8b5a2b', 26, 9, 1, 15);
+    fill(ctx, '#2a1810', 24, 13, 6, 1);
+    fill(ctx, '#2a1810', 24, 19, 6, 1);
+    block(ctx, '#2a8a5a', '#0a4a30', 23, 2, 9, 8);
+    fill(ctx, '#7dffb3', 25, 3, 5, 5);
+    fill(ctx, '#c9ffe0', 26, 4, 2, 2);
+    spark(ctx, 27, 4, '#ffffff');
+    spark(ctx, 25, 6, '#7dffb3');
     return;
   }
 
   if (look === 'cleaver') {
-    block(ctx, '#ff6b9d', '#6a2040', 22, 8, 9, 12);
-    fill(ctx, '#ffb0c8', 23, 9, 4, 9);
-    fill(ctx, '#c04070', 28, 8, 3, 12);
-    fill(ctx, '#c9a227', 22, 19, 8, 2);
-    fill(ctx, '#8b5a2b', 24, 21, 4, 6);
+    // Wide pink cleaver — sharp top edge
+    fill(ctx, '#6a2040', 21, 7, 10, 13);
+    fill(ctx, '#ff6b9d', 22, 8, 8, 11);
+    fill(ctx, '#ffb0c8', 22, 8, 3, 10); // edge hilite
+    fill(ctx, '#c04070', 28, 8, 2, 11); // back bevel
+    fill(ctx, '#ffffff', 23, 8, 2, 1); // tip gleam
+    fill(ctx, '#c9a227', 21, 19, 9, 2);
+    fill(ctx, '#5a3d1a', 24, 21, 4, 6);
+    fill(ctx, '#8b5a2b', 25, 21, 2, 5);
     return;
   }
 
   if (look === 'honk') {
-    block(ctx, '#ffe08a', '#8a7030', 25, 6, 5, 16);
+    fill(ctx, '#8a7030', 24, 5, 6, 17);
+    fill(ctx, '#ffe08a', 25, 6, 4, 15);
     fill(ctx, '#fff3c0', 25, 7, 2, 12);
-    fill(ctx, '#c9a227', 23, 20, 8, 2);
-    block(ctx, '#5ad45a', '#2a6a2a', 23, 22, 8, 7);
-    fill(ctx, '#222', 27, 24, 2, 2);
-    fill(ctx, '#ff8844', 29, 26, 3, 2);
+    fill(ctx, '#c9a227', 22, 19, 9, 2);
+    block(ctx, '#5ad45a', '#2a6a2a', 22, 21, 9, 8);
+    fill(ctx, '#222', 26, 23, 2, 2);
+    spark(ctx, 26, 23, '#ffffff');
+    fill(ctx, '#ff8844', 28, 25, 3, 2);
     return;
   }
 
   if (look === 'saber') {
-    fill(ctx, '#8a6030', 22, 20, 8, 2);
-    fill(ctx, '#e8c070', 28, 6, 3, 4);
-    fill(ctx, '#e8c070', 26, 9, 4, 4);
-    fill(ctx, '#e8c070', 25, 12, 3, 4);
-    fill(ctx, '#e8c070', 24, 15, 3, 5);
-    fill(ctx, '#fff0c0', 28, 8, 1, 5);
-    fill(ctx, '#c9a227', 23, 19, 6, 2);
-    fill(ctx, '#6b4423', 25, 22, 4, 5);
+    // Curved sand saber — stepped tip, bright edge
+    fill(ctx, '#8a6030', 22, 19, 8, 2);
+    fill(ctx, '#c9a040', 27, 5, 4, 4);
+    fill(ctx, '#e8c070', 26, 8, 4, 4);
+    fill(ctx, '#e8c070', 25, 11, 4, 4);
+    fill(ctx, '#e8c070', 24, 14, 4, 5);
+    fill(ctx, '#fff0c0', 27, 6, 1, 8); // edge
+    fill(ctx, '#a07030', 29, 8, 1, 8); // back
+    spark(ctx, 28, 5, '#ffffff');
+    fill(ctx, '#c9a227', 23, 18, 6, 2);
+    fill(ctx, '#5a3d1a', 25, 21, 4, 6);
+    fill(ctx, '#8b5a2b', 26, 21, 2, 5);
     return;
   }
 
   if (look === 'iron') {
-    block(ctx, '#8a98a8', '#3a4050', 25, 4, 5, 18);
-    fill(ctx, '#5a6878', 27, 6, 2, 14);
-    fill(ctx, '#c0c8d0', 25, 4, 5, 3);
-    fill(ctx, '#4a4030', 22, 20, 10, 2);
-    fill(ctx, '#6a5a40', 24, 22, 6, 5);
-    spark(ctx, 26, 6);
+    bladeVertical(ctx, 25, 3, 5, 18, '#9aabc0', '#e0e8f0', '#4a5060', '#2a3040');
+    fill(ctx, '#c0c8d0', 25, 3, 5, 2);
+    hiltBelow(ctx, 27, 20, 10);
     return;
   }
 
-  // mild sword
-  block(ctx, '#dfe6f0', '#607080', 25, 8, 5, 14);
-  fill(ctx, '#ffffff', 25, 9, 2, 10);
-  fill(ctx, '#c9a227', 23, 20, 9, 2);
-  fill(ctx, '#8b5a2b', 25, 22, 4, 5);
-  spark(ctx, 26, 10);
+  // mild sword — sharp steel
+  bladeVertical(ctx, 25, 6, 5, 15, '#dfe6f0', '#ffffff', '#607080', '#3a4050');
+  hiltBelow(ctx, 27, 20, 9);
 }
 
 /**
@@ -127,167 +135,183 @@ export function drawWeaponIcon(
   look: WeaponLook | string,
 ): void {
   if (look === 'bow') {
-    fill(ctx, '#3a2410', 8, 4, 3, 24);
-    fill(ctx, '#3a2410', 21, 4, 3, 24);
-    for (let i = 0; i < 10; i++) {
-      const y = 4 + i * 2;
+    fill(ctx, '#2a1810', 7, 3, 3, 26);
+    fill(ctx, '#2a1810', 22, 3, 3, 26);
+    for (let i = 0; i < 11; i++) {
+      const y = 3 + i * 2;
       const inset = i < 5 ? 4 - Math.floor(i / 2) : Math.floor((i - 5) / 2);
-      fill(ctx, '#8b5a2b', 6 + inset, y, 3, 2);
-      fill(ctx, '#8b5a2b', 23 - inset, y, 3, 2);
+      fill(ctx, '#8b5a2b', 5 + inset, y, 3, 2);
+      fill(ctx, '#8b5a2b', 24 - inset, y, 3, 2);
     }
-    fill(ctx, '#a06830', 10, 6, 2, 20);
-    fill(ctx, '#a06830', 20, 6, 2, 20);
-    fill(ctx, '#e8e0d0', 12, 7, 1, 18);
-    fill(ctx, '#c8b090', 4, 14, 18, 3);
-    fill(ctx, '#7dffb3', 2, 14, 4, 3);
-    fill(ctx, '#ff6b9d', 20, 13, 4, 5);
+    fill(ctx, '#a06830', 9, 5, 2, 22);
+    fill(ctx, '#a06830', 21, 5, 2, 22);
+    fill(ctx, '#e8e0d0', 12, 6, 1, 20);
+    fill(ctx, '#c8b090', 3, 13, 20, 3);
+    fill(ctx, '#7dffb3', 1, 13, 4, 3);
+    fill(ctx, '#ff6b9d', 21, 12, 5, 5);
+    spark(ctx, 2, 14, '#c9ffe0');
     return;
   }
 
   if (look === 'crossbow') {
-    fill(ctx, '#5a3d1a', 4, 13, 20, 6);
-    fill(ctx, '#8b5a2b', 12, 4, 5, 24);
-    fill(ctx, '#a06830', 6, 4, 16, 3);
-    fill(ctx, '#a06830', 6, 25, 16, 3);
-    fill(ctx, '#3a2410', 5, 6, 3, 18);
-    fill(ctx, '#3a2410', 20, 6, 3, 18);
-    fill(ctx, '#d0d0d8', 13, 7, 2, 16);
-    fill(ctx, '#c8b090', 14, 14, 14, 3);
-    fill(ctx, '#ff6b9d', 26, 13, 5, 5);
-    fill(ctx, '#c9a227', 8, 15, 4, 3);
+    fill(ctx, '#5a3d1a', 3, 12, 22, 7);
+    fill(ctx, '#8b5a2b', 11, 3, 6, 26);
+    fill(ctx, '#a06830', 5, 3, 18, 3);
+    fill(ctx, '#a06830', 5, 26, 18, 3);
+    fill(ctx, '#3a2410', 4, 5, 3, 20);
+    fill(ctx, '#3a2410', 21, 5, 3, 20);
+    fill(ctx, '#e8e0d0', 13, 6, 2, 18);
+    fill(ctx, '#c8b090', 13, 13, 15, 3);
+    fill(ctx, '#ff6b9d', 26, 12, 5, 5);
+    fill(ctx, '#c9a227', 7, 14, 4, 3);
+    spark(ctx, 28, 13, '#ffb0c8');
     return;
   }
 
   if (look === 'phaser') {
-    block(ctx, '#1a1a22', '#0a0a10', 5, 14, 8, 12);
-    block(ctx, '#3a3a48', '#1a1a22', 8, 8, 16, 10);
-    fill(ctx, '#5a5a68', 8, 8, 16, 3);
-    fill(ctx, '#2a2a35', 11, 12, 8, 3);
-    block(ctx, '#ff2030', '#8a1018', 22, 10, 8, 6);
-    fill(ctx, '#ff8890', 24, 12, 4, 2);
-    fill(ctx, '#ffc857', 12, 12, 3, 3);
-    fill(ctx, '#aaa', 9, 6, 3, 3);
+    block(ctx, '#1a1a22', '#0a0a10', 4, 13, 9, 13);
+    block(ctx, '#3a3a48', '#1a1a22', 7, 7, 17, 11);
+    fill(ctx, '#6a6a78', 7, 7, 17, 3);
+    fill(ctx, '#2a2a35', 10, 12, 9, 3);
+    block(ctx, '#ff2030', '#8a1018', 21, 9, 9, 7);
+    fill(ctx, '#ff8890', 23, 11, 5, 3);
+    fill(ctx, '#ffc857', 11, 11, 3, 3);
+    fill(ctx, '#d0d0d8', 8, 5, 3, 3);
+    spark(ctx, 26, 11, '#ffffff');
     return;
   }
 
   if (look === 'staff') {
-    fill(ctx, '#4a3018', 13, 8, 6, 22);
-    fill(ctx, '#6b4423', 14, 10, 4, 18);
-    fill(ctx, '#3a2010', 12, 14, 8, 2);
-    fill(ctx, '#3a2010', 12, 20, 8, 2);
-    block(ctx, '#2a8a5a', '#0a4a30', 10, 2, 12, 10);
-    fill(ctx, '#7dffb3', 13, 4, 6, 6);
-    spark(ctx, 15, 5, '#c9ffe0');
-    spark(ctx, 16, 7, '#ffffff');
+    fill(ctx, '#3a2010', 12, 7, 7, 23);
+    fill(ctx, '#6b4423', 13, 9, 5, 19);
+    fill(ctx, '#8b5a2b', 14, 11, 2, 15);
+    fill(ctx, '#2a1810', 11, 13, 9, 2);
+    fill(ctx, '#2a1810', 11, 19, 9, 2);
+    block(ctx, '#2a8a5a', '#0a4a30', 9, 1, 14, 11);
+    fill(ctx, '#7dffb3', 12, 3, 8, 7);
+    fill(ctx, '#c9ffe0', 14, 4, 3, 3);
+    spark(ctx, 15, 4, '#ffffff');
+    spark(ctx, 13, 7, '#7dffb3');
     return;
   }
 
   if (look === 'cleaver') {
-    block(ctx, '#ff6b9d', '#6a2040', 6, 3, 18, 16);
-    fill(ctx, '#ffb0c8', 8, 5, 8, 12);
-    fill(ctx, '#c04070', 20, 4, 4, 14);
-    fill(ctx, '#c9a227', 8, 18, 12, 3);
-    fill(ctx, '#8b5a2b', 12, 21, 6, 8);
+    fill(ctx, '#6a2040', 5, 2, 20, 17);
+    fill(ctx, '#ff6b9d', 7, 3, 16, 15);
+    fill(ctx, '#ffb0c8', 7, 3, 5, 14);
+    fill(ctx, '#c04070', 20, 3, 3, 15);
+    fill(ctx, '#ffffff', 8, 3, 4, 2);
+    fill(ctx, '#c9a227', 7, 17, 14, 3);
+    fill(ctx, '#5a3d1a', 11, 20, 7, 9);
+    fill(ctx, '#8b5a2b', 13, 21, 3, 7);
     return;
   }
 
   if (look === 'honk') {
-    block(ctx, '#ffe08a', '#8a7030', 12, 2, 8, 18);
+    fill(ctx, '#8a7030', 11, 1, 10, 19);
+    fill(ctx, '#ffe08a', 12, 2, 8, 17);
     fill(ctx, '#fff3c0', 13, 3, 3, 14);
-    fill(ctx, '#c9a227', 9, 18, 14, 3);
-    block(ctx, '#5ad45a', '#2a6a2a', 10, 21, 12, 8);
-    fill(ctx, '#222', 16, 23, 2, 2);
-    fill(ctx, '#ff8844', 20, 25, 5, 3);
+    fill(ctx, '#c9a227', 8, 17, 16, 3);
+    block(ctx, '#5ad45a', '#2a6a2a', 9, 20, 14, 9);
+    fill(ctx, '#222', 15, 22, 3, 3);
+    spark(ctx, 15, 22, '#ffffff');
+    fill(ctx, '#ff8844', 19, 24, 5, 3);
     return;
   }
 
   if (look === 'saber') {
-    fill(ctx, '#8a6030', 7, 18, 14, 3);
-    const curve: [number, number, number, number][] = [
-      [18, 3, 6, 5],
-      [15, 6, 7, 5],
-      [13, 10, 6, 5],
-      [12, 14, 5, 5],
-    ];
-    for (const [x, y, w, h] of curve) fill(ctx, '#e8c070', x, y, w, h);
-    fill(ctx, '#fff0c0', 19, 5, 2, 6);
-    fill(ctx, '#c9a227', 8, 17, 12, 3);
-    fill(ctx, '#6b4423', 12, 21, 6, 8);
+    fill(ctx, '#8a6030', 8, 18, 14, 3);
+    fill(ctx, '#e8c070', 18, 2, 8, 6);
+    fill(ctx, '#e8c070', 15, 7, 9, 5);
+    fill(ctx, '#e8c070', 12, 11, 9, 5);
+    fill(ctx, '#e8c070', 10, 15, 8, 4);
+    fill(ctx, '#fff0c0', 20, 3, 2, 10);
+    spark(ctx, 22, 2, '#ffffff');
+    fill(ctx, '#c9a227', 10, 17, 10, 3);
+    fill(ctx, '#5a3d1a', 13, 20, 6, 9);
+    fill(ctx, '#8b5a2b', 15, 21, 2, 7);
     return;
   }
 
   if (look === 'iron') {
-    block(ctx, '#8a98a8', '#3a4050', 12, 2, 8, 18);
-    fill(ctx, '#5a6878', 15, 4, 2, 14);
-    fill(ctx, '#c0c8d0', 12, 2, 8, 4);
-    fill(ctx, '#4a4030', 7, 18, 18, 4);
-    fill(ctx, '#6a5a40', 12, 22, 8, 8);
-    spark(ctx, 14, 4);
+    bladeVertical(ctx, 12, 2, 8, 18, '#9aabc0', '#e0e8f0', '#4a5060', '#2a3040');
+    hiltBelow(ctx, 16, 19, 14);
     return;
   }
 
-  // mild sword
-  block(ctx, '#dfe6f0', '#607080', 13, 3, 6, 16);
-  fill(ctx, '#ffffff', 14, 4, 2, 12);
-  fill(ctx, '#c9a227', 8, 17, 16, 4);
-  fill(ctx, '#8b5a2b', 13, 21, 6, 8);
-  fill(ctx, '#ffc857', 14, 18, 4, 2);
-  spark(ctx, 15, 5);
+  // mild sword default
+  bladeVertical(ctx, 12, 3, 8, 17, '#dfe6f0', '#ffffff', '#607080', '#3a4050');
+  hiltBelow(ctx, 16, 19, 12);
 }
 
 /**
- * Attack swing / held weapon FX (24×24).
+ * Swing FX (20×20 canvas) — sharp silhouettes for attack VFX.
  */
 export function drawWeaponSwing(
   ctx: CanvasRenderingContext2D,
   look: WeaponLook,
 ): void {
   if (look === 'bow' || look === 'crossbow') {
-    fill(ctx, '#c8b090', 2, 10, 16, 4);
-    fill(ctx, look === 'crossbow' ? '#ff6b9d' : '#7dffb3', 16, 8, 6, 8);
-    fill(ctx, '#ff6b9d', 1, 8, 4, 8);
+    fill(ctx, '#c8b090', 2, 9, 16, 4);
+    fill(ctx, look === 'crossbow' ? '#ff6b9d' : '#7dffb3', 15, 7, 6, 8);
+    fill(ctx, '#ff6b9d', 1, 7, 4, 8);
+    spark(ctx, 2, 9, '#c9ffe0');
     return;
   }
   if (look === 'phaser') {
-    fill(ctx, '#3a3a48', 2, 8, 12, 8);
-    fill(ctx, '#ff2030', 12, 10, 10, 4);
-    fill(ctx, '#ffc857', 5, 10, 3, 3);
+    fill(ctx, '#3a3a48', 2, 7, 12, 8);
+    fill(ctx, '#ff2030', 11, 9, 10, 4);
+    fill(ctx, '#ff8890', 13, 10, 6, 2);
+    fill(ctx, '#ffc857', 5, 9, 3, 3);
+    spark(ctx, 18, 10, '#ffffff');
     return;
   }
   if (look === 'staff') {
-    fill(ctx, '#6b4423', 10, 4, 5, 16);
-    block(ctx, '#7dffb3', '#2a8a5a', 7, 2, 11, 8);
-    spark(ctx, 11, 4);
+    fill(ctx, '#6b4423', 9, 3, 5, 16);
+    block(ctx, '#7dffb3', '#2a8a5a', 6, 1, 12, 9);
+    spark(ctx, 10, 3, '#ffffff');
     return;
   }
   if (look === 'cleaver') {
-    fill(ctx, '#ff6b9d', 4, 2, 14, 12);
-    fill(ctx, '#c04070', 14, 2, 5, 12);
-    fill(ctx, '#8b5a2b', 9, 14, 6, 8);
+    fill(ctx, '#ff6b9d', 3, 1, 15, 13);
+    fill(ctx, '#ffb0c8', 4, 2, 5, 10);
+    fill(ctx, '#c04070', 14, 1, 5, 13);
+    fill(ctx, '#ffffff', 4, 1, 5, 2);
+    fill(ctx, '#8b5a2b', 8, 13, 6, 8);
     return;
   }
   if (look === 'honk') {
-    fill(ctx, '#ffe08a', 8, 1, 7, 14);
-    fill(ctx, '#5ad45a', 6, 14, 10, 7);
+    fill(ctx, '#ffe08a', 7, 0, 8, 14);
+    fill(ctx, '#fff3c0', 8, 1, 3, 11);
+    fill(ctx, '#5ad45a', 5, 13, 11, 7);
     return;
   }
   if (look === 'saber') {
-    fill(ctx, '#e8c070', 14, 1, 5, 5);
-    fill(ctx, '#e8c070', 11, 5, 6, 5);
-    fill(ctx, '#e8c070', 8, 9, 6, 6);
-    fill(ctx, '#c9a227', 6, 14, 10, 3);
+    fill(ctx, '#e8c070', 13, 0, 6, 5);
+    fill(ctx, '#e8c070', 10, 4, 7, 5);
+    fill(ctx, '#e8c070', 7, 8, 7, 6);
+    fill(ctx, '#fff0c0', 15, 1, 2, 8);
+    fill(ctx, '#c9a227', 5, 13, 11, 3);
+    spark(ctx, 16, 0, '#ffffff');
     return;
   }
   if (look === 'iron') {
-    fill(ctx, '#8a98a8', 8, 0, 7, 16);
-    fill(ctx, '#5a6878', 11, 2, 2, 12);
-    fill(ctx, '#4a4030', 4, 14, 14, 4);
+    fill(ctx, '#3a4050', 7, 0, 8, 16);
+    fill(ctx, '#9aabc0', 8, 1, 6, 14);
+    fill(ctx, '#e0e8f0', 8, 1, 2, 12);
+    fill(ctx, '#4a5060', 12, 2, 2, 12);
+    fill(ctx, '#4a4030', 3, 14, 15, 4);
+    spark(ctx, 9, 1, '#ffffff');
     return;
   }
-  fill(ctx, '#dfe6f0', 9, 0, 6, 16);
-  fill(ctx, '#fff', 10, 1, 2, 12);
-  fill(ctx, '#c9a227', 6, 14, 12, 4);
-  fill(ctx, '#8b5a2b', 9, 18, 6, 5);
+  // mild sword slash
+  fill(ctx, '#3a4050', 8, 0, 7, 16);
+  fill(ctx, '#dfe6f0', 9, 1, 5, 14);
+  fill(ctx, '#ffffff', 9, 1, 2, 12);
+  fill(ctx, '#607080', 12, 2, 2, 12);
+  fill(ctx, '#c9a227', 5, 14, 13, 3);
+  fill(ctx, '#8b5a2b', 8, 17, 6, 4);
+  spark(ctx, 10, 0, '#ffffff');
 }
 
 export function swingTextureKey(look: WeaponLook): string {
@@ -301,10 +325,12 @@ export function weaponLookFromTemplateId(id: string): WeaponLook | null {
     case 'mild_sword':
       return 'sword';
     case 'iron_blade':
+    case 'bud_fang':
       return 'iron';
     case 'sand_saber':
       return 'saber';
     case 'dunjun_cleaver':
+    case 'bud_claw':
       return 'cleaver';
     case 'honk_blade':
       return 'honk';

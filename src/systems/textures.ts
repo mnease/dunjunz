@@ -21,6 +21,7 @@ import {
 } from './weapon-visuals';
 import {
   block,
+  cartoonFace,
   dither,
   drawBrickTile,
   drawDirtTile,
@@ -30,6 +31,7 @@ import {
   drawWaterTile,
   fill,
   grit,
+  hairMass,
   hex,
   shadedBlock,
   spark,
@@ -417,84 +419,85 @@ function drawBreastplate(
 }
 
 /**
- * Helmets: closed plate with horns, leather cheek-guards, wizard hat with brim.
+ * Head: cartoon face + hair mass, then helm overlays (EMA 32-bit craft).
  */
 function drawHelmet(
   ctx: CanvasRenderingContext2D,
   look: AppearanceSpec['helmet'],
 ): void {
-  // face always under helm
-  shadedBlock(ctx, '#f0c8a4', '#ffe0c8', '#c09070', 10, 5, 12, 8);
-  fill(ctx, '#1a1a2e', 12, 8, 2, 2);
-  fill(ctx, '#1a1a2e', 18, 8, 2, 2);
-  spark(ctx, 13, 8, '#ffffff');
-  spark(ctx, 19, 8, '#ffffff');
-  fill(ctx, '#d09080', 14, 11, 4, 1);
+  const fx = 10;
+  const fy = 5;
+  const fw = 12;
+  const fh = 9;
+
+  // Hair first (under helm / over skull) — bare heads get full mass
+  if (look === 'none') {
+    hairMass(ctx, fx, fy, fw, { bangs: true });
+  } else if (look === 'leather' || look === 'cloth_arcane') {
+    // side locks peek from open helms
+    fill(ctx, '#3d2b1f', fx - 1, fy + 1, 2, 5);
+    fill(ctx, '#3d2b1f', fx + fw - 1, fy + 1, 2, 5);
+  }
+
+  cartoonFace(ctx, fx, fy, fw, fh, {
+    soft: look === 'cloth_arcane',
+  });
 
   if (look === 'plate') {
-    // closed great-helm dome
-    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', 8, 1, 16, 10);
+    // closed great-helm dome + horns (face mostly covered)
+    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', 8, 1, 16, 11);
     fill(ctx, '#a8b8c8', 10, 2, 12, 3);
-    // visor slit
-    fill(ctx, '#0a0a12', 11, 7, 10, 2);
-    fill(ctx, '#1a1a2e', 12, 7, 3, 2);
-    fill(ctx, '#1a1a2e', 17, 7, 3, 2);
-    // nasal
-    fill(ctx, '#6a7888', 15, 6, 2, 5);
-    // cheek plates
-    fill(ctx, '#7a8a9a', 8, 8, 3, 4);
-    fill(ctx, '#7a8a9a', 21, 8, 3, 4);
-    // HORNS
-    fill(ctx, '#e8e0d0', 6, 0, 3, 5);
-    fill(ctx, '#e8e0d0', 23, 0, 3, 5);
-    fill(ctx, '#c0b8a0', 5, 0, 2, 3);
-    fill(ctx, '#c0b8a0', 25, 0, 2, 3);
+    fill(ctx, '#0a0a12', 11, 7, 10, 3); // visor
+    fill(ctx, '#1a1a2e', 12, 8, 3, 2);
+    fill(ctx, '#1a1a2e', 17, 8, 3, 2);
+    spark(ctx, 13, 8, '#ffffff');
+    spark(ctx, 18, 8, '#ffffff');
+    fill(ctx, '#6a7888', 15, 6, 2, 6); // nasal
+    fill(ctx, '#7a8a9a', 8, 8, 3, 5);
+    fill(ctx, '#7a8a9a', 21, 8, 3, 5);
+    // horns
+    fill(ctx, '#e8e0d0', 5, 0, 4, 6);
+    fill(ctx, '#e8e0d0', 23, 0, 4, 6);
+    fill(ctx, '#c0b8a0', 4, 0, 2, 3);
+    fill(ctx, '#c0b8a0', 26, 0, 2, 3);
     fill(ctx, '#ffffff', 6, 1, 1, 2);
     fill(ctx, '#ffffff', 25, 1, 1, 2);
-    // brow ridge
     fill(ctx, '#c0d0e0', 10, 5, 12, 1);
-    spark(ctx, 14, 3, '#ffffff');
+    spark(ctx, 14, 2, '#ffffff');
     return;
   }
   if (look === 'leather') {
-    // open-face leather cap + cheek guards + stub horns
-    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 8, 2, 16, 7);
-    fill(ctx, '#a06830', 10, 3, 12, 2);
-    // cheek flaps
-    fill(ctx, '#6b4423', 7, 7, 4, 5);
-    fill(ctx, '#6b4423', 21, 7, 4, 5);
-    fill(ctx, '#5a3d1a', 8, 9, 2, 2);
-    fill(ctx, '#5a3d1a', 22, 9, 2, 2);
-    // chin strap
+    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 8, 1, 16, 7);
+    fill(ctx, '#a06830', 10, 2, 12, 2);
+    fill(ctx, '#6b4423', 7, 6, 4, 6);
+    fill(ctx, '#6b4423', 21, 6, 4, 6);
     fill(ctx, '#3d2b1f', 12, 12, 8, 1);
-    // short bone/horn studs
-    fill(ctx, '#e8e0d0', 9, 0, 2, 3);
-    fill(ctx, '#e8e0d0', 21, 0, 2, 3);
-    fill(ctx, '#c9a227', 14, 4, 4, 1); // band
+    fill(ctx, '#e8e0d0', 8, 0, 3, 3);
+    fill(ctx, '#e8e0d0', 21, 0, 3, 3);
+    fill(ctx, '#c9a227', 13, 3, 6, 1);
+    // bangs peek under cap
+    fill(ctx, '#3d2b1f', 12, 5, 3, 2);
+    fill(ctx, '#3d2b1f', 17, 5, 3, 2);
     return;
   }
   if (look === 'cloth_arcane') {
-    // wide brim + tall cone + star
-    fill(ctx, '#2a1848', 6, 5, 20, 3); // brim
-    fill(ctx, '#4a2a7a', 7, 5, 18, 2);
-    // cone
-    fill(ctx, '#4a2a7a', 11, 0, 10, 6);
-    fill(ctx, '#7a5ab0', 13, 0, 6, 7);
+    fill(ctx, '#2a1848', 5, 5, 22, 3); // brim
+    fill(ctx, '#4a2a7a', 6, 5, 20, 2);
+    fill(ctx, '#4a2a7a', 10, 0, 12, 7);
+    fill(ctx, '#7a5ab0', 12, 0, 8, 7);
     fill(ctx, '#5a3a8a', 14, 0, 4, 2);
-    fill(ctx, '#2a1848', 15, 0, 2, 1); // tip
+    fill(ctx, '#2a1848', 15, 0, 2, 1);
     spark(ctx, 16, 1, '#ffc857');
-    spark(ctx, 12, 4, '#c9a0ff');
-    // band
-    fill(ctx, '#c9a227', 11, 5, 10, 1);
+    spark(ctx, 12, 3, '#c9a0ff');
+    fill(ctx, '#c9a227', 10, 5, 12, 1);
     return;
   }
-  // bare: gold circlet crown
-  shadedBlock(ctx, '#c9a227', '#e8c050', '#8a7010', 8, 3, 16, 3);
-  fill(ctx, '#e8c050', 10, 3, 12, 1);
-  fill(ctx, '#ffc857', 9, 2, 2, 3);
-  fill(ctx, '#ffc857', 14, 1, 4, 3);
-  fill(ctx, '#ffc857', 21, 2, 2, 3);
-  fill(ctx, '#fff3a0', 15, 1, 2, 1);
+  // bare: circlet on hair
+  shadedBlock(ctx, '#c9a227', '#e8c050', '#8a7010', 9, 2, 14, 3);
+  fill(ctx, '#ffc857', 10, 1, 2, 3);
+  fill(ctx, '#ffc857', 14, 0, 4, 3);
+  fill(ctx, '#ffc857', 20, 1, 2, 3);
+  fill(ctx, '#fff3a0', 15, 0, 2, 1);
 }
 
 /**
@@ -583,64 +586,63 @@ export function drawBuddyBase(
   opts: BuddyDrawOpts = {},
 ): void {
   const sx = (opts.stretchX ?? 0) * 2;
-  // body
-  shadedBlock(
-    ctx,
-    '#d0d0d8',
-    '#e8e8f0',
-    '#909098',
-    8 - Math.min(2, sx),
-    12,
-    16 + sx,
-    14,
-  );
-  fill(ctx, '#c0c0c8', 10, 24, 12 + Math.floor(sx / 2), 2);
-  // ears
-  fill(ctx, '#d0d0d8', 6, 6, 6, 8);
-  fill(ctx, '#d0d0d8', 20 + Math.min(4, sx), 6, 6, 8);
-  fill(ctx, '#b0b0b8', 5, 4, 4, 4);
-  fill(ctx, '#b0b0b8', 23 + Math.min(4, sx), 4, 4, 4);
-  // face
-  if (opts.squint) {
-    fill(ctx, '#222', 12, 16, 4, 2);
-    fill(ctx, '#222', 18, 16, 4, 2);
-  } else {
-    fill(ctx, '#222', 12, 15, 3, 3);
-    fill(ctx, '#222', 18, 15, 3, 3);
-    spark(ctx, 13, 15);
-    spark(ctx, 19, 15);
-  }
+  const bx = 8 - Math.min(2, sx);
+  const bw = 16 + sx;
+  // body outline + shaded mass
+  fill(ctx, '#6a6a72', bx - 1, 11, bw + 2, 16);
+  shadedBlock(ctx, '#d0d0d8', '#f0f0f8', '#909098', bx, 12, bw, 14);
+  fill(ctx, '#e8e8f0', bx + 2, 13, bw - 4, 3);
+  // ears (tufted)
+  fill(ctx, '#6a6a72', 5, 5, 7, 9);
+  fill(ctx, '#d0d0d8', 6, 6, 5, 7);
+  fill(ctx, '#ffb0c8', 7, 8, 3, 3); // inner ear
+  fill(ctx, '#6a6a72', 20 + Math.min(4, sx), 5, 7, 9);
+  fill(ctx, '#d0d0d8', 21 + Math.min(4, sx), 6, 5, 7);
+  fill(ctx, '#ffb0c8', 22 + Math.min(4, sx), 8, 3, 3);
+  fill(ctx, '#b0b0b8', 5, 3, 4, 4);
+  fill(ctx, '#b0b0b8', 23 + Math.min(4, sx), 3, 4, 4);
+  // cartoon face band
+  cartoonFace(ctx, 11, 14, 10, 7, {
+    squint: opts.squint,
+    soft: opts.soft,
+  });
+  // snout accent
   fill(ctx, opts.soft ? '#ffb0c8' : '#ff6b9d', 14, 20, 4, 2);
-  fill(ctx, 'rgba(255,107,157,0.45)', 10, 18, 3, 2);
-  fill(ctx, 'rgba(255,107,157,0.45)', 20, 18, 3, 2);
   const reach = (opts.armReach ?? 0) * 2;
   if (reach > 0) {
-    fill(ctx, '#c8c8d0', 24, 16, reach, 4);
-    fill(ctx, '#c8c8d0', 24 + reach - 2, 14, 4, 8);
+    fill(ctx, '#909098', 24, 15, reach, 5);
+    fill(ctx, '#c8c8d0', 24, 16, reach, 3);
+    fill(ctx, '#c8c8d0', 24 + reach - 2, 13, 5, 9);
     if (opts.claw) {
-      fill(ctx, '#222', 24 + reach, 12, 2, 4);
+      fill(ctx, '#222', 24 + reach + 1, 12, 2, 4);
       fill(ctx, '#222', 26 + reach, 14, 2, 2);
-      fill(ctx, '#222', 24 + reach, 20, 2, 4);
+      fill(ctx, '#222', 24 + reach + 1, 20, 2, 4);
+      fill(ctx, '#eee', 25 + reach, 13, 1, 1);
     }
   }
   if (opts.puffed) {
-    fill(ctx, '#e8d0b0', 8, 18, 4, 4);
-    fill(ctx, '#e8d0b0', 20, 18, 4, 4);
-    fill(ctx, '#ff8844', 28, 16, 4, 4);
+    fill(ctx, '#e8d0b0', 7, 17, 5, 5);
+    fill(ctx, '#e8d0b0', 20, 17, 5, 5);
+    fill(ctx, '#ff8844', 27, 15, 5, 5);
+    spark(ctx, 29, 16, '#ffcc88');
   }
   if (opts.coil) {
-    fill(ctx, '#b0b0b8', 4, 14, 24, 10);
+    fill(ctx, '#909098', 3, 13, 26, 12);
+    fill(ctx, '#b0b0b8', 5, 14, 22, 10);
     fill(ctx, '#888890', 6, 16, 20, 2);
     fill(ctx, '#888890', 8, 20, 16, 2);
   }
   if (opts.soft) {
-    fill(ctx, 'rgba(232,240,255,0.55)', 4, 10, 24, 16);
+    fill(ctx, 'rgba(232,240,255,0.45)', 3, 9, 26, 18);
   }
-  // feet
+  // feet with pads
+  fill(ctx, '#6a6a72', 9, 26, 6, 5);
   fill(ctx, '#a0a0a8', 10, 26, 5, 4);
+  fill(ctx, '#ffb0c8', 11, 28, 3, 1);
+  fill(ctx, '#6a6a72', 17, 26, 6, 5);
   fill(ctx, '#a0a0a8', 18, 26, 5, 4);
+  fill(ctx, '#ffb0c8', 19, 28, 3, 1);
   if (opts.squint && !opts.stretchX) {
-    // blink afterimage streaks (Zorp)
     ctx.fillStyle = 'rgba(125,92,255,0.5)';
     ctx.fillRect(0, 7, 3, 3);
     ctx.fillRect(1, 6, 2, 1);
@@ -1576,52 +1578,66 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   canvasTex(scene, 'slime', ART_RES, ART_RES, (ctx) => {
-    fill(ctx, 'rgba(0,0,0,0.2)', 6, 26, 20, 4);
-    block(ctx, '#5ad45a', '#2a6a2a', 6, 10, 20, 18);
-    fill(ctx, '#7dffb3', 8, 12, 16, 8);
-    fill(ctx, '#fff', 10, 14, 4, 4);
-    fill(ctx, '#fff', 18, 14, 4, 4);
-    fill(ctx, '#111', 12, 16, 2, 2);
-    fill(ctx, '#111', 20, 16, 2, 2);
+    fill(ctx, 'rgba(0,0,0,0.25)', 6, 26, 20, 4);
+    block(ctx, '#5ad45a', '#1a4a20', 5, 9, 22, 19);
+    fill(ctx, '#7dffb3', 7, 11, 18, 9);
+    fill(ctx, '#9ef0b8', 9, 12, 8, 4);
+    fill(ctx, '#fff', 9, 14, 5, 5);
+    fill(ctx, '#fff', 18, 14, 5, 5);
+    fill(ctx, '#1a1a2e', 11, 16, 3, 3);
+    fill(ctx, '#1a1a2e', 20, 16, 3, 3);
+    spark(ctx, 11, 15, '#ffffff');
+    spark(ctx, 20, 15, '#ffffff');
+    fill(ctx, '#2a6a2a', 13, 22, 6, 2);
     spark(ctx, 14, 13, '#c9ffe0');
   });
 
   canvasTex(scene, 'slime-b', ART_RES, ART_RES, (ctx) => {
     fill(ctx, 'rgba(0,0,0,0.2)', 4, 26, 24, 4);
-    block(ctx, '#5ad45a', '#2a6a2a', 4, 12, 24, 16);
-    fill(ctx, '#7dffb3', 7, 14, 18, 6);
-    fill(ctx, '#fff', 9, 15, 4, 4);
-    fill(ctx, '#fff', 19, 14, 4, 4);
-    fill(ctx, '#111', 11, 17, 2, 2);
-    fill(ctx, '#111', 21, 16, 2, 2);
+    block(ctx, '#5ad45a', '#1a4a20', 4, 11, 24, 17);
+    fill(ctx, '#7dffb3', 6, 13, 20, 7);
+    fill(ctx, '#fff', 8, 14, 5, 5);
+    fill(ctx, '#fff', 19, 13, 5, 5);
+    fill(ctx, '#1a1a2e', 10, 16, 3, 3);
+    fill(ctx, '#1a1a2e', 21, 15, 3, 3);
+    spark(ctx, 10, 15, '#ffffff');
+    spark(ctx, 21, 14, '#ffffff');
   });
 
   canvasTex(scene, 'skeleton', ART_RES, ART_RES, (ctx) => {
-    block(ctx, '#e8e0d0', '#8a8070', 10, 2, 12, 10);
-    fill(ctx, '#c8c0b0', 12, 4, 8, 2);
-    fill(ctx, '#111', 12, 7, 3, 3);
-    fill(ctx, '#111', 18, 7, 3, 3);
-    fill(ctx, '#111', 14, 11, 4, 1);
-    fill(ctx, '#e8e0d0', 12, 14, 8, 10);
-    fill(ctx, '#c8c0b0', 13, 16, 6, 1);
-    fill(ctx, '#c8c0b0', 13, 19, 6, 1);
-    fill(ctx, '#c8c0b0', 13, 22, 6, 1);
-    fill(ctx, '#e8e0d0', 6, 15, 5, 3);
-    fill(ctx, '#e8e0d0', 21, 15, 5, 3);
-    fill(ctx, '#e8e0d0', 11, 24, 4, 6);
-    fill(ctx, '#e8e0d0', 17, 24, 4, 6);
+    // skull with cartoon hollow eyes
+    fill(ctx, '#6a6050', 9, 1, 14, 12);
+    fill(ctx, '#e8e0d0', 10, 2, 12, 10);
+    fill(ctx, '#fff8e8', 12, 3, 8, 3);
+    fill(ctx, '#1a1a2e', 12, 6, 4, 4);
+    fill(ctx, '#1a1a2e', 18, 6, 4, 4);
+    spark(ctx, 13, 6, '#ffffff');
+    spark(ctx, 19, 6, '#ffffff');
+    fill(ctx, '#1a1a2e', 14, 11, 4, 1);
+    fill(ctx, '#c8c0b0', 13, 12, 2, 1);
+    fill(ctx, '#c8c0b0', 17, 12, 2, 1);
+    // ribcage
+    fill(ctx, '#e8e0d0', 11, 14, 10, 10);
+    fill(ctx, '#c8c0b0', 12, 16, 8, 1);
+    fill(ctx, '#c8c0b0', 12, 19, 8, 1);
+    fill(ctx, '#c8c0b0', 12, 22, 8, 1);
+    fill(ctx, '#e8e0d0', 5, 14, 6, 4);
+    fill(ctx, '#e8e0d0', 21, 14, 6, 4);
+    fill(ctx, '#e8e0d0', 10, 24, 5, 6);
+    fill(ctx, '#e8e0d0', 17, 24, 5, 6);
   });
 
   canvasTex(scene, 'redshirt', ART_RES, ART_RES, (ctx) => {
+    // red tunic + cartoon face + hair
     shadedBlock(ctx, '#c0392b', '#e05050', '#7a1818', 8, 12, 16, 12);
-    shadedBlock(ctx, '#f0c8a4', '#ffe0c8', '#c09070', 10, 4, 12, 9);
-    fill(ctx, '#111', 12, 7, 2, 2);
-    fill(ctx, '#111', 18, 7, 2, 2);
-    fill(ctx, '#1a1a22', 10, 24, 5, 6);
-    fill(ctx, '#1a1a22', 17, 24, 5, 6);
-    fill(ctx, '#888', 6, 14, 3, 8);
-    fill(ctx, '#3a3a48', 22, 16, 6, 4);
-    fill(ctx, '#ff2030', 26, 17, 3, 2);
+    fill(ctx, '#ffc857', 12, 14, 8, 2); // rank strip
+    hairMass(ctx, 10, 4, 12, { color: '#1a1a22', bangs: true });
+    cartoonFace(ctx, 10, 4, 12, 9);
+    fill(ctx, '#1a1a22', 9, 24, 6, 6);
+    fill(ctx, '#1a1a22', 17, 24, 6, 6);
+    fill(ctx, '#888', 5, 13, 4, 9);
+    fill(ctx, '#3a3a48', 22, 15, 7, 5);
+    fill(ctx, '#ff2030', 26, 16, 3, 3);
   });
 
   canvasTex(scene, 'captain', ART_RES, ART_RES, (ctx) => {

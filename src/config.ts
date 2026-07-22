@@ -3,11 +3,11 @@ export const GAME_W = 1280;
 export const GAME_H = 720;
 /**
  * Logical tile step in the room grid (world units before display scale).
- * Textures render at ART_RES (32) for 16-bit density; sprites use SPRITE_SCALE
- * so they still occupy TILE×SCALE world pixels.
+ * Textures render at ART_RES (32) for 32-bit craft density; sprites use
+ * SPRITE_SCALE so they still occupy TILE×SCALE world pixels.
  */
 export const TILE = 16;
-/** Canvas resolution for map tiles, avatar, enemies (SNES-era density). */
+/** Canvas resolution for map tiles, avatar, enemies (dense 32×32 craft). */
 export const ART_RES = 32;
 export const SCALE = 3;
 /** Phaser scale so an ART_RES×ART_RES texture covers TILE×SCALE world pixels. */

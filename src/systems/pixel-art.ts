@@ -1,6 +1,6 @@
 /**
- * 16-bit style pixel helpers — outlines, shading, dither, vertical gradients.
- * Used by texture generation for SNES-era readability.
+ * 32-bit craft density helpers (ART_RES=32) — outlines, faces, hair, blades.
+ * EMA council: silhouette first, ≤3 values per form + 1 specular, no muddy face dither.
  */
 
 export function hex(n: number): string {
@@ -130,6 +130,150 @@ export function spark(
 ): void {
   ctx.fillStyle = color;
   ctx.fillRect(x, y, 1, 1);
+}
+
+/** 1px dark outline ring around a filled rect (outer silhouette). */
+export function outline(
+  ctx: CanvasRenderingContext2D,
+  edgeC: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  ctx.fillStyle = edgeC;
+  ctx.fillRect(x - 1, y, w + 2, 1);
+  ctx.fillRect(x - 1, y + h - 1, w + 2, 1);
+  ctx.fillRect(x - 1, y, 1, h);
+  ctx.fillRect(x + w, y, 1, h);
+}
+
+/**
+ * Cartoon hero face band (EMA: big eyes + catchlight + small smile + blush).
+ * Face rect is typically ~10–12 × 8–9 on a 32 canvas.
+ */
+export function cartoonFace(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  opts?: { squint?: boolean; soft?: boolean },
+): void {
+  const skin = '#f0c8a4';
+  const skinHi = '#ffe0c8';
+  const skinSh = '#c09070';
+  const edge = '#6a4030';
+  // head mass
+  ctx.fillStyle = edge;
+  ctx.fillRect(x - 1, y, w + 2, h);
+  ctx.fillRect(x, y - 1, w, h + 2);
+  shadedBlock(ctx, skin, skinHi, skinSh, x, y, w, h);
+  // cheek blush (solid, not dither)
+  fill(ctx, opts?.soft ? 'rgba(255,150,160,0.55)' : 'rgba(255,120,140,0.4)', x + 1, y + h - 3, 2, 1);
+  fill(ctx, opts?.soft ? 'rgba(255,150,160,0.55)' : 'rgba(255,120,140,0.4)', x + w - 3, y + h - 3, 2, 1);
+  // eyes — large cartoon ovals
+  const eyeY = y + Math.max(2, Math.floor(h * 0.35));
+  const leftEx = x + 2;
+  const rightEx = x + w - 5;
+  if (opts?.squint) {
+    fill(ctx, '#1a1a2e', leftEx, eyeY + 1, 3, 1);
+    fill(ctx, '#1a1a2e', rightEx, eyeY + 1, 3, 1);
+  } else {
+    // sclera
+    fill(ctx, '#ffffff', leftEx, eyeY, 3, 3);
+    fill(ctx, '#ffffff', rightEx, eyeY, 3, 3);
+    // iris
+    fill(ctx, '#2a3a6a', leftEx + 1, eyeY + 1, 2, 2);
+    fill(ctx, '#2a3a6a', rightEx + 1, eyeY + 1, 2, 2);
+    // catchlight
+    spark(ctx, leftEx + 1, eyeY, '#ffffff');
+    spark(ctx, rightEx + 1, eyeY, '#ffffff');
+    // brows
+    fill(ctx, '#3d2b1f', leftEx, eyeY - 1, 3, 1);
+    fill(ctx, '#3d2b1f', rightEx, eyeY - 1, 3, 1);
+  }
+  // smile
+  const my = y + h - 2;
+  fill(ctx, '#c07070', x + Math.floor(w / 2) - 2, my, 4, 1);
+  fill(ctx, '#e09090', x + Math.floor(w / 2) - 1, my, 2, 1);
+}
+
+/**
+ * Hair mass over a head: crown bulk + bangs + side locks + 1 specular streak.
+ * hairColor mid; dark/light derived.
+ */
+export function hairMass(
+  ctx: CanvasRenderingContext2D,
+  headX: number,
+  headY: number,
+  headW: number,
+  opts?: { color?: string; bangs?: boolean },
+): void {
+  const mid = opts?.color ?? '#3d2b1f';
+  const dark = '#1a1008';
+  const light = '#6b4423';
+  // crown / undercut silhouette
+  fill(ctx, dark, headX - 1, headY - 3, headW + 2, 4);
+  fill(ctx, mid, headX, headY - 4, headW, 5);
+  fill(ctx, mid, headX - 1, headY - 1, 2, 6); // left lock
+  fill(ctx, mid, headX + headW - 1, headY - 1, 2, 6); // right lock
+  fill(ctx, dark, headX - 1, headY + 2, 1, 3);
+  fill(ctx, dark, headX + headW, headY + 2, 1, 3);
+  // bangs breaking the forehead
+  if (opts?.bangs !== false) {
+    fill(ctx, mid, headX + 1, headY, 3, 3);
+    fill(ctx, mid, headX + 5, headY, 2, 2);
+    fill(ctx, mid, headX + headW - 4, headY, 3, 3);
+    fill(ctx, dark, headX + 2, headY + 2, 2, 1);
+  }
+  // single specular streak (not stripes)
+  fill(ctx, light, headX + 3, headY - 3, 2, 1);
+  spark(ctx, headX + 4, headY - 3, '#a07840');
+}
+
+/**
+ * Sharpened blade: mid + edge hilite + dark bevel + bright tip.
+ * Vertical blade growing upward from (x, tipY) of height h, width w.
+ */
+export function bladeVertical(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  tipY: number,
+  w: number,
+  h: number,
+  mid = '#dfe6f0',
+  edge = '#ffffff',
+  back = '#607080',
+  outlineC = '#3a4050',
+): void {
+  // outline
+  fill(ctx, outlineC, x - 1, tipY, w + 2, h);
+  // body
+  fill(ctx, mid, x, tipY + 1, w, h - 1);
+  // edge hilite (attack side = left)
+  fill(ctx, edge, x, tipY + 2, 1, Math.max(2, h - 4));
+  // back bevel
+  fill(ctx, back, x + w - 1, tipY + 2, 1, Math.max(2, h - 4));
+  // tip wedge
+  fill(ctx, mid, x, tipY, w, 2);
+  fill(ctx, edge, x + Math.floor(w / 2) - 1, tipY, 2, 1);
+  spark(ctx, x + Math.floor(w / 2), tipY, '#ffffff');
+}
+
+/** Cross-guard + grip + pommel under a blade. */
+export function hiltBelow(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  y: number,
+  guardW = 9,
+): void {
+  fill(ctx, '#8a6820', cx - Math.floor(guardW / 2), y, guardW, 2);
+  fill(ctx, '#c9a227', cx - Math.floor(guardW / 2) + 1, y, guardW - 2, 1);
+  fill(ctx, '#5a3d1a', cx - 1, y + 2, 3, 5);
+  fill(ctx, '#8b5a2b', cx, y + 2, 1, 4);
+  fill(ctx, '#c9a227', cx - 1, y + 6, 3, 2);
+  spark(ctx, cx, y + 6, '#fff3a0');
 }
 
 /** One cobble stone with bevel + optional chip. */
