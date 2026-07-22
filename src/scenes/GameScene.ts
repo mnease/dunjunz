@@ -233,7 +233,7 @@ import {
   GUILD_MASTER_ID,
   guildMasterDialog,
   guildMasterIntroDialog,
-  ensureTrainingWeaponInBag,
+  ensureCatalogInBag,
   isRackEmpty,
   isTutorialComplete,
   listRackWeaponOptions,
@@ -242,7 +242,7 @@ import {
   nextTutorialWeapon,
   rackDialog,
   rackInventoryDialog,
-  rackTextureKey,
+  rackPresentTemplates,
   rackWeaponFromId,
   recordDummyDamage,
   returnWeaponToRack,
@@ -252,6 +252,7 @@ import {
   weaponDamageDealt,
   type TutorialWeapon,
 } from '../systems/tutorial';
+import { ensureGuildRackTexture } from '../systems/textures';
 import { loadSave, writeSave } from '../systems/save';
 import {
   basementDepth,
@@ -2811,12 +2812,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Captain gets gold command tunic (Kirk), not generic purple NPC
-    // Racks: show weapon until taken into bag, then empty stand
+    // Racks: multi-weapon stand; equipped piece is omitted from pegs
     const rackWeapon =
       def.kind === 'rack' ? rackWeaponFromId(def.id) : null;
     const rackTex =
       rackWeapon != null
-        ? rackTextureKey(rackWeapon, isRackEmpty(this.save, rackWeapon))
+        ? ensureGuildRackTexture(
+            this,
+            rackWeapon,
+            rackPresentTemplates(this.save, rackWeapon),
+          )
         : null;
     const tex =
       def.id === 'captain' && this.textures.exists('captain')
@@ -3206,6 +3211,10 @@ export class GameScene extends Phaser.Scene {
 
   private emitHud(): void {
     this.refreshPlayerAppearance();
+    // Equipped weapon leaves its guild peg; keep multi-weapon stands in sync
+    if (this.room?.id === GUILD_HALL_ID) {
+      this.syncWeaponRackSprites();
+    }
     this.game.events.emit('hud-update', this.save, this.room.title);
     if (this.inventoryOpen) {
       this.game.events.emit('inventory-refresh', this.save);
@@ -3963,13 +3972,13 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // E again while this rack's picker is open → take first listed weapon
+    // E again while this rack's picker is open → take first hanging weapon
     if (this.rackPicker && this.rackPicker.rackId === actor.id) {
       this.confirmRackPick(0);
       return;
     }
 
-    // Empty stand → return this family's weapon to the rack
+    // No hanging pieces → return equipped family weapon to the pegs
     if (isRackEmpty(this.save, w)) {
       this.rackPicker = null;
       const r = returnWeaponToRack(this.save, w);
@@ -3987,15 +3996,13 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('dialog-show', rackDialog(w, { mode: 'return' }));
       this.game.events.emit(
         'toast',
-        r.unequipped
-          ? `${w.toUpperCase()} RETURNED — E TO BROWSE`
-          : `${w.toUpperCase()} RACK STOCKED — E TO BROWSE`,
+        `${w.toUpperCase()} RETURNED TO RACK`,
       );
       return;
     }
 
-    // Stocked stand → open this rack's inventory (1-9 to equip)
-    this.save = ensureTrainingWeaponInBag(this.save, w);
+    // Hanging weapons → browse (only pieces still on the stand)
+    this.save = ensureCatalogInBag(this.save, w);
     const opts = listRackWeaponOptions(this.save, w);
     if (opts.length === 0) {
       this.game.events.emit('toast', 'RACK IS BARE');
@@ -4012,7 +4019,7 @@ export class GameScene extends Phaser.Scene {
       'toast',
       opts.length === 1
         ? 'PRESS 1 OR E TO TAKE'
-        : `PRESS 1-${Math.min(9, opts.length)} TO EQUIP`,
+        : `PRESS 1-${Math.min(9, opts.length)} — THAT PIECE LEAVES THE RACK`,
     );
   }
 
@@ -4024,14 +4031,15 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** Empty / stocked stands from save flags. */
+  /** Multi-weapon stands: omit currently equipped catalog piece. */
   private syncWeaponRackSprites(): void {
     for (const a of this.actors) {
       if (!a.alive || a.kind !== 'rack') continue;
       const w = rackWeaponFromId(a.id);
       if (!w) continue;
-      const key = rackTextureKey(w, isRackEmpty(this.save, w));
-      if (this.textures.exists(key) && a.sprite.texture.key !== key) {
+      const present = rackPresentTemplates(this.save, w);
+      const key = ensureGuildRackTexture(this, w, present);
+      if (a.sprite.texture.key !== key) {
         a.sprite.setTexture(key);
       }
     }

@@ -20,6 +20,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Multi-weapon guild racks** — each stand shows real catalog weapons (sword: mild/iron/saber/cleaver; bow: short bow + crossbow; axe/staff: training pieces). Only the equipped piece leaves its peg; siblings stay. E browses hanging set (1–9); empty peg + E returns.
 - **Guild hall shadows** — deeper ambient (`0.13`), stronger torch/lamp cookies (intensity + radius + erase punch) so light pools and dark corners read clearly.
 
 ### Fixed

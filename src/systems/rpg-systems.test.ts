@@ -3055,6 +3055,8 @@ import {
   isTutorialComplete,
   listRackWeaponOptions,
   nextTutorialWeapon,
+  RACK_CATALOG,
+  rackPresentTemplates,
   rackTextureKey,
   recordDummyDamage,
   recordDummyHit,
@@ -3147,31 +3149,35 @@ describe('tutorial guild hall', () => {
     expect(inst?.templateId).toBe('training_axe');
   });
 
-  it('taking a training weapon marks rack empty and equips hip look', () => {
+  it('multi-weapon racks omit only the equipped piece', () => {
+    expect(RACK_CATALOG.sword.length).toBeGreaterThanOrEqual(3);
+    expect(RACK_CATALOG.bow.length).toBeGreaterThanOrEqual(2);
     let save = defaultSave();
+    expect(rackPresentTemplates(save, 'sword')).toEqual([...RACK_CATALOG.sword]);
     expect(isRackEmpty(save, 'sword')).toBe(false);
-    expect(isTrainingWeaponTaken(save, 'sword')).toBe(false);
-    expect(rackTextureKey('sword', false)).toBe('rack_sword');
+    expect(rackTextureKey('sword', false)).toBe('rack_sword_full');
     expect(rackTextureKey('sword', true)).toBe('rack_empty');
+
     save = equipTrainingWeapon(save, 'sword');
-    expect(isRackEmpty(save, 'sword')).toBe(true);
     expect(isTrainingWeaponTaken(save, 'sword')).toBe(true);
+    // Only mild_sword leaves the pegs — iron/saber/cleaver stay
+    const hanging = rackPresentTemplates(save, 'sword');
+    expect(hanging).not.toContain('mild_sword');
+    expect(hanging).toContain('iron_blade');
+    expect(hanging).toContain('sand_saber');
+    expect(isRackEmpty(save, 'sword')).toBe(false);
     expect(save.hasSword).toBe(true);
-    const uid = save.equipped.weapon;
-    expect(uid).toBeTruthy();
-    const inst = save.bag.find((b) => b.uid === uid);
-    expect(inst?.templateId).toBe('mild_sword');
-    // Axe take leaves sword in bag; axe becomes equipped hip weapon
+
+    // Switch to axe: sword pegs refill; axe peg empties (only one catalog axe)
     save = equipTrainingWeapon(save, 'axe');
+    expect(rackPresentTemplates(save, 'sword')).toContain('mild_sword');
     expect(isRackEmpty(save, 'axe')).toBe(true);
-    expect(isRackEmpty(save, 'sword')).toBe(true);
     const axe = save.bag.find((b) => b.uid === save.equipped.weapon);
     expect(axe?.templateId).toBe('training_axe');
   });
 
-  it('returns weapon to rack then browse lists family options', () => {
+  it('returns weapon to rack then browse lists hanging catalog options', () => {
     let save = equipTrainingWeapon(defaultSave(), 'sword');
-    expect(isRackEmpty(save, 'sword')).toBe(true);
     expect(save.equipped.weapon).toBeTruthy();
     const ret = returnWeaponToRack(save, 'sword');
     expect(ret.ok).toBe(true);
@@ -3180,15 +3186,17 @@ describe('tutorial guild hall', () => {
     expect(isRackStocked(save, 'sword')).toBe(true);
     expect(save.equipped.weapon).toBeNull();
     expect(save.hasSword).toBe(false);
-    // Second interact: rack inventory lists at least the training sword
     const opts = listRackWeaponOptions(save, 'sword');
-    expect(opts.length).toBeGreaterThanOrEqual(1);
-    expect(opts[0]?.templateId).toBe('mild_sword');
-    const take = takeWeaponFromRack(save, 'sword', opts[0]!.uid);
+    expect(opts.length).toBe(RACK_CATALOG.sword.length);
+    expect(opts.map((o) => o.templateId)).toContain('mild_sword');
+    expect(opts.map((o) => o.templateId)).toContain('iron_blade');
+    const iron = opts.find((o) => o.templateId === 'iron_blade')!;
+    const take = takeWeaponFromRack(save, 'sword', iron.uid);
     expect(take.ok).toBe(true);
     save = take.save;
-    expect(isRackEmpty(save, 'sword')).toBe(true);
-    expect(save.equipped.weapon).toBe(opts[0]!.uid);
+    expect(save.equipped.weapon).toBe(iron.uid);
+    expect(rackPresentTemplates(save, 'sword')).not.toContain('iron_blade');
+    expect(rackPresentTemplates(save, 'sword')).toContain('mild_sword');
   });
 
   it('intro welcomes to Dunjunz, then guild master, then drills', () => {

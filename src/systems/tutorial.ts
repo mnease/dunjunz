@@ -54,6 +54,17 @@ export const TRAINING_TEMPLATES: Record<TutorialWeapon, string> = {
   staff: 'wizard_staff',
 };
 
+/**
+ * Real in-game weapon templates displayed on each guild rack.
+ * Looks map to distinct silhouettes (sword / iron / saber / cleaver / …).
+ */
+export const RACK_CATALOG: Record<TutorialWeapon, readonly string[]> = {
+  sword: ['mild_sword', 'iron_blade', 'sand_saber', 'dunjun_cleaver'],
+  axe: ['training_axe'],
+  bow: ['short_bow', 'hunter_crossbow'],
+  staff: ['wizard_staff'],
+};
+
 /** Damage that must be dealt with a weapon to clear its drill stage. */
 export function drillDamageRequired(): number {
   return Math.max(
@@ -274,44 +285,56 @@ export function skipTutorial(save: SaveData): SaveData {
   return completeTutorial(save);
 }
 
-/** Flag: this family's training rack currently has its weapon checked out. */
-export function rackOutFlag(weapon: TutorialWeapon): string {
-  return `tutorial_rack_out_${weapon}`;
-}
-
-/** True when the stand is empty (weapon is out with the hero). */
-export function isRackEmpty(save: SaveData, weapon: TutorialWeapon): boolean {
-  return !!save.flags?.[rackOutFlag(weapon)];
-}
-
-export function isRackStocked(save: SaveData, weapon: TutorialWeapon): boolean {
-  return !isRackEmpty(save, weapon);
-}
-
-export function setRackEmpty(
-  save: SaveData,
-  weapon: TutorialWeapon,
-  empty: boolean,
-): SaveData {
-  return {
-    ...save,
-    flags: { ...save.flags, [rackOutFlag(weapon)]: empty },
-  };
+/** Currently equipped weapon template id, or null. */
+export function equippedWeaponTemplateId(save: SaveData): string | null {
+  const uid = save.equipped?.weapon;
+  if (!uid) return null;
+  const inst = save.bag.find((b) => b.uid === uid);
+  return inst?.templateId ?? null;
 }
 
 /**
- * Legacy: bag-owned training template meant "taken".
- * Prefer isRackEmpty for visuals / return flow.
+ * Catalog templates still hanging on the rack (not the equipped piece).
+ * Equipping one weapon removes only that silhouette; siblings stay.
+ */
+export function rackPresentTemplates(
+  save: SaveData,
+  family: TutorialWeapon,
+): string[] {
+  const eq = equippedWeaponTemplateId(save);
+  return RACK_CATALOG[family].filter((tid) => tid !== eq);
+}
+
+/** True when no catalog weapons remain on the pegs (usually sole item equipped). */
+export function isRackEmpty(save: SaveData, family: TutorialWeapon): boolean {
+  return rackPresentTemplates(save, family).length === 0;
+}
+
+export function isRackStocked(save: SaveData, family: TutorialWeapon): boolean {
+  return !isRackEmpty(save, family);
+}
+
+/**
+ * Legacy helper — true when the default training piece is currently equipped.
  */
 export function isTrainingWeaponTaken(
   save: SaveData,
   weapon: TutorialWeapon,
 ): boolean {
-  if (save.flags?.[rackOutFlag(weapon)] != null) {
-    return isRackEmpty(save, weapon);
+  return equippedWeaponTemplateId(save) === TRAINING_TEMPLATES[weapon];
+}
+
+/** Mint every catalog template for this family into the bag (no equip). */
+export function ensureCatalogInBag(
+  save: SaveData,
+  family: TutorialWeapon,
+): SaveData {
+  let next = save;
+  for (const tid of RACK_CATALOG[family]) {
+    if (next.bag.some((b) => b.templateId === tid)) continue;
+    next = mintItem(next, tid, 'common', 0).save;
   }
-  const tid = TRAINING_TEMPLATES[weapon];
-  return save.bag.some((b) => b.templateId === tid);
+  return next;
 }
 
 /** Ensure the default training template exists in the bag (no equip). */
@@ -319,57 +342,51 @@ export function ensureTrainingWeaponInBag(
   save: SaveData,
   weapon: TutorialWeapon,
 ): SaveData {
-  const tid = TRAINING_TEMPLATES[weapon];
-  if (save.bag.some((b) => b.templateId === tid)) return save;
-  return mintItem(save, tid, 'common', 0).save;
+  return ensureCatalogInBag(save, weapon);
 }
 
-/** Bag weapons that belong on this rack (sword/axe/bow/staff family). */
+/**
+ * Weapons currently hanging (pickable) — catalog pieces not equipped.
+ * Always mints catalog into bag first so each has a uid.
+ */
 export function listRackWeaponOptions(
   save: SaveData,
-  weapon: TutorialWeapon,
+  family: TutorialWeapon,
 ): { uid: string; templateId: string; name: string }[] {
-  const next = ensureTrainingWeaponInBag(save, weapon);
+  const next = ensureCatalogInBag(save, family);
+  const present = new Set(rackPresentTemplates(next, family));
   const out: { uid: string; templateId: string; name: string }[] = [];
-  for (const inst of next.bag) {
-    const t = getTemplate(inst.templateId);
-    if (t.slot !== 'weapon') continue;
-    const fam = tutorialWeaponFromEquip(inst.templateId, t.look);
-    if (fam !== weapon) continue;
+  for (const tid of RACK_CATALOG[family]) {
+    if (!present.has(tid)) continue;
+    const inst = next.bag.find((b) => b.templateId === tid);
+    if (!inst) continue;
     out.push({
       uid: inst.uid,
-      templateId: inst.templateId,
+      templateId: tid,
       name: displayItemName(inst),
     });
   }
-  // Stable: training template first, then others by name
-  const train = TRAINING_TEMPLATES[weapon];
-  out.sort((a, b) => {
-    if (a.templateId === train && b.templateId !== train) return -1;
-    if (b.templateId === train && a.templateId !== train) return 1;
-    return a.name.localeCompare(b.name);
-  });
   return out;
 }
 
-function withBowAmmo(save: SaveData, weapon: TutorialWeapon): SaveData {
-  if (weapon !== 'bow') return save;
+function withBowAmmo(save: SaveData, family: TutorialWeapon): SaveData {
+  if (family !== 'bow') return save;
   const arrows = Math.max(save.stacks?.arrows ?? 0, 30);
   return { ...save, stacks: { ...save.stacks, arrows } };
 }
 
 /**
- * Take a specific bag weapon off the rack (equip + empty stand).
+ * Equip a hanging rack weapon. Only that piece leaves the stand.
  */
 export function takeWeaponFromRack(
   save: SaveData,
-  weapon: TutorialWeapon,
+  family: TutorialWeapon,
   uid?: string,
 ): { save: SaveData; ok: boolean; reason?: string; name?: string } {
-  let next = ensureTrainingWeaponInBag(save, weapon);
-  const opts = listRackWeaponOptions(next, weapon);
+  let next = ensureCatalogInBag(save, family);
+  const opts = listRackWeaponOptions(next, family);
   if (opts.length === 0) {
-    return { save, ok: false, reason: 'RACK IS BARE' };
+    return { save, ok: false, reason: 'RACK IS BARE — RETURN YOUR WEAPON' };
   }
   const pick =
     (uid ? opts.find((o) => o.uid === uid) : null) ?? opts[0]!;
@@ -377,67 +394,64 @@ export function takeWeaponFromRack(
     ...next,
     equipped: { ...next.equipped, weapon: pick.uid },
   };
-  next = withBowAmmo(next, weapon);
-  next = setRackEmpty(next, weapon, true);
+  next = withBowAmmo(next, family);
   next = syncDerivedStats(next);
   return { save: next, ok: true, name: pick.name };
 }
 
-/** Grant/equip default training weapon and empty its rack. */
+/** Grant/equip default training weapon for drills. */
 export function equipTrainingWeapon(
   save: SaveData,
   weapon: TutorialWeapon,
 ): SaveData {
-  const r = takeWeaponFromRack(save, weapon);
-  return r.save;
+  let next = ensureCatalogInBag(save, weapon);
+  const tid = TRAINING_TEMPLATES[weapon];
+  const inst = next.bag.find((b) => b.templateId === tid);
+  if (!inst) return next;
+  next = {
+    ...next,
+    equipped: { ...next.equipped, weapon: inst.uid },
+  };
+  next = withBowAmmo(next, weapon);
+  return syncDerivedStats(next);
 }
 
 /**
- * Return this family's weapon to the rack: unequip if held, restock stand.
- * Works even if the hero swapped to another weapon (restocks the empty peg).
+ * Unequip the family weapon so it reappears on the rack.
  */
 export function returnWeaponToRack(
   save: SaveData,
-  weapon: TutorialWeapon,
+  family: TutorialWeapon,
 ): { save: SaveData; ok: boolean; reason?: string; unequipped: boolean } {
-  if (isRackStocked(save, weapon)) {
+  const eqUid = save.equipped?.weapon;
+  if (!eqUid) {
     return {
       save,
       ok: false,
-      reason: 'RACK ALREADY STOCKED — E TO BROWSE',
+      reason: 'NOTHING EQUIPPED TO RETURN',
       unequipped: false,
     };
   }
-  // Must own at least one weapon of this family to "return"
-  let next = ensureTrainingWeaponInBag(save, weapon);
-  const opts = listRackWeaponOptions(next, weapon);
-  if (opts.length === 0) {
+  const inst = save.bag.find((b) => b.uid === eqUid);
+  if (!inst) {
+    return { save, ok: false, reason: 'NOTHING TO RETURN', unequipped: false };
+  }
+  const t = getTemplate(inst.templateId);
+  const fam = tutorialWeaponFromEquip(inst.templateId, t.look);
+  if (fam !== family) {
     return {
       save,
       ok: false,
-      reason: 'NOTHING TO RETURN',
+      reason: `HOLDING ${fam?.toUpperCase() ?? 'OTHER'} — USE THAT RACK`,
       unequipped: false,
     };
   }
-  let unequipped = false;
-  const eqUid = next.equipped.weapon;
-  if (eqUid) {
-    const inst = next.bag.find((b) => b.uid === eqUid);
-    if (inst) {
-      const t = getTemplate(inst.templateId);
-      const fam = tutorialWeaponFromEquip(inst.templateId, t.look);
-      if (fam === weapon) {
-        next = {
-          ...next,
-          equipped: { ...next.equipped, weapon: null },
-        };
-        unequipped = true;
-      }
-    }
-  }
-  next = setRackEmpty(next, weapon, false);
-  next = syncDerivedStats(next);
-  return { save: next, ok: true, unequipped };
+  // Prefer returning catalog pieces; still allow unequip of any family weapon
+  const next = syncDerivedStats({
+    ...save,
+    equipped: { ...save.equipped, weapon: null },
+  });
+  return { save: next, ok: true, unequipped: true };
 }
 
 /** Map rack actor id → tutorial weapon family. */
@@ -457,24 +471,30 @@ export function rackWeaponFromId(id: string | undefined): TutorialWeapon | null 
 }
 
 /**
- * Rack canvas texture: full weapon stand, or empty peg after pickup.
- * `empty` true → rack_empty.
+ * Stable texture key for a multi-weapon rack state.
+ * Present template ids sorted → unique canvas texture.
  */
 export function rackTextureKey(
-  weapon: TutorialWeapon,
-  empty: boolean,
+  family: TutorialWeapon,
+  presentOrEmpty: boolean | string[],
 ): string {
-  if (empty) return 'rack_empty';
-  switch (weapon) {
-    case 'sword':
-      return 'rack_sword';
-    case 'axe':
-      return 'rack_axe';
-    case 'bow':
-      return 'rack_bow';
-    case 'staff':
-      return 'rack_staff';
+  // Legacy bool API: empty stand vs full default catalog art
+  if (typeof presentOrEmpty === 'boolean') {
+    if (presentOrEmpty) return 'rack_empty';
+    return `rack_${family}_full`;
   }
+  const present = presentOrEmpty;
+  if (present.length === 0) return 'rack_empty';
+  const sig = [...present].sort().join('+');
+  return `rack_${family}__${sig}`;
+}
+
+/** Stable key from save for this family's current hanging set. */
+export function rackTextureKeyForSave(
+  save: SaveData,
+  family: TutorialWeapon,
+): string {
+  return rackTextureKey(family, rackPresentTemplates(save, family));
 }
 
 export function stairsBlockedToast(): string {
@@ -513,9 +533,9 @@ export function guildMasterIntroDialog(): string[] {
     'DEAL DAMAGE TO DUMMIES WITH FOUR WEAPONS:',
     'SWORD → AXE → BOW → STAFF.',
     `EACH WEAPON: ${DUMMY_DRILL_REQUIRED_PCT}% OF DUMMY HP.`,
-    'RACKS (E): TAKE, RETURN, THEN BROWSE.',
-    'EMPTY STAND + E = PUT THE WEAPON BACK.',
-    'STOCKED STAND + E = PICK 1-9 FROM THE RACK.',
+    'EACH RACK HOLDS SEVERAL REAL WEAPONS.',
+    'E = BROWSE · 1-9 = EQUIP ONE (IT LEAVES THE PEG).',
+    'EQUIP ANOTHER OR RETURN (E ON EMPTY) TO PUT IT BACK.',
     'DUMMIES (SPACE / Z) TAKE THE HITS.',
     'WHEN ALL FOUR ARE DONE, TALK TO ME.',
     'THEN: EAST DOOR → MEADOW. MATHEMATICAL!',
@@ -610,21 +630,21 @@ export function rackDialog(
   if (opts?.mode === 'return') {
     return [
       `${weapon.toUpperCase()} RACK — WEAPON RETURNED.`,
-      'THE STAND IS STOCKED AGAIN.',
+      'IT HANGS WITH THE OTHERS AGAIN.',
       'PRESS E TO BROWSE THIS RACK\'S WEAPONS.',
     ];
   }
   if (opts?.mode === 'browse') {
     return [
-      `${weapon.toUpperCase()} RACK — CHOOSE A WEAPON.`,
-      'PRESS 1-9 TO EQUIP FROM THE LIST.',
-      'E ON EMPTY STAND RETURNS YOUR WEAPON.',
+      `${weapon.toUpperCase()} RACK — SEVERAL REAL WEAPONS.`,
+      'PRESS 1-9 TO EQUIP ONE FROM THE LIST.',
+      'THAT PIECE LEAVES THE RACK; THE REST STAY.',
     ];
   }
   return [
     `YOU TAKE THE ${label}.`,
-    'IT LEAVES THE RACK AND RIDES YOUR HIP.',
-    'E AGAIN AT THIS RACK TO RETURN IT.',
+    'IT LEAVES ITS PEG. THE OTHER WEAPONS STAY.',
+    'RETURN IT (EMPTY STAND + E) OR PICK ANOTHER.',
     goal,
   ];
 }
@@ -636,6 +656,7 @@ export function rackInventoryDialog(
 ): string[] {
   const lines = [
     `${weapon.toUpperCase()} RACK — SELECT`,
+    `(${options.length} HANGING)`,
     '',
   ];
   const max = Math.min(9, options.length);
@@ -643,39 +664,19 @@ export function rackInventoryDialog(
     lines.push(`${i + 1}. ${options[i]!.name}`);
   }
   if (options.length > 9) {
-    lines.push(`… +${options.length - 9} MORE IN BAG`);
+    lines.push(`… +${options.length - 9} MORE`);
   }
   lines.push('');
-  lines.push('PRESS 1-9 TO EQUIP.');
-  lines.push('ESC CANCELS. E ON EMPTY = RETURN.');
+  lines.push('PRESS 1-9 TO EQUIP (LEAVES THE RACK).');
+  lines.push('E ON EMPTY PEG = RETURN EQUIPPED.');
   return lines;
-}
-
-/**
- * Seed rack_out flags for mid-run saves that already minted training gear
- * before the return/browse system existed.
- */
-export function migrateRackStockFlags(save: SaveData): SaveData {
-  let flags = save.flags;
-  let changed = false;
-  for (const w of TUTORIAL_WEAPONS) {
-    const key = rackOutFlag(w);
-    if (flags?.[key] != null) continue;
-    const tid = TRAINING_TEMPLATES[w];
-    const owned = save.bag.some((b) => b.templateId === tid);
-    if (!owned) continue;
-    // Owned training piece → treat as checked out until returned
-    flags = { ...flags, [key]: true };
-    changed = true;
-  }
-  return changed ? { ...save, flags: flags! } : save;
 }
 
 /**
  * Veterans who already crawled skip the guild.
  */
 export function migrateTutorial(save: SaveData): SaveData {
-  let next = migrateRackStockFlags(save);
+  let next = save;
   if (isTutorialComplete(next)) return next;
   const visited = next.visitedRooms ?? [];
   const leftGuild = visited.some(

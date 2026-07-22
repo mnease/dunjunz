@@ -1309,6 +1309,144 @@ function drawItemIcon(
   fill(ctx, '#7dffb3', 10, 10, 12, 12);
 }
 
+/** Compact rack peg weapons — distinct looks, fits multi-weapon stand. */
+function drawRackPegWeapon(
+  ctx: CanvasRenderingContext2D,
+  look: string,
+  cx: number,
+  top: number,
+): void {
+  if (look === 'bow') {
+    fill(ctx, '#2a1810', cx - 1, top, 2, 14);
+    fill(ctx, '#8b5a2b', cx, top + 1, 1, 12);
+    fill(ctx, '#c8b090', cx - 3, top + 6, 7, 1);
+    fill(ctx, '#7dffb3', cx - 3, top + 5, 2, 2);
+    return;
+  }
+  if (look === 'crossbow') {
+    fill(ctx, '#5a3d1a', cx - 4, top + 6, 9, 3);
+    fill(ctx, '#8b5a2b', cx - 1, top, 2, 14);
+    fill(ctx, '#c9a227', cx - 3, top + 7, 2, 1);
+    return;
+  }
+  if (look === 'axe') {
+    fill(ctx, '#5a3d1a', cx, top + 2, 2, 12);
+    fill(ctx, '#8b5a2b', cx, top + 3, 1, 10);
+    fill(ctx, '#5a6578', cx - 5, top + 2, 7, 5);
+    fill(ctx, '#c0c8d0', cx - 4, top + 3, 3, 3);
+    spark(ctx, cx - 3, top + 3, '#ffffff');
+    return;
+  }
+  if (look === 'staff') {
+    fill(ctx, '#3a2010', cx, top, 2, 15);
+    fill(ctx, '#6b4423', cx, top + 1, 1, 13);
+    block(ctx, '#2a8a5a', '#0a4a30', cx - 2, top - 1, 6, 5);
+    fill(ctx, '#7dffb3', cx - 1, top, 3, 3);
+    spark(ctx, cx + 1, top, '#ffffff');
+    return;
+  }
+  if (look === 'cleaver') {
+    fill(ctx, '#ff6b9d', cx - 2, top + 1, 5, 9);
+    fill(ctx, '#ffb0c8', cx - 2, top + 1, 2, 8);
+    fill(ctx, '#c9a227', cx - 2, top + 10, 5, 1);
+    fill(ctx, '#5a3d1a', cx, top + 11, 2, 4);
+    return;
+  }
+  if (look === 'saber') {
+    fill(ctx, '#e8c070', cx, top + 1, 2, 11);
+    fill(ctx, '#fff0c0', cx + 1, top + 2, 1, 8);
+    fill(ctx, '#c9a040', cx - 1, top, 3, 2);
+    fill(ctx, '#5a3d1a', cx, top + 12, 2, 3);
+    return;
+  }
+  if (look === 'iron') {
+    fill(ctx, '#9aabc0', cx, top, 2, 13);
+    fill(ctx, '#e0e8f0', cx, top, 1, 12);
+    fill(ctx, '#c9a227', cx - 1, top + 12, 4, 2);
+    fill(ctx, '#5a3d1a', cx, top + 14, 2, 2);
+    return;
+  }
+  if (look === 'honk') {
+    fill(ctx, '#ffe08a', cx, top, 2, 12);
+    fill(ctx, '#5ad45a', cx - 1, top + 12, 4, 4);
+    return;
+  }
+  // mild / default sword
+  fill(ctx, '#dfe6f0', cx, top, 2, 13);
+  fill(ctx, '#ffffff', cx, top + 1, 1, 10);
+  fill(ctx, '#c9a227', cx - 1, top + 12, 4, 2);
+  fill(ctx, '#5a3d1a', cx, top + 14, 2, 2);
+}
+
+const RACK_FAMILY_DEFAULTS: Record<string, string[]> = {
+  sword: ['mild_sword', 'iron_blade', 'sand_saber', 'dunjun_cleaver'],
+  axe: ['training_axe'],
+  bow: ['short_bow', 'hunter_crossbow'],
+  staff: ['wizard_staff'],
+};
+
+function defaultPresentForFamily(family: string): string[] {
+  return RACK_FAMILY_DEFAULTS[family] ?? [];
+}
+
+function lookForRackTemplate(templateId: string): string {
+  return weaponLookFromTemplateId(templateId) || 'sword';
+}
+
+function drawMultiWeaponRack(
+  ctx: CanvasRenderingContext2D,
+  _family: string,
+  present: string[],
+): void {
+  // stand
+  fill(ctx, '#3a2410', 4, 27, 24, 4);
+  fill(ctx, '#5a3d1a', 5, 27, 22, 2);
+  fill(ctx, '#6b4423', 6, 20, 3, 9);
+  fill(ctx, '#6b4423', 23, 20, 3, 9);
+  fill(ctx, '#8b5a2b', 7, 20, 1, 8);
+  fill(ctx, '#8b5a2b', 24, 20, 1, 8);
+  fill(ctx, '#4a3018', 6, 18, 20, 3);
+  fill(ctx, '#6b4423', 7, 18, 18, 1);
+
+  if (present.length === 0) {
+    fill(ctx, '#4a3018', 10, 16, 4, 2);
+    fill(ctx, '#4a3018', 18, 16, 4, 2);
+    return;
+  }
+
+  const n = Math.min(4, present.length);
+  const span = 20;
+  const startX = 6 + Math.floor((span - (n - 1) * Math.floor(span / Math.max(1, n - 1 || 1))) / 2);
+  const step = n <= 1 ? 0 : Math.floor(span / (n - 1));
+  for (let i = 0; i < n; i++) {
+    const tid = present[i]!;
+    const look = lookForRackTemplate(tid);
+    const cx = n === 1 ? 15 : startX + i * step;
+    drawRackPegWeapon(ctx, look, cx, 3);
+  }
+}
+
+/**
+ * Dynamic multi-weapon rack texture for the guild hall.
+ * `present` = template ids still hanging (not currently equipped).
+ */
+export function ensureGuildRackTexture(
+  scene: Phaser.Scene,
+  family: 'sword' | 'axe' | 'bow' | 'staff',
+  present: string[],
+): string {
+  const sorted = [...present].sort();
+  const key =
+    sorted.length === 0
+      ? 'rack_empty'
+      : `rack_${family}__${sorted.join('+')}`;
+  if (scene.textures.exists(key)) return key;
+  canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
+    drawMultiWeaponRack(ctx, family, sorted);
+  });
+  return key;
+}
+
 export function generateTextures(scene: Phaser.Scene): void {
   // —— Map tiles @ ART_RES (16-bit density, match avatar/weapon detail) ——
   canvasTex(scene, 'tile-floor', ART_RES, ART_RES, (ctx) => {
@@ -1469,60 +1607,32 @@ export function generateTextures(scene: Phaser.Scene): void {
     spark(ctx, 11, 9, '#fff3c0');
   });
 
-  // Weapon racks — distinct silhouettes (guild hall; not all swords)
+  // Weapon racks — multi-weapon stands (guild hall)
   const drawRackStand = (ctx: CanvasRenderingContext2D) => {
-    fill(ctx, '#3a2410', 6, 26, 20, 4);
-    fill(ctx, '#5a3d1a', 7, 26, 18, 2);
-    fill(ctx, '#6b4423', 14, 18, 4, 10);
-    fill(ctx, '#8b5a2b', 15, 18, 2, 9);
+    fill(ctx, '#3a2410', 4, 27, 24, 4);
+    fill(ctx, '#5a3d1a', 5, 27, 22, 2);
+    fill(ctx, '#6b4423', 6, 20, 3, 9);
+    fill(ctx, '#6b4423', 23, 20, 3, 9);
+    fill(ctx, '#8b5a2b', 7, 20, 1, 8);
+    fill(ctx, '#8b5a2b', 24, 20, 1, 8);
+    // crossbar pegs
+    fill(ctx, '#4a3018', 6, 18, 20, 3);
+    fill(ctx, '#6b4423', 7, 18, 18, 1);
   };
-  // Empty stand after the hero takes that training weapon
   canvasTex(scene, 'rack_empty', ART_RES, ART_RES, (ctx) => {
     drawRackStand(ctx);
-    // faint peg where the weapon hung
-    fill(ctx, '#4a3018', 13, 16, 6, 2);
-    fill(ctx, '#2a1a0c', 14, 15, 4, 1);
+    fill(ctx, '#4a3018', 10, 16, 4, 2);
+    fill(ctx, '#4a3018', 18, 16, 4, 2);
   });
-  canvasTex(scene, 'rack_sword', ART_RES, ART_RES, (ctx) => {
-    drawRackStand(ctx);
-    // vertical blade
-    fill(ctx, '#607080', 14, 4, 4, 16);
-    fill(ctx, '#dfe6f0', 15, 5, 2, 14);
-    fill(ctx, '#c9a227', 12, 18, 8, 2);
-    spark(ctx, 15, 5, '#ffffff');
-  });
-  canvasTex(scene, 'rack_axe', ART_RES, ART_RES, (ctx) => {
-    drawRackStand(ctx);
-    // haft + wide bit (reads as axe, not sword)
-    fill(ctx, '#5a3d1a', 14, 6, 3, 16);
-    fill(ctx, '#8b5a2b', 15, 7, 1, 14);
-    fill(ctx, '#5a6578', 6, 5, 14, 10);
-    fill(ctx, '#a0a8b8', 7, 6, 10, 7);
-    fill(ctx, '#e0e4ec', 7, 6, 4, 5);
-    fill(ctx, '#c9a227', 12, 14, 6, 2);
-    spark(ctx, 8, 7, '#ffffff');
-  });
-  canvasTex(scene, 'rack_bow', ART_RES, ART_RES, (ctx) => {
-    drawRackStand(ctx);
-    // recurve bow
-    fill(ctx, '#2a1810', 8, 4, 2, 18);
-    fill(ctx, '#2a1810', 22, 4, 2, 18);
-    fill(ctx, '#8b5a2b', 9, 5, 2, 16);
-    fill(ctx, '#8b5a2b', 21, 5, 2, 16);
-    fill(ctx, '#c8b090', 10, 12, 12, 2);
-    fill(ctx, '#7dffb3', 8, 11, 3, 4);
-    fill(ctx, '#ff6b9d', 21, 11, 3, 4);
-  });
-  canvasTex(scene, 'rack_staff', ART_RES, ART_RES, (ctx) => {
-    drawRackStand(ctx);
-    // staff + glowing tip
-    fill(ctx, '#3a2010', 14, 6, 4, 18);
-    fill(ctx, '#6b4423', 15, 7, 2, 16);
-    block(ctx, '#2a8a5a', '#0a4a30', 11, 2, 10, 8);
-    fill(ctx, '#7dffb3', 13, 3, 6, 5);
-    fill(ctx, '#c9ffe0', 14, 4, 3, 2);
-    spark(ctx, 15, 4, '#ffffff');
-  });
+  // Static full-catalog fallbacks (used before dynamic ensure)
+  for (const fam of ['sword', 'axe', 'bow', 'staff'] as const) {
+    canvasTex(scene, `rack_${fam}`, ART_RES, ART_RES, (ctx) => {
+      drawMultiWeaponRack(ctx, fam, defaultPresentForFamily(fam));
+    });
+    canvasTex(scene, `rack_${fam}_full`, ART_RES, ART_RES, (ctx) => {
+      drawMultiWeaponRack(ctx, fam, defaultPresentForFamily(fam));
+    });
+  }
 
   canvasTex(scene, 'tile-stairs-up', ART_RES, ART_RES, (ctx) => {
     fill(ctx, '#2a3048', 0, 0, ART_RES, ART_RES);
