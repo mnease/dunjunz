@@ -12,7 +12,7 @@ import {
   getTemplate,
   instanceAtk,
 } from './items';
-import { effectiveGearDef } from './class-gear';
+import { canHeroEquipGear, effectiveGearDef } from './class-gear';
 import { levelFromXp, xpToAdvanceFrom, xpToReachLevel } from './progression';
 import { budAttackDamage, budCombatProfile } from './best-bud-combat';
 import { getBestBud, isCompanionActive } from './best-bud';
@@ -255,6 +255,10 @@ export function equipHeroUid(save: SaveData, uid: string): BudEquipResult {
       reason: 'BUDDY ONLY — Y FOR BUD GEAR MODE',
     };
   }
+  const gate = canHeroEquipGear(save, inst.templateId);
+  if (!gate.ok) {
+    return { ok: false, save, reason: gate.reason };
+  }
   let next = ensureBudProgress(save);
   const budEq = clearUidFromEquipped(next.budEquipped, uid);
   const equipped = { ...next.equipped, [t.slot]: uid };
@@ -276,10 +280,15 @@ export function cycleHeroSlotEquip(
 ): BudEquipResult {
   const options = save.bag.filter((i) => {
     const t = getTemplate(i.templateId);
-    return t.slot === slot && !t.buddyOnly;
+    return t.slot === slot && !t.buddyOnly && canHeroEquipGear(save, i.templateId).ok;
   });
   if (!options.length) {
-    return { ok: false, save, reason: `NO ${slot.toUpperCase()} IN BAG` };
+    if (save.equipped[slot]) {
+      const equipped = { ...save.equipped, [slot]: null };
+      const next = syncDerivedStats({ ...save, equipped });
+      return { ok: true, save: next, message: `${slot.toUpperCase()} UNEQUIPPED` };
+    }
+    return { ok: false, save, reason: `NO ${slot.toUpperCase()} YOU CAN WEAR` };
   }
   const cur = save.equipped[slot];
   if (!cur) return equipHeroUid(save, options[0]!.uid);

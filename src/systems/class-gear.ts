@@ -2,13 +2,14 @@
  * D&D-inspired armor categories + class proficiency / affinity.
  *
  * - Categories: cloth · light · medium · heavy (5e-style bands).
- * - Proficiency: class can wear the category well (full DEF).
- * - Unproficient: still wearable (Dunjunz is friendly) but DEF is reduced.
- * - Affinity: item tags one or more classes; primary OR secondary match
- *   grants a synergy bonus (dual-class friendly).
+ * - Proficiency: class can wear the category (required once a class is picked).
+ * - Affinity-tagged gear: must match primary OR secondary class to equip.
+ * - Affinity match also grants a DEF synergy bonus.
+ * - Pre-class (no primary): any non-buddy gear is equippable.
  */
 
-import type { ClassId, ItemInstance, SaveData } from '../types';
+import type { ItemInstance, SaveData } from '../types';
+import { CLASSES, type ClassId } from './classes';
 import {
   findInBag,
   getTemplate,
@@ -52,8 +53,101 @@ export const CLASS_ARMOR_PROFICIENCY: Record<ClassId, ArmorCategory[]> = {
 
 /** Flat DEF synergy when item affinity matches a class you have. */
 export const CLASS_AFFINITY_DEF_BONUS = 1;
-/** Multiplier when not proficient in the category (still usable). */
+/**
+ * Legacy DEF mult if mismatched gear is already equipped (cannot re-equip).
+ * New equips are blocked — see canHeroEquipGear.
+ */
 export const UNPROFICIENT_DEF_MULT = 0.65;
+
+/** Classes that list a category in their proficiency table. */
+export function classesProficientInCategory(
+  category: ArmorCategory,
+): ClassId[] {
+  return (Object.keys(CLASS_ARMOR_PROFICIENCY) as ClassId[]).filter((id) =>
+    classHasArmorProficiency(id, category),
+  );
+}
+
+/** "MUST BE A BARBARIAN TO WEAR THIS" / multi-class variants. */
+export function mustBeClassMessage(classIds: ClassId[]): string {
+  const names = classIds
+    .map((id) => CLASSES[id]?.name ?? id.toUpperCase())
+    .filter(Boolean);
+  if (!names.length) return 'CLASS REQUIRED TO WEAR THIS';
+  if (names.length === 1) {
+    const n = names[0]!;
+    const art = /^[AEIOU]/i.test(n) ? 'AN' : 'A';
+    return `MUST BE ${art} ${n} TO WEAR THIS`;
+  }
+  if (names.length === 2) {
+    return `MUST BE A ${names[0]} OR ${names[1]} TO WEAR THIS`;
+  }
+  const head = names.slice(0, -1).join(', ');
+  const last = names[names.length - 1]!;
+  return `MUST BE A ${head}, OR ${last} TO WEAR THIS`;
+}
+
+export type EquipClassGate =
+  | { ok: true }
+  | { ok: false; reason: string };
+
+/**
+ * Whether the hero may equip this template (class / armor type gate).
+ * Buddy gear and pre-class saves always pass (buddy has its own path).
+ * Weapons and keys have no armor type gate.
+ */
+export function canHeroEquipGear(
+  save: Pick<SaveData, 'primaryClass' | 'secondaryClass'>,
+  templateId: string,
+): EquipClassGate {
+  const t = getTemplate(templateId);
+  if (!t.slot || t.slot === 'weapon' || t.slot === 'key') {
+    return { ok: true };
+  }
+  // No class yet — learn by wearing anything (class pick at L5 locks rules)
+  if (!save.primaryClass) {
+    return { ok: true };
+  }
+
+  // Class-tagged sets: hard require affinity match
+  const affinity = t.classAffinity;
+  if (affinity?.length) {
+    if (saveHasClassAffinity(save, affinity)) {
+      return { ok: true };
+    }
+    return { ok: false, reason: mustBeClassMessage(affinity) };
+  }
+
+  // Generic armor: must be proficient in the category
+  const cat = t.armorCategory;
+  if (cat) {
+    if (saveProficientInCategory(save, cat)) {
+      return { ok: true };
+    }
+    const need = classesProficientInCategory(cat);
+    // Prefer "Must be a Fighter..." list over abstract category-only text
+    if (need.length > 0 && need.length <= 6) {
+      return {
+        ok: false,
+        reason: `${mustBeClassMessage(need)} (${cat.toUpperCase()} ARMOR)`,
+      };
+    }
+    return {
+      ok: false,
+      reason: `MUST BE PROFICIENT IN ${cat.toUpperCase()} ARMOR TO WEAR THIS`,
+    };
+  }
+
+  return { ok: true };
+}
+
+/** True when bag UI should grey the icon (hero mode, class mismatch). */
+export function isGearClassBlocked(
+  save: Pick<SaveData, 'primaryClass' | 'secondaryClass'>,
+  templateId: string,
+): boolean {
+  return !canHeroEquipGear(save, templateId).ok;
+}
 
 export function classHasArmorProficiency(
   classId: ClassId | null | undefined,
@@ -166,6 +260,12 @@ export function classGearHint(
     return { kind: 'none', text: '' };
   }
 
+  // Hard gate first — blocked items lead with the must-be notice
+  const gate = canHeroEquipGear(save, templateId);
+  if (!gate.ok) {
+    return { kind: 'unproficient', text: gate.reason };
+  }
+
   const affinity = t.classAffinity;
   if (affinity?.length && saveHasClassAffinity(save, affinity)) {
     const names = affinity.map((c) => c.toUpperCase()).join('/');
@@ -195,7 +295,7 @@ export function classGearHint(
 
   return {
     kind: 'unproficient',
-    text: `NOT PROFICIENT · ${cat.toUpperCase()} (DEF ×${UNPROFICIENT_DEF_MULT})`,
+    text: `NOT PROFICIENT · ${cat.toUpperCase()}`,
   };
 }
 

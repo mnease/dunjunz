@@ -17,7 +17,7 @@ import {
   getTemplate,
   mintItem,
 } from './items';
-import { effectiveGearDef } from './class-gear';
+import { canHeroEquipGear, effectiveGearDef } from './class-gear';
 // class-gear registers compare-hook on load
 
 export {
@@ -316,6 +316,10 @@ export function equipUid(save: SaveData, uid: string): EquipResult {
       reason: 'BUDDY ONLY — PRESS Y IN BAG FOR BUD GEAR',
     };
   }
+  const gate = canHeroEquipGear(save, inst.templateId);
+  if (!gate.ok) {
+    return { ok: false, save, reason: gate.reason };
+  }
   const equipped = { ...save.equipped, [t.slot]: uid };
   const next = syncDerivedStats({ ...save, equipped });
   return {
@@ -346,17 +350,29 @@ export function bagItemsForSlot(save: SaveData, slot: EquipSlot): ItemInstance[]
   });
 }
 
+/** Hero cycle candidates: correct slot + class/type allowed. */
+export function bagItemsForHeroEquipSlot(
+  save: SaveData,
+  slot: EquipSlot,
+): ItemInstance[] {
+  return bagItemsForSlot(save, slot).filter((i) =>
+    canHeroEquipGear(save, i.templateId).ok,
+  );
+}
+
 export function cycleSlotEquip(save: SaveData, slot: EquipSlot): EquipResult {
-  const options = bagItemsForSlot(save, slot);
+  const options = bagItemsForHeroEquipSlot(save, slot);
   if (options.length === 0) {
-    return { ok: false, save, reason: `NO ${slot.toUpperCase()} IN BAG` };
+    // Still allow unequip if something wrong-class is stuck on
+    if (save.equipped[slot]) return unequipSlot(save, slot);
+    return { ok: false, save, reason: `NO ${slot.toUpperCase()} YOU CAN WEAR` };
   }
   const cur = save.equipped[slot];
-  if (!cur) return equipUid(save, options[0].uid);
+  if (!cur) return equipUid(save, options[0]!.uid);
   const idx = options.findIndex((i) => i.uid === cur);
-  if (idx < 0) return equipUid(save, options[0].uid);
+  if (idx < 0) return equipUid(save, options[0]!.uid);
   if (idx >= options.length - 1) return unequipSlot(save, slot);
-  return equipUid(save, options[idx + 1].uid);
+  return equipUid(save, options[idx + 1]!.uid);
 }
 
 export function cycleWeaponEquip(save: SaveData): EquipResult {
@@ -379,8 +395,8 @@ export function autoEquipEmptySlots(save: SaveData): SaveData {
   }
   for (const slot of ALL_EQUIP_SLOTS) {
     if (!next.equipped[slot]) {
-      const opts = bagItemsForSlot(next, slot);
-      if (opts.length) next.equipped[slot] = opts[0].uid;
+      const opts = bagItemsForHeroEquipSlot(next, slot);
+      if (opts.length) next.equipped[slot] = opts[0]!.uid;
     }
   }
   return syncDerivedStats(next);

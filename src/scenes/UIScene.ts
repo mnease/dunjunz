@@ -21,7 +21,11 @@ import {
   findInBag,
   getTemplate,
 } from '../systems/items';
-import { classGearHint } from '../systems/class-gear';
+import {
+  canHeroEquipGear,
+  classGearHint,
+  isGearClassBlocked,
+} from '../systems/class-gear';
 // Ensure class-gear registers DEF compare hook
 import '../systems/class-gear';
 import { getBestBud, isCompanionActive } from '../systems/best-bud';
@@ -2259,14 +2263,26 @@ export class UIScene extends Phaser.Scene {
       const x = originX + col * (cell + gap);
       const y = originY + row * (cell + gap);
       const selected = i === this.invBagSelected;
+      // Hero mode: grey out gear that fails class / armor-type gate
+      const classBlocked =
+        this.gearTarget !== 'bud' &&
+        !!item.slot &&
+        item.slot !== 'weapon' &&
+        item.slot !== 'key' &&
+        !item.usable &&
+        isGearClassBlocked(save, item.templateId);
       const border = selected
-        ? COLORS.gold
+        ? classBlocked
+          ? 0x8a6060
+          : COLORS.gold
         : item.equipped
           ? COLORS.green
-          : 0x5c4d7a;
+          : classBlocked
+            ? 0x3a3a48
+            : 0x5c4d7a;
 
       const frame = this.add
-        .rectangle(x, y, cell, cell, 0x12161f, 1)
+        .rectangle(x, y, cell, cell, classBlocked ? 0x0c0e14 : 0x12161f, 1)
         .setStrokeStyle(selected ? 3 : 2, border)
         .setScrollFactor(0)
         .setInteractive({ useHandCursor: true });
@@ -2289,7 +2305,8 @@ export class UIScene extends Phaser.Scene {
         .image(x, y - 4, tex)
         .setScale(1.4)
         .setScrollFactor(0)
-        .setAlpha(item.equipped ? 1 : 0.95);
+        .setAlpha(classBlocked ? 0.32 : item.equipped ? 1 : 0.95)
+        .setTint(classBlocked ? 0x667788 : 0xffffff);
       this.invBagLayer!.add(icon);
       this.invBagPieces.push(icon);
 
@@ -2408,6 +2425,11 @@ export class UIScene extends Phaser.Scene {
         sel.name + (sel.count > 1 ? ` x${sel.count}` : ''),
         sel.blurb,
       ];
+      const classGate =
+        this.gearTarget !== 'bud' && sel.slot && sel.slot !== 'weapon' && sel.slot !== 'key'
+          ? canHeroEquipGear(save, sel.templateId)
+          : { ok: true as const };
+
       if (sel.equipped) {
         bits.push('[EQUIPPED]');
         if (sel.uid) {
@@ -2417,6 +2439,9 @@ export class UIScene extends Phaser.Scene {
         }
       } else if (sel.usable) {
         bits.push('CLICK AGAIN / U TO USE');
+      } else if (!classGate.ok) {
+        bits.push(classGate.reason);
+        bits.push('GREYED OUT — CANNOT EQUIP ON THIS CLASS');
       } else if (sel.slot && sel.uid) {
         const inst = findInBag(save, sel.uid);
         const cmp = compareToEquipped(save, inst, this.gearTarget);
@@ -2429,15 +2454,27 @@ export class UIScene extends Phaser.Scene {
       // D&D-style class proficiency / affinity line
       if (sel.slot && sel.slot !== 'weapon' && sel.slot !== 'key') {
         const hint = classGearHint(save, sel.templateId);
-        if (hint.text) bits.push(hint.text);
+        if (hint.text && (classGate.ok || !bits.includes(hint.text))) {
+          if (!classGate.ok && hint.text === classGate.reason) {
+            // already pushed reason
+          } else if (classGate.ok) {
+            bits.push(hint.text);
+          }
+        }
         const cat = getTemplate(sel.templateId).armorCategory;
-        if (cat && !hint.text.includes(cat.toUpperCase())) {
+        if (
+          cat &&
+          classGate.ok &&
+          !bits.some((b) => b.includes(cat.toUpperCase()))
+        ) {
           bits.push(`${cat.toUpperCase()} ARMOR`);
         }
       }
       this.invBagDetail?.setText(bits.join('\n'));
-      // Color detail hint line via full text color (Phaser Text is single color)
-      if (sel.uid && sel.slot && !sel.equipped) {
+      // Color detail: red when class-blocked, else compare arrows
+      if (!classGate.ok) {
+        this.invBagDetail?.setColor('#ff8a8a');
+      } else if (sel.uid && sel.slot && !sel.equipped) {
         const inst = findInBag(save, sel.uid);
         const cmp = compareToEquipped(save, inst, this.gearTarget);
         if (cmp.dir === 'up') this.invBagDetail?.setColor('#7dffb3');

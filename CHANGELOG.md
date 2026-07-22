@@ -18,6 +18,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Fixed
 
+- **Class-mismatched gear greyed out** — once you have a class, bag icons for wrong armor type / class sets grey out. Detail + equip toast use notices like **MUST BE A BARBARIAN TO WEAR THIS**. Pre-class and buddy gear mode unchanged.
 - **Room-exit freeze (buddy strike)** — Best Bud delayed lash could call `setVelocity` after the target sprite was destroyed on room transition (`budStrike` crash). Now marks actors dead on clear, bumps a room epoch for in-flight hits, and guards live body before knockback.
 - **iPhone layout** — pad docks **under** the canvas (not over a short 16:9 frame). Full-viewport `touch-play` shell, safe-area insets, rubber-band lock, Phaser scale refresh on dock/orientation. Pointer-only pad input with `setPointerCapture` (no pointer+touch double-fire). Site chrome hidden while crawling so the playfield + dock fit.
 

@@ -619,7 +619,7 @@ describe('class gear proficiency (D&D-style)', () => {
     const plate = mintItem(save, 'fighter_plate', 'common', 0);
     save = plate.save;
     const plateDef = effectiveGearDef(save, plate.instance);
-    // base 3 * 0.65 unproficient, no affinity
+    // base 3 * 0.65 unproficient, no affinity (legacy worn penalty)
     expect(plateDef).toBeLessThan(3);
     expect(plateDef).toBe(Math.floor(3 * 0.65));
   });
@@ -633,6 +633,66 @@ describe('class gear proficiency (D&D-style)', () => {
     save = cloak.save;
     // base 2 + affinity 1
     expect(effectiveGearDef(save, cloak.instance)).toBe(3);
+  });
+
+  it('blocks equip when class does not match; message names required class', async () => {
+    const {
+      canHeroEquipGear,
+      isGearClassBlocked,
+      mustBeClassMessage,
+    } = await import('./class-gear');
+    const { equipUid } = await import('./inventory');
+    let save = defaultSave();
+    save.primaryClass = 'wizard';
+    const hide = mintItem(save, 'barbarian_hide', 'common', 0);
+    save = hide.save;
+
+    expect(isGearClassBlocked(save, 'barbarian_hide')).toBe(true);
+    const gate = canHeroEquipGear(save, 'barbarian_hide');
+    expect(gate.ok).toBe(false);
+    if (!gate.ok) {
+      expect(gate.reason).toMatch(/MUST BE A BARBARIAN/i);
+      expect(gate.reason).toMatch(/DRUID/i);
+    }
+    expect(mustBeClassMessage(['barbarian'])).toBe(
+      'MUST BE A BARBARIAN TO WEAR THIS',
+    );
+
+    const eq = equipUid(save, hide.instance.uid);
+    expect(eq.ok).toBe(false);
+    if (!eq.ok) expect(eq.reason).toMatch(/MUST BE A BARBARIAN/i);
+    expect(save.equipped.breastplate).toBeNull();
+  });
+
+  it('allows equip when class matches affinity; pre-class free', async () => {
+    const { canHeroEquipGear } = await import('./class-gear');
+    const { equipUid } = await import('./inventory');
+    let save = defaultSave();
+    // Pre-class: open season
+    const hide0 = mintItem(save, 'barbarian_hide', 'common', 0);
+    save = hide0.save;
+    expect(canHeroEquipGear(save, 'barbarian_hide').ok).toBe(true);
+    const pre = equipUid(save, hide0.instance.uid);
+    expect(pre.ok).toBe(true);
+
+    save = defaultSave();
+    save.primaryClass = 'barbarian';
+    const hide = mintItem(save, 'barbarian_hide', 'common', 0);
+    save = hide.save;
+    expect(canHeroEquipGear(save, 'barbarian_hide').ok).toBe(true);
+    const eq = equipUid(save, hide.instance.uid);
+    expect(eq.ok).toBe(true);
+    if (eq.ok) expect(eq.save.equipped.breastplate).toBe(hide.instance.uid);
+  });
+
+  it('blocks wizard from generic heavy tower shield by armor type', async () => {
+    const { canHeroEquipGear } = await import('./class-gear');
+    let save = defaultSave();
+    save.primaryClass = 'wizard';
+    // tower_shield has classAffinity fighter/paladin/cleric
+    const gate = canHeroEquipGear(save, 'tower_shield');
+    expect(gate.ok).toBe(false);
+    if (!gate.ok) expect(gate.reason).toMatch(/MUST BE A /i);
   });
 });
 
