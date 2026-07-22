@@ -14,6 +14,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 ### Added
 
 - **Share graphic** — `public/share-dunjunz.png` (1200² hero in full armor + sword, **DUNJUNZ** title) and `public/og-image.png` (1200×630) for social/OG; landing + play meta tags point at og-image.
+- **Landing page images** — hero banner + 3-card gallery (hero loadout, meadow/sun trees, dark dungeon) on `/`; CRT-framed figures, lazy-loaded cards, clickable hero → `/play`.
 - **Surface sun depth (EMA council)** — big meadow/trail oaks (`scale` 2.2–2.6), sun-cast elongated ground shadows, and **moving cloud shade** (no cloud sprites) drifting slowly across outdoor surface lands. Trunk-sized colliders so canopies don't brick the meadow. `prefers-reduced-motion` freezes cloud drift.
 
 ### Changed

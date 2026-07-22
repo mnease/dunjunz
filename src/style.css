@@ -1285,7 +1285,123 @@ body.touch-play.mobile-immersive #game-frame {
 
 .landing-hero {
   padding: var(--space-4) 0 var(--space-3);
+  max-width: 56rem;
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.landing-hero-copy {
   max-width: 42rem;
+}
+
+.landing-hero-figure {
+  margin: 0;
+  max-width: 100%;
+}
+
+.landing-hero-link {
+  display: block;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 3px solid var(--border);
+  box-shadow:
+    0 0 0 2px rgba(255, 200, 87, 0.35),
+    0 12px 40px rgba(0, 0, 0, 0.45);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.landing-hero-link:hover,
+.landing-hero-link:focus-visible {
+  border-color: var(--amber);
+  box-shadow:
+    0 0 0 2px rgba(125, 255, 179, 0.45),
+    0 14px 44px rgba(0, 0, 0, 0.5);
+  outline: none;
+}
+
+.landing-hero-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #0a0c10;
+  vertical-align: middle;
+}
+
+.landing-figcap {
+  margin: 0.65rem 0 0;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  line-height: var(--lh-body);
+}
+
+.landing-figcap a {
+  color: var(--neon);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.landing-figcap a:hover {
+  color: var(--amber);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.landing-gallery {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  max-width: 56rem;
+}
+
+.landing-card {
+  margin: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  background: #0a0c10;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.landing-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: #12161f;
+}
+
+.landing-card figcaption {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  line-height: var(--lh-body);
+  border-top: 1px solid var(--border);
+  background: rgba(18, 22, 31, 0.9);
+}
+
+@media (min-width: 900px) {
+  .landing-hero {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+
+  .landing-gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .landing-card img {
+    aspect-ratio: 1 / 1;
+  }
 }
 
 .landing-kicker {
@@ -1353,6 +1469,10 @@ body.touch-play.mobile-immersive #game-frame {
   max-width: 42rem;
   padding: var(--space-3) 0;
   border-top: 1px solid var(--border);
+}
+
+.landing-section:has(.landing-gallery) {
+  max-width: 56rem;
 }
 
 .landing-support {
@@ -1485,5 +1605,9 @@ body.touch-play.mobile-immersive #game-frame {
 
   .landing-table td:first-child {
     white-space: normal;
+  }
+
+  .landing-gallery {
+    gap: var(--space-2);
   }
 }
