@@ -15,6 +15,8 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 - **Mid-boss wardens (P0 + P1)** — new `miniboss` combat tier (HP 36 / contact 3 / XP 18, between elite and land boss). Permanent kills only; never sets `bossDefeated`, land clear, or exit portals. **Floor Captain** on Dunjunz `b4_side` (BADGE CHECK, base HP 40) — soft mid (hall → descent stairs stay free).
 - **Mid-boss P2 — Rules Lawyer** — optional Dunjunz B6 den (`b6_side`, ERRATA DEN, base HP 46). Peaceful until hit or chest open; talk grants +5 HP + bone mat + durable `rules_lawyer_forgiven` (skips re-spawn). Fight path mid XP/loot only — no land clear, portal, or boss chest table. Hall/descent stairs remain free.
+- **Mid-boss P3 — Assistant Honk** — optional Sewerz B2 den (`sewerz_b2_side`, HONKLET OFFICE, base HP 50). Goose intern chase/dialog; mid kill only; hall/descent free before Royal Goose @ B4.
+- **Mid-boss P4 — deep dens** — **Deputy Howl** on Woodz deep `woodz_b2_side` (PACK DEN, HP 32 + atmosphere wolves) and **Lease Wight** on Dezertz deep `dezertz_b2_side` (LEASE OFFICE, HP 36). Optional post-clear dens; dungeon chests; never land ceremony.
 - **Mobile play (EMA council)** — on-screen D-pad + ATK / TALK / BAG / MAP / USE / MENU on `/play` for touch devices. DOM pad (not Phaser joystick) ORs into GameScene input.
 
 ### Added

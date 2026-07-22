@@ -922,6 +922,53 @@ export function buildWoodzDeep(): Record<string, RoomDef> {
       }),
     );
   }
+  // B2 optional den: Deputy Howl (post-clear deep; stairs free via hall)
+  if (out.woodz_b2_side) {
+    out.woodz_b2_side = {
+      ...out.woodz_b2_side,
+      title: 'PACK DEN · B2',
+      entities: [
+        sign('woodz-howl-sign', 3, 8, [
+          'PACK DEN. UNPAID INTERNSHIP.',
+          'DEPUTY HOWL REPORTS TO THE WOLF LORD.',
+          'WEST: HALL. STAIRS FREE. OPTIONAL FIGHT.',
+        ]),
+        {
+          kind: 'miniboss',
+          id: 'deputy-howl',
+          x: 8,
+          y: 5,
+          hp: 32,
+          dialog: [
+            'DEPUTY HOWL: NAME TAG SAYS "DEPUTY."',
+            'I FETCH STICKS FOR THE WOLF LORD.',
+            'BENEFITS? EXPERIENCE. AND HOWLING.',
+            'FIGHT ME OR SNEAK PAST. HALL IS WEST.',
+          ],
+        },
+        // Atmosphere pack — normal creeps, not ceremony bosses
+        ...creeps(['wolf', 'wolf'], 'woodz-howl-pack', [
+          [5, 7],
+          [11, 6],
+        ]),
+        chest('woodz-howl-chest', 11, 3, 'dungeon'),
+      ],
+    };
+  }
+  if (out.woodz_b2_foyer) {
+    const foyerEnts = out.woodz_b2_foyer.entities ?? [];
+    out.woodz_b2_foyer = {
+      ...out.woodz_b2_foyer,
+      entities: [
+        sign('woodz-b2-foyer-mid-sign', 12, 8, [
+          'B2: PACK DEN EAST OF THE HALL.',
+          'OPTIONAL. ROOTS GO DEEPER SOUTH.',
+        ]),
+        ...foyerEnts.filter((e) => e.kind !== 'sign'),
+      ],
+    };
+  }
+
   // Terminal treasure room instead of endless stairs from B3 descent
   out.woodz_b3_heart = {
     id: 'woodz_b3_heart',
@@ -1029,6 +1076,48 @@ export function buildDezertzDeep(): Record<string, RoomDef> {
       ]),
     ],
   };
+  // B2 optional den: Lease Wight (post-clear deep; stairs free via hall)
+  if (out.dezertz_b2_side) {
+    out.dezertz_b2_side = {
+      ...out.dezertz_b2_side,
+      title: 'LEASE OFFICE · B2',
+      entities: [
+        sign('dezertz-lease-sign', 3, 8, [
+          'LEASE OFFICE. SECURITY DEPOSIT.',
+          'THE LEASE WIGHT MANAGES THE TOWER.',
+          'WEST: HALL. STAIRS FREE. OPTIONAL FIGHT.',
+        ]),
+        {
+          kind: 'miniboss',
+          id: 'lease-wight',
+          x: 8,
+          y: 5,
+          hp: 36,
+          dialog: [
+            'LEASE WIGHT: WHERE IS THE DEPOSIT?',
+            'SAND IN THE CARPETS COUNTS AS DAMAGE.',
+            'PRIZELLA WAS A MODEL TENANT. YOU ARE NOT.',
+            'FIGHT OR LEAVE. HALL WEST. NO HARD GATE.',
+          ],
+        },
+        chest('dezertz-lease-chest', 11, 3, 'dungeon'),
+      ],
+    };
+  }
+  if (out.dezertz_b2_foyer) {
+    const foyerEnts = out.dezertz_b2_foyer.entities ?? [];
+    out.dezertz_b2_foyer = {
+      ...out.dezertz_b2_foyer,
+      entities: [
+        sign('dezertz-b2-foyer-mid-sign', 12, 8, [
+          'B2: LEASE OFFICE EAST OF THE HALL.',
+          'OPTIONAL. VAULT DEEPER SOUTH.',
+        ]),
+        ...foyerEnts.filter((e) => e.kind !== 'sign'),
+      ],
+    };
+  }
+
   if (out.dezertz_b3_descent) {
     out.dezertz_b3_descent = {
       ...out.dezertz_b3_descent,
@@ -1067,6 +1156,48 @@ export function buildSewerzDeep(): Record<string, RoomDef> {
         hostiles: packs[n - 2]!,
       }),
     );
+  }
+
+  // B2 optional den: Assistant Honk (pre-goose midpoint; stairs free via hall)
+  if (out.sewerz_b2_side) {
+    out.sewerz_b2_side = {
+      ...out.sewerz_b2_side,
+      title: 'HONKLET OFFICE · B2',
+      entities: [
+        sign('sewerz-honk-sign', 3, 8, [
+          'HONKLET OFFICE. INTERN DESK.',
+          'ASSISTANT HONK. SMALLER BILL. BIG FEELINGS.',
+          'WEST: HALL. STAIRS FREE. ROYAL GOOSE IS B4.',
+        ]),
+        {
+          kind: 'miniboss',
+          id: 'assistant-honk',
+          x: 8,
+          y: 5,
+          hp: 50,
+          dialog: [
+            'ASSISTANT HONK: HONK? HONK.',
+            'I SHADOW THE ROYAL GOOSE. UNPAID.',
+            'TAX SCROLLS? ABOVE MY PAY GRADE. HONK.',
+            'FIGHT ME OR WADDLE PAST. PIPES STILL WORK.',
+          ],
+        },
+        chest('sewerz-honk-chest', 11, 3, 'dungeon'),
+      ],
+    };
+  }
+  if (out.sewerz_b2_foyer) {
+    const foyerEnts = out.sewerz_b2_foyer.entities ?? [];
+    out.sewerz_b2_foyer = {
+      ...out.sewerz_b2_foyer,
+      entities: [
+        sign('sewerz-b2-foyer-mid-sign', 12, 8, [
+          'B2: HONKLET OFFICE EAST OF THE HALL.',
+          'OPTIONAL. GOOSE NESTS AT B4.',
+        ]),
+        ...foyerEnts.filter((e) => e.kind !== 'sign'),
+      ],
+    };
   }
 
   out.sewerz_b4_foyer = {

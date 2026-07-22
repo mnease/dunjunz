@@ -2484,6 +2484,12 @@ import {
 import {
   applyMinibossKill,
   applyRulesLawyerForgive,
+  ASSISTANT_HONK_BASE_HP,
+  ASSISTANT_HONK_ID,
+  ASSISTANT_HONK_ROOM_ID,
+  DEPUTY_HOWL_BASE_HP,
+  DEPUTY_HOWL_ID,
+  DEPUTY_HOWL_ROOM_ID,
   FLOOR_CAPTAIN_BASE_HP,
   FLOOR_CAPTAIN_ID,
   FLOOR_CAPTAIN_ROOM_ID,
@@ -2491,7 +2497,11 @@ import {
   isMinibossKind,
   isPeacefulMinibossUntilProvoked,
   isRulesLawyerForgiven,
+  LEASE_WIGHT_BASE_HP,
+  LEASE_WIGHT_ID,
+  LEASE_WIGHT_ROOM_ID,
   midBossOpensLandExitPortal,
+  MINIBOSS_IDS,
   RULES_LAWYER_BASE_HP,
   RULES_LAWYER_FORGIVE_HEAL,
   RULES_LAWYER_FORGIVE_MAT,
@@ -2723,5 +2733,136 @@ describe('Rules Lawyer B6 dual-path den (P2)', () => {
     const atB6 = resolveEnemyHp('miniboss', RULES_LAWYER_BASE_HP, 9);
     expect(atB6).toBe(Math.round(46 * (1 + 0.18 * 9)));
     expect(atB6).toBeLessThan(resolveEnemyHp('boss', 72, 12));
+  });
+});
+
+describe('mid dens P3 Assistant Honk + P4 deep wardens', () => {
+  const dens: {
+    id: string;
+    roomId: string;
+    hp: number;
+    land: string;
+    floor: number;
+    titleRe: RegExp;
+  }[] = [
+    {
+      id: ASSISTANT_HONK_ID,
+      roomId: ASSISTANT_HONK_ROOM_ID,
+      hp: ASSISTANT_HONK_BASE_HP,
+      land: 'sewerz',
+      floor: -2,
+      titleRe: /HONKLET|HONK/i,
+    },
+    {
+      id: DEPUTY_HOWL_ID,
+      roomId: DEPUTY_HOWL_ROOM_ID,
+      hp: DEPUTY_HOWL_BASE_HP,
+      land: 'woodz',
+      floor: -2,
+      titleRe: /PACK|HOWL/i,
+    },
+    {
+      id: LEASE_WIGHT_ID,
+      roomId: LEASE_WIGHT_ROOM_ID,
+      hp: LEASE_WIGHT_BASE_HP,
+      land: 'dezertz',
+      floor: -2,
+      titleRe: /LEASE|OFFICE/i,
+    },
+  ];
+
+  it('registers all three dens in MINIBOSS_IDS', () => {
+    expect(MINIBOSS_IDS.has(ASSISTANT_HONK_ID)).toBe(true);
+    expect(MINIBOSS_IDS.has(DEPUTY_HOWL_ID)).toBe(true);
+    expect(MINIBOSS_IDS.has(LEASE_WIGHT_ID)).toBe(true);
+    expect(isPeacefulMinibossUntilProvoked(ASSISTANT_HONK_ID)).toBe(false);
+  });
+
+  it.each(dens)(
+    '$id placed on $roomId as miniboss with authored hp and dungeon chest',
+    ({ id, roomId, hp, land, floor, titleRe }) => {
+      const room = ROOMS[roomId];
+      expect(room).toBeDefined();
+      expect(room.land).toBe(land);
+      expect(room.floor).toBe(floor);
+      expect(room.title).toMatch(titleRe);
+      const warden = room.entities?.find((e) => e.id === id);
+      expect(warden).toBeDefined();
+      expect(warden!.kind).toBe('miniboss');
+      expect(warden!.hp).toBe(hp);
+      expect(warden!.dialog?.length).toBeGreaterThan(0);
+      const denChest = room.entities?.find((e) => e.kind === 'chest');
+      expect(denChest).toBeDefined();
+      expect(denChest!.chestTable === 'boss').toBe(false);
+      expect(isBossRoom(roomId)).toBe(false);
+      expect(BOSS_ROOM_META[roomId]).toBeUndefined();
+      expect(midBossOpensLandExitPortal(roomId)).toBe(false);
+      expect(isPermanentKill('miniboss', id)).toBe(true);
+      expect(shouldApplyMinibossReward('miniboss', id)).toBe(true);
+      expect(isMinibossEntity('miniboss', id)).toBe(true);
+    },
+  );
+
+  it('sewerz / woodz / dezertz B2 spine stays free without clearing dens', () => {
+    // Sewerz B2: hall east = side, north = descent
+    expect(ROOMS.sewerz_b2_hall?.east).toBe('sewerz_b2_side');
+    expect(ROOMS.sewerz_b2_side?.west).toBe('sewerz_b2_hall');
+    expect(ROOMS.sewerz_b2_hall?.north).toBe('sewerz_b2_descent');
+    expect(
+      ROOMS.sewerz_b2_hall?.entities?.some((e) => e.id === ASSISTANT_HONK_ID),
+    ).toBe(false);
+    expect(
+      ROOMS.sewerz_b2_descent?.entities?.some((e) => e.id === ASSISTANT_HONK_ID),
+    ).toBe(false);
+
+    expect(ROOMS.woodz_b2_hall?.east).toBe('woodz_b2_side');
+    expect(ROOMS.woodz_b2_side?.west).toBe('woodz_b2_hall');
+    expect(ROOMS.woodz_b2_hall?.north).toBe('woodz_b2_descent');
+    expect(
+      ROOMS.woodz_b2_hall?.entities?.some((e) => e.id === DEPUTY_HOWL_ID),
+    ).toBe(false);
+
+    expect(ROOMS.dezertz_b2_hall?.east).toBe('dezertz_b2_side');
+    expect(ROOMS.dezertz_b2_side?.west).toBe('dezertz_b2_hall');
+    expect(ROOMS.dezertz_b2_hall?.north).toBe('dezertz_b2_descent');
+    expect(
+      ROOMS.dezertz_b2_hall?.entities?.some((e) => e.id === LEASE_WIGHT_ID),
+    ).toBe(false);
+  });
+
+  it.each([
+    [ASSISTANT_HONK_ID, ASSISTANT_HONK_ROOM_ID, 'sewerz'] as const,
+    [DEPUTY_HOWL_ID, DEPUTY_HOWL_ROOM_ID, 'woodz'] as const,
+    [LEASE_WIGHT_ID, LEASE_WIGHT_ROOM_ID, 'dezertz'] as const,
+  ])(
+    'kill %s never sets land ceremony or land-exit portal',
+    (id, roomId, land) => {
+      let save = defaultSave();
+      save = {
+        ...save,
+        bossDefeated: true,
+        landsCleared: ['dunjunz'],
+      };
+      const r = applyMinibossKill(save, id, land);
+      expect(r.save.killed).toContain(id);
+      expect(r.save.bossDefeated).toBe(true);
+      expect(r.save.landsCleared).toEqual(['dunjunz']);
+      expect(r.setsBossDefeated).toBe(false);
+      expect(r.landsClearedAdded).toEqual([]);
+      expect(r.opensLandExitPortal).toBe(false);
+      expect(r.toast.length).toBeGreaterThan(0);
+      expect(r.dialog.length).toBeGreaterThan(0);
+      expect(shouldSpawnBossExitPortal(r.save, roomId, land)).toBe(false);
+    },
+  );
+
+  it('scaled dens stay under same-land boss bands', () => {
+    const honk = resolveEnemyHp('miniboss', ASSISTANT_HONK_BASE_HP, 7);
+    expect(honk).toBe(Math.round(50 * (1 + 0.18 * 7)));
+    expect(honk).toBeLessThan(resolveEnemyHp('boss', 88, 12)); // royal goose band
+    const howl = resolveEnemyHp('miniboss', DEPUTY_HOWL_BASE_HP, 4);
+    expect(howl).toBeLessThan(resolveEnemyHp('boss', 64, 6));
+    const wight = resolveEnemyHp('miniboss', LEASE_WIGHT_BASE_HP, 4);
+    expect(wight).toBeLessThan(resolveEnemyHp('boss', 70, 6));
   });
 });

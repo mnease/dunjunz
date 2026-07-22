@@ -31,7 +31,15 @@ export function isPermanentKill(kind: string, id: string): boolean {
   if (kind === 'miniboss') return true;
   if (kind === 'cube') return true;
   if (id === 'captain' || id === 'captain-hard') return true;
-  if (id === 'floor-captain' || id === 'rules-lawyer') return true;
+  if (
+    id === 'floor-captain' ||
+    id === 'rules-lawyer' ||
+    id === 'assistant-honk' ||
+    id === 'deputy-howl' ||
+    id === 'lease-wight'
+  ) {
+    return true;
+  }
   // Hard-mode trek ensigns must stay dead for captain promotion
   if (id.startsWith('ensign-')) return true;
   if (id === 'dungeon-master' || id === 'wolf-lord' || id === 'sand-wraith') {

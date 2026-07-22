@@ -35,10 +35,28 @@ export const RULES_LAWYER_FORGIVE_HEAL = 5;
 /** Joke forjing mat on forgive. */
 export const RULES_LAWYER_FORGIVE_MAT = 'bone';
 
+/** Sewerz B2 optional den — goose intern. */
+export const ASSISTANT_HONK_ID = 'assistant-honk';
+export const ASSISTANT_HONK_ROOM_ID = 'sewerz_b2_side';
+export const ASSISTANT_HONK_BASE_HP = 50;
+
+/** Woodz deep B2 optional den — wolf intern. */
+export const DEPUTY_HOWL_ID = 'deputy-howl';
+export const DEPUTY_HOWL_ROOM_ID = 'woodz_b2_side';
+export const DEPUTY_HOWL_BASE_HP = 32;
+
+/** Dezertz deep B2 optional den — property manager. */
+export const LEASE_WIGHT_ID = 'lease-wight';
+export const LEASE_WIGHT_ROOM_ID = 'dezertz_b2_side';
+export const LEASE_WIGHT_BASE_HP = 36;
+
 /** Known mid-warden entity ids (kind miniboss preferred). */
 export const MINIBOSS_IDS: ReadonlySet<string> = new Set([
   FLOOR_CAPTAIN_ID,
   RULES_LAWYER_ID,
+  ASSISTANT_HONK_ID,
+  DEPUTY_HOWL_ID,
+  LEASE_WIGHT_ID,
 ]);
 
 export function isMinibossKind(kind: string): boolean {
@@ -105,7 +123,49 @@ export interface MinibossForgiveResult {
 function wardenDisplayName(id: string): string {
   if (id === FLOOR_CAPTAIN_ID) return 'FLOOR CAPTAIN';
   if (id === RULES_LAWYER_ID) return 'RULES LAWYER';
+  if (id === ASSISTANT_HONK_ID) return 'ASSISTANT HONK';
+  if (id === DEPUTY_HOWL_ID) return 'DEPUTY HOWL';
+  if (id === LEASE_WIGHT_ID) return 'LEASE WIGHT';
   return id.toUpperCase().replace(/-/g, ' ');
+}
+
+function wardenKillDialog(id: string): string[] {
+  if (id === FLOOR_CAPTAIN_ID) {
+    return [
+      'THE FLOOR CAPTAIN DROPS HIS CLIPBOARD.',
+      '"I WAS ONLY SCHEDULING THE DM\'S CALENDAR…"',
+      'NO EXIT PORTAL. STAIRS STILL WORK. GO DEEPER.',
+    ];
+  }
+  if (id === RULES_LAWYER_ID) {
+    return [
+      'THE RULES LAWYER\'S BINDER SCATTERS.',
+      '"THAT WAS… NOT IN THE ERRATA."',
+      'NO LAND CLEAR. NO EXIT PORTAL. OPTIONAL DEN DONE.',
+    ];
+  }
+  if (id === ASSISTANT_HONK_ID) {
+    return [
+      'ASSISTANT HONK DEFLATES. TINY BILL. BIG DRAMA.',
+      '"THE ROYAL GOOSE WILL HEAR ABOUT THIS. HONK."',
+      'NO LAND CLEAR. PIPES STILL LEAD DEEPER.',
+    ];
+  }
+  if (id === DEPUTY_HOWL_ID) {
+    return [
+      'DEPUTY HOWL COLLAPSES. UNPAID INTERNSHIP ENDED.',
+      '"THE WOLF LORD NEVER FILED MY HOURS…"',
+      'OPTIONAL ROOT DEN CLEARED. NO LAND PORTAL.',
+    ];
+  }
+  if (id === LEASE_WIGHT_ID) {
+    return [
+      'LEASE WIGHT FADES. SECURITY DEPOSIT FORFEIT.',
+      '"THAT WAS NOT NORMAL WEAR AND TEAR."',
+      'OPTIONAL CRYPT DEN DONE. TOWER STAIRS FREE.',
+    ];
+  }
+  return ['A WARDEN FALLS.', 'NOT THE LAND BOSS. KEEP GOING.'];
 }
 
 /**
@@ -135,23 +195,7 @@ export function applyMinibossKill(
     landsClearedAdded: [],
     opensLandExitPortal: false,
     toast: `${name} DOWN — MIDDLE MANAGEMENT CLEARED`,
-    dialog:
-      id === FLOOR_CAPTAIN_ID
-        ? [
-            'THE FLOOR CAPTAIN DROPS HIS CLIPBOARD.',
-            '"I WAS ONLY SCHEDULING THE DM\'S CALENDAR…"',
-            'NO EXIT PORTAL. STAIRS STILL WORK. GO DEEPER.',
-          ]
-        : id === RULES_LAWYER_ID
-          ? [
-              'THE RULES LAWYER\'S BINDER SCATTERS.',
-              '"THAT WAS… NOT IN THE ERRATA."',
-              'NO LAND CLEAR. NO EXIT PORTAL. OPTIONAL DEN DONE.',
-            ]
-          : [
-              'A WARDEN FALLS.',
-              'NOT THE LAND BOSS. KEEP GOING.',
-            ],
+    dialog: wardenKillDialog(id),
   };
 }
 

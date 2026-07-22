@@ -79,7 +79,10 @@ import {
 import {
   applyMinibossKill,
   applyRulesLawyerForgive,
+  ASSISTANT_HONK_ID,
+  DEPUTY_HOWL_ID,
   isPeacefulMinibossUntilProvoked,
+  LEASE_WIGHT_ID,
   RULES_LAWYER_ID,
   shouldApplyMinibossReward,
   shouldSkipMinibossSpawn,
@@ -2194,6 +2197,12 @@ export class GameScene extends Phaser.Scene {
     }
     if (def.id === RULES_LAWYER_ID) {
       sprite.setTint(0xc8c0e8); // binder grey-purple skeleton clerk
+    } else if (def.id === ASSISTANT_HONK_ID) {
+      sprite.setTint(0xffe08a); // junior goose yellow
+    } else if (def.id === DEPUTY_HOWL_ID) {
+      sprite.setTint(0x9a9ab0); // pack-grey wolf intern
+    } else if (def.id === LEASE_WIGHT_ID) {
+      sprite.setTint(0xd4c0a0); // sandy property manager
     } else if (def.id === 'floor-captain' || def.kind === 'miniboss') {
       sprite.setTint(0xffb090); // manager warmth; skip depth wash
     }
@@ -2209,7 +2218,10 @@ export class GameScene extends Phaser.Scene {
         def.id !== 'royal-goose' &&
         def.kind !== 'miniboss' &&
         def.id !== 'floor-captain' &&
-        def.id !== RULES_LAWYER_ID
+        def.id !== RULES_LAWYER_ID &&
+        def.id !== ASSISTANT_HONK_ID &&
+        def.id !== DEPUTY_HOWL_ID &&
+        def.id !== LEASE_WIGHT_ID
       ) {
         sprite.setTint(et);
       }
