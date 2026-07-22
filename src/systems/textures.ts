@@ -1008,6 +1008,35 @@ function drawItemIcon(
     fill(ctx, '#ff6b9d', 22, 19, 4, 5);
     return;
   }
+  if (
+    itemId === 'crawler_starter_box' ||
+    itemId === 'loot_box_bronze' ||
+    itemId === 'loot_box_silver' ||
+    itemId === 'loot_box_gold' ||
+    itemId === 'loot_box_platinum' ||
+    itemId === 'loot_box_diamond'
+  ) {
+    const colors: Record<string, { body: string; lid: string; band: string }> = {
+      crawler_starter_box: { body: '#8a5a2a', lid: '#c97b3a', band: '#c9a227' },
+      loot_box_bronze: { body: '#8a5a2a', lid: '#c97b3a', band: '#c9a227' },
+      loot_box_silver: { body: '#6a738a', lid: '#c0c8d0', band: '#e0e8f0' },
+      loot_box_gold: { body: '#8a6820', lid: '#ffc857', band: '#ffe08a' },
+      loot_box_platinum: { body: '#5a7088', lid: '#b0d0e8', band: '#e8f4ff' },
+      loot_box_diamond: { body: '#3a6088', lid: '#7dffb3', band: '#c9ffe0' },
+    };
+    const c = colors[itemId]!;
+    // Treasure chest silhouette
+    fill(ctx, '#2a1810', 6, 12, 20, 14);
+    fill(ctx, c.body, 7, 13, 18, 12);
+    fill(ctx, c.lid, 6, 8, 20, 7);
+    fill(ctx, c.band, 6, 14, 20, 3);
+    fill(ctx, '#ffc857', 14, 15, 4, 4);
+    spark(ctx, 15, 9, '#ffffff');
+    if (itemId === 'crawler_starter_box') {
+      fill(ctx, '#7dffb3', 12, 18, 8, 2);
+    }
+    return;
+  }
   if (itemId === 'beam_me_up') {
     block(ctx, '#4ecdc4', '#1a6060', 8, 8, 16, 16);
     fill(ctx, '#fff', 11, 12, 10, 3);
@@ -1914,6 +1943,12 @@ export function generateTextures(scene: Phaser.Scene): void {
     'staff_ice',
     'phaser',
     'arrows',
+    'crawler_starter_box',
+    'loot_box_bronze',
+    'loot_box_silver',
+    'loot_box_gold',
+    'loot_box_platinum',
+    'loot_box_diamond',
     'beam_me_up',
     'leather_armor',
     'reinforced_leather',

@@ -21,6 +21,7 @@ import { canHeroEquipGear, effectiveGearDef } from './class-gear';
 // class-gear registers compare-hook on load
 import { igniteLight, isLightItemId } from './lighting';
 import { isScrollOrTomeId, useScrollOrTome } from './scrolls';
+import { isLootBoxTemplateId, openLootBox } from './loot-boxes';
 
 export {
   computePlayerDamage,
@@ -246,6 +247,18 @@ export function useInventoryItem(
   const t = getTemplate(templateId);
   if (!t.usable) {
     return { ok: false, save, reason: 'CANNOT USE THAT HERE' };
+  }
+  // Loot boxes (starter + tiered)
+  if (isLootBoxTemplateId(templateId)) {
+    const r = openLootBox(save, templateId);
+    if (!r.ok) {
+      return { ok: false, save: r.save, reason: r.reason };
+    }
+    return {
+      ok: true,
+      save: syncDerivedStats(r.save),
+      message: r.message,
+    };
   }
   if (templateId === 'potion') {
     if (save.hp >= save.maxHp) {

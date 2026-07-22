@@ -6,6 +6,7 @@
 
 import type { SaveData } from '../types';
 import { displayItemName, getTemplate, mintItem } from './items';
+import { grantCrawlerStarterBox } from './loot-boxes';
 import { syncDerivedStats } from './inventory';
 
 export const FLAG_TUTORIAL_COMPLETE = 'tutorial_complete';
@@ -300,7 +301,10 @@ export function completeTutorial(save: SaveData): SaveData {
     flags[FLAG_HIT[w]] = true;
     stacks[STACK_DMG[w]] = req;
   }
-  return { ...save, flags, stacks };
+  // Bronze Crawler Starter Box — leather kit + mild sword + wood shield
+  let next: SaveData = { ...save, flags, stacks };
+  next = grantCrawlerStarterBox(next).save;
+  return next;
 }
 
 export function skipTutorial(save: SaveData): SaveData {
@@ -664,7 +668,7 @@ export function rackDialog(
   if (opts?.mode === 'browse') {
     return [
       `${weapon.toUpperCase()} RACK — SEVERAL REAL WEAPONS.`,
-      'PRESS 1-9 TO EQUIP ONE FROM THE LIST.',
+      'OPEN THE RACK WINDOW TO PICK ONE.',
       'THAT PIECE LEAVES THE RACK; THE REST STAY.',
     ];
   }
@@ -676,7 +680,44 @@ export function rackDialog(
   ];
 }
 
-/** Dialog lines listing rack inventory (1-based). */
+/** Payload for the inventory-style rack weapon picker panel. */
+export type RackPickerPayload = {
+  family: TutorialWeapon;
+  rackId: string;
+  options: {
+    uid: string;
+    templateId: string;
+    name: string;
+    blurb: string;
+  }[];
+  selectedIndex: number;
+};
+
+/** Build picker payload for hanging catalog weapons. */
+export function buildRackPickerPayload(
+  save: SaveData,
+  family: TutorialWeapon,
+  rackId: string,
+  selectedIndex = 0,
+): RackPickerPayload {
+  const opts = listRackWeaponOptions(save, family);
+  return {
+    family,
+    rackId,
+    options: opts.map((o) => ({
+      uid: o.uid,
+      templateId: o.templateId,
+      name: o.name,
+      blurb: getTemplate(o.templateId).blurb,
+    })),
+    selectedIndex: Math.max(
+      0,
+      Math.min(selectedIndex, Math.max(0, opts.length - 1)),
+    ),
+  };
+}
+
+/** @deprecated Prefer the rack picker panel. Kept for tests / fallback copy. */
 export function rackInventoryDialog(
   weapon: TutorialWeapon,
   options: { name: string }[],
@@ -685,17 +726,10 @@ export function rackInventoryDialog(
     `${weapon.toUpperCase()} RACK — SELECT`,
     `(${options.length} HANGING)`,
     '',
+    'OPEN THE WEAPON RACK WINDOW TO CHOOSE.',
+    'CLICK A WEAPON OR USE ARROWS + ENTER.',
+    'E ON EMPTY PEG = RETURN EQUIPPED.',
   ];
-  const max = Math.min(9, options.length);
-  for (let i = 0; i < max; i++) {
-    lines.push(`${i + 1}. ${options[i]!.name}`);
-  }
-  if (options.length > 9) {
-    lines.push(`… +${options.length - 9} MORE`);
-  }
-  lines.push('');
-  lines.push('PRESS 1-9 TO EQUIP (LEAVES THE RACK).');
-  lines.push('E ON EMPTY PEG = RETURN EQUIPPED.');
   return lines;
 }
 

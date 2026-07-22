@@ -3067,7 +3067,9 @@ import {
   allWeaponHitsDone,
   canExitGuildEast,
   canUseDungeonStairs,
+  buildRackPickerPayload,
   completeTutorial,
+  ensureCatalogInBag,
   drillDamageRequired,
   equipTrainingWeapon,
   guildMasterDialog,
@@ -3363,6 +3365,76 @@ describe('tutorial guild hall', () => {
       visitedRooms: ['b1_entrance'],
     });
     expect(isTutorialComplete(vet)).toBe(true);
+  });
+
+  it('completing tutorial grants Crawler Starter Box once', () => {
+    let save = completeTutorial(defaultSave());
+    expect(isTutorialComplete(save)).toBe(true);
+    expect(save.stacks.crawler_starter_box).toBe(1);
+    expect(save.flags?.got_crawler_starter_box).toBe(true);
+    // Idempotent
+    save = completeTutorial(save);
+    expect(save.stacks.crawler_starter_box).toBe(1);
+  });
+
+  it('buildRackPickerPayload lists hanging weapons with blurbs', () => {
+    let save = defaultSave();
+    save = ensureCatalogInBag(save, 'sword');
+    const payload = buildRackPickerPayload(save, 'sword', 'rack_sword', 0);
+    expect(payload.options.length).toBe(RACK_CATALOG.sword.length);
+    expect(payload.options[0]?.name).toBeTruthy();
+    expect(payload.options[0]?.blurb).toBeTruthy();
+    expect(payload.family).toBe('sword');
+  });
+});
+
+describe('loot boxes', () => {
+  it('opens crawler starter box into full leather kit + sword + shield', async () => {
+    const {
+      openLootBox,
+      CRAWLER_STARTER_BOX_ID,
+      STARTER_BOX_CONTENTS,
+    } = await import('./loot-boxes');
+    let save = defaultSave();
+    save = {
+      ...save,
+      stacks: { ...save.stacks, [CRAWLER_STARTER_BOX_ID]: 1 },
+    };
+    const r = openLootBox(save, CRAWLER_STARTER_BOX_ID, () => 0.1);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.save.stacks[CRAWLER_STARTER_BOX_ID] ?? 0).toBe(0);
+    for (const tid of STARTER_BOX_CONTENTS) {
+      expect(r.save.bag.some((b) => b.templateId === tid)).toBe(true);
+    }
+  });
+
+  it('rolls tiers with bronze most common over many trials', async () => {
+    const { rollLootBoxTier } = await import('./loot-boxes');
+    const counts = { bronze: 0, silver: 0, gold: 0, platinum: 0, diamond: 0 };
+    const n = 1000;
+    for (let i = 0; i < n; i++) {
+      // Deterministic-ish scatter
+      const r = ((i * 1103515245 + 12345) >>> 0) / 0xffffffff;
+      counts[rollLootBoxTier(() => r)] += 1;
+    }
+    expect(counts.bronze).toBeGreaterThan(counts.silver);
+    expect(counts.silver).toBeGreaterThan(counts.gold);
+    expect(counts.gold).toBeGreaterThan(counts.platinum);
+    expect(counts.diamond).toBeLessThan(counts.platinum + 20);
+  });
+
+  it('achievement unlocks grant a loot box each', async () => {
+    const { grantLootBoxesForAchievements, isLootBoxTemplateId } = await import(
+      './loot-boxes'
+    );
+    const { ACHIEVEMENTS } = await import('./achievements');
+    const a = ACHIEVEMENTS[0]!;
+    const r = grantLootBoxesForAchievements(defaultSave(), [a], () => 0.01);
+    expect(r.boxes.length).toBe(1);
+    expect(r.boxes[0]!.tier).toBe('bronze'); // low rng → bronze
+    const boxId = Object.keys(r.save.stacks).find(isLootBoxTemplateId);
+    expect(boxId).toBeTruthy();
   });
 });
 

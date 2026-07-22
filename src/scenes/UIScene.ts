@@ -46,6 +46,7 @@ import {
   type MapzOpenPayload,
   type MapzViewModel,
 } from '../systems/mapz';
+import type { RackPickerPayload } from '../systems/tutorial';
 import {
   canAfford,
   clampShopPage,
@@ -304,6 +305,21 @@ export class UIScene extends Phaser.Scene {
   private shopStockPage = 0;
   private shopBagPage = 0;
 
+  /** Weapon rack picker (inventory-style grid). */
+  private rackBg: Phaser.GameObjects.Rectangle | null = null;
+  private rackTitle: Phaser.GameObjects.Text | null = null;
+  private rackSubtitle: Phaser.GameObjects.Text | null = null;
+  private rackDetail: Phaser.GameObjects.Text | null = null;
+  private rackHelp: Phaser.GameObjects.Text | null = null;
+  private rackLayer: Phaser.GameObjects.Container | null = null;
+  private rackPieces: Phaser.GameObjects.GameObject[] = [];
+  private rackPayload: RackPickerPayload | null = null;
+  private rackOpen = false;
+  private rackSelected = 0;
+  private static readonly RACK_COLS = 4;
+  private static readonly RACK_CELL = 88;
+  private static readonly RACK_GAP = 16;
+
   constructor() {
     super({ key: 'UI', active: false });
   }
@@ -314,6 +330,7 @@ export class UIScene extends Phaser.Scene {
     this.mapzOpen = false;
     this.forjingOpen = false;
     this.shopOpen = false;
+    this.rackOpen = false;
     if (!this.chromeBuilt || !this.dialogBg?.active) {
       this.buildChrome();
       this.chromeBuilt = true;
@@ -440,6 +457,7 @@ export class UIScene extends Phaser.Scene {
     this.buildMapzPanel();
     this.buildForjingPanel();
     this.buildShopPanel();
+    this.buildRackPickerPanel();
 
     this.pauseText = this.add
       .text(
@@ -829,6 +847,94 @@ export class UIScene extends Phaser.Scene {
     this.shopLayer?.removeAll(true);
   }
 
+  private buildRackPickerPanel(): void {
+    const d = 215;
+    this.clearRackPieces();
+    this.rackBg?.destroy();
+    this.rackTitle?.destroy();
+    this.rackSubtitle?.destroy();
+    this.rackDetail?.destroy();
+    this.rackHelp?.destroy();
+    this.rackLayer?.destroy();
+
+    this.rackBg = this.add
+      .rectangle(GAME_W / 2, GAME_H / 2 + 8, GAME_W - 24, GAME_H - 56, 0x0a0c10, 0.97)
+      .setStrokeStyle(3, COLORS.gold)
+      .setScrollFactor(0)
+      .setDepth(d)
+      .setVisible(false);
+
+    this.rackTitle = this.add
+      .text(GAME_W / 2, HUD_H + 16, 'WEAPON RACK', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '14px',
+        color: '#7dffb3',
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+
+    this.rackSubtitle = this.add
+      .text(GAME_W / 2, HUD_H + 40, 'SELECT A WEAPON TO EQUIP', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '9px',
+        color: '#ffc857',
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+
+    this.rackLayer = this.add
+      .container(0, 0)
+      .setDepth(d + 2)
+      .setScrollFactor(0)
+      .setVisible(false);
+
+    this.rackDetail = this.add
+      .text(48, GAME_H - 140, '', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '10px',
+        color: '#f4f0ff',
+        lineSpacing: 8,
+        wordWrap: { width: GAME_W - 96 },
+      })
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+
+    this.rackHelp = this.add
+      .text(
+        GAME_W / 2,
+        GAME_H - 28,
+        'ARROWS SELECT  ·  ENTER / CLICK EQUIP  ·  1-9  ·  ESC CLOSE',
+        {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '8px',
+          color: '#7dffb3',
+          wordWrap: { width: GAME_W - 48 },
+          align: 'center',
+        },
+      )
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+  }
+
+  private ensureRackChrome(): void {
+    if (!this.rackBg?.active || !this.rackLayer?.active) {
+      this.buildRackPickerPanel();
+    }
+  }
+
+  private clearRackPieces(): void {
+    for (const p of this.rackPieces) p.destroy();
+    this.rackPieces = [];
+    this.rackLayer?.removeAll(true);
+  }
+
   private buildInventoryPanel(): void {
     const d = 120;
     this.clearInvBagPieces();
@@ -1213,6 +1319,8 @@ export class UIScene extends Phaser.Scene {
     this.game.events.off('shop-select', this.onShopSelect, this);
     this.game.events.off('shop-refresh', this.onShopRefresh, this);
     this.game.events.off('shop-page', this.onShopPage, this);
+    this.game.events.off('rack-picker-toggle', this.onRackPickerToggle, this);
+    this.game.events.off('rack-picker-select', this.onRackPickerSelect, this);
 
     this.game.events.on('hud-update', this.refreshHud, this);
     this.game.events.on('dialog-show', this.showDialog, this);
@@ -1241,6 +1349,8 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('shop-select', this.onShopSelect, this);
     this.game.events.on('shop-refresh', this.onShopRefresh, this);
     this.game.events.on('shop-page', this.onShopPage, this);
+    this.game.events.on('rack-picker-toggle', this.onRackPickerToggle, this);
+    this.game.events.on('rack-picker-select', this.onRackPickerSelect, this);
 
     if (!this.bound) {
       this.bound = true;
@@ -1276,6 +1386,8 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('shop-select', this.onShopSelect, this);
       this.game.events.off('shop-refresh', this.onShopRefresh, this);
       this.game.events.off('shop-page', this.onShopPage, this);
+      this.game.events.off('rack-picker-toggle', this.onRackPickerToggle, this);
+      this.game.events.off('rack-picker-select', this.onRackPickerSelect, this);
       this.input.keyboard?.off('keydown-ENTER', this.onEnterKey, this);
       this.input.keyboard?.off('keydown-SPACE', this.onSpaceKey, this);
       this.bound = false;
@@ -1289,6 +1401,7 @@ export class UIScene extends Phaser.Scene {
     this.closeMapzPanel();
     this.closeForjingPanel();
     this.closeShopPanel();
+    this.closeRackPickerPanel();
     this.pauseText?.setVisible(false);
     this.pauseResumeHit?.setVisible(false);
     this.pauseTitleHit?.setVisible(false);
@@ -1300,6 +1413,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.emit('mapz-state', false);
     this.game.events.emit('forjing-state', false);
     this.game.events.emit('shop-state', false);
+    this.game.events.emit('rack-picker-state', false);
   };
 
   private resetDialogVisuals(): void {
@@ -1310,7 +1424,13 @@ export class UIScene extends Phaser.Scene {
   }
 
   private onInventoryToggle = (save: SaveData): void => {
-    if (this.dialogOpen || this.mapzOpen || this.forjingOpen || this.shopOpen) {
+    if (
+      this.dialogOpen ||
+      this.mapzOpen ||
+      this.forjingOpen ||
+      this.shopOpen ||
+      this.rackOpen
+    ) {
       return;
     }
     this.lastSave = save;
@@ -1874,6 +1994,181 @@ export class UIScene extends Phaser.Scene {
     this.shopLayer?.setVisible(true).setDepth(212);
     this.renderShopGrid();
     this.game.events.emit('shop-state', true);
+  }
+
+  private onRackPickerToggle = (payload?: RackPickerPayload | null): void => {
+    this.ensureRackChrome();
+    // Close when open and no payload
+    if (this.rackOpen && !payload?.options) {
+      this.closeRackPickerPanel();
+      return;
+    }
+    if (this.rackOpen && payload?.options) {
+      this.rackPayload = payload;
+      this.rackSelected = payload.selectedIndex ?? 0;
+      this.renderRackPickerGrid();
+      return;
+    }
+    if (this.inventoryOpen || this.mapzOpen || this.forjingOpen || this.shopOpen) {
+      return;
+    }
+    if (!payload?.options?.length) return;
+    if (this.dialogOpen) {
+      this.resetDialogVisuals();
+      this.game.events.emit('dialog-state', false);
+    }
+    this.rackPayload = payload;
+    this.rackSelected = payload.selectedIndex ?? 0;
+    this.openRackPickerGraphic();
+  };
+
+  private onRackPickerSelect = (index: number): void => {
+    if (!this.rackOpen || !this.rackPayload) return;
+    const n = this.rackPayload.options.length;
+    if (!n) return;
+    this.rackSelected = Math.max(0, Math.min(index, n - 1));
+    this.rackPayload = { ...this.rackPayload, selectedIndex: this.rackSelected };
+    this.renderRackPickerGrid();
+    this.game.events.emit('rack-picker-cursor', this.rackSelected);
+  };
+
+  private openRackPickerGraphic(): void {
+    if (!this.rackPayload) return;
+    this.ensureRackChrome();
+    this.rackOpen = true;
+    this.rackBg?.setVisible(true);
+    this.rackTitle?.setVisible(true);
+    this.rackSubtitle?.setVisible(true);
+    this.rackDetail?.setVisible(true);
+    this.rackHelp?.setVisible(true);
+    this.rackLayer?.setVisible(true);
+    this.renderRackPickerGrid();
+    this.game.events.emit('rack-picker-state', true);
+  }
+
+  private closeRackPickerPanel(): void {
+    this.rackOpen = false;
+    this.rackPayload = null;
+    this.rackSelected = 0;
+    this.clearRackPieces();
+    this.rackBg?.setVisible(false);
+    this.rackTitle?.setVisible(false);
+    this.rackSubtitle?.setVisible(false);
+    this.rackDetail?.setVisible(false);
+    this.rackHelp?.setVisible(false);
+    this.rackLayer?.setVisible(false);
+    this.game.events.emit('rack-picker-state', false);
+  }
+
+  private renderRackPickerGrid(): void {
+    if (!this.rackPayload || !this.rackLayer) return;
+    this.clearRackPieces();
+    const opts = this.rackPayload.options;
+    const fam = this.rackPayload.family.toUpperCase();
+    this.rackTitle?.setText(`${fam} RACK`);
+    this.rackSubtitle?.setText(
+      `${opts.length} WEAPON${opts.length === 1 ? '' : 'S'} HANGING — EQUIP ONE`,
+    );
+
+    if (this.rackSelected >= opts.length) {
+      this.rackSelected = Math.max(0, opts.length - 1);
+    }
+
+    const cols = UIScene.RACK_COLS;
+    const cell = UIScene.RACK_CELL;
+    const gap = UIScene.RACK_GAP;
+    const gridW = cols * cell + (cols - 1) * gap;
+    const originX = (GAME_W - gridW) / 2 + cell / 2;
+    const originY = HUD_H + 110;
+
+    for (let i = 0; i < opts.length; i++) {
+      const opt = opts[i]!;
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = originX + col * (cell + gap);
+      const y = originY + row * (cell + gap);
+      const selected = i === this.rackSelected;
+
+      const frame = this.add
+        .rectangle(x, y, cell, cell, 0x12161f, 1)
+        .setStrokeStyle(selected ? 3 : 2, selected ? COLORS.gold : 0x5c4d7a)
+        .setScrollFactor(0)
+        .setInteractive({ useHandCursor: true });
+      frame.on('pointerdown', () => {
+        if (this.rackSelected === i) {
+          // Second click equips
+          this.game.events.emit('rack-picker-confirm', i);
+          return;
+        }
+        this.rackSelected = i;
+        if (this.rackPayload) {
+          this.rackPayload = { ...this.rackPayload, selectedIndex: i };
+        }
+        this.renderRackPickerGrid();
+        this.game.events.emit('rack-picker-cursor', i);
+      });
+      this.rackLayer!.add(frame);
+      this.rackPieces.push(frame);
+
+      const iconKey = itemIconKey(opt.templateId);
+      const tex = this.textures.exists(iconKey) ? iconKey : 'icon_empty';
+      const icon = this.add
+        .image(x, y - 4, tex)
+        .setScale(2.0)
+        .setScrollFactor(0);
+      this.rackLayer!.add(icon);
+      this.rackPieces.push(icon);
+
+      const num = this.add
+        .text(x - cell / 2 + 8, y - cell / 2 + 6, `${i + 1}`, {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '8px',
+          color: selected ? '#ffc857' : '#6a738a',
+        })
+        .setScrollFactor(0);
+      this.rackLayer!.add(num);
+      this.rackPieces.push(num);
+    }
+
+    // Equip button under selection
+    const sel = opts[this.rackSelected];
+    if (sel) {
+      this.rackDetail?.setText(
+        [
+          sel.name,
+          sel.blurb,
+          '',
+          'ENTER OR CLICK AGAIN TO EQUIP',
+          'THAT WEAPON LEAVES THE RACK — OTHERS STAY.',
+        ].join('\n'),
+      );
+      this.rackDetail?.setColor('#f4f0ff');
+
+      const btnY = GAME_H - 168;
+      const btn = this.add
+        .rectangle(GAME_W / 2, btnY, 280, 36, 0x1a4030, 0.98)
+        .setStrokeStyle(2, COLORS.green)
+        .setScrollFactor(0)
+        .setInteractive({ useHandCursor: true });
+      btn.on('pointerdown', () => {
+        this.game.events.emit('rack-picker-confirm', this.rackSelected);
+      });
+      this.rackLayer.add(btn);
+      this.rackPieces.push(btn);
+      const btnLabel = this.add
+        .text(GAME_W / 2, btnY, '▶  EQUIP', {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '11px',
+          color: '#7dffb3',
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0);
+      this.rackLayer.add(btnLabel);
+      this.rackPieces.push(btnLabel);
+    } else {
+      this.rackDetail?.setText('NO WEAPONS HANGING.');
+      this.rackDetail?.setColor('#6a738a');
+    }
   }
 
   private closeShopPanel(): void {
@@ -3120,6 +3415,7 @@ export class UIScene extends Phaser.Scene {
     if (this.mapzOpen) this.closeMapzPanel();
     if (this.forjingOpen) this.closeForjingPanel();
     if (this.shopOpen) this.closeShopPanel();
+    if (this.rackOpen) this.closeRackPickerPanel();
     this.dialogLines = lines.filter(
       (l) => l !== undefined && l !== null && String(l).trim() !== '',
     );
@@ -3207,6 +3503,7 @@ export class UIScene extends Phaser.Scene {
     if (paused && this.mapzOpen) this.closeMapzPanel();
     if (paused && this.forjingOpen) this.closeForjingPanel();
     if (paused && this.shopOpen) this.closeShopPanel();
+    if (paused && this.rackOpen) this.closeRackPickerPanel();
     this.pauseText?.setVisible(paused);
     this.pauseResumeHit?.setVisible(paused);
     this.pauseTitleHit?.setVisible(paused);

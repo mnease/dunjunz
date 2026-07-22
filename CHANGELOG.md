@@ -13,6 +13,8 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Loot boxes + brag rewards** — bronze → silver → gold → platinum → diamond tiers (weighted drop on each NEW BRAG). Open from bag. Tutorial graduate grants a fixed **Crawler Starter Box** (mild sword, full leather set, wood shield).
+- **Weapon rack picker panel** — guild stands open an inventory-style window (icons, select, equip) instead of a numbered dialog list.
 - **Training Guild hall** — new start room `guild_hall` with Guild Master, 4 dummies, and weapon racks. Drill order: **sword → axe → bow → staff** (new `training_axe`). East door unlocks on graduate → meadow; surface dungeon mouths use **cave entrance** art. Veterans with dungeon visits migrate past the gate.
 - **Share graphic** — `public/share-dunjunz.png` (1200² hero in full armor + sword, **DUNJUNZ** title) and `public/og-image.png` (1200×630) for social/OG; landing + play meta tags point at og-image.
 - **Landing page images** — hero banner + 3-card gallery (hero loadout, meadow/sun trees, dark dungeon) on `/`; CRT-framed figures, lazy-loaded cards, clickable hero → `/play`.

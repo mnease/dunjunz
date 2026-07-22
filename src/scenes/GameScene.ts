@@ -233,6 +233,7 @@ import {
   GUILD_MASTER_ID,
   guildMasterDialog,
   guildMasterIntroDialog,
+  buildRackPickerPayload,
   ensureCatalogInBag,
   isRackEmpty,
   isTutorialComplete,
@@ -241,7 +242,6 @@ import {
   needsTutorialIntro,
   nextTutorialWeapon,
   rackDialog,
-  rackInventoryDialog,
   rackPresentTemplates,
   rackWeaponFromId,
   recordDummyDamage,
@@ -250,8 +250,10 @@ import {
   takeWeaponFromRack,
   tutorialWeaponFromEquip,
   weaponDamageDealt,
+  type RackPickerPayload,
   type TutorialWeapon,
 } from '../systems/tutorial';
+import { grantLootBoxesForAchievements } from '../systems/loot-boxes';
 import {
   ensureGuildRackTexture,
   ensurePlayerTexture,
@@ -500,14 +502,11 @@ export class GameScene extends Phaser.Scene {
   private shopSelected = 0;
   private shopBagSelected = 0;
   /**
-   * Active weapon-rack browser (stocked stand → pick 1-9).
+   * Active weapon-rack browser (inventory-style panel).
    * Cleared on pick, Esc, room leave, or walking away.
    */
-  private rackPicker: {
-    family: TutorialWeapon;
-    uids: string[];
-    rackId: string;
-  } | null = null;
+  private rackPicker: RackPickerPayload | null = null;
+  private rackPickerOpen = false;
   /** Beach wake: blurry-eyes overlay (fades after intro dialog). */
   private wakeBlurRt: Phaser.GameObjects.Rectangle | null = null;
   private wakeBlurAlpha = 0;
@@ -589,6 +588,8 @@ export class GameScene extends Phaser.Scene {
     // Leftover dialogLocked/paused from a prior run freezes movement entirely.
     this.dialogLocked = false;
     this.dialogCloseCooldown = 0;
+    this.rackPickerOpen = false;
+    this.rackPicker = null;
     this.inventoryOpen = false;
     this.mapzOpen = false;
     this.forjingOpen = false;
@@ -780,6 +781,9 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on('forjing-cursor', this.onForjingCursor, this);
     this.game.events.on('shop-state', this.onShopState, this);
     this.game.events.on('shop-cursor', this.onShopCursor, this);
+    this.game.events.on('rack-picker-state', this.onRackPickerState, this);
+    this.game.events.on('rack-picker-cursor', this.onRackPickerCursor, this);
+    this.game.events.on('rack-picker-confirm', this.onRackPickerConfirm, this);
     this.game.events.on('inventory-bag-activate', this.onBagActivate, this);
     this.game.events.on('pause-action', this.onPauseAction, this);
     this.game.events.on('turn-battle-ended', this.onTurnBattleEnded, this);
@@ -805,6 +809,9 @@ export class GameScene extends Phaser.Scene {
       this.game.events.off('forjing-cursor', this.onForjingCursor, this);
       this.game.events.off('shop-state', this.onShopState, this);
       this.game.events.off('shop-cursor', this.onShopCursor, this);
+      this.game.events.off('rack-picker-state', this.onRackPickerState, this);
+      this.game.events.off('rack-picker-cursor', this.onRackPickerCursor, this);
+      this.game.events.off('rack-picker-confirm', this.onRackPickerConfirm, this);
       this.game.events.off('inventory-bag-activate', this.onBagActivate, this);
       this.game.events.off('pause-action', this.onPauseAction, this);
       this.game.events.off('turn-battle-ended', this.onTurnBattleEnded, this);
@@ -926,6 +933,22 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (this.rackPickerOpen) {
+      if (edgeAxis('left')) this.navRackPicker('left');
+      if (edgeAxis('right')) this.navRackPicker('right');
+      if (edgeAxis('up')) this.navRackPicker('up');
+      if (edgeAxis('down')) this.navRackPicker('down');
+      if (consumeTouchAction('attack') || consumeTouchAction('interact')) {
+        this.confirmRackPick(this.rackPicker?.selectedIndex ?? 0);
+      }
+      if (consumeTouchAction('menu')) {
+        this.clearRackPicker();
+        drainTouchActions();
+        this.syncTouchPadMode('explore');
+      }
+      return;
+    }
+
     if (this.forjingOpen) {
       if (edgeAxis('left')) this.navForjing('left');
       if (edgeAxis('right')) this.navForjing('right');
@@ -989,6 +1012,8 @@ export class GameScene extends Phaser.Scene {
     this.mapzOpen = false;
     this.forjingOpen = false;
     this.shopOpen = false;
+    this.rackPickerOpen = false;
+    this.rackPicker = null;
     this.transitionLock = false;
     clearAllTouch();
     setTouchPadVisible(false);
@@ -1060,7 +1085,8 @@ export class GameScene extends Phaser.Scene {
       this.inventoryOpen ||
       this.mapzOpen ||
       this.forjingOpen ||
-      this.shopOpen
+      this.shopOpen ||
+      this.rackPickerOpen
     );
   }
 
@@ -1155,13 +1181,46 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('shop-toggle');
       return;
     }
+    if (this.rackPickerOpen) {
+      this.confirmRackPick(this.rackPicker?.selectedIndex ?? 0);
+      return;
+    }
     if (this.panelOpen()) return;
     this.tryInteract();
   };
 
   private clearRackPicker(): void {
+    if (this.rackPickerOpen) {
+      this.game.events.emit('rack-picker-toggle');
+    }
     this.rackPicker = null;
+    this.rackPickerOpen = false;
   }
+
+  private onRackPickerState = (open: boolean): void => {
+    this.rackPickerOpen = open;
+    if (!open) {
+      this.rackPicker = null;
+    }
+  };
+
+  private onRackPickerCursor = (index: number): void => {
+    if (!this.rackPicker) return;
+    this.rackPicker = {
+      ...this.rackPicker,
+      selectedIndex: Math.max(
+        0,
+        Math.min(index, this.rackPicker.options.length - 1),
+      ),
+    };
+  };
+
+  private onRackPickerConfirm = (index?: number): void => {
+    if (!this.rackPickerOpen || !this.rackPicker) return;
+    const i =
+      typeof index === 'number' ? index : this.rackPicker.selectedIndex;
+    this.confirmRackPick(i);
+  };
 
   private onBuyKey = (): void => {
     if (this.paused || this.dialogCloseCooldown > 0) return;
@@ -1273,8 +1332,9 @@ export class GameScene extends Phaser.Scene {
   };
 
   private onDigitKey(n: number): void {
-    // Weapon rack inventory (stocked stand browse) — works mid-dialog
+    // Weapon rack picker — 1-9 equip that slot
     if (
+      this.rackPickerOpen &&
       this.rackPicker &&
       !this.paused &&
       !this.inventoryOpen &&
@@ -1441,11 +1501,23 @@ export class GameScene extends Phaser.Scene {
     const { save, newly } = syncAchievements(this.save);
     this.save = save;
     if (!newly.length) return;
+    // Each new brag drops a weighted-tier loot box (bronze most common)
+    const boxed = grantLootBoxesForAchievements(this.save, newly);
+    this.save = boxed.save;
     writeSave(this.save);
     newly.forEach((a, i) => {
       this.time.delayedCall(i * 400, () => {
         playSfx('success');
         this.game.events.emit('toast', `NEW BRAG: ${a.title}`);
+      });
+    });
+    boxed.boxes.forEach((b, i) => {
+      this.time.delayedCall(newly.length * 400 + i * 350, () => {
+        playSfx('pickup');
+        this.game.events.emit(
+          'toast',
+          `LOOT BOX: ${b.tier.toUpperCase()} (FROM ${b.title})`,
+        );
       });
     });
   }
@@ -4412,15 +4484,19 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // E again while this rack's picker is open → take first hanging weapon
-    if (this.rackPicker && this.rackPicker.rackId === actor.id) {
-      this.confirmRackPick(0);
+    // E again while this rack's picker is open → equip selected piece
+    if (
+      this.rackPickerOpen &&
+      this.rackPicker &&
+      this.rackPicker.rackId === actor.id
+    ) {
+      this.confirmRackPick(this.rackPicker.selectedIndex);
       return;
     }
 
     // No hanging pieces → return equipped family weapon to the pegs
     if (isRackEmpty(this.save, w)) {
-      this.rackPicker = null;
+      this.clearRackPicker();
       const r = returnWeaponToRack(this.save, w);
       if (!r.ok) {
         this.game.events.emit('toast', r.reason ?? 'CANNOT RETURN');
@@ -4441,7 +4517,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Hanging weapons → browse (only pieces still on the stand)
+    // Hanging weapons → inventory-style picker window
     this.save = ensureCatalogInBag(this.save, w);
     const opts = listRackWeaponOptions(this.save, w);
     if (opts.length === 0) {
@@ -4449,17 +4525,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     writeSave(this.save);
-    this.rackPicker = {
-      family: w,
-      uids: opts.map((o) => o.uid),
-      rackId: actor.id,
-    };
-    this.game.events.emit('dialog-show', rackInventoryDialog(w, opts));
+    this.rackPicker = buildRackPickerPayload(this.save, w, actor.id, 0);
+    this.game.events.emit('rack-picker-toggle', this.rackPicker);
     this.game.events.emit(
       'toast',
-      opts.length === 1
-        ? 'PRESS 1 OR E TO TAKE'
-        : `PRESS 1-${Math.min(9, opts.length)} — THAT PIECE LEAVES THE RACK`,
+      'RACK — CLICK OR ARROWS + ENTER TO EQUIP',
     );
   }
 
@@ -4485,21 +4555,39 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private static readonly RACK_COLS = 4;
+
+  private navRackPicker(dir: 'up' | 'down' | 'left' | 'right'): void {
+    if (!this.rackPicker || !this.rackPicker.options.length) return;
+    const n = this.rackPicker.options.length;
+    const cols = GameScene.RACK_COLS;
+    let i = this.rackPicker.selectedIndex;
+    if (dir === 'left') i = (i - 1 + n) % n;
+    else if (dir === 'right') i = (i + 1) % n;
+    else if (dir === 'up') i = (i - cols + n) % n;
+    else if (dir === 'down') i = (i + cols) % n;
+    this.rackPicker = { ...this.rackPicker, selectedIndex: i };
+    this.game.events.emit('rack-picker-select', i);
+  }
+
   private confirmRackPick(index: number): void {
     if (!this.rackPicker) return;
-    const { family, uids, rackId } = this.rackPicker;
-    if (index < 0 || index >= uids.length) {
+    const { family, options, rackId } = this.rackPicker;
+    if (index < 0 || index >= options.length) {
       this.game.events.emit('toast', 'INVALID SLOT');
       return;
     }
-    const uid = uids[index]!;
+    const uid = options[index]!.uid;
     const r = takeWeaponFromRack(this.save, family, uid);
     if (!r.ok) {
       this.game.events.emit('toast', r.reason ?? 'CANNOT EQUIP');
       return;
     }
     this.save = r.save;
+    // Close panel first (emits rack-picker-state false)
+    this.game.events.emit('rack-picker-toggle');
     this.rackPicker = null;
+    this.rackPickerOpen = false;
     writeSave(this.save);
     this.emitHud();
     this.refreshPlayerAppearance();
@@ -4545,8 +4633,16 @@ export class GameScene extends Phaser.Scene {
       // Unlock east door tiles live
       this.tileGrid = this.applyPersistentDoorUnlocks(this.tileGrid);
       this.rebuildMapTilesForUnlock();
-      this.game.events.emit('dialog-show', guildMasterDialog(this.save));
-      this.game.events.emit('toast', 'GRADUATED — EAST DOOR OPEN');
+      this.game.events.emit('dialog-show', [
+        ...guildMasterDialog(this.save),
+        '',
+        'CRAWLER STARTER BOX — OPEN IT IN YOUR BAG [I].',
+        'SWORD, LEATHER SET, WOOD SHIELD. YOU EARNED IT.',
+      ]);
+      this.game.events.emit(
+        'toast',
+        'GRADUATED — STARTER BOX IN BAG · EAST DOOR OPEN',
+      );
       playSfx('success');
       return;
     }
@@ -5497,6 +5593,8 @@ export class GameScene extends Phaser.Scene {
         this.game.events.emit('forjing-toggle');
       } else if (this.shopOpen) {
         this.game.events.emit('shop-toggle');
+      } else if (this.rackPickerOpen) {
+        this.clearRackPicker();
       } else {
         this.paused = !this.paused;
         this.game.events.emit('pause-ui', this.paused);
@@ -5579,6 +5677,21 @@ export class GameScene extends Phaser.Scene {
         }
         if (Phaser.Input.Keyboard.JustDown(this.keys.enter)) {
           this.confirmForjingAction();
+        }
+      }
+      // Weapon rack picker navigation
+      if (this.rackPickerOpen) {
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.keys.a)) {
+          this.navRackPicker('left');
+        } else if (Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.keys.d)) {
+          this.navRackPicker('right');
+        } else if (Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.keys.w)) {
+          this.navRackPicker('up');
+        } else if (Phaser.Input.Keyboard.JustDown(this.cursors.down) || Phaser.Input.Keyboard.JustDown(this.keys.s)) {
+          this.navRackPicker('down');
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.enter)) {
+          this.confirmRackPick(this.rackPicker?.selectedIndex ?? 0);
         }
       }
       // ESC closes dialog (desktop)
