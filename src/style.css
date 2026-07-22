@@ -267,6 +267,24 @@ body {
   flex: 0 1 auto;
 }
 
+/* Version under the game frame, lower-left of the stage */
+.game-version {
+  margin: 0.4rem 0 0 0.2rem;
+  padding: 0;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: #6a738a;
+  text-align: left;
+  user-select: none;
+  pointer-events: none;
+}
+
+body.touch-play.mobile-immersive .game-version {
+  display: none;
+}
+
 /* —— Touch pad: translucent overlay HUD (not a dock) —— */
 .touch-pad {
   display: none;

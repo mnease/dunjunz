@@ -1,6 +1,6 @@
 import './style.css';
 import Phaser from 'phaser';
-import { GAME_H, GAME_W } from './config';
+import { GAME_H, GAME_VERSION, GAME_W } from './config';
 import { BootScene } from './scenes/BootScene';
 import { TitleScene } from './scenes/TitleScene';
 import { GameScene } from './scenes/GameScene';
@@ -16,6 +16,12 @@ import { initCombatModeUi } from './ui/combat-mode';
 import { initJournalUi } from './ui/journal';
 import { initSettingsUi } from './ui/settings';
 import { initTouchPad } from './systems/touch-input';
+
+// Version under the play canvas (package.json via Vite)
+const versionEl = document.getElementById('game-version');
+if (versionEl) {
+  versionEl.textContent = `v${GAME_VERSION}`;
+}
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,

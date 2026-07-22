@@ -1,6 +1,13 @@
 /** Native canvas size — 16:9 HD. */
 export const GAME_W = 1280;
 export const GAME_H = 720;
+
+/**
+ * Player-facing game version (from package.json via Vite `__APP_VERSION__`).
+ * Display as `v${GAME_VERSION}` under the play canvas.
+ */
+export const GAME_VERSION =
+  typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
 /**
  * Logical tile step in the room grid (world units before display scale).
  * Textures render at ART_RES (32) for 32-bit craft density; sprites use
