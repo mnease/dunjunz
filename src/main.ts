@@ -1,5 +1,6 @@
 import './style.css';
 import Phaser from 'phaser';
+import { inject } from '@vercel/analytics';
 import { GAME_H, GAME_W } from './config';
 import { BootScene } from './scenes/BootScene';
 import { TitleScene } from './scenes/TitleScene';
@@ -47,3 +48,6 @@ initSettingsUi();
 initAuthUi();
 initFeedbackUi();
 initTouchPad();
+
+// Initialize Vercel Web Analytics
+inject();
