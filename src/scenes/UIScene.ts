@@ -28,6 +28,9 @@ import {
 } from '../systems/class-gear';
 // Ensure class-gear registers DEF compare hook
 import '../systems/class-gear';
+import { ATTR_IDS, ATTR_LABELS } from '../systems/attributes';
+import type { AttrId } from '../types';
+import { isTouchUiPreferred } from '../systems/touch-input';
 import { getBestBud, isCompanionActive } from '../systems/best-bud';
 import {
   budArmorDef,
@@ -129,6 +132,9 @@ export class UIScene extends Phaser.Scene {
   private invBagDetail: Phaser.GameObjects.Text | null = null;
   private invBagLayer: Phaser.GameObjects.Container | null = null;
   private invBagPieces: Phaser.GameObjects.GameObject[] = [];
+  /** Tappable STR/DEX/… buttons when level packages are waiting. */
+  private invStatLayer: Phaser.GameObjects.Container | null = null;
+  private invStatPieces: Phaser.GameObjects.GameObject[] = [];
   private invBagSelected = 0;
   /** Bag grid page (0-based). 8×3 = 24 slots per page. */
   private invBagPage = 0;
@@ -814,7 +820,7 @@ export class UIScene extends Phaser.Scene {
       .setDepth(d + 2);
 
     this.invAttrs = this.add
-      .text(railX, startY + 120, '', {
+      .text(railX, startY + 100, '', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#7dffb3',
@@ -823,6 +829,11 @@ export class UIScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
       .setDepth(d + 2);
+
+    this.invStatLayer = this.add
+      .container(0, 0)
+      .setScrollFactor(0)
+      .setDepth(d + 3);
 
     // BAG band: title → grid → pager → detail → help (strict bottom stack)
     const bagTitleY = HUD_H + 230;
@@ -968,7 +979,11 @@ export class UIScene extends Phaser.Scene {
     this.setInvPieceVisible(this.invBagDetail, open);
     this.setInvPieceVisible(this.invHelp, open);
     this.invBagLayer?.setVisible(open);
-    if (!open) this.clearInvBagPieces();
+    this.invStatLayer?.setVisible(open);
+    if (!open) {
+      this.clearInvBagPieces();
+      this.clearStatButtons();
+    }
     for (const slot of ALL_EQUIP_SLOTS) {
       this.setInvPieceVisible(this.invSlotFrames[slot], open);
       this.setInvPieceVisible(this.invSlotIcons[slot], open);
@@ -2279,6 +2294,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     if (budMode) {
+      this.clearStatButtons();
       this.invStats?.setText(budGearSummary(s));
       this.invAttrs?.setText(
         [
@@ -2297,22 +2313,128 @@ export class UIScene extends Phaser.Scene {
           `WPN ${s.hasSword ? 'Y' : '-'} KEY ${s.hasKey ? 'Y' : '-'}`,
         ].join('\n'),
       );
+      const packages = s.attrPoints > 0 || !!s.pendingAttrMajor;
       const pending = s.pendingAttrMajor
-        ? `NOW +1 (not ${s.pendingAttrMajor.toUpperCase()})`
+        ? `TAP +1 (not ${s.pendingAttrMajor.toUpperCase()})`
         : s.attrPoints > 0
-          ? '1st pick +2 · 2nd +1'
+          ? 'TAP STAT: +2 then +1 other'
           : 'no packages';
+      const touch = isTouchUiPreferred();
       this.invAttrs?.setText(
-        [
-          `PKG ${s.attrPoints}  ${pending}`,
-          `1STR${s.attrs.str} 2DEX${s.attrs.dex}`,
-          `3VIT${s.attrs.vit} 4INT${s.attrs.int}`,
-          `5LCK${s.attrs.lck}`,
-        ].join('\n'),
+        packages
+          ? [
+              `PKG ${s.attrPoints}${s.pendingAttrMajor ? '*' : ''}`,
+              pending,
+              touch ? 'BUTTONS BELOW' : 'OR KEYS 1–5',
+            ].join('\n')
+          : [
+              `PKG ${s.attrPoints}`,
+              `STR${s.attrs.str} DEX${s.attrs.dex} VIT${s.attrs.vit}`,
+              `INT${s.attrs.int} LCK${s.attrs.lck}`,
+            ].join('\n'),
       );
+      this.renderStatSpendButtons(s);
     }
 
     this.renderBagGrid(s);
+  }
+
+  private clearStatButtons(): void {
+    for (const p of this.invStatPieces) p.destroy();
+    this.invStatPieces = [];
+    this.invStatLayer?.removeAll(true);
+  }
+
+  /**
+   * Big tappable STR/DEX/VIT/INT/LCK (+ AUTO) when packages remain.
+   * Mobile primary path — keys 1–5 still work on desktop.
+   */
+  private renderStatSpendButtons(s: SaveData): void {
+    this.clearStatButtons();
+    if (!this.invStatLayer) return;
+    const packages = s.attrPoints > 0 || !!s.pendingAttrMajor;
+    if (!packages) return;
+
+    const railX = 220 + 2 * 280 + 24; // match buildInventoryPanel rail
+    const startY = HUD_H + 36 + 150;
+    const btnW = Math.min(108, Math.floor((GAME_W - railX - 28) / 3) - 6);
+    const btnH = 40;
+    const gap = 8;
+
+    const title = this.add
+      .text(railX, startY - 18, 'SPEND STAT PKG', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
+        color: '#ffc857',
+      })
+      .setScrollFactor(0);
+    this.invStatLayer.add(title);
+    this.invStatPieces.push(title);
+
+    ATTR_IDS.forEach((attr, i) => {
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+      const x = railX + col * (btnW + gap) + btnW / 2;
+      const y = startY + 12 + row * (btnH + gap) + btnH / 2;
+      const blocked =
+        !!s.pendingAttrMajor && s.pendingAttrMajor === attr;
+      const val = s.attrs[attr];
+      const bg = this.add
+        .rectangle(
+          x,
+          y,
+          btnW,
+          btnH,
+          blocked ? 0x2a2030 : 0x1a4030,
+          0.98,
+        )
+        .setStrokeStyle(2, blocked ? 0x6a4050 : COLORS.green)
+        .setScrollFactor(0)
+        .setInteractive({ useHandCursor: !blocked });
+      const label = this.add
+        .text(x, y, `${ATTR_LABELS[attr]}\n${val}`, {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '9px',
+          color: blocked ? '#6a738a' : '#7dffb3',
+          align: 'center',
+          lineSpacing: 4,
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0);
+      if (!blocked) {
+        bg.on('pointerdown', () => {
+          playSfx('ui_click');
+          this.game.events.emit('spend-attr', attr as AttrId);
+        });
+        bg.on('pointerover', () => bg.setFillStyle(0x2a6040, 1));
+        bg.on('pointerout', () => bg.setFillStyle(0x1a4030, 0.98));
+      }
+      this.invStatLayer!.add([bg, label]);
+      this.invStatPieces.push(bg, label);
+    });
+
+    // AUTO fills remaining packages (same as Settings → auto, one-shot)
+    const autoY = startY + 12 + 2 * (btnH + gap) + btnH / 2;
+    const autoW = Math.min(btnW * 2 + gap, GAME_W - railX - 40);
+    const autoBg = this.add
+      .rectangle(railX + autoW / 2, autoY, autoW, btnH, 0x3a2810, 0.98)
+      .setStrokeStyle(2, 0xffc857)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    const autoLb = this.add
+      .text(railX + autoW / 2, autoY, 'AUTO ALL', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '10px',
+        color: '#ffc857',
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0);
+    autoBg.on('pointerdown', () => {
+      playSfx('ui_click');
+      this.game.events.emit('auto-stats-flush');
+    });
+    this.invStatLayer.add([autoBg, autoLb]);
+    this.invStatPieces.push(autoBg, autoLb);
   }
 
   private renderBagGrid(save: SaveData): void {

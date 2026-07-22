@@ -27,6 +27,7 @@ import {
   clearAllTouch,
   consumeTouchAction,
   drainTouchActions,
+  isTouchUiPreferred,
   setTouchPadMode,
   setTouchPadVisible,
   touchAxisDown,
@@ -604,6 +605,8 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on('shop-cursor', this.onShopCursor, this);
     this.game.events.on('inventory-bag-activate', this.onBagActivate, this);
     this.game.events.on('pause-action', this.onPauseAction, this);
+    this.game.events.on('spend-attr', this.onSpendAttrEvent, this);
+    this.game.events.on('auto-stats-flush', this.onAutoStatsFlushEvent, this);
     window.addEventListener('dunjunz-auto-stats-enabled', this.onAutoStatsEnabled);
     window.addEventListener('dunjunz-save-updated', this.onSaveUpdated);
     this.events.once('shutdown', () => {
@@ -621,6 +624,8 @@ export class GameScene extends Phaser.Scene {
       this.game.events.off('shop-cursor', this.onShopCursor, this);
       this.game.events.off('inventory-bag-activate', this.onBagActivate, this);
       this.game.events.off('pause-action', this.onPauseAction, this);
+      this.game.events.off('spend-attr', this.onSpendAttrEvent, this);
+      this.game.events.off('auto-stats-flush', this.onAutoStatsFlushEvent, this);
       kb.off('keydown-SPACE', this.onAttackKey, this);
       kb.off('keydown-Z', this.onAttackKey, this);
       kb.off('keydown-E', this.onInteractKey, this);
@@ -1312,6 +1317,30 @@ export class GameScene extends Phaser.Scene {
     this.game.events.emit('inventory-refresh', this.save);
     this.game.events.emit('toast', result.message);
   }
+
+  private onSpendAttrEvent = (attr: AttrId): void => {
+    this.spendAttr(attr);
+  };
+
+  private onAutoStatsFlushEvent = (): void => {
+    if (!this.inventoryOpen || this.dialogLocked || this.paused) return;
+    if (!hasUnspentStatPackages(this.save)) {
+      this.game.events.emit('toast', 'NO PACKAGES TO SPEND');
+      return;
+    }
+    // One-shot auto (does not require Settings → auto on)
+    const { save, notes } = flushAutoStatPackages(this.save);
+    this.save = syncDerivedStats(save);
+    writeSave(this.save);
+    this.emitHud();
+    this.game.events.emit('inventory-refresh', this.save);
+    playSfx('success');
+    const brief =
+      notes.length > 2
+        ? `${notes.length} PACKAGES APPLIED`
+        : notes.slice(0, 2).join(' · ') || 'DONE';
+    this.game.events.emit('toast', `AUTO STATS: ${brief}`);
+  };
 
   private spendAttr(attr: AttrId): void {
     if (!this.inventoryOpen || this.dialogLocked || this.paused) return;
@@ -2615,9 +2644,12 @@ export class GameScene extends Phaser.Scene {
           `LEVEL UP! LV ${prog.level} — STATS AUTO-ASSIGNED`,
         );
       } else {
+        const touch = isTouchUiPreferred();
         this.game.events.emit(
           'toast',
-          `LEVEL UP! LV ${prog.level} — +${prog.attrPointsGained} PKG: +2/+1 (I) OR SETTINGS→AUTO`,
+          touch
+            ? `LEVEL UP! LV ${prog.level} — OPEN BAG · TAP A STAT (+2 then +1)`
+            : `LEVEL UP! LV ${prog.level} — +${prog.attrPointsGained} PKG: +2/+1 (I) OR SETTINGS→AUTO`,
         );
       }
       this.time.delayedCall(400, () => this.checkHeroPick());

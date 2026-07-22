@@ -30,6 +30,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 - **Mobile full-screen overlay controls** — game fills the viewport; D-pad (left) and actions (right) sit as a translucent HUD on the playfield (no dock that squishes the canvas).
 - **Mobile contextual pad + talk UX** — pad remaps by mode (explore / dialog NEXT·CLOSE / panel OK·PAGE·CLOSE / pause). Dialog sits mid-screen with **NEXT/CLOSE** hits; ESC/MENU closes talk; bag/shop/mapz use stick + OK. Landscape tries fullscreen + immersive CSS.
 - **Virtual stick + landscape lock** — D-pad replaced by omni joystick (8-way). PWA/manifest forces landscape; portrait shows rotate gate; `orientation.lock` when the browser allows.
+- **Mobile stat spend** — open bag after level-up; large **STR/DEX/VIT/INT/LCK** buttons (+ **AUTO ALL**) when packages wait. Toast: OPEN BAG · TAP A STAT.
 - **Larger inventory icons** — bag cells ~68px with ~2× icon scale; equip-slot frames/icons enlarged so gear silhouettes are readable.
 
 ### Fixed
