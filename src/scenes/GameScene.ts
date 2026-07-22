@@ -3149,15 +3149,19 @@ export class GameScene extends Phaser.Scene {
   private die(): void {
     this.dialogLocked = true;
     playSfx('death');
+    const respawn =
+      isTutorialComplete(this.save) ? 'overworld' : GUILD_HALL_ID;
     this.game.events.emit('dialog-show', [
       'YOU HAVE DIED. BUMMER.',
       'THE BARD IS ALREADY WRITING A SONG.',
       'IT WILL NOT BE FLATTERING. AT ALL.',
-      'RESPAWNING AT THE MEADOW... AGAIN...',
+      respawn === GUILD_HALL_ID
+        ? 'RESPAWNING AT THE TRAINING GUILD...'
+        : 'RESPAWNING AT THE MEADOW... AGAIN...',
     ]);
     this.time.delayedCall(100, () => {
       this.save.hp = this.save.maxHp;
-      this.save.roomId = 'overworld';
+      this.save.roomId = respawn;
       this.save = {
         ...this.save,
         flags: { ...this.save.flags, died_once: true },
@@ -3167,7 +3171,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.time.delayedCall(2500, () => {
       this.dialogLocked = false;
-      this.loadRoom('overworld', true);
+      this.loadRoom(respawn, true);
       this.invuln = 1500;
     });
   }
