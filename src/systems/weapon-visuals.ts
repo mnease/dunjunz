@@ -60,6 +60,18 @@ export function drawWeaponAvatar(
     return;
   }
 
+  if (look === 'axe') {
+    // Hip hatchet — wood haft + steel bit
+    fill(ctx, '#3a2010', 25, 10, 3, 16);
+    fill(ctx, '#6b4423', 26, 11, 1, 14);
+    fill(ctx, '#5a6578', 20, 8, 10, 8);
+    fill(ctx, '#8a98a8', 21, 9, 7, 5);
+    fill(ctx, '#c0c8d0', 21, 9, 3, 4);
+    fill(ctx, '#c9a227', 24, 15, 5, 2);
+    spark(ctx, 22, 10, '#ffffff');
+    return;
+  }
+
   if (look === 'staff') {
     fill(ctx, '#3a2010', 25, 5, 4, 23);
     fill(ctx, '#6b4423', 26, 7, 2, 19);
@@ -181,6 +193,17 @@ export function drawWeaponIcon(
     return;
   }
 
+  if (look === 'axe') {
+    fill(ctx, '#3a2010', 14, 8, 5, 20);
+    fill(ctx, '#6b4423', 15, 9, 3, 18);
+    fill(ctx, '#5a6578', 6, 4, 18, 12);
+    fill(ctx, '#8a98a8', 8, 5, 13, 9);
+    fill(ctx, '#c0c8d0', 8, 5, 5, 7);
+    fill(ctx, '#c9a227', 12, 14, 8, 3);
+    spark(ctx, 9, 6, '#ffffff');
+    return;
+  }
+
   if (look === 'staff') {
     fill(ctx, '#3a2010', 12, 7, 7, 23);
     fill(ctx, '#6b4423', 13, 9, 5, 19);
@@ -266,6 +289,13 @@ export function drawWeaponSwing(
     spark(ctx, 18, 10, '#ffffff');
     return;
   }
+  if (look === 'axe') {
+    fill(ctx, '#6b4423', 8, 6, 5, 12);
+    fill(ctx, '#8a98a8', 2, 2, 14, 10);
+    fill(ctx, '#c0c8d0', 3, 3, 5, 7);
+    spark(ctx, 4, 3, '#ffffff');
+    return;
+  }
   if (look === 'staff') {
     fill(ctx, '#6b4423', 9, 3, 5, 16);
     block(ctx, '#7dffb3', '#2a8a5a', 6, 1, 12, 9);
@@ -324,6 +354,8 @@ export function weaponLookFromTemplateId(id: string): WeaponLook | null {
   switch (id) {
     case 'mild_sword':
       return 'sword';
+    case 'training_axe':
+      return 'axe';
     case 'iron_blade':
     case 'bud_fang':
       return 'iron';

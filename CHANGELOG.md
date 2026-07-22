@@ -13,7 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
-- **Tutorial Guild Master** — first meadow boot auto-introduces a Guild Master who teaches move/talk/attack/bag. Dungeon **stairs stay locked** until you take the sword, swing once, open the bag, and talk again to graduate (`tutorial_complete` flag). East trail stays open. Returning graduates get short quest hints.
+- **Training Guild hall** — new start room `guild_hall` with Guild Master, 4 dummies, and weapon racks. Drill order: **sword → axe → bow → staff** (new `training_axe`). East door unlocks on graduate → meadow; surface dungeon mouths use **cave entrance** art. Veterans with dungeon visits migrate past the gate.
 - **Share graphic** — `public/share-dunjunz.png` (1200² hero in full armor + sword, **DUNJUNZ** title) and `public/og-image.png` (1200×630) for social/OG; landing + play meta tags point at og-image.
 - **Landing page images** — hero banner + 3-card gallery (hero loadout, meadow/sun trees, dark dungeon) on `/`; CRT-framed figures, lazy-loaded cards, clickable hero → `/play`.
 - **Surface sun depth (EMA council)** — big meadow/trail oaks (`scale` 2.2–2.6), sun-cast elongated ground shadows, and **moving cloud shade** (no cloud sprites) drifting slowly across outdoor surface lands. Trunk-sized colliders so canopies don't brick the meadow. `prefers-reduced-motion` freezes cloud drift.

@@ -3030,60 +3030,68 @@ import {
 } from './surface-sun';
 
 import {
+  allWeaponHitsDone,
+  canExitGuildEast,
   canUseDungeonStairs,
   completeTutorial,
+  equipTrainingWeapon,
   guildMasterDialog,
   isTutorialComplete,
-  markTutorialBag,
-  markTutorialSwung,
-  tutorialChecklist,
+  nextTutorialWeapon,
+  recordDummyHit,
+  tutorialWeaponFromEquip,
 } from './tutorial';
+import { START_ROOM } from '../data/world';
 
-describe('tutorial guild master', () => {
-  it('blocks dungeon stairs until graduated', () => {
+describe('tutorial guild hall', () => {
+  it('starts at guild_hall and blocks east + stairs until graduated', () => {
+    expect(START_ROOM).toBe('guild_hall');
     let save = defaultSave();
     expect(canUseDungeonStairs(save)).toBe(false);
-    expect(isTutorialComplete(save)).toBe(false);
+    expect(canExitGuildEast(save)).toBe(false);
     save = completeTutorial(save);
     expect(canUseDungeonStairs(save)).toBe(true);
-    expect(isTutorialComplete(save)).toBe(true);
+    expect(canExitGuildEast(save)).toBe(true);
   });
 
-  it('checklist requires sword, swing, and bag before graduate', () => {
+  it('records dummy hits only in sword→axe→bow→staff order', () => {
     let save = defaultSave();
-    expect(tutorialChecklist(save).readyToGraduate).toBe(false);
-    save = { ...save, hasSword: true };
-    expect(tutorialChecklist(save).readyToGraduate).toBe(false);
-    save = markTutorialSwung(save);
-    expect(tutorialChecklist(save).readyToGraduate).toBe(false);
-    save = markTutorialBag(save);
-    expect(tutorialChecklist(save).readyToGraduate).toBe(true);
-    expect(tutorialChecklist(save).hasSword).toBe(true);
+    expect(nextTutorialWeapon(save)).toBe('sword');
+    let r = recordDummyHit(save, 'axe');
+    expect(r.accepted).toBe(false);
+    r = recordDummyHit(save, 'sword');
+    expect(r.accepted).toBe(true);
+    expect(r.advanced).toBe(true);
+    save = r.save;
+    expect(nextTutorialWeapon(save)).toBe('axe');
+    save = recordDummyHit(save, 'axe').save;
+    save = recordDummyHit(save, 'bow').save;
+    save = recordDummyHit(save, 'staff').save;
+    expect(allWeaponHitsDone(save)).toBe(true);
+    expect(nextTutorialWeapon(save)).toBeNull();
   });
 
-  it('guild master dialog mentions lock before complete', () => {
+  it('maps equip templates to tutorial weapons and equips training axe', () => {
+    expect(tutorialWeaponFromEquip('training_axe', 'axe')).toBe('axe');
+    expect(tutorialWeaponFromEquip('short_bow', 'bow')).toBe('bow');
+    expect(tutorialWeaponFromEquip('wizard_staff', 'staff')).toBe('staff');
+    let save = equipTrainingWeapon(defaultSave(), 'axe');
+    expect(save.equipped.weapon).toBeTruthy();
+    const inst = save.bag.find((b) => b.uid === save.equipped.weapon);
+    expect(inst?.templateId).toBe('training_axe');
+  });
+
+  it('guild dialog mentions drills; migrate veterans with dungeon visits', async () => {
     const lines = guildMasterDialog(defaultSave());
-    expect(lines.some((l) => /STAIRS|LOCK|GRADUATE|GUILD/i.test(l))).toBe(
-      true,
-    );
-    const done = guildMasterDialog(completeTutorial(defaultSave()));
-    expect(done.some((l) => /OPEN|GRADUATE STATUS/i.test(l))).toBe(true);
-  });
-
-  it('migrateTutorial graduates veterans with dungeon visits, not sword alone', async () => {
+    expect(lines.some((l) => /SWORD|AXE|DUMMY|GUILD/i.test(l))).toBe(true);
     const { migrateTutorial } = await import('./tutorial');
-    const midTutorial = migrateTutorial({
-      ...defaultSave(),
-      hasSword: true,
-    });
-    expect(isTutorialComplete(midTutorial)).toBe(false);
+    const mid = migrateTutorial({ ...defaultSave(), hasSword: true });
+    expect(isTutorialComplete(mid)).toBe(false);
     const vet = migrateTutorial({
       ...defaultSave(),
       visitedRooms: ['b1_entrance'],
     });
     expect(isTutorialComplete(vet)).toBe(true);
-    const fresh = migrateTutorial(defaultSave());
-    expect(isTutorialComplete(fresh)).toBe(false);
   });
 });
 

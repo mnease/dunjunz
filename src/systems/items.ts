@@ -196,6 +196,15 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     baseAtk: 1,
     look: 'sword',
   },
+  training_axe: {
+    id: 'training_axe',
+    name: 'TRAINING AXE',
+    blurb: 'Guild-issue hatchet. Space/Z to chop. [W]',
+    kind: 'gear',
+    slot: 'weapon',
+    baseAtk: 1,
+    look: 'axe',
+  },
   iron_blade: {
     id: 'iron_blade',
     name: 'IRON BLADE',

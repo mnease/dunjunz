@@ -20,9 +20,10 @@ import { buildAllDeepRooms } from './world-deep';
  *   in the texture art, not multi-tile ASCII.
  *
  * SURFACE (floor 0)
- *   (0,0) overworld --E-- (1,0) overworld_east
- *           | S down               | N woodz_path → woodz_edge → deep
- *                                  | S dezertz_dunes → edge → tower
+ *   guild_hall --E-- overworld --E-- overworld_east
+ *                    | S cave mouth          | N woodz / S dezertz
+ *                    v
+ *                 b1_entrance …
  *
  * B1 (floor -1)
  *              (0,3) b1_descent  S down to B2
@@ -40,6 +41,64 @@ import { buildAllDeepRooms } from './world-deep';
  */
 
 export const ROOMS: Record<string, RoomDef> = {
+  // ─── TRAINING GUILD (start) ─────────────────────────────
+  guild_hall: {
+    id: 'guild_hall',
+    title: 'TRAINING GUILD · HALL',
+    land: 'surface',
+    floor: 0,
+    mapX: -1,
+    mapY: 0,
+    // East unlocks when tutorial_complete (locked door until then)
+    east: 'overworld',
+    tiles: [
+      '################',
+      '#..............#',
+      '#..##......##..#',
+      '#..............#',
+      '#..............#',
+      '#..............L',
+      '#..............#',
+      '#..............#',
+      '#..##......##..#',
+      '#..............#',
+      '################',
+    ],
+    entities: [
+      {
+        kind: 'npc',
+        id: 'guild-master',
+        x: 8,
+        y: 5,
+        dialog: [
+          'GUILD MASTER. WEAPON DRILLS. EAST DOOR STAYS LOCKED.',
+        ],
+      },
+      { kind: 'dummy', id: 'dummy-nw', x: 3, y: 3 },
+      { kind: 'dummy', id: 'dummy-ne', x: 12, y: 3 },
+      { kind: 'dummy', id: 'dummy-sw', x: 3, y: 7 },
+      { kind: 'dummy', id: 'dummy-se', x: 12, y: 7 },
+      { kind: 'rack', id: 'rack-sword', x: 5, y: 2 },
+      { kind: 'rack', id: 'rack-axe', x: 7, y: 2 },
+      { kind: 'rack', id: 'rack-bow', x: 9, y: 2 },
+      { kind: 'rack', id: 'rack-staff', x: 11, y: 2 },
+      {
+        kind: 'sign',
+        id: 'guild-rules',
+        x: 8,
+        y: 8,
+        dialog: [
+          'TRAINING GUILD RULES',
+          '1. RACK (E) = EQUIP WEAPON',
+          '2. DUMMY (SPACE/Z) = HIT IN ORDER',
+          'SWORD → AXE → BOW → STAFF',
+          '3. TALK TO GUILD MASTER TO GRADUATE',
+          '4. EAST DOOR OPENS AFTER GRADUATION',
+        ],
+      },
+    ],
+  },
+
   // ─── SURFACE ─────────────────────────────────────────────
   overworld: {
     id: 'overworld',
@@ -48,6 +107,7 @@ export const ROOMS: Record<string, RoomDef> = {
     floor: 0,
     mapX: 0,
     mapY: 0,
+    west: 'guild_hall',
     east: 'overworld_east',
     stairsDown: 'b1_entrance',
     // Every row must be exactly 16 chars (VIEW_TILES_W). Short rows pad as
@@ -57,32 +117,15 @@ export const ROOMS: Record<string, RoomDef> = {
       '#gggggggggggggg#',
       '#gg........gggg#',
       '#g...dddd...ggg#',
-      '#g..dddddd..ggg.',
-      '#g....dS.d..ggg.',
-      '#g....dd....ggg.',
+      '....dddddd..ggg.',
+      '....d.S.d...ggg.',
+      '....dddd....ggg.',
       '#gg........gggg#',
       '#ggg~~~~~~ggggg#',
       '#gggg~~~~gggggg#',
       '################',
     ],
     entities: [
-      {
-        kind: 'npc',
-        id: 'guild-master',
-        x: 4,
-        y: 3,
-        // Dialog is dynamic via systems/tutorial.ts (Guild Master phases)
-        dialog: [
-          'GUILD MASTER OF THE TUTORIAL GUILD.',
-          'TALK TO ME TO TRAIN. STAIRS STAY LOCKED UNTIL YOU GRADUATE.',
-        ],
-      },
-      {
-        kind: 'sword',
-        id: 'starter-sword',
-        x: 5,
-        y: 3,
-      },
       {
         kind: 'sign',
         id: 'sign-meadow',
@@ -91,11 +134,10 @@ export const ROOMS: Record<string, RoomDef> = {
         dialog: [
           'OFFICIAL QUEST SIGN (VERY OFFICIAL)',
           'SAVE PRIZELLA. SHE RULES. LITERALLY.',
-          'TALK TO THE GUILD MASTER FIRST — STAIRS LOCK UNTIL GRADUATION.',
-          'THEN: STAIRS = DUNJUNZ B1. EAST = TRAIL.',
+          'CAVE MOUTH = DUNJUNZ B1.',
+          'EAST = TRAIL. WEST = TRAINING GUILD.',
           'TRAIL NORTH: WOODZ. SOUTH: DEZERTZ.',
           'M = MAPZ (ONCE YOU FIND SOME)',
-          'F AT A FORJE = MAKE COOLER STUFF',
         ],
       },
       {
@@ -1557,7 +1599,7 @@ export function resolveRoomId(id: string): string {
   return ROOM_ALIASES[id] ?? id;
 }
 
-export const START_ROOM = 'overworld';
+export const START_ROOM = 'guild_hall';
 
 /** Human-readable floor label for HUD. */
 export function floorLabel(floor: number | undefined): string {

@@ -1408,10 +1408,9 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   canvasTex(scene, 'tile-stairs', ART_RES, ART_RES, (ctx) => {
-    // pit behind steps
+    // Dungeon stair shaft (purple stone)
     fill(ctx, '#1a1020', 0, 0, ART_RES, ART_RES);
     dither(ctx, '#1a1020', '#0a0810', 0, 0, ART_RES, ART_RES, 0);
-    // side walls
     shadedBlock(ctx, '#3a3050', '#5a4a70', '#1a1428', 0, 0, 3, ART_RES);
     shadedBlock(ctx, '#3a3050', '#5a4a70', '#1a1428', ART_RES - 3, 0, 3, ART_RES);
     for (let i = 0; i < 7; i++) {
@@ -1428,14 +1427,46 @@ export function generateTextures(scene: Phaser.Scene): void {
         ART_RES - 6 - inset * 2,
         3,
       );
-      // tread edge
       fill(ctx, '#4a3a60', 3 + inset, y + 3, ART_RES - 6 - inset * 2, 1);
       grit(ctx, 'rgba(0,0,0,0.2)', 4 + inset, y, ART_RES - 8 - inset * 2, 2, 4, i);
     }
-    // descent marker
     fill(ctx, '#ff6b9d', 11, 1, 10, 3);
     fill(ctx, '#ffb0c8', 13, 2, 6, 1);
     fill(ctx, '#c03050', 14, 4, 4, 1);
+  });
+
+  // Surface cave mouth (meadow dungeon entrance) — rock arch + dark maw
+  canvasTex(scene, 'tile-cave-mouth', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#2f6b45', 0, 0, ART_RES, ART_RES); // grass around
+    dither(ctx, '#2f6b45', '#1e4a30', 0, 0, ART_RES, ART_RES, 0);
+    // rock mass
+    shadedBlock(ctx, '#5a5048', '#8a8070', '#2a2420', 2, 4, 28, 26);
+    fill(ctx, '#6a6058', 4, 6, 24, 8);
+    // dark cave hole (ellipse-ish)
+    fill(ctx, '#0a0810', 8, 10, 16, 18);
+    fill(ctx, '#121018', 10, 12, 12, 14);
+    fill(ctx, '#1a1020', 12, 14, 8, 10);
+    // arch lip highlight
+    fill(ctx, '#a09888', 7, 9, 18, 2);
+    fill(ctx, '#c9a227', 12, 8, 8, 1); // faint gold glint
+    grit(ctx, 'rgba(0,0,0,0.25)', 4, 8, 24, 20, 6, 2);
+    spark(ctx, 14, 16, '#2a2038');
+  });
+
+  // Training dummy — straw + wood post
+  canvasTex(scene, 'dummy', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#5a3d1a', 14, 18, 4, 12); // post
+    fill(ctx, '#8b5a2b', 15, 18, 2, 11);
+    // body sack
+    shadedBlock(ctx, '#c9a227', '#e8d080', '#6a5020', 8, 6, 16, 16);
+    fill(ctx, '#a08040', 10, 8, 12, 4);
+    // rope
+    fill(ctx, '#6b4423', 8, 12, 16, 2);
+    // face X
+    fill(ctx, '#3a2a10', 12, 10, 2, 2);
+    fill(ctx, '#3a2a10', 18, 10, 2, 2);
+    fill(ctx, '#3a2a10', 14, 14, 4, 2);
+    spark(ctx, 11, 9, '#fff3c0');
   });
 
   canvasTex(scene, 'tile-stairs-up', ART_RES, ART_RES, (ctx) => {
@@ -1507,6 +1538,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     'empty',
     'potion',
     'mild_sword',
+    'training_axe',
     'iron_blade',
     'sand_saber',
     'dunjun_cleaver',
@@ -1583,6 +1615,7 @@ export function generateTextures(scene: Phaser.Scene): void {
   // Default melee swing + one FX frame per weapon look (attack reads uniquely)
   const swingLooks: WeaponLook[] = [
     'sword',
+    'axe',
     'iron',
     'saber',
     'cleaver',

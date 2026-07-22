@@ -44,7 +44,11 @@ export type EntityKind =
   | 'tarantula'
   | 'hornet'
   /** Wall-mounted torch prop (decoration + ambient light ease). */
-  | 'torch_wall';
+  | 'torch_wall'
+  /** Training dummy (guild hall — hit with weapons, no contact damage). */
+  | 'dummy'
+  /** Weapon rack (guild hall — equip training gear). */
+  | 'rack';
 
 /** Non-human best friend companion (randomized per playthrough). */
 export type BestBudId =

@@ -219,18 +219,27 @@ import { pendingHeroPick } from '../systems/hero-identity';
 import { playMusic, playSfx, type MusicId } from '../systems/audio';
 import { loadSettings } from '../systems/settings';
 import {
+  allWeaponHitsDone,
+  canExitGuildEast,
   canUseDungeonStairs,
   completeTutorial,
+  dummyHitToast,
+  equipTrainingWeapon,
+  eastDoorBlockedToast,
+  GUILD_HALL_ID,
   GUILD_MASTER_ID,
   guildMasterDialog,
   guildMasterIntroDialog,
   isTutorialComplete,
-  markTutorialBag,
   markTutorialIntroSeen,
-  markTutorialSwung,
   needsTutorialIntro,
+  nextTutorialWeapon,
+  rackDialog,
+  recordDummyHit,
   stairsBlockedToast,
-  tutorialChecklist,
+  tutorialWeaponFromEquip,
+  type TutorialWeapon,
+  TRAINING_TEMPLATES,
 } from '../systems/tutorial';
 import { loadSave, writeSave } from '../systems/save';
 import {
@@ -340,7 +349,7 @@ const TEX: Record<TileKind, string> = {
   locked: 'tile-locked',
   stairs: 'tile-stairs',
   stairs_up: 'tile-stairs-up',
-  entrance: 'tile-stairs',
+  entrance: 'tile-cave-mouth',
   lava: 'tile-lava',
   pad: 'tile-pad',
 };
@@ -372,6 +381,8 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   tarantula: 'tarantula',
   hornet: 'hornet',
   torch_wall: 'torch_wall',
+  dummy: 'dummy',
+  rack: 'sword-item',
 };
 
 const MOBILE_HOSTILES = [
@@ -988,14 +999,6 @@ export class GameScene extends Phaser.Scene {
     if (open && this.player.body) {
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     }
-    if (open && !isTutorialComplete(this.save)) {
-      const next = markTutorialBag(this.save);
-      if (next !== this.save) {
-        this.save = next;
-        writeSave(this.save);
-        this.game.events.emit('toast', 'BAG OPENED — TALK TO GUILD MASTER');
-      }
-    }
   };
 
   private onMapzState = (open: boolean): void => {
@@ -1553,7 +1556,10 @@ export class GameScene extends Phaser.Scene {
    * Without this, death + reload re-locks the door while the key is already gone.
    */
   private applyPersistentDoorUnlocks(grid: TileKind[][]): TileKind[][] {
-    if (!this.save.flags['door-unlocked']) return grid;
+    const unlockFriend = !!this.save.flags['door-unlocked'];
+    const unlockGuild =
+      this.room?.id === GUILD_HALL_ID && isTutorialComplete(this.save);
+    if (!unlockFriend && !unlockGuild) return grid;
     return grid.map((row) =>
       row.map((cell) => (cell === 'locked' ? 'door' : cell)),
     );
@@ -2076,13 +2082,17 @@ export class GameScene extends Phaser.Scene {
       for (let x = 0; x < VIEW_TILES_W; x++) {
         const kind = this.tileGrid[y][x];
         const pos = this.tileToWorld(x, y);
+        const texKey =
+          kind === 'stairs' && (room.floor ?? 0) >= 0
+            ? 'tile-cave-mouth'
+            : TEX[kind];
         const img = this.add
-          .image(pos.x, pos.y, TEX[kind])
+          .image(pos.x, pos.y, texKey)
           .setScale(SPRITE_SCALE)
           .setDepth(0);
         img.setData('mapTile', true);
         const tint = depthTileTint(depth, kind, land === 'surface' ? 'dunjunz' : land);
-        if (tint !== 0xffffff) img.setTint(tint);
+        if (tint !== 0xffffff && kind !== 'stairs') img.setTint(tint);
         if (kind === 'water' || kind === 'lava') {
           this.ambientTiles.push({ img, kind });
         }
@@ -2196,14 +2206,14 @@ export class GameScene extends Phaser.Scene {
     this.syncCompanion();
     this.flushAchievements();
 
-    // First-boot meadow: Guild Master intro (stairs locked until graduation)
-    if (resolved === 'overworld' && needsTutorialIntro(this.save)) {
+    // First-boot guild hall intro
+    if (resolved === GUILD_HALL_ID && needsTutorialIntro(this.save)) {
       this.time.delayedCall(400, () => {
-        if (this.leavingToTitle || this.room?.id !== 'overworld') return;
+        if (this.leavingToTitle || this.room?.id !== GUILD_HALL_ID) return;
         this.save = markTutorialIntroSeen(this.save);
         writeSave(this.save);
         this.game.events.emit('dialog-show', guildMasterIntroDialog());
-        this.game.events.emit('toast', 'TALK TO THE GUILD MASTER (E)');
+        this.game.events.emit('toast', 'RACKS (E) · DUMMIES (ATK) · MASTER (E)');
       });
     }
 
@@ -2786,6 +2796,8 @@ export class GameScene extends Phaser.Scene {
       'princess',
       'best_bud',
       'portal',
+      'rack',
+      'dummy',
     ].includes(def.kind);
 
     // Mobile hostiles: chase + walls. Cactus: rooted hazard. Tree: solid prop.
@@ -2807,6 +2819,19 @@ export class GameScene extends Phaser.Scene {
     } else if (def.kind === 'torch_wall') {
       sprite.setImmovable(true);
       sprite.setDepth(3);
+      const body = sprite.body as Phaser.Physics.Arcade.Body;
+      body.enable = false;
+    } else if (def.kind === 'dummy') {
+      sprite.setImmovable(true);
+      sprite.setDepth(5);
+      const body = sprite.body as Phaser.Physics.Arcade.Body;
+      body.moves = false;
+      body.enable = true;
+      body.setSize(14, 16);
+    } else if (def.kind === 'rack') {
+      sprite.setImmovable(true);
+      sprite.setDepth(4);
+      sprite.setTint(0xffc857);
       const body = sprite.body as Phaser.Physics.Arcade.Body;
       body.enable = false;
     } else if (isCactusPlant || isTree) {
@@ -2858,8 +2883,8 @@ export class GameScene extends Phaser.Scene {
     const threat = threatForRoom(this.room, this.save);
     const generation = Math.max(0, opts?.generation ?? 0);
     let hp =
-      isTree || isTumbleweed
-        ? 1
+      isTree || isTumbleweed || def.kind === 'dummy' || def.kind === 'rack'
+        ? 99
         : resolveEnemyHp(def.kind, def.hp, threat);
     let contactDamage = contactHostile
       ? resolveEnemyContactDamage(def.kind, threat)
@@ -2899,7 +2924,11 @@ export class GameScene extends Phaser.Scene {
       displayScale: def.scale,
     };
 
-    if (contactHostile) {
+    if (def.kind === 'dummy') {
+      this.physics.add.overlap(this.swordHit, sprite, () =>
+        this.hitEnemy(actor),
+      );
+    } else if (contactHostile) {
       this.physics.add.overlap(this.player, sprite, () =>
         this.hurtPlayer(actor),
       );
@@ -3147,6 +3176,12 @@ export class GameScene extends Phaser.Scene {
     if (!actor.alive || actor.hurtCooldown > 0 || !this.attacking) return;
     if (!hasWeaponEquipped(this.save)) return;
     if (!actorHasLiveBody(actor)) return;
+
+    // Training dummy — no kill, weapon drill only
+    if (actor.kind === 'dummy') {
+      this.onDummyHit(actor);
+      return;
+    }
 
     // Best Bud is immortal friendship — not a target
     if (actor.kind === 'best_bud') {
@@ -3672,27 +3707,73 @@ export class GameScene extends Phaser.Scene {
     return best;
   }
 
-  private noteTutorialSwing(): void {
-    if (isTutorialComplete(this.save)) return;
-    const next = markTutorialSwung(this.save);
-    if (next === this.save) return;
-    this.save = next;
+  private equippedTutorialWeapon(): TutorialWeapon | null {
+    const uid = this.save.equipped?.weapon;
+    const inst = uid ? findInBag(this.save, uid) : null;
+    const tid = inst?.templateId;
+    const look = appearanceFromSave(this.save).weapon;
+    return tutorialWeaponFromEquip(tid, look);
+  }
+
+  private onDummyHit(actor: Actor): void {
+    if (!actor.alive || actor.kind !== 'dummy') return;
+    if (actor.hurtCooldown > 0) return;
+    actor.hurtCooldown = 220;
+    playSfx('hit_enemy');
+    actor.sprite.setTint(0xffffff);
+    sparkBurst(this, actor.sprite.x, actor.sprite.y, 0xffc857, 3);
+    this.time.delayedCall(80, () => {
+      if (actor.alive) actor.sprite.clearTint();
+    });
+    if (isTutorialComplete(this.save)) {
+      this.game.events.emit('toast', 'DUMMY THUDS. ALREADY GRADUATED.');
+      return;
+    }
+    const w = this.equippedTutorialWeapon();
+    const r = recordDummyHit(this.save, w);
+    this.save = r.save;
     writeSave(this.save);
-    this.game.events.emit('toast', 'SWING NOTED — TALK TO GUILD MASTER');
+    this.game.events.emit(
+      'toast',
+      dummyHitToast(r.accepted, w, r.next, r.advanced),
+    );
+    if (r.advanced && !r.next) {
+      this.game.events.emit('toast', 'ALL WEAPONS HIT — TALK TO GUILD MASTER');
+    }
+  }
+
+  private useWeaponRack(actor: Actor): void {
+    const id = actor.id ?? '';
+    const map: Record<string, TutorialWeapon> = {
+      'rack-sword': 'sword',
+      'rack-axe': 'axe',
+      'rack-bow': 'bow',
+      'rack-staff': 'staff',
+    };
+    const w = map[id];
+    if (!w) {
+      this.game.events.emit('toast', 'EMPTY RACK');
+      return;
+    }
+    this.save = equipTrainingWeapon(this.save, w);
+    writeSave(this.save);
+    this.emitHud();
+    this.refreshPlayerAppearance();
+    playSfx('success');
+    this.game.events.emit('dialog-show', rackDialog(w));
+    this.game.events.emit(
+      'toast',
+      `EQUIPPED ${TRAINING_TEMPLATES[w].replace(/_/g, ' ').toUpperCase()}`,
+    );
   }
 
   /**
-   * Tutorial Guild Master — gates dungeon stairs until checklist done:
-   * sword + one swing + open bag, then talk again to graduate.
+   * Guild Master — graduate after all four weapon dummy hits.
    */
   private talkToGuildMaster(_npc: Actor): void {
-    if (!this.save.hasSword) {
-      this.grantSword(false);
-    }
     this.save = markTutorialIntroSeen(this.save);
-    const check = tutorialChecklist(this.save);
 
-    if (check.complete) {
+    if (isTutorialComplete(this.save)) {
       this.game.events.emit('dialog-show', [
         ...guildMasterDialog(this.save),
         '',
@@ -3702,17 +3783,48 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    if (check.readyToGraduate) {
+    if (allWeaponHitsDone(this.save)) {
       this.save = completeTutorial(this.save);
       writeSave(this.save);
+      // Unlock east door tiles live
+      this.tileGrid = this.applyPersistentDoorUnlocks(this.tileGrid);
+      this.rebuildMapTilesForUnlock();
       this.game.events.emit('dialog-show', guildMasterDialog(this.save));
-      this.game.events.emit('toast', 'GRADUATED — DUNJUN STAIRS OPEN');
+      this.game.events.emit('toast', 'GRADUATED — EAST DOOR OPEN');
       playSfx('success');
       return;
     }
 
     writeSave(this.save);
+    const need = nextTutorialWeapon(this.save);
     this.game.events.emit('dialog-show', guildMasterDialog(this.save));
+    if (need) {
+      this.game.events.emit(
+        'toast',
+        `NEXT DRILL: ${need.toUpperCase()}`,
+      );
+    }
+  }
+
+  /** After tutorial unlocks L→door, refresh wall colliders for the east mouth. */
+  private rebuildMapTilesForUnlock(): void {
+    // Soft approach: clear solid walls that became doors
+    // Full rebuild is heavy; convert locked static walls on east edge
+    const cell = TILE * SCALE;
+    for (let ty = 0; ty < this.tileGrid.length; ty++) {
+      for (let tx = 0; tx < (this.tileGrid[ty]?.length ?? 0); tx++) {
+        if (this.tileGrid[ty][tx] !== 'door') continue;
+        // Ensure no wall body on door cells — destroy overlapping wall sprites
+        const wx = this.roomOriginX + (tx + 0.5) * cell;
+        const wy = this.roomOriginY + (ty + 0.5) * cell;
+        this.walls.getChildren().forEach((c) => {
+          const s = c as Phaser.Physics.Arcade.Sprite;
+          if (Math.hypot(s.x - wx, s.y - wy) < cell * 0.4) {
+            s.destroy();
+          }
+        });
+      }
+    }
   }
 
   private tryInteract(): void {
@@ -3805,6 +3917,11 @@ export class GameScene extends Phaser.Scene {
 
     if (best.id === GUILD_MASTER_ID || best.id === 'old-man') {
       this.talkToGuildMaster(best);
+      return;
+    }
+
+    if (best.kind === 'rack' || best.id?.startsWith('rack-')) {
+      this.useWeaponRack(best);
       return;
     }
 
@@ -4069,13 +4186,11 @@ export class GameScene extends Phaser.Scene {
 
     if (equippedWeaponIsRanged(this.save)) {
       this.tryRangedAttack();
-      this.noteTutorialSwing();
       return;
     }
 
     this.attacking = true;
     playSfx('attack');
-    this.noteTutorialSwing();
     // Hip sheathe vanishes while the blade is out in front
     this.refreshPlayerAppearance();
 
@@ -4208,8 +4323,12 @@ export class GameScene extends Phaser.Scene {
       for (let x = 0; x < VIEW_TILES_W; x++) {
         const kind = this.tileGrid[y][x];
         const pos = this.tileToWorld(x, y);
+        const texKey =
+          kind === 'stairs' && (this.room.floor ?? 0) >= 0
+            ? 'tile-cave-mouth'
+            : TEX[kind];
         const img = this.add
-          .image(pos.x, pos.y, TEX[kind])
+          .image(pos.x, pos.y, texKey)
           .setScale(SPRITE_SCALE)
           .setDepth(0);
         img.setData('mapTile', true);
@@ -4302,6 +4421,10 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (tx >= VIEW_TILES_W - 1 && this.room.east) {
+      if (this.room.id === GUILD_HALL_ID && !canExitGuildEast(this.save)) {
+        this.game.events.emit('toast', eastDoorBlockedToast());
+        return;
+      }
       this.transitionLock = true;
       playSfx('door');
       this.travelTo(this.room.east, entryFromOpposite('east'));
@@ -5199,6 +5322,11 @@ export class GameScene extends Phaser.Scene {
     // Melee multi-hit guard; projectiles only skip if still in brief i-frames
     if (actor.hurtCooldown > 0 && !fromProjectile) return false;
     if (fromProjectile && actor.hurtCooldown > 120) return false;
+
+    if (actor.kind === 'dummy') {
+      this.onDummyHit(actor);
+      return true;
+    }
 
     if (actor.kind === 'cube' && !actor.aggressive) {
       this.provokePeaceful(actor, 'THE CUBE IS MAD NOW');

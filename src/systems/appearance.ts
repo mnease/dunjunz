@@ -30,6 +30,7 @@ export type WeaponLook =
   | 'cleaver'
   | 'honk'
   | 'phaser'
+  | 'axe'
   | 'bow'
   | 'crossbow'
   | 'staff';
@@ -73,6 +74,8 @@ function mapWeapon(look: string | undefined): WeaponLook {
       return 'honk';
     case 'phaser':
       return 'phaser';
+    case 'axe':
+      return 'axe';
     case 'bow':
       return 'bow';
     case 'crossbow':
