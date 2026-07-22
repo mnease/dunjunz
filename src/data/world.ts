@@ -391,7 +391,8 @@ export const ROOMS: Record<string, RoomDef> = {
       '#..PP......PP..#',
       '#..............#',
       '#..............#',
-      '#.....####......',
+      // East mouth → b1_gate (D survives 16:9 rim seal)
+      '#.....####.....D',
       '#..............#',
       '#..PP......PP..#',
       '#..............#',
@@ -426,7 +427,7 @@ export const ROOMS: Record<string, RoomDef> = {
           "CAPTAIN'S LOG: STARDATE... UH...",
           'GOLD SHIRT. COMMAND TRACK. VIBES: 10.',
           'WE BEAMED INTO A DUNGEON. COOL. COOL.',
-          'EAST RETURNS TO THE GATE.',
+          'EAST DOOR RETURNS TO THE GATE.',
           'ENSIGNS IN RED: PLEASE STOP DYING.',
           'THAT\'S AN ORDER. A SOFT ORDER.',
         ],

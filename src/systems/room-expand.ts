@@ -329,20 +329,19 @@ function sealRim(
   grid[targetH - 1]![0] = '#';
   grid[targetH - 1]![targetW - 1] = '#';
 
-  // Keep single doors: if a rim cell is floor-like, only leave it open when
-  // it is a multi-tile trail (not a one-tile door mouth). Door glyphs (D/L)
-  // stay as-is; stray floor holes on the rim become wall.
+  // Keep single doors / trail mouths: door glyphs (D/L) always stay.
+  // Isolated floor on the rim is sealed ONLY when it is a stretch artifact
+  // (interior behind it is also wall). Real single-tile exits (e.g. b1_trek
+  // east to gate) keep open floor when the interior cell is walkable.
   const sealEdge = (
     get: (i: number) => string,
     set: (i: number, c: string) => void,
+    getInterior: (i: number) => string,
     n: number,
   ) => {
     for (let i = 1; i < n - 1; i++) {
       const c = get(i);
       if (c === '#' || DOORISH.has(c)) continue;
-      // Floor/grass/dirt on rim is only OK for open trails (already painted
-      // as continuous runs). Isolated floor next to walls becomes wall so
-      // we never show a gap or a fake second door tile.
       const left = get(i - 1);
       const right = get(i + 1);
       const alone =
@@ -353,38 +352,49 @@ function sealRim(
         set(i, '#');
         continue;
       }
-      if (alone && (c === '.' || c === 'g' || c === 'd')) {
+      if (alone && (c === '.' || c === 'g' || c === 'd' || c === '~' || c === '=')) {
+        const inner = getInterior(i);
+        // True exit: walkable (or door) just inside — keep the mouth open
+        if (!isSolidWall(inner)) continue;
         set(i, '#');
       }
     }
   };
 
+  // North rim → interior is row 1
   sealEdge(
     (i) => grid[0]![i]!,
     (i, c) => {
       grid[0]![i] = c;
     },
+    (i) => grid[1]![i]!,
     targetW,
   );
+  // South
   sealEdge(
     (i) => grid[targetH - 1]![i]!,
     (i, c) => {
       grid[targetH - 1]![i] = c;
     },
+    (i) => grid[targetH - 2]![i]!,
     targetW,
   );
+  // West
   sealEdge(
     (i) => grid[i]![0]!,
     (i, c) => {
       grid[i]![0] = c;
     },
+    (i) => grid[i]![1]!,
     targetH,
   );
+  // East
   sealEdge(
     (i) => grid[i]![targetW - 1]!,
     (i, c) => {
       grid[i]![targetW - 1] = c;
     },
+    (i) => grid[i]![targetW - 2]!,
     targetH,
   );
 

@@ -23,6 +23,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Fixed
 
+- **USS Plot Hole / redshirt room soft-lock** — 16:9 rim seal closed single-tile open exits (trek east → gate). Seal now keeps walkable mouths with walkable interiors; regression test covers all linked room edges.
 - **ESC → Main Title freeze** — `scene.start('Title')` mid-`update` after pause could hang Phaser. Title exit is deferred one tick, Game+UI fully stopped, pause overlay has tappable **RESUME** / **MAIN MENU**.
 
 ### Changed

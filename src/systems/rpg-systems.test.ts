@@ -1135,6 +1135,47 @@ describe('room expand to 16:9 view', () => {
     }
     expect(open).toBeGreaterThan(0);
   });
+
+  it('keeps linked room exits open after stretch (no soft-lock mouths)', async () => {
+    const { expandRoomTiles } = await import('./room-expand');
+    const { VIEW_TILES_W, VIEW_TILES_H } = await import('../config');
+    // USS Plot Hole (redshirts) was sealing its only east exit
+    const trek = expandRoomTiles(ROOMS.b1_trek.tiles);
+    let eOpen = 0;
+    for (let y = 0; y < VIEW_TILES_H; y++) {
+      const ch = trek.tiles[y]?.[VIEW_TILES_W - 1];
+      if (ch && ch !== '#') eOpen += 1;
+    }
+    expect(eOpen).toBeGreaterThan(0);
+
+    // Every room with a cardinal link keeps that rim walkable
+    const sealed: string[] = [];
+    for (const room of Object.values(ROOMS)) {
+      const ex = expandRoomTiles(room.tiles);
+      const h = ex.tiles.length;
+      const w = ex.tiles[0]!.length;
+      const edgeOpen = (edge: 'N' | 'S' | 'E' | 'W') => {
+        let n = 0;
+        if (edge === 'E' || edge === 'W') {
+          const x = edge === 'E' ? w - 1 : 0;
+          for (let y = 0; y < h; y++) {
+            if (ex.tiles[y]![x] !== '#') n++;
+          }
+        } else {
+          const y = edge === 'N' ? 0 : h - 1;
+          for (let x = 0; x < w; x++) {
+            if (ex.tiles[y]![x] !== '#') n++;
+          }
+        }
+        return n;
+      };
+      if (room.east && edgeOpen('E') === 0) sealed.push(`${room.id}:east`);
+      if (room.west && edgeOpen('W') === 0) sealed.push(`${room.id}:west`);
+      if (room.north && edgeOpen('N') === 0) sealed.push(`${room.id}:north`);
+      if (room.south && edgeOpen('S') === 0) sealed.push(`${room.id}:south`);
+    }
+    expect(sealed, `sealed exits: ${sealed.join(', ')}`).toEqual([]);
+  });
 });
 
 describe('forjing craft enhance imbue', () => {
