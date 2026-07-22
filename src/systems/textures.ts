@@ -4,9 +4,11 @@ import {
   BARE_APPEARANCE,
   buddyTextureKey,
   playerTextureKey,
+  playerWakeTextureKey,
   type AppearanceSpec,
   type BuddyPoseName,
   type PlayerWalkFrame,
+  type PlayerWakePose,
   type WeaponLook,
   type ShieldLook,
   type AmuletLook,
@@ -581,6 +583,78 @@ export function ensurePlayerTexture(
   if (!scene.textures.exists(key)) {
     canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
       drawPlayerLook(ctx, spec, walk);
+    });
+  }
+  return key;
+}
+
+/**
+ * Beach wake poses: lying on sand → sitting up → standing.
+ * Drawn as dedicated 32×32 frames so gear still reads at a glance.
+ */
+export function drawPlayerWakePose(
+  ctx: CanvasRenderingContext2D,
+  spec: AppearanceSpec,
+  pose: Exclude<PlayerWakePose, 'stand'>,
+): void {
+  if (pose === 'lie') {
+    // Horizontal body on the sand (head left, feet right)
+    // shadow under body
+    fill(ctx, 'rgba(40,30,20,0.25)', 4, 20, 24, 4);
+    // legs
+    shadedBlock(ctx, '#3d2b1f', '#5a4030', '#1a1008', 18, 14, 10, 5);
+    shadedBlock(ctx, '#3d2b1f', '#5a4030', '#1a1008', 18, 19, 10, 5);
+    // torso
+    shadedBlock(ctx, '#4a6a9a', '#6a8aba', '#2a3a5a', 8, 13, 12, 12);
+    // head
+    shadedBlock(ctx, '#e8c4a0', '#ffe0c8', '#c09070', 2, 14, 8, 8);
+    // closed eyes (asleep)
+    fill(ctx, '#3a2a20', 4, 17, 2, 1);
+    fill(ctx, '#3a2a20', 7, 17, 2, 1);
+    // hair
+    fill(ctx, '#2a1a10', 2, 13, 8, 2);
+    // arm draped
+    shadedBlock(ctx, '#e8c4a0', '#ffe0c8', '#c09070', 12, 22, 8, 3);
+    // light armor hint if any
+    if (spec.breastplate !== 'none') {
+      fill(ctx, '#8a98a8', 9, 15, 10, 2);
+    }
+    spark(ctx, 5, 15, 'rgba(255,255,255,0.3)');
+    return;
+  }
+
+  // sit — upright torso, folded legs
+  fill(ctx, 'rgba(40,30,20,0.2)', 8, 26, 16, 3);
+  // folded legs
+  shadedBlock(ctx, '#3d2b1f', '#5a4030', '#1a1008', 8, 22, 7, 5);
+  shadedBlock(ctx, '#3d2b1f', '#5a4030', '#1a1008', 17, 22, 7, 5);
+  // torso
+  shadedBlock(ctx, '#4a6a9a', '#6a8aba', '#2a3a5a', 10, 12, 12, 12);
+  if (spec.breastplate !== 'none') {
+    fill(ctx, '#8a98a8', 11, 14, 10, 8);
+  }
+  // head
+  shadedBlock(ctx, '#e8c4a0', '#ffe0c8', '#c09070', 11, 4, 10, 9);
+  fill(ctx, '#2a1a10', 11, 3, 10, 3);
+  // opening eyes (half)
+  fill(ctx, '#222', 13, 8, 2, 1);
+  fill(ctx, '#222', 18, 8, 2, 1);
+  fill(ctx, '#fff', 13, 7, 1, 1);
+  // arms on knees
+  shadedBlock(ctx, '#e8c4a0', '#ffe0c8', '#c09070', 7, 16, 4, 6);
+  shadedBlock(ctx, '#e8c4a0', '#ffe0c8', '#c09070', 21, 16, 4, 6);
+}
+
+export function ensurePlayerWakeTexture(
+  scene: Phaser.Scene,
+  spec: AppearanceSpec,
+  pose: PlayerWakePose,
+): string {
+  if (pose === 'stand') return ensurePlayerTexture(scene, spec, 0);
+  const key = playerWakeTextureKey(spec, pose);
+  if (!scene.textures.exists(key)) {
+    canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
+      drawPlayerWakePose(ctx, spec, pose);
     });
   }
   return key;

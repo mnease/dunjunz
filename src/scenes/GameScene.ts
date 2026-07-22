@@ -60,7 +60,7 @@ import {
   withHiddenWeapon,
   type PlayerWalkFrame,
 } from '../systems/appearance';
-import { ensureBuddyTexture, ensurePlayerTexture } from '../systems/textures';
+import { ensureBuddyTexture } from '../systems/textures';
 import { swingTextureKey } from '../systems/weapon-visuals';
 import {
   ATTR_IDS,
@@ -252,13 +252,18 @@ import {
   weaponDamageDealt,
   type TutorialWeapon,
 } from '../systems/tutorial';
-import { ensureGuildRackTexture } from '../systems/textures';
+import {
+  ensureGuildRackTexture,
+  ensurePlayerTexture,
+  ensurePlayerWakeTexture,
+} from '../systems/textures';
 import {
   beachWakeDialog,
   ensureCrawlerId,
   markBeachWakeSeen,
   needsBeachWake,
 } from '../systems/crawler-id';
+import type { PlayerWakePose } from '../systems/appearance';
 import { BEACH_START_ID } from '../data/world';
 import { getCombatMode } from '../systems/combat-mode';
 import type { CombatMode } from '../types';
@@ -506,6 +511,8 @@ export class GameScene extends Phaser.Scene {
   /** Beach wake: blurry-eyes overlay (fades after intro dialog). */
   private wakeBlurRt: Phaser.GameObjects.Rectangle | null = null;
   private wakeBlurAlpha = 0;
+  /** Locks movement / attack while lie→sit→stand plays. */
+  private beachWakeActive = false;
   private shopPane: ShopPane = 'stock';
   private paused = false;
   /** Guards against double goToTitle / mid-update scene tears. */
@@ -608,6 +615,7 @@ export class GameScene extends Phaser.Scene {
     this.lightCookie = null;
     this.wakeBlurRt = null;
     this.wakeBlurAlpha = 0;
+    this.beachWakeActive = false;
     this.cloudField = [];
     this.surfaceSunTimeMs = 0;
     this.ambientTiles = [];
@@ -1123,7 +1131,12 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('dialog-advance');
       return;
     }
-    if (this.panelOpen() || this.paused || this.dialogCloseCooldown > 0) {
+    if (
+      this.panelOpen() ||
+      this.paused ||
+      this.dialogCloseCooldown > 0 ||
+      this.beachWakeActive
+    ) {
       return;
     }
     this.tryAttack();
@@ -1135,7 +1148,7 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('dialog-advance');
       return;
     }
-    if (this.paused || this.dialogCloseCooldown > 0) return;
+    if (this.paused || this.dialogCloseCooldown > 0 || this.beachWakeActive) return;
     // E also closes shop (do not also handle E in update — that same-frame
     // double-fire was opening then immediately closing the shop).
     if (this.shopOpen) {
@@ -2429,8 +2442,14 @@ export class GameScene extends Phaser.Scene {
     this.syncCompanion();
     this.flushAchievements();
 
-    // Beach wake — blurry eyes + voice assigns crawler id
+    // Beach wake — lie on sand, sit, stand, voice assigns crawler id
     if (resolved === BEACH_START_ID && needsBeachWake(this.save)) {
+      // Pose immediately so first painted frame is prone (not standing)
+      this.beachWakeActive = true;
+      this.setPlayerWakePose('lie');
+      if (this.player?.body) {
+        (this.player.body as Phaser.Physics.Arcade.Body).enable = false;
+      }
       this.beginBeachWake();
     }
 
@@ -3621,17 +3640,36 @@ export class GameScene extends Phaser.Scene {
     this.invuln = 900;
   };
 
+  private setPlayerWakePose(pose: PlayerWakePose): void {
+    if (!this.player) return;
+    const spec = appearanceFromSave(this.save);
+    const key = ensurePlayerWakeTexture(this, spec, pose);
+    if (this.player.texture.key !== key) this.player.setTexture(key);
+  }
+
   private beginBeachWake(): void {
+    this.beachWakeActive = true;
+    // Start prone on the sand
+    this.facing = 'up';
+    if (this.player?.body) {
+      const body = this.player.body as Phaser.Physics.Arcade.Body;
+      body.setVelocity(0, 0);
+      body.enable = false;
+    }
+    this.setPlayerWakePose('lie');
+    this.player?.setAngle(0);
+    this.player?.setScale(SPRITE_SCALE);
+
     // Blurry eyes — dark vignette over outdoor beach
-    this.wakeBlurAlpha = 0.82;
+    this.wakeBlurAlpha = 0.88;
     if (!this.wakeBlurRt) {
       this.wakeBlurRt = this.add
-        .rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x02040a, 0.82)
+        .rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x02040a, 0.88)
         .setScrollFactor(0)
         .setDepth(92)
         .setOrigin(0.5);
     } else {
-      this.wakeBlurRt.setVisible(true).setFillStyle(0x02040a, 0.82);
+      this.wakeBlurRt.setVisible(true).setFillStyle(0x02040a, 0.88);
     }
 
     void ensureCrawlerId(this.save).then((s) => {
@@ -3640,15 +3678,55 @@ export class GameScene extends Phaser.Scene {
       const id = this.save.crawlerId ?? 1;
       this.save = markBeachWakeSeen(this.save);
       writeSave(this.save);
-      this.time.delayedCall(500, () => {
+
+      // Stir on the sand
+      this.time.delayedCall(350, () => {
+        if (!this.player?.active || this.room?.id !== BEACH_START_ID) return;
+        this.tweens.add({
+          targets: this.player,
+          x: this.player.x + 2,
+          duration: 180,
+          yoyo: true,
+          ease: 'Sine.easeInOut',
+        });
+      });
+
+      // Sit up
+      this.time.delayedCall(900, () => {
         if (this.leavingToTitle || this.room?.id !== BEACH_START_ID) return;
+        this.setPlayerWakePose('sit');
+        this.player?.setScale(SPRITE_SCALE * 0.92, SPRITE_SCALE * 1.05);
+        this.tweens.add({
+          targets: this.player,
+          scaleX: SPRITE_SCALE,
+          scaleY: SPRITE_SCALE,
+          duration: 280,
+          ease: 'Back.easeOut',
+        });
+        this.wakeBlurAlpha = 0.55;
+        this.wakeBlurRt?.setFillStyle(0x02040a, 0.55);
+      });
+
+      // Stand + open eyes fully + dialog
+      this.time.delayedCall(1700, () => {
+        if (this.leavingToTitle || this.room?.id !== BEACH_START_ID) return;
+        this.setPlayerWakePose('stand');
+        this.refreshPlayerAppearance(0);
+        this.player?.setScale(SPRITE_SCALE * 1.08, SPRITE_SCALE * 0.92);
+        this.tweens.add({
+          targets: this.player,
+          scaleX: SPRITE_SCALE,
+          scaleY: SPRITE_SCALE,
+          duration: 320,
+          ease: 'Back.easeOut',
+        });
         this.game.events.emit('dialog-show', beachWakeDialog(id));
         this.game.events.emit('toast', 'NORTH → MEADOW · WEST → GUILD');
-        // Fade blur while talking / after a beat
+        // Fade remaining blur
         this.tweens.add({
           targets: this,
           wakeBlurAlpha: 0,
-          duration: 4200,
+          duration: 2800,
           ease: 'Sine.easeOut',
           onUpdate: () => {
             this.wakeBlurRt?.setFillStyle(
@@ -3661,6 +3739,15 @@ export class GameScene extends Phaser.Scene {
             this.wakeBlurAlpha = 0;
           },
         });
+      });
+
+      // Unlock controls after stand (dialog can still be open)
+      this.time.delayedCall(2100, () => {
+        if (this.leavingToTitle) return;
+        this.beachWakeActive = false;
+        if (this.player?.body) {
+          (this.player.body as Phaser.Physics.Arcade.Body).enable = true;
+        }
       });
     });
   }
@@ -4845,7 +4932,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private tryAttack(): void {
-    if (this.attacking || this.dialogLocked || this.paused || this.panelOpen()) {
+    if (
+      this.attacking ||
+      this.dialogLocked ||
+      this.paused ||
+      this.panelOpen() ||
+      this.beachWakeActive
+    ) {
       return;
     }
 
@@ -5444,6 +5537,16 @@ export class GameScene extends Phaser.Scene {
     this.padCooldown = Math.max(0, this.padCooldown - delta);
     this.portalCooldown = Math.max(0, this.portalCooldown - delta);
     this.dialogCloseCooldown = Math.max(0, this.dialogCloseCooldown - delta);
+
+    // Beach wake lie→sit→stand — freeze on the sand
+    if (this.beachWakeActive) {
+      if (this.player?.body) {
+        (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      }
+      this.refreshLighting();
+      this.refreshSurfaceShadows(delta);
+      return;
+    }
 
     if (this.dialogLocked || this.panelOpen()) {
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);

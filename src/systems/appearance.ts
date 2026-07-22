@@ -212,6 +212,9 @@ export function budAppearanceFromSave(save: SaveData): AppearanceSpec {
  */
 export type PlayerWalkFrame = 0 | 1 | 2;
 
+/** Beach wake sequence poses (front-view canvas frames). */
+export type PlayerWakePose = 'lie' | 'sit' | 'stand';
+
 /** Stable texture key for a full gear loadout (+ optional walk frame). */
 export function playerTextureKey(
   spec: AppearanceSpec,
@@ -231,6 +234,14 @@ export function playerTextureKey(
     spec.key,
   ].join('_');
   return walk === 0 ? base : `${base}_w${walk}`;
+}
+
+export function playerWakeTextureKey(
+  spec: AppearanceSpec,
+  pose: PlayerWakePose,
+): string {
+  if (pose === 'stand') return playerTextureKey(spec, 0);
+  return `${playerTextureKey(spec, 0)}_wake_${pose}`;
 }
 
 export function playerTextureKeyFromSave(

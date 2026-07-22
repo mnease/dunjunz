@@ -20,6 +20,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Beach wake animation** — crawler loads lying on the sand, sits up, then stands as blurry eyes clear and the voice greets them (movement locked until stand).
 - **Beach dressing** — sand tiles + dune walls (not bricks), coconut palms, seaweed, scuttling non-combat crabs, and shorebound wave animation (foam rolls north toward the beach).
 - **Mirror of Changing** — full-height oval mirror in the Tutorial Guild (SW). Press **E** for a mode popup: **Live Action RPG** (default, real-time Zelda-like) or **Turn-Based RPG** (classic heroes-left / enemies-right battles with initiative, Attack / Defend / Item / Flee). Switch anytime by returning to the guild.
 

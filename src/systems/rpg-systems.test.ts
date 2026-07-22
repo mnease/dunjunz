@@ -3302,6 +3302,19 @@ describe('tutorial guild hall', () => {
     expect(lines).toMatch(/TUTORIAL GUILD/);
   });
 
+  it('beach wake poses have distinct texture keys', async () => {
+    const { BARE_APPEARANCE, playerWakeTextureKey } = await import(
+      './appearance'
+    );
+    const lie = playerWakeTextureKey(BARE_APPEARANCE, 'lie');
+    const sit = playerWakeTextureKey(BARE_APPEARANCE, 'sit');
+    const stand = playerWakeTextureKey(BARE_APPEARANCE, 'stand');
+    expect(lie).toMatch(/_wake_lie$/);
+    expect(sit).toMatch(/_wake_sit$/);
+    expect(stand).not.toMatch(/wake/);
+    expect(lie).not.toBe(sit);
+  });
+
   it('guild dialog mentions drills; migrate veterans with dungeon visits', async () => {
     const lines = guildMasterDialog(defaultSave());
     expect(lines.some((l) => /SWORD|AXE|DUMMY|GUILD/i.test(l))).toBe(true);
