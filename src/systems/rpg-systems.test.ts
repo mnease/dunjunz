@@ -3070,11 +3070,15 @@ describe('tutorial guild master', () => {
     expect(done.some((l) => /OPEN|GRADUATE STATUS/i.test(l))).toBe(true);
   });
 
-  it('migrateTutorial graduates veterans with sword or dungeon visits', async () => {
+  it('migrateTutorial graduates veterans with dungeon visits, not sword alone', async () => {
     const { migrateTutorial } = await import('./tutorial');
-    const vet = migrateTutorial({
+    const midTutorial = migrateTutorial({
       ...defaultSave(),
       hasSword: true,
+    });
+    expect(isTutorialComplete(midTutorial)).toBe(false);
+    const vet = migrateTutorial({
+      ...defaultSave(),
       visitedRooms: ['b1_entrance'],
     });
     expect(isTutorialComplete(vet)).toBe(true);

@@ -182,9 +182,9 @@ export function migrateTutorial(save: SaveData): SaveData {
       id.includes('woodz_b') ||
       id.includes('dezertz_b'),
   );
+  // Do NOT use hasSword alone — first Guild talk grants the sword mid-tutorial.
   const progressed =
     leftMeadow ||
-    save.hasSword ||
     (save.level ?? 1) > 1 ||
     (save.xp ?? 0) > 0 ||
     (save.landsCleared?.length ?? 0) > 0 ||
