@@ -976,6 +976,22 @@ describe('world tile geometry', () => {
   });
 });
 
+describe('room connectivity (EMA audit)', () => {
+  it('all ROOMS have matching doors, links, stairs, and map coords', async () => {
+    const { ROOMS } = await import('../data/world');
+    const { validateRooms } = await import('./room-validate');
+    const issues = validateRooms(ROOMS);
+    if (issues.length) {
+      const sample = issues
+        .slice(0, 12)
+        .map((i) => `[${i.kind}] ${i.id}: ${i.detail}`)
+        .join('\n');
+      expect(issues, `Room issues:\n${sample}`).toEqual([]);
+    }
+    expect(issues.length).toBe(0);
+  });
+});
+
 describe('room expand to 16:9 view', () => {
   it('stretches playable interior across VIEW_TILES (not a brick frame)', async () => {
     const { expandRoomTiles } = await import('./room-expand');
