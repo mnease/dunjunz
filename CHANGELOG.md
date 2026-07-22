@@ -18,6 +18,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 - **Landing page images** — hero banner + 3-card gallery (hero loadout, meadow/sun trees, dark dungeon) on `/`; CRT-framed figures, lazy-loaded cards, clickable hero → `/play`.
 - **Surface sun depth (EMA council)** — big meadow/trail oaks (`scale` 2.2–2.6), sun-cast elongated ground shadows, and **moving cloud shade** (no cloud sprites) drifting slowly across outdoor surface lands. Trunk-sized colliders so canopies don't brick the meadow. `prefers-reduced-motion` freezes cloud drift.
 
+### Fixed
+
+- **Bow/staff vs dummies** — player projectiles now hit training dummies (arrows/bolts were filtered to hostiles only).
+
 ### Changed
 
 - **Training Guild atmosphere (EMA)** — ominous living-quarters hall: bookshelves lining the walls, NW/SE reading corners (chair + table + lamp + nook shelf), wall torches + floor lamps with visible light radii, dim ambient (`AMBIENT_GUILD_HALL`) so shadows read without soft-locking new players. Center stays drill floor (dummies/racks/master). Flavor dialogs on shelves/tables.

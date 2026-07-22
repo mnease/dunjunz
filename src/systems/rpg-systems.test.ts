@@ -1836,6 +1836,16 @@ describe('best bud combat', () => {
     expect(budCanBlockHit('pebbo', 1000)).toBe(false);
     expect(budCanBlockHit('gloop', 0)).toBe(false);
   });
+
+  it('player projectiles can target training dummies', async () => {
+    const { isHostileKind, isPlayerProjectileTarget } = await import(
+      './best-bud-combat'
+    );
+    expect(isHostileKind('dummy')).toBe(false);
+    expect(isPlayerProjectileTarget('dummy')).toBe(true);
+    expect(isPlayerProjectileTarget('slime')).toBe(true);
+    expect(isPlayerProjectileTarget('sign')).toBe(false);
+  });
 });
 
 describe('best bud quest', () => {

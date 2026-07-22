@@ -169,6 +169,7 @@ import {
   budCanBlockHit,
   budCombatProfile,
   isHostileKind,
+  isPlayerProjectileTarget,
 } from '../systems/best-bud-combat';
 import {
   computeBudHealAmount,
@@ -3877,8 +3878,9 @@ export class GameScene extends Phaser.Scene {
 
   private onDummyHit(actor: Actor, damageOverride?: number): void {
     if (!actor.alive || actor.kind !== 'dummy') return;
-    if (actor.hurtCooldown > 0) return;
-    actor.hurtCooldown = 220;
+    // Align with projectile multi-hit gate (arrows/staff bolts); melee still spaced
+    if (actor.hurtCooldown > 120) return;
+    actor.hurtCooldown = 200;
     playSfx('hit_enemy');
     actor.sprite.setTint(0xffffff);
     sparkBurst(this, actor.sprite.x, actor.sprite.y, 0xffc857, 3);
@@ -5528,11 +5530,11 @@ export class GameScene extends Phaser.Scene {
         p.img.x += p.vx * stepDt;
         p.img.y += p.vy * stepDt;
 
-        // Hit creeps first (so a shot that grazes wall+creep still counts)
+        // Hit creeps / training dummies first (so a shot that grazes wall still counts)
         if (p.fromPlayer) {
           for (const a of this.actors) {
             if (!a.alive || !a.sprite?.active) continue;
-            if (!isHostileKind(a.kind) && a.kind !== 'boss') continue;
+            if (!isPlayerProjectileTarget(a.kind)) continue;
             if (this.isUnprovokedPeaceful(a)) continue;
             const hitR = this.projectileHitRadius(true);
             // Segment vs point: nearest distance along this step

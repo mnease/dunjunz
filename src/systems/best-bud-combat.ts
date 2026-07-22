@@ -156,3 +156,11 @@ export function hostileEntityKinds(): readonly string[] {
 export function isHostileKind(kind: string): boolean {
   return hostileEntityKinds().includes(kind);
 }
+
+/**
+ * Targets for player arrows / bolts / beams.
+ * Training dummies are not hostiles but must still take ranged drill hits.
+ */
+export function isPlayerProjectileTarget(kind: string): boolean {
+  return kind === 'dummy' || isHostileKind(kind) || kind === 'boss';
+}
