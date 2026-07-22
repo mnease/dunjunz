@@ -234,6 +234,7 @@ import {
   guildMasterDialog,
   guildMasterIntroDialog,
   buildRackPickerPayload,
+  equippedGuildLoaner,
   ensureCatalogInBag,
   isRackEmpty,
   isTutorialComplete,
@@ -243,6 +244,7 @@ import {
   nextTutorialWeapon,
   rackDialog,
   rackPresentTemplates,
+  rackReturnPromptLines,
   rackWeaponFromId,
   recordDummyDamage,
   returnWeaponToRack,
@@ -508,6 +510,13 @@ export class GameScene extends Phaser.Scene {
    */
   private rackPicker: RackPickerPayload | null = null;
   private rackPickerOpen = false;
+  /** Yes/No prompt to return equipped loaner to its rack. */
+  private rackReturnPrompt: {
+    family: TutorialWeapon;
+    rackId: string;
+    name: string;
+  } | null = null;
+  private rackReturnOpen = false;
   /** Beach wake: blurry-eyes overlay (fades after intro dialog). */
   private wakeBlurRt: Phaser.GameObjects.Rectangle | null = null;
   private wakeBlurAlpha = 0;
@@ -591,6 +600,8 @@ export class GameScene extends Phaser.Scene {
     this.dialogCloseCooldown = 0;
     this.rackPickerOpen = false;
     this.rackPicker = null;
+    this.rackReturnOpen = false;
+    this.rackReturnPrompt = null;
     this.inventoryOpen = false;
     this.mapzOpen = false;
     this.forjingOpen = false;
@@ -785,6 +796,8 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on('rack-picker-state', this.onRackPickerState, this);
     this.game.events.on('rack-picker-cursor', this.onRackPickerCursor, this);
     this.game.events.on('rack-picker-confirm', this.onRackPickerConfirm, this);
+    this.game.events.on('rack-return-state', this.onRackReturnState, this);
+    this.game.events.on('rack-return-answer', this.onRackReturnAnswer, this);
     this.game.events.on('inventory-bag-activate', this.onBagActivate, this);
     this.game.events.on('pause-action', this.onPauseAction, this);
     this.game.events.on('turn-battle-ended', this.onTurnBattleEnded, this);
@@ -813,6 +826,8 @@ export class GameScene extends Phaser.Scene {
       this.game.events.off('rack-picker-state', this.onRackPickerState, this);
       this.game.events.off('rack-picker-cursor', this.onRackPickerCursor, this);
       this.game.events.off('rack-picker-confirm', this.onRackPickerConfirm, this);
+      this.game.events.off('rack-return-state', this.onRackReturnState, this);
+      this.game.events.off('rack-return-answer', this.onRackReturnAnswer, this);
       this.game.events.off('inventory-bag-activate', this.onBagActivate, this);
       this.game.events.off('pause-action', this.onPauseAction, this);
       this.game.events.off('turn-battle-ended', this.onTurnBattleEnded, this);
@@ -950,6 +965,16 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (this.rackReturnOpen) {
+      if (consumeTouchAction('attack') || consumeTouchAction('interact')) {
+        this.onRackReturnAnswer(true);
+      }
+      if (consumeTouchAction('menu') || consumeTouchAction('use')) {
+        this.onRackReturnAnswer(false);
+      }
+      return;
+    }
+
     if (this.forjingOpen) {
       if (edgeAxis('left')) this.navForjing('left');
       if (edgeAxis('right')) this.navForjing('right');
@@ -1015,6 +1040,8 @@ export class GameScene extends Phaser.Scene {
     this.shopOpen = false;
     this.rackPickerOpen = false;
     this.rackPicker = null;
+    this.rackReturnOpen = false;
+    this.rackReturnPrompt = null;
     this.transitionLock = false;
     clearAllTouch();
     setTouchPadVisible(false);
@@ -1087,7 +1114,8 @@ export class GameScene extends Phaser.Scene {
       this.mapzOpen ||
       this.forjingOpen ||
       this.shopOpen ||
-      this.rackPickerOpen
+      this.rackPickerOpen ||
+      this.rackReturnOpen
     );
   }
 
@@ -1182,6 +1210,10 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('shop-toggle');
       return;
     }
+    if (this.rackReturnOpen) {
+      this.onRackReturnAnswer(true);
+      return;
+    }
     if (this.rackPickerOpen) {
       this.confirmRackPick(this.rackPicker?.selectedIndex ?? 0);
       return;
@@ -1196,6 +1228,15 @@ export class GameScene extends Phaser.Scene {
     }
     this.rackPicker = null;
     this.rackPickerOpen = false;
+    this.clearRackReturnPrompt();
+  }
+
+  private clearRackReturnPrompt(): void {
+    if (this.rackReturnOpen) {
+      this.game.events.emit('rack-return-prompt-close');
+    }
+    this.rackReturnPrompt = null;
+    this.rackReturnOpen = false;
   }
 
   private onRackPickerState = (open: boolean): void => {
@@ -1221,6 +1262,42 @@ export class GameScene extends Phaser.Scene {
     const i =
       typeof index === 'number' ? index : this.rackPicker.selectedIndex;
     this.confirmRackPick(i);
+  };
+
+  private onRackReturnState = (open: boolean): void => {
+    this.rackReturnOpen = open;
+    if (!open) this.rackReturnPrompt = null;
+  };
+
+  private onRackReturnAnswer = (yes: boolean): void => {
+    if (!this.rackReturnPrompt && !this.rackReturnOpen) return;
+    const prompt = this.rackReturnPrompt;
+    const family = prompt?.family;
+    const rackId = prompt?.rackId;
+    const name = prompt?.name ?? 'WEAPON';
+    this.clearRackReturnPrompt();
+    if (!yes || !family) {
+      this.game.events.emit('toast', 'KEEPING WEAPON');
+      return;
+    }
+    const r = returnWeaponToRack(this.save, family);
+    if (!r.ok) {
+      this.game.events.emit('toast', r.reason ?? 'CANNOT RETURN');
+      return;
+    }
+    this.save = r.save;
+    writeSave(this.save);
+    this.emitHud();
+    this.refreshPlayerAppearance();
+    this.syncWeaponRackSprites();
+    const actor = this.actors.find((a) => a.id === rackId);
+    if (actor) this.flashRack(actor);
+    playSfx('success');
+    this.game.events.emit('dialog-show', rackDialog(family, { mode: 'return' }));
+    this.game.events.emit(
+      'toast',
+      `${(r.name ?? name).toUpperCase()} RETURNED TO RACK`,
+    );
   };
 
   private onBuyKey = (): void => {
@@ -1333,6 +1410,12 @@ export class GameScene extends Phaser.Scene {
   };
 
   private onDigitKey(n: number): void {
+    // Return prompt: 1 = YES, 2 = NO
+    if (this.rackReturnOpen && !this.paused) {
+      if (n === 1) this.onRackReturnAnswer(true);
+      else if (n === 2) this.onRackReturnAnswer(false);
+      return;
+    }
     // Weapon rack picker — 1-9 equip that slot
     if (
       this.rackPickerOpen &&
@@ -4505,7 +4588,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // E again while this rack's picker is open → equip selected piece
+    // E again while this rack's picker is open → borrow selected piece
     if (
       this.rackPickerOpen &&
       this.rackPicker &&
@@ -4515,30 +4598,35 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // No hanging pieces → return equipped family weapon to the pegs
-    if (isRackEmpty(this.save, w)) {
+    // Holding this family's loaner → Yes/No return prompt (even if pegs still full)
+    const holding = equippedGuildLoaner(this.save);
+    if (holding && holding.family === w) {
       this.clearRackPicker();
-      const r = returnWeaponToRack(this.save, w);
-      if (!r.ok) {
-        this.game.events.emit('toast', r.reason ?? 'CANNOT RETURN');
-        return;
-      }
-      this.save = r.save;
-      writeSave(this.save);
-      this.emitHud();
-      this.refreshPlayerAppearance();
-      this.syncWeaponRackSprites();
-      this.flashRack(actor);
-      playSfx('success');
-      this.game.events.emit('dialog-show', rackDialog(w, { mode: 'return' }));
+      this.rackReturnPrompt = {
+        family: w,
+        rackId: actor.id,
+        name: holding.name,
+      };
+      this.game.events.emit('rack-return-prompt', {
+        family: w,
+        name: holding.name,
+        lines: rackReturnPromptLines(w, holding.name),
+      });
+      return;
+    }
+
+    // Bare rack and holding nothing of this family
+    if (isRackEmpty(this.save, w)) {
       this.game.events.emit(
         'toast',
-        `${w.toUpperCase()} RETURNED TO RACK`,
+        holding
+          ? `HOLDING ${holding.family.toUpperCase()} — RETURN IT FIRST`
+          : 'RACK IS BARE',
       );
       return;
     }
 
-    // Hanging weapons → inventory-style picker window
+    // Hanging weapons → inventory-style picker (one loaner at a time)
     this.save = ensureCatalogInBag(this.save, w);
     const opts = listRackWeaponOptions(this.save, w);
     if (opts.length === 0) {
@@ -4546,11 +4634,14 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     writeSave(this.save);
+    this.clearRackReturnPrompt();
     this.rackPicker = buildRackPickerPayload(this.save, w, actor.id, 0);
     this.game.events.emit('rack-picker-toggle', this.rackPicker);
     this.game.events.emit(
       'toast',
-      'RACK — CLICK OR ARROWS + ENTER TO EQUIP',
+      holding
+        ? `BORROW ${w.toUpperCase()} — CURRENT LOANER RETURNS AUTOMATICALLY`
+        : 'RACK — CLICK OR ARROWS + ENTER TO BORROW',
     );
   }
 
@@ -4598,8 +4689,12 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('toast', 'INVALID SLOT');
       return;
     }
-    const uid = options[index]!.uid;
-    const r = takeWeaponFromRack(this.save, family, uid);
+    const pick = options[index]!;
+    const r = takeWeaponFromRack(
+      this.save,
+      family,
+      pick.templateId ?? pick.uid,
+    );
     if (!r.ok) {
       this.game.events.emit('toast', r.reason ?? 'CANNOT EQUIP');
       return;
@@ -4620,10 +4715,17 @@ export class GameScene extends Phaser.Scene {
       'dialog-show',
       rackDialog(family, { mode: 'take', name: r.name }),
     );
-    this.game.events.emit(
-      'toast',
-      `BORROWED ${r.name ?? family.toUpperCase()} — GUILD LOANER`,
-    );
+    if (r.autoReturned) {
+      this.game.events.emit(
+        'toast',
+        `RETURNED ${r.autoReturned} · BORROWED ${r.name ?? family.toUpperCase()}`,
+      );
+    } else {
+      this.game.events.emit(
+        'toast',
+        `BORROWED ${r.name ?? family.toUpperCase()} — GUILD LOANER`,
+      );
+    }
   }
 
   /**
@@ -5619,6 +5721,8 @@ export class GameScene extends Phaser.Scene {
         this.game.events.emit('shop-toggle');
       } else if (this.rackPickerOpen) {
         this.clearRackPicker();
+      } else if (this.rackReturnOpen) {
+        this.onRackReturnAnswer(false);
       } else {
         this.paused = !this.paused;
         this.game.events.emit('pause-ui', this.paused);
@@ -5716,6 +5820,12 @@ export class GameScene extends Phaser.Scene {
         }
         if (Phaser.Input.Keyboard.JustDown(this.keys.enter)) {
           this.confirmRackPick(this.rackPicker?.selectedIndex ?? 0);
+        }
+      }
+      // Return Yes/No — Enter/1 = yes; Esc/2 handled via digit + ESC path
+      if (this.rackReturnOpen) {
+        if (Phaser.Input.Keyboard.JustDown(this.keys.enter)) {
+          this.onRackReturnAnswer(true);
         }
       }
       // ESC closes dialog (desktop)

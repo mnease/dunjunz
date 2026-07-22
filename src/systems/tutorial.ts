@@ -398,6 +398,32 @@ export function equippedWeaponTemplateId(save: SaveData): string | null {
   return inst?.templateId ?? null;
 }
 
+/** Equipped guild loaner instance, if any. */
+export function equippedGuildLoaner(
+  save: SaveData,
+): { uid: string; templateId: string; family: TutorialWeapon; name: string } | null {
+  const uid = save.equipped?.weapon;
+  if (!uid) return null;
+  const inst = save.bag.find((b) => b.uid === uid);
+  if (!inst || !isGuildLoanerInstance(inst)) return null;
+  const t = getTemplate(inst.templateId);
+  const family = tutorialWeaponFromEquip(inst.templateId, t.look);
+  if (!family) return null;
+  return {
+    uid: inst.uid,
+    templateId: inst.templateId,
+    family,
+    name: displayItemName(inst),
+  };
+}
+
+/** Family of the currently equipped guild loaner, or null. */
+export function equippedGuildLoanerFamily(
+  save: SaveData,
+): TutorialWeapon | null {
+  return equippedGuildLoaner(save)?.family ?? null;
+}
+
 /**
  * Catalog templates still hanging on the rack (not the equipped piece).
  * Equipping one weapon removes only that silhouette; siblings stay.
@@ -406,8 +432,11 @@ export function rackPresentTemplates(
   save: SaveData,
   family: TutorialWeapon,
 ): string[] {
-  const eq = equippedWeaponTemplateId(save);
-  return RACK_CATALOG[family].filter((tid) => tid !== eq);
+  // Only hide the equipped piece when it is a guild loaner of this family
+  const loaner = equippedGuildLoaner(save);
+  const hide =
+    loaner && loaner.family === family ? loaner.templateId : null;
+  return RACK_CATALOG[family].filter((tid) => tid !== hide);
 }
 
 /** True when no catalog weapons remain on the pegs (usually sole item equipped). */
@@ -429,44 +458,32 @@ export function isTrainingWeaponTaken(
   return equippedWeaponTemplateId(save) === TRAINING_TEMPLATES[weapon];
 }
 
-/** Mint every catalog template for this family into the bag (no equip). */
-export function ensureCatalogInBag(
-  save: SaveData,
-  family: TutorialWeapon,
-): SaveData {
-  let next = save;
-  for (const tid of RACK_CATALOG[family]) {
-    // Promote legacy untagged catalog copies to explicit loaners
-    if (
-      next.bag.some(
-        (b) => b.templateId === tid && b.guildLoaner === undefined,
-      )
-    ) {
-      next = {
-        ...next,
-        bag: next.bag.map((b) =>
-          b.templateId === tid && b.guildLoaner === undefined
-            ? { ...b, guildLoaner: true }
-            : b,
-        ),
-      };
-    }
-    // Already have a tagged loaner for this template
-    if (next.bag.some((b) => b.templateId === tid && b.guildLoaner === true)) {
-      continue;
-    }
-    // Mint a hall-only loaner (even if a permanent copy exists)
-    const minted = mintItem(next, tid, 'common', 0);
-    const loaner = { ...minted.instance, guildLoaner: true as const };
-    next = {
-      ...minted.save,
-      bag: minted.save.bag.map((b) => (b.uid === loaner.uid ? loaner : b)),
-    };
-  }
-  return next;
+/**
+ * Guild loaners only exist while equipped (or briefly during take).
+ * Unequipped loaners are never stored in inventory — they live on racks.
+ */
+export function purgeUnequippedGuildLoaners(save: SaveData): SaveData {
+  const eq = save.equipped?.weapon ?? null;
+  const bag = save.bag.filter((b) => {
+    if (!isGuildLoanerInstance(b)) return true;
+    return eq != null && b.uid === eq;
+  });
+  if (bag.length === save.bag.length) return save;
+  return syncDerivedStats({ ...save, bag });
 }
 
-/** Ensure the default training template exists in the bag (no equip). */
+/**
+ * @deprecated No longer pre-mints rack catalog into bag.
+ * Loaners are virtual on racks; mint only when borrowed.
+ */
+export function ensureCatalogInBag(
+  save: SaveData,
+  _family: TutorialWeapon,
+): SaveData {
+  return purgeUnequippedGuildLoaners(save);
+}
+
+/** Ensure the default training template path still works for tests. */
 export function ensureTrainingWeaponInBag(
   save: SaveData,
   weapon: TutorialWeapon,
@@ -476,29 +493,19 @@ export function ensureTrainingWeaponInBag(
 
 /**
  * Weapons currently hanging (pickable) — catalog pieces not equipped.
- * Always mints catalog into bag first so each has a uid.
+ * Virtual list (template ids); take mints a loaner on borrow.
  */
 export function listRackWeaponOptions(
   save: SaveData,
   family: TutorialWeapon,
 ): { uid: string; templateId: string; name: string }[] {
-  const next = ensureCatalogInBag(save, family);
-  const present = new Set(rackPresentTemplates(next, family));
-  const out: { uid: string; templateId: string; name: string }[] = [];
-  for (const tid of RACK_CATALOG[family]) {
-    if (!present.has(tid)) continue;
-    // Prefer loaner instance over permanent loot with the same template
-    const inst =
-      next.bag.find((b) => b.templateId === tid && b.guildLoaner === true) ??
-      next.bag.find((b) => b.templateId === tid && isGuildLoanerInstance(b));
-    if (!inst) continue;
-    out.push({
-      uid: inst.uid,
-      templateId: tid,
-      name: displayItemName(inst),
-    });
-  }
-  return out;
+  const present = rackPresentTemplates(save, family);
+  return present.map((tid) => ({
+    // uid is template id until borrowed (takeWeaponFromRack accepts either)
+    uid: tid,
+    templateId: tid,
+    name: getTemplate(tid).name,
+  }));
 }
 
 function withBowAmmo(save: SaveData, family: TutorialWeapon): SaveData {
@@ -507,28 +514,134 @@ function withBowAmmo(save: SaveData, family: TutorialWeapon): SaveData {
   return { ...save, stacks: { ...save.stacks, arrows } };
 }
 
+function clearBowAmmoIfNeeded(save: SaveData): SaveData {
+  const stacks = { ...save.stacks };
+  delete stacks.arrows;
+  return { ...save, stacks };
+}
+
 /**
- * Equip a hanging rack weapon. Only that piece leaves the stand.
+ * Unequip the family loaner and remove it from bag so it reappears on the rack.
+ */
+export function returnWeaponToRack(
+  save: SaveData,
+  family: TutorialWeapon,
+): {
+  save: SaveData;
+  ok: boolean;
+  reason?: string;
+  unequipped: boolean;
+  name?: string;
+} {
+  const holding = equippedGuildLoaner(save);
+  if (!holding) {
+    return {
+      save: purgeUnequippedGuildLoaners(save),
+      ok: false,
+      reason: 'NOTHING EQUIPPED TO RETURN',
+      unequipped: false,
+    };
+  }
+  if (holding.family !== family) {
+    return {
+      save,
+      ok: false,
+      reason: `HOLDING ${holding.family.toUpperCase()} — USE THAT RACK`,
+      unequipped: false,
+    };
+  }
+  const bag = save.bag.filter((b) => b.uid !== holding.uid);
+  let next: SaveData = {
+    ...save,
+    bag,
+    equipped: { ...save.equipped, weapon: null },
+  };
+  if (family === 'bow') next = clearBowAmmoIfNeeded(next);
+  next = purgeUnequippedGuildLoaners(next);
+  next = syncDerivedStats(next);
+  return {
+    save: next,
+    ok: true,
+    unequipped: true,
+    name: holding.name,
+  };
+}
+
+/** Return whatever guild loaner is equipped (any family). */
+export function returnAnyEquippedGuildLoaner(save: SaveData): {
+  save: SaveData;
+  returned: TutorialWeapon | null;
+  name?: string;
+} {
+  const holding = equippedGuildLoaner(save);
+  if (!holding) {
+    return { save: purgeUnequippedGuildLoaners(save), returned: null };
+  }
+  const r = returnWeaponToRack(save, holding.family);
+  return {
+    save: r.save,
+    returned: r.ok ? holding.family : null,
+    name: r.name,
+  };
+}
+
+/**
+ * Borrow a hanging rack weapon. Only one loaner at a time —
+ * any currently equipped guild weapon is returned first.
+ * `pickId` is a template id (or legacy bag uid).
  */
 export function takeWeaponFromRack(
   save: SaveData,
   family: TutorialWeapon,
-  uid?: string,
-): { save: SaveData; ok: boolean; reason?: string; name?: string } {
-  let next = ensureCatalogInBag(save, family);
+  pickId?: string,
+): {
+  save: SaveData;
+  ok: boolean;
+  reason?: string;
+  name?: string;
+  autoReturned?: string;
+} {
+  let next = purgeUnequippedGuildLoaners(save);
+  let autoReturned: string | undefined;
+
+  // One loaner at a time — return whatever is equipped
+  const prior = returnAnyEquippedGuildLoaner(next);
+  next = prior.save;
+  if (prior.returned && prior.name) {
+    autoReturned = prior.name;
+  }
+
   const opts = listRackWeaponOptions(next, family);
   if (opts.length === 0) {
-    return { save, ok: false, reason: 'RACK IS BARE — RETURN YOUR WEAPON' };
+    return {
+      save: next,
+      ok: false,
+      reason: 'RACK IS BARE — RETURN YOUR WEAPON',
+      autoReturned,
+    };
   }
   const pick =
-    (uid ? opts.find((o) => o.uid === uid) : null) ?? opts[0]!;
+    (pickId
+      ? opts.find((o) => o.uid === pickId || o.templateId === pickId)
+      : null) ?? opts[0]!;
+
+  // Mint a hall-only loaner and equip it (not a permanent bag item)
+  const minted = mintItem(next, pick.templateId, 'common', 0);
+  const loaner = { ...minted.instance, guildLoaner: true as const };
   next = {
-    ...next,
-    equipped: { ...next.equipped, weapon: pick.uid },
+    ...minted.save,
+    bag: minted.save.bag.map((b) => (b.uid === loaner.uid ? loaner : b)),
+    equipped: { ...minted.save.equipped, weapon: loaner.uid },
   };
   next = withBowAmmo(next, family);
+  next = purgeUnequippedGuildLoaners(next);
   next = syncDerivedStats(next);
-  return { save: next, ok: true, name: pick.name };
+  return {
+    save: next,
+    ok: true,
+    name: displayItemName(loaner),
+    autoReturned,
+  };
 }
 
 /** Grant/equip default training weapon for drills. */
@@ -536,54 +649,24 @@ export function equipTrainingWeapon(
   save: SaveData,
   weapon: TutorialWeapon,
 ): SaveData {
-  let next = ensureCatalogInBag(save, weapon);
   const tid = TRAINING_TEMPLATES[weapon];
-  const inst = next.bag.find((b) => b.templateId === tid);
-  if (!inst) return next;
-  next = {
-    ...next,
-    equipped: { ...next.equipped, weapon: inst.uid },
-  };
-  next = withBowAmmo(next, weapon);
-  return syncDerivedStats(next);
+  const r = takeWeaponFromRack(save, weapon, tid);
+  return r.save;
 }
 
-/**
- * Unequip the family weapon so it reappears on the rack.
- */
-export function returnWeaponToRack(
-  save: SaveData,
+/** Copy for the return Yes/No prompt. */
+export function rackReturnPromptLines(
   family: TutorialWeapon,
-): { save: SaveData; ok: boolean; reason?: string; unequipped: boolean } {
-  const eqUid = save.equipped?.weapon;
-  if (!eqUid) {
-    return {
-      save,
-      ok: false,
-      reason: 'NOTHING EQUIPPED TO RETURN',
-      unequipped: false,
-    };
-  }
-  const inst = save.bag.find((b) => b.uid === eqUid);
-  if (!inst) {
-    return { save, ok: false, reason: 'NOTHING TO RETURN', unequipped: false };
-  }
-  const t = getTemplate(inst.templateId);
-  const fam = tutorialWeaponFromEquip(inst.templateId, t.look);
-  if (fam !== family) {
-    return {
-      save,
-      ok: false,
-      reason: `HOLDING ${fam?.toUpperCase() ?? 'OTHER'} — USE THAT RACK`,
-      unequipped: false,
-    };
-  }
-  // Prefer returning catalog pieces; still allow unequip of any family weapon
-  const next = syncDerivedStats({
-    ...save,
-    equipped: { ...save.equipped, weapon: null },
-  });
-  return { save: next, ok: true, unequipped: true };
+  weaponName: string,
+): string[] {
+  const label = family.toUpperCase();
+  return [
+    `${label} RACK`,
+    `RETURN YOUR ${weaponName}?`,
+    '',
+    'YES — PUT IT BACK ON THE RACK.',
+    'NO — KEEP HOLDING IT.',
+  ];
 }
 
 /** Map rack actor id → tutorial weapon family. */

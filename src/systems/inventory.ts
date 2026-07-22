@@ -207,6 +207,14 @@ export function listInventory(
   }
 
   for (const inst of save.bag) {
+    // Guild rack loaners are hall-only — never list unequipped ones as bag stash
+    if (inst.guildLoaner === true) {
+      const onHero = ALL_EQUIP_SLOTS.some((s) => save.equipped[s] === inst.uid);
+      const onBud = ALL_EQUIP_SLOTS.some(
+        (s) => (save.budEquipped?.[s] ?? null) === inst.uid,
+      );
+      if (!onHero && !onBud) continue;
+    }
     const t = getTemplate(inst.templateId);
     const onHero = ALL_EQUIP_SLOTS.some((s) => save.equipped[s] === inst.uid);
     const onBud = ALL_EQUIP_SLOTS.some(
@@ -217,7 +225,11 @@ export function listInventory(
       templateId: inst.templateId,
       name: displayItemName(inst),
       count: 1,
-      blurb: onBud ? `${t.blurb} [BUD]` : t.blurb,
+      blurb: onBud
+        ? `${t.blurb} [BUD]`
+        : inst.guildLoaner
+          ? `${t.blurb} [GUILD LOANER]`
+          : t.blurb,
       usable: false,
       slot: t.slot,
       equipped: onHero || onBud,

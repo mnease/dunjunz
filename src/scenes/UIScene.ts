@@ -320,6 +320,16 @@ export class UIScene extends Phaser.Scene {
   private static readonly RACK_CELL = 88;
   private static readonly RACK_GAP = 16;
 
+  /** Return loaner Yes/No prompt */
+  private rackRetBg: Phaser.GameObjects.Rectangle | null = null;
+  private rackRetTitle: Phaser.GameObjects.Text | null = null;
+  private rackRetBody: Phaser.GameObjects.Text | null = null;
+  private rackRetYesHit: Phaser.GameObjects.Rectangle | null = null;
+  private rackRetNoHit: Phaser.GameObjects.Rectangle | null = null;
+  private rackRetYesLabel: Phaser.GameObjects.Text | null = null;
+  private rackRetNoLabel: Phaser.GameObjects.Text | null = null;
+  private rackRetOpen = false;
+
   constructor() {
     super({ key: 'UI', active: false });
   }
@@ -331,6 +341,7 @@ export class UIScene extends Phaser.Scene {
     this.forjingOpen = false;
     this.shopOpen = false;
     this.rackOpen = false;
+    this.rackRetOpen = false;
     if (!this.chromeBuilt || !this.dialogBg?.active) {
       this.buildChrome();
       this.chromeBuilt = true;
@@ -458,6 +469,7 @@ export class UIScene extends Phaser.Scene {
     this.buildForjingPanel();
     this.buildShopPanel();
     this.buildRackPickerPanel();
+    this.buildRackReturnPrompt();
 
     this.pauseText = this.add
       .text(
@@ -935,6 +947,149 @@ export class UIScene extends Phaser.Scene {
     this.rackLayer?.removeAll(true);
   }
 
+  private buildRackReturnPrompt(): void {
+    const d = 220;
+    this.rackRetBg?.destroy();
+    this.rackRetTitle?.destroy();
+    this.rackRetBody?.destroy();
+    this.rackRetYesHit?.destroy();
+    this.rackRetNoHit?.destroy();
+    this.rackRetYesLabel?.destroy();
+    this.rackRetNoLabel?.destroy();
+
+    this.rackRetBg = this.add
+      .rectangle(GAME_W / 2, GAME_H / 2, Math.min(560, GAME_W - 48), 220, 0x0a0c10, 0.97)
+      .setStrokeStyle(3, COLORS.gold)
+      .setScrollFactor(0)
+      .setDepth(d)
+      .setVisible(false);
+
+    this.rackRetTitle = this.add
+      .text(GAME_W / 2, GAME_H / 2 - 72, 'RETURN WEAPON?', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '12px',
+        color: '#7dffb3',
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+
+    this.rackRetBody = this.add
+      .text(GAME_W / 2, GAME_H / 2 - 28, '', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '10px',
+        color: '#f4f0ff',
+        align: 'center',
+        wordWrap: { width: Math.min(500, GAME_W - 80) },
+        lineSpacing: 8,
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false);
+
+    const btnY = GAME_H / 2 + 70;
+    const btnW = 160;
+    this.rackRetYesHit = this.add
+      .rectangle(GAME_W / 2 - btnW / 2 - 12, btnY, btnW, 44, 0x1a4030, 0.98)
+      .setStrokeStyle(2, COLORS.green)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.rackRetYesLabel = this.add
+      .text(GAME_W / 2 - btnW / 2 - 12, btnY, 'YES [1]', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '11px',
+        color: '#7dffb3',
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(d + 2)
+      .setVisible(false);
+
+    this.rackRetNoHit = this.add
+      .rectangle(GAME_W / 2 + btnW / 2 + 12, btnY, btnW, 44, 0x3a2030, 0.98)
+      .setStrokeStyle(2, 0xff6b9d)
+      .setScrollFactor(0)
+      .setDepth(d + 1)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.rackRetNoLabel = this.add
+      .text(GAME_W / 2 + btnW / 2 + 12, btnY, 'NO [2]', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '11px',
+        color: '#ffb0c8',
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(d + 2)
+      .setVisible(false);
+
+    this.rackRetYesHit.on('pointerdown', () => {
+      this.game.events.emit('rack-return-answer', true);
+    });
+    this.rackRetNoHit.on('pointerdown', () => {
+      this.game.events.emit('rack-return-answer', false);
+    });
+  }
+
+  private ensureRackReturnChrome(): void {
+    if (!this.rackRetBg?.active) this.buildRackReturnPrompt();
+  }
+
+  private onRackReturnPrompt = (payload?: {
+    family?: string;
+    name?: string;
+    lines?: string[];
+  } | null): void => {
+    this.ensureRackReturnChrome();
+    if (!payload?.name && !payload?.lines?.length) {
+      this.closeRackReturnPrompt();
+      return;
+    }
+    if (this.rackOpen) this.closeRackPickerPanel();
+    if (this.dialogOpen) {
+      this.resetDialogVisuals();
+      this.game.events.emit('dialog-state', false);
+    }
+    const fam = (payload.family ?? 'weapon').toUpperCase();
+    const name = payload.name ?? 'WEAPON';
+    this.rackRetTitle?.setText(`RETURN ${fam}?`);
+    this.rackRetBody?.setText(
+      (payload.lines && payload.lines.length
+        ? payload.lines.slice(1).join('\n')
+        : `WOULD YOU LIKE TO RETURN YOUR ${name}?\nIT GOES BACK ON THE RACK.`
+      ).trim(),
+    );
+    this.rackRetOpen = true;
+    this.rackRetBg?.setVisible(true);
+    this.rackRetTitle?.setVisible(true);
+    this.rackRetBody?.setVisible(true);
+    this.rackRetYesHit?.setVisible(true);
+    this.rackRetNoHit?.setVisible(true);
+    this.rackRetYesLabel?.setVisible(true);
+    this.rackRetNoLabel?.setVisible(true);
+    this.game.events.emit('rack-return-state', true);
+  };
+
+  private onRackReturnPromptClose = (): void => {
+    this.closeRackReturnPrompt();
+  };
+
+  private closeRackReturnPrompt(): void {
+    this.rackRetOpen = false;
+    this.rackRetBg?.setVisible(false);
+    this.rackRetTitle?.setVisible(false);
+    this.rackRetBody?.setVisible(false);
+    this.rackRetYesHit?.setVisible(false);
+    this.rackRetNoHit?.setVisible(false);
+    this.rackRetYesLabel?.setVisible(false);
+    this.rackRetNoLabel?.setVisible(false);
+    this.game.events.emit('rack-return-state', false);
+  }
+
   private buildInventoryPanel(): void {
     const d = 120;
     this.clearInvBagPieces();
@@ -1321,6 +1476,12 @@ export class UIScene extends Phaser.Scene {
     this.game.events.off('shop-page', this.onShopPage, this);
     this.game.events.off('rack-picker-toggle', this.onRackPickerToggle, this);
     this.game.events.off('rack-picker-select', this.onRackPickerSelect, this);
+    this.game.events.off('rack-return-prompt', this.onRackReturnPrompt, this);
+    this.game.events.off(
+      'rack-return-prompt-close',
+      this.onRackReturnPromptClose,
+      this,
+    );
 
     this.game.events.on('hud-update', this.refreshHud, this);
     this.game.events.on('dialog-show', this.showDialog, this);
@@ -1351,6 +1512,12 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('shop-page', this.onShopPage, this);
     this.game.events.on('rack-picker-toggle', this.onRackPickerToggle, this);
     this.game.events.on('rack-picker-select', this.onRackPickerSelect, this);
+    this.game.events.on('rack-return-prompt', this.onRackReturnPrompt, this);
+    this.game.events.on(
+      'rack-return-prompt-close',
+      this.onRackReturnPromptClose,
+      this,
+    );
 
     if (!this.bound) {
       this.bound = true;
@@ -1388,6 +1555,12 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('shop-page', this.onShopPage, this);
       this.game.events.off('rack-picker-toggle', this.onRackPickerToggle, this);
       this.game.events.off('rack-picker-select', this.onRackPickerSelect, this);
+      this.game.events.off('rack-return-prompt', this.onRackReturnPrompt, this);
+      this.game.events.off(
+        'rack-return-prompt-close',
+        this.onRackReturnPromptClose,
+        this,
+      );
       this.input.keyboard?.off('keydown-ENTER', this.onEnterKey, this);
       this.input.keyboard?.off('keydown-SPACE', this.onSpaceKey, this);
       this.bound = false;
@@ -1402,6 +1575,7 @@ export class UIScene extends Phaser.Scene {
     this.closeForjingPanel();
     this.closeShopPanel();
     this.closeRackPickerPanel();
+    this.closeRackReturnPrompt();
     this.pauseText?.setVisible(false);
     this.pauseResumeHit?.setVisible(false);
     this.pauseTitleHit?.setVisible(false);
@@ -3416,6 +3590,7 @@ export class UIScene extends Phaser.Scene {
     if (this.forjingOpen) this.closeForjingPanel();
     if (this.shopOpen) this.closeShopPanel();
     if (this.rackOpen) this.closeRackPickerPanel();
+    if (this.rackRetOpen) this.closeRackReturnPrompt();
     this.dialogLines = lines.filter(
       (l) => l !== undefined && l !== null && String(l).trim() !== '',
     );
@@ -3504,6 +3679,7 @@ export class UIScene extends Phaser.Scene {
     if (paused && this.forjingOpen) this.closeForjingPanel();
     if (paused && this.shopOpen) this.closeShopPanel();
     if (paused && this.rackOpen) this.closeRackPickerPanel();
+    if (paused && this.rackRetOpen) this.closeRackReturnPrompt();
     this.pauseText?.setVisible(paused);
     this.pauseResumeHit?.setVisible(paused);
     this.pauseTitleHit?.setVisible(paused);

@@ -3307,17 +3307,39 @@ describe('tutorial guild hall', () => {
     expect(isRackStocked(save, 'sword')).toBe(true);
     expect(save.equipped.weapon).toBeNull();
     expect(save.hasSword).toBe(false);
+    // Loaner removed from bag — lives on rack only
+    expect(save.bag.every((b) => b.guildLoaner !== true)).toBe(true);
     const opts = listRackWeaponOptions(save, 'sword');
     expect(opts.length).toBe(RACK_CATALOG.sword.length);
     expect(opts.map((o) => o.templateId)).toContain('mild_sword');
     expect(opts.map((o) => o.templateId)).toContain('iron_blade');
     const iron = opts.find((o) => o.templateId === 'iron_blade')!;
-    const take = takeWeaponFromRack(save, 'sword', iron.uid);
+    const take = takeWeaponFromRack(save, 'sword', iron.templateId);
     expect(take.ok).toBe(true);
     save = take.save;
-    expect(save.equipped.weapon).toBe(iron.uid);
+    expect(save.equipped.weapon).toBeTruthy();
+    const eq = save.bag.find((b) => b.uid === save.equipped.weapon);
+    expect(eq?.templateId).toBe('iron_blade');
+    expect(eq?.guildLoaner).toBe(true);
     expect(rackPresentTemplates(save, 'sword')).not.toContain('iron_blade');
     expect(rackPresentTemplates(save, 'sword')).toContain('mild_sword');
+    // Only the equipped loaner sits in bag
+    expect(save.bag.filter((b) => b.guildLoaner === true)).toHaveLength(1);
+  });
+
+  it('returning loaner while rack still has siblings works', () => {
+    let save = equipTrainingWeapon(defaultSave(), 'sword');
+    // 3 still hanging
+    expect(rackPresentTemplates(save, 'sword').length).toBe(
+      RACK_CATALOG.sword.length - 1,
+    );
+    const ret = returnWeaponToRack(save, 'sword');
+    expect(ret.ok).toBe(true);
+    save = ret.save;
+    expect(rackPresentTemplates(save, 'sword').length).toBe(
+      RACK_CATALOG.sword.length,
+    );
+    expect(save.equipped.weapon).toBeNull();
   });
 
   it('intro welcomes to Dunjunz, then guild master, then drills', () => {
@@ -3390,8 +3412,7 @@ describe('tutorial guild hall', () => {
   });
 
   it('rack weapons are loaners and strip on graduate; starter box remains', () => {
-    let save = ensureCatalogInBag(defaultSave(), 'sword');
-    save = equipTrainingWeapon(save, 'sword');
+    let save = equipTrainingWeapon(defaultSave(), 'sword');
     expect(save.bag.some((b) => b.guildLoaner === true)).toBe(true);
     expect(save.equipped.weapon).toBeTruthy();
 
@@ -3400,6 +3421,19 @@ describe('tutorial guild hall', () => {
     expect(save.bag.every((b) => !isGuildLoanerInstance(b))).toBe(true);
     expect(save.equipped.weapon).toBeNull();
     expect(save.stacks.crawler_starter_box).toBe(1);
+  });
+
+  it('taking a second family auto-returns the first loaner', () => {
+    let save = equipTrainingWeapon(defaultSave(), 'sword');
+    expect(rackPresentTemplates(save, 'sword')).not.toContain('mild_sword');
+    const r = takeWeaponFromRack(save, 'axe', 'training_axe');
+    expect(r.ok).toBe(true);
+    expect(r.autoReturned).toBeTruthy();
+    save = r.save;
+    expect(rackPresentTemplates(save, 'sword')).toContain('mild_sword');
+    expect(rackPresentTemplates(save, 'axe')).not.toContain('training_axe');
+    const eq = save.bag.find((b) => b.uid === save.equipped.weapon);
+    expect(eq?.templateId).toBe('training_axe');
   });
 });
 
