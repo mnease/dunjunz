@@ -602,6 +602,16 @@ export class GameScene extends Phaser.Scene {
     this.facing = 'down';
     this.actors = [];
     this.tileGrid = [];
+    // Dead RTs after stop/start still look non-null → WebGL clear crashes (beach freeze)
+    this.surfaceShadowRt = null;
+    this.lightRt = null;
+    this.lightCookie = null;
+    this.wakeBlurRt = null;
+    this.wakeBlurAlpha = 0;
+    this.cloudField = [];
+    this.surfaceSunTimeMs = 0;
+    this.ambientTiles = [];
+    this.ambientFrame = 0;
 
     this.save = reconcileMapzFromCollected(loadSave());
     this.roomOriginX = (GAME_W - MAP_PIXEL_W) / 2;
@@ -1845,14 +1855,27 @@ export class GameScene extends Phaser.Scene {
     return { sources, ambient };
   }
 
+  /** True when a Phaser GO is still live (not destroyed after scene stop). */
+  private goAlive(
+    go: Phaser.GameObjects.GameObject | null | undefined,
+  ): boolean {
+    return !!(go && (go as { active?: boolean; scene?: unknown }).active && go.scene);
+  }
+
   /** Outdoor sun shade layer (tree cast + cloud blobs). */
   private ensureSurfaceShadowRt(): void {
+    if (this.surfaceShadowRt && !this.goAlive(this.surfaceShadowRt)) {
+      this.surfaceShadowRt = null;
+    }
     if (!this.surfaceShadowRt) {
       this.surfaceShadowRt = this.add
         .renderTexture(0, 0, GAME_W, GAME_H)
         .setOrigin(0, 0)
         .setScrollFactor(0)
         .setDepth(88); // under dungeon light veil (90), over world
+    }
+    if (this.lightCookie && !this.goAlive(this.lightCookie)) {
+      this.lightCookie = null;
     }
     if (!this.lightCookie && this.textures.exists('light_cookie')) {
       this.lightCookie = this.add
@@ -1867,16 +1890,27 @@ export class GameScene extends Phaser.Scene {
    * Clouds are never drawn — only their shade.
    */
   private refreshSurfaceShadows(delta: number): void {
+    if (!this.sys.isActive() || this.leavingToTitle) return;
     const outdoor = this.room ? isOutdoorSurface(this.room) : false;
     if (!outdoor) {
-      this.surfaceShadowRt?.setVisible(false);
+      if (this.goAlive(this.surfaceShadowRt)) {
+        this.surfaceShadowRt!.setVisible(false);
+      }
       return;
     }
     this.ensureSurfaceShadowRt();
-    const rt = this.surfaceShadowRt!;
+    const rt = this.surfaceShadowRt;
+    if (!rt || !this.goAlive(rt)) {
+      this.surfaceShadowRt = null;
+      return;
+    }
     if (this.panelOpen()) {
-      rt.clear();
-      rt.setVisible(false);
+      try {
+        rt.clear();
+        rt.setVisible(false);
+      } catch {
+        this.surfaceShadowRt = null;
+      }
       return;
     }
     // reduceMotion: freeze cloud drift (still show static shade)
@@ -1891,46 +1925,62 @@ export class GameScene extends Phaser.Scene {
     }
 
     const cookie = this.lightCookie;
-    if (!cookie || !this.textures.exists('light_cookie')) {
-      rt.setVisible(false);
+    if (!cookie || !this.goAlive(cookie) || !this.textures.exists('light_cookie')) {
+      try {
+        rt.setVisible(false);
+      } catch {
+        this.surfaceShadowRt = null;
+      }
       return;
     }
 
-    rt.clear();
-    rt.setVisible(true);
-    const cam = this.cameras.main;
+    try {
+      rt.clear();
+      rt.setVisible(true);
+      const cam = this.cameras.main;
 
-    // Cloud shade — screen space, slow drift
-    const clouds = cloudShadowCenters(
-      this.cloudField,
-      this.surfaceSunTimeMs,
-      GAME_W,
-      GAME_H - HUD_H,
-    );
-    for (const c of clouds) {
-      const diam = c.radius * 2;
-      cookie.setTint(0x0a1420);
-      cookie.setAlpha(c.alpha);
-      cookie.setScale(diam / 256, (diam * 0.55) / 256);
-      // Offset Y by HUD so shade sits on playfield
-      rt.draw(cookie, c.x, c.y + HUD_H);
+      // Cloud shade — screen space, slow drift
+      const clouds = cloudShadowCenters(
+        this.cloudField,
+        this.surfaceSunTimeMs,
+        GAME_W,
+        GAME_H - HUD_H,
+      );
+      for (const c of clouds) {
+        const diam = c.radius * 2;
+        cookie.setTint(0x0a1420);
+        cookie.setAlpha(c.alpha);
+        cookie.setScale(diam / 256, (diam * 0.55) / 256);
+        // Offset Y by HUD so shade sits on playfield
+        rt.draw(cookie, c.x, c.y + HUD_H);
+      }
+
+      // Tree / palm cast shadows (world → screen)
+      for (const a of this.actors) {
+        if (
+          !a.alive ||
+          (a.kind !== 'tree' && a.kind !== 'palm') ||
+          !a.sprite?.active
+        ) {
+          continue;
+        }
+        const sc = a.displayScale ?? 1;
+        const sh = castTreeShadowCenter(a.sprite.x, a.sprite.y, sc);
+        const sx = sh.x - cam.scrollX;
+        const sy = sh.y - cam.scrollY;
+        cookie.setTint(0x0a1420);
+        cookie.setAlpha(sh.alpha);
+        cookie.setScale((sh.rx * 2) / 256, (sh.ry * 2) / 256);
+        rt.draw(cookie, sx, sy);
+      }
+
+      cookie.clearTint();
+      cookie.setAlpha(1);
+    } catch {
+      // WebGL RT can die mid-frame after scene stop/restart — recreate next tick
+      this.surfaceShadowRt = null;
+      this.lightCookie = null;
     }
-
-    // Tree cast shadows (world → screen)
-    for (const a of this.actors) {
-      if (!a.alive || a.kind !== 'tree' || !a.sprite?.active) continue;
-      const sc = a.displayScale ?? 1;
-      const sh = castTreeShadowCenter(a.sprite.x, a.sprite.y, sc);
-      const sx = sh.x - cam.scrollX;
-      const sy = sh.y - cam.scrollY;
-      cookie.setTint(0x0a1420);
-      cookie.setAlpha(sh.alpha);
-      cookie.setScale((sh.rx * 2) / 256, (sh.ry * 2) / 256);
-      rt.draw(cookie, sx, sy);
-    }
-
-    cookie.clearTint();
-    cookie.setAlpha(1);
   }
 
   /**
@@ -1939,12 +1989,19 @@ export class GameScene extends Phaser.Scene {
    * Hidden while inventory/shop/mapz/forje/dialog open so modal chrome stays readable.
    */
   private refreshLighting(): void {
+    if (!this.sys.isActive() || this.leavingToTitle) return;
+    if (this.lightRt && !this.goAlive(this.lightRt)) {
+      this.lightRt = null;
+    }
     if (!this.lightRt) {
       this.lightRt = this.add
         .renderTexture(0, 0, GAME_W, GAME_H)
         .setOrigin(0, 0)
         .setScrollFactor(0)
         .setDepth(90);
+    }
+    if (this.lightCookie && !this.goAlive(this.lightCookie)) {
+      this.lightCookie = null;
     }
     if (!this.lightCookie && this.textures.exists('light_cookie')) {
       this.lightCookie = this.add
@@ -1955,8 +2012,14 @@ export class GameScene extends Phaser.Scene {
 
     // Outdoor surface uses subtractive shade layer (not dungeon veil)
     if (this.room && isOutdoorSurface(this.room)) {
-      this.lightRt.clear();
-      this.lightRt.setVisible(false);
+      try {
+        if (this.goAlive(this.lightRt)) {
+          this.lightRt!.clear();
+          this.lightRt!.setVisible(false);
+        }
+      } catch {
+        this.lightRt = null;
+      }
       return;
     }
 

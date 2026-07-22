@@ -41,7 +41,13 @@ export default async function handler(
     }
     res.status(200).json({ ok: true, crawlerId });
   } catch (e) {
+    // Don't hard-fail the client beach wake — local fallback handles 5xx.
     const msg = e instanceof Error ? e.message : 'error';
-    res.status(503).json({ ok: false, error: 'db', detail: msg });
+    res.status(200).json({
+      ok: false,
+      error: 'db',
+      detail: msg,
+      fallback: true,
+    });
   }
 }

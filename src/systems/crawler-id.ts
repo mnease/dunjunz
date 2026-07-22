@@ -26,10 +26,14 @@ function allocateLocal(): number {
 /** Request next global crawler id from API (or local fallback). */
 export async function allocateCrawlerId(): Promise<number> {
   try {
+    const ctrl = new AbortController();
+    const t = window.setTimeout(() => ctrl.abort(), 2500);
     const res = await fetch('/api/crawler-spawn', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: ctrl.signal,
     });
+    window.clearTimeout(t);
     const data = (await res.json().catch(() => ({}))) as {
       ok?: boolean;
       crawlerId?: number;
@@ -38,7 +42,7 @@ export async function allocateCrawlerId(): Promise<number> {
       return Math.floor(data.crawlerId);
     }
   } catch {
-    /* offline / no DB */
+    /* offline / no DB / 500 / timeout — never block beach load */
   }
   return allocateLocal();
 }
