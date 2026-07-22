@@ -2854,8 +2854,20 @@ export class GameScene extends Phaser.Scene {
       'dummy',
     ].includes(def.kind);
 
-    // Mobile hostiles: chase + walls. Cactus: rooted hazard. Tree: solid prop.
-    // Tumbleweed: drifts, no combat.
+    // Props the hero cannot walk through (interact still uses reach radius)
+    const solidProp =
+      def.kind === 'dummy' ||
+      def.kind === 'rack' ||
+      def.kind === 'sign' ||
+      def.kind === 'chest' ||
+      def.kind === 'forje' ||
+      def.kind === 'npc' ||
+      def.kind === 'merchant' ||
+      def.kind === 'princess' ||
+      def.kind === 'tree';
+
+    // Mobile hostiles: chase + walls. Cactus: rooted hazard (overlap only).
+    // Solid props: immovable footprint collider. Tumbleweed: drifts, no combat.
     if (mobileHostile) {
       sprite.setImmovable(false);
       sprite.setCollideWorldBounds(true);
@@ -2875,32 +2887,50 @@ export class GameScene extends Phaser.Scene {
       sprite.setDepth(3);
       const body = sprite.body as Phaser.Physics.Arcade.Body;
       body.enable = false;
-    } else if (def.kind === 'dummy') {
+    } else if (solidProp) {
       sprite.setImmovable(true);
-      sprite.setDepth(5);
+      if (def.kind === 'dummy') sprite.setDepth(5);
+      if (def.kind === 'rack') sprite.setDepth(4);
       const body = sprite.body as Phaser.Physics.Arcade.Body;
       body.moves = false;
       body.enable = true;
-      body.setSize(14, 16);
-    } else if (def.kind === 'rack') {
-      sprite.setImmovable(true);
-      sprite.setDepth(4);
-      // No flat gold tint — each rack texture already shows the weapon type
-      const body = sprite.body as Phaser.Physics.Arcade.Body;
-      body.enable = false;
-    } else if (isCactusPlant || isTree) {
-      sprite.setImmovable(true);
-      const body = sprite.body as Phaser.Physics.Arcade.Body;
-      body.moves = false;
-      body.enable = true;
-      // Trunk-sized collider (not full canopy) so big trees don't block whole meadows
-      const trunk = isTree && (def.scale ?? 1) > 1.5 ? 10 : 12;
-      body.setSize(trunk, isTree ? 12 : 14);
-      body.setOffset((sprite.frame.width - trunk) / 2, sprite.frame.height - 14);
-      // Trees block the hero; cactus is overlap-only (spines)
+      // Footprint-sized hitbox (not full sprite) so talk/use still works nearby
+      const fw = sprite.frame.width;
+      const fh = sprite.frame.height;
+      let bw = 12;
+      let bh = 12;
       if (isTree) {
-        this.physics.add.collider(this.player, sprite);
+        // Trunk-sized collider so big canopy trees don't block whole meadows
+        bw = (def.scale ?? 1) > 1.5 ? 10 : 12;
+        bh = 12;
+      } else if (def.kind === 'dummy') {
+        bw = 14;
+        bh = 12;
+      } else if (def.kind === 'chest' || def.kind === 'forje') {
+        bw = 14;
+        bh = 12;
+      } else if (def.kind === 'sign' || def.kind === 'rack') {
+        bw = 10;
+        bh = 10;
+      } else if (
+        def.kind === 'npc' ||
+        def.kind === 'merchant' ||
+        def.kind === 'princess'
+      ) {
+        bw = 12;
+        bh = 12;
       }
+      body.setSize(bw, bh);
+      body.setOffset((fw - bw) / 2, Math.max(0, fh - bh - 1));
+      this.physics.add.collider(this.player, sprite);
+    } else if (isCactusPlant) {
+      sprite.setImmovable(true);
+      const body = sprite.body as Phaser.Physics.Arcade.Body;
+      body.moves = false;
+      body.enable = true;
+      body.setSize(12, 14);
+      body.setOffset(2, 1);
+      // overlap for spines handled below with contact hostiles
     } else if (isTumbleweed) {
       sprite.setImmovable(false);
       sprite.setCollideWorldBounds(true);
