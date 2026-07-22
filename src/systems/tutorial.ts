@@ -162,6 +162,39 @@ export function needsTutorialIntro(save: SaveData): boolean {
 }
 
 /**
+ * Veterans who already crawled should not re-sit orientation.
+ * Call from save load/migrate.
+ */
+export function migrateTutorial(save: SaveData): SaveData {
+  if (isTutorialComplete(save)) return save;
+  const visited = save.visitedRooms ?? [];
+  const leftMeadow = visited.some(
+    (id) =>
+      id.startsWith('b1_') ||
+      id.startsWith('b2_') ||
+      id.startsWith('b3_') ||
+      id.startsWith('b4_') ||
+      id.startsWith('b5_') ||
+      id.startsWith('b6_') ||
+      id.startsWith('b7_') ||
+      id.startsWith('b8_') ||
+      id.includes('sewerz') ||
+      id.includes('woodz_b') ||
+      id.includes('dezertz_b'),
+  );
+  const progressed =
+    leftMeadow ||
+    save.hasSword ||
+    (save.level ?? 1) > 1 ||
+    (save.xp ?? 0) > 0 ||
+    (save.landsCleared?.length ?? 0) > 0 ||
+    !!save.bossDefeated ||
+    !!save.princessSaved;
+  if (!progressed) return save;
+  return completeTutorial(save);
+}
+
+/**
  * First-boot intro monologue (auto-shown once on meadow).
  */
 export function guildMasterIntroDialog(): string[] {

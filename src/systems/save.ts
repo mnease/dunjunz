@@ -9,6 +9,7 @@ import { reconcileMapzFromCollected } from './mapz';
 import { queueCloudSave } from './cloud-save';
 import { ensureBudProgress } from './best-bud-gear';
 import { setLastMode } from './humanz-save';
+import { migrateTutorial } from './tutorial';
 
 export function defaultSave(): SaveData {
   const attrs = defaultAttrs();
@@ -187,10 +188,11 @@ export function loadSave(): SaveData {
           : base.collected,
         inventory: parsed.inventory ?? {},
       } as SaveData & Record<string, unknown>;
-      const migrated = migrateAttrPackages(
+      let migrated = migrateAttrPackages(
         withV5Fields(migrateEquipment(merged)),
       );
       migrated.level = levelFromXp(migrated.xp);
+      migrated = migrateTutorial(migrated);
       return syncDerivedStats(migrated);
     }
 
@@ -255,6 +257,7 @@ export function loadSave(): SaveData {
     // Scroll pickups must unlock mapz even if an older save blanked discoveredMapz
     next = reconcileMapzFromCollected(next);
     next = migrateAttrPackages(next);
+    next = migrateTutorial(next);
     return syncDerivedStats(next);
   } catch {
     return defaultSave();

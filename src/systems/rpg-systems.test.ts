@@ -3069,6 +3069,18 @@ describe('tutorial guild master', () => {
     const done = guildMasterDialog(completeTutorial(defaultSave()));
     expect(done.some((l) => /OPEN|GRADUATE STATUS/i.test(l))).toBe(true);
   });
+
+  it('migrateTutorial graduates veterans with sword or dungeon visits', async () => {
+    const { migrateTutorial } = await import('./tutorial');
+    const vet = migrateTutorial({
+      ...defaultSave(),
+      hasSword: true,
+      visitedRooms: ['b1_entrance'],
+    });
+    expect(isTutorialComplete(vet)).toBe(true);
+    const fresh = migrateTutorial(defaultSave());
+    expect(isTutorialComplete(fresh)).toBe(false);
+  });
 });
 
 describe('surface sun + cloud shade', () => {
