@@ -45,6 +45,15 @@
             Journal
             <kbd class="nav-kbd">J</kbd>
           </button>
+          <button
+            type="button"
+            id="mobile-mode-toggle"
+            class="nav-btn nav-btn-ghost"
+            aria-pressed="false"
+            title="On-screen D-pad + buttons (or open /play?mobile=1)"
+          >
+            MOBILE
+          </button>
           <button type="button" id="settings-open" class="nav-btn nav-btn-ghost">
             Settings
           </button>
@@ -252,6 +261,11 @@
           <label class="settings-check">
             <input id="set-reduce-motion" type="checkbox" />
             Reduce motion (less camera shake)
+          </label>
+          <label class="settings-check">
+            <input id="set-mobile-mode" type="checkbox" />
+            Mobile mode — on-screen D-pad + buttons (also
+            <code>?mobile=1</code>)
           </label>
           <fieldset class="settings-fieldset">
             <legend class="settings-legend">Level-up stats</legend>

@@ -20,6 +20,11 @@ export interface GameSettings {
    * every 5th level uses class focus). When false, spend manually in inventory (1–5).
    */
   autoStatAllocate: boolean;
+  /**
+   * Force on-screen mobile pad + touch-play layout.
+   * Survives reloads; also set by `?mobile=1` on /play.
+   */
+  mobileMode: boolean;
 }
 
 const DEFAULTS: GameSettings = {
@@ -30,6 +35,7 @@ const DEFAULTS: GameSettings = {
   sfxVolume: 0.55,
   reduceMotion: false,
   autoStatAllocate: false,
+  mobileMode: false,
 };
 
 let cached: GameSettings | null = null;
@@ -64,6 +70,7 @@ export function loadSettings(): GameSettings {
       ),
       reduceMotion: !!p.reduceMotion,
       autoStatAllocate: !!p.autoStatAllocate,
+      mobileMode: !!p.mobileMode,
     };
     return { ...cached };
   } catch {
@@ -81,6 +88,7 @@ export function saveSettings(next: GameSettings): GameSettings {
     sfxVolume: clamp01(next.sfxVolume),
     reduceMotion: !!next.reduceMotion,
     autoStatAllocate: !!next.autoStatAllocate,
+    mobileMode: !!next.mobileMode,
   };
   cached = clean;
   try {

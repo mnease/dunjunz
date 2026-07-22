@@ -2299,6 +2299,36 @@ describe('auto stat allocate', () => {
     patchSettings({ autoStatAllocate: false });
     void loadSettings;
   });
+
+  it('settings include mobileMode and persist', () => {
+    const d = defaultSettings();
+    expect(d.mobileMode).toBe(false);
+    const s = patchSettings({ mobileMode: true });
+    expect(s.mobileMode).toBe(true);
+    expect(loadSettings().mobileMode).toBe(true);
+    patchSettings({ mobileMode: false });
+  });
+});
+
+describe('mobile mode query', () => {
+  it('parseMobileQuery accepts common truthy/falsey forms', async () => {
+    const { parseMobileQuery, applyMobileQueryToSettings } = await import(
+      './touch-input'
+    );
+    expect(parseMobileQuery('?mobile=1')).toBe(true);
+    expect(parseMobileQuery('?touch=true')).toBe(true);
+    expect(parseMobileQuery('?pad=on')).toBe(true);
+    expect(parseMobileQuery('?mobile=0')).toBe(false);
+    expect(parseMobileQuery('?mobile=off')).toBe(false);
+    expect(parseMobileQuery('')).toBe(null);
+    expect(parseMobileQuery('?foo=1')).toBe(null);
+
+    patchSettings({ mobileMode: false });
+    expect(applyMobileQueryToSettings('?mobile=1')).toBe(true);
+    expect(loadSettings().mobileMode).toBe(true);
+    expect(applyMobileQueryToSettings('?mobile=0')).toBe(false);
+    expect(loadSettings().mobileMode).toBe(false);
+  });
 });
 
 // ── Actor combat guards (room-transition safety) ──────────────────

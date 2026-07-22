@@ -16,6 +16,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 - **Mid-boss wardens (P0 + P1)** — new `miniboss` combat tier (HP 36 / contact 3 / XP 18, between elite and land boss). Permanent kills only; never sets `bossDefeated`, land clear, or exit portals. **Floor Captain** on Dunjunz `b4_side` (BADGE CHECK, base HP 40) — soft mid (hall → descent stairs stay free).
 - **Mobile play (EMA council)** — on-screen D-pad + ATK / TALK / BAG / MAP / USE / MENU on `/play` for touch devices. DOM pad (not Phaser joystick) ORs into GameScene input.
 
+### Added
+
+- **Mobile mode (explicit)** — force on-screen D-pad + buttons via **MOBILE** topbar toggle, Settings checkbox, or `/play?mobile=1` (persists in browser). Auto-detect still works; forced mode no longer depends on flaky pointer media queries.
+
 ### Changed
 
 - **Larger inventory icons** — bag cells ~68px with ~2× icon scale; equip-slot frames/icons enlarged so gear silhouettes are readable.

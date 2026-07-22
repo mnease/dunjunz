@@ -14,6 +14,7 @@ import {
   getCurrentMusic,
   unlockAudio,
 } from '../systems/audio';
+import { setMobileMode } from '../systems/touch-input';
 
 export function initSettingsUi(): void {
   const openBtn = document.getElementById('settings-open');
@@ -35,6 +36,9 @@ export function initSettingsUi(): void {
   ) as HTMLInputElement | null;
   const reduce = document.getElementById(
     'set-reduce-motion',
+  ) as HTMLInputElement | null;
+  const mobileMode = document.getElementById(
+    'set-mobile-mode',
   ) as HTMLInputElement | null;
   const autoStats = document.getElementById(
     'set-auto-stats',
@@ -66,6 +70,7 @@ export function initSettingsUi(): void {
     if (musicVol) musicVol.value = String(Math.round(s.musicVolume * 100));
     if (sfxVol) sfxVol.value = String(Math.round(s.sfxVolume * 100));
     if (reduce) reduce.checked = s.reduceMotion;
+    if (mobileMode) mobileMode.checked = !!s.mobileMode;
     if (autoStats) autoStats.checked = !!s.autoStatAllocate;
     if (manualStats) manualStats.checked = !s.autoStatAllocate;
     if (musicLabel) musicLabel.textContent = `${Math.round(s.musicVolume * 100)}%`;
@@ -80,6 +85,7 @@ export function initSettingsUi(): void {
     sfxVolume: Number(sfxVol?.value ?? 55) / 100,
     reduceMotion: !!reduce?.checked,
     autoStatAllocate: !!autoStats?.checked,
+    mobileMode: !!mobileMode?.checked,
   });
 
   const applyLive = () => {
@@ -95,6 +101,10 @@ export function initSettingsUi(): void {
       window.dispatchEvent(
         new CustomEvent('dunjunz-auto-stats-enabled', { detail: s }),
       );
+    }
+    // Mobile pad / layout — force path so pad shows even if auto-detect failed
+    if (s.mobileMode !== prev.mobileMode) {
+      setMobileMode(s.mobileMode);
     }
   };
 

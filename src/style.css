@@ -203,6 +203,12 @@ body {
   box-shadow: 1px 1px 0 #0a0c10;
 }
 
+.nav-btn.is-active {
+  color: #0a0c10;
+  background: #7dffb3;
+  border-color: #5ad4a0;
+}
+
 .nav-btn-ghost {
   background: transparent;
   color: var(--amber);

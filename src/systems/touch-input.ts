@@ -3,11 +3,15 @@
  * DOM dock sets flags; GameScene ORs them with keyboard.
  * Does NOT synthesize KeyboardEvents (Safari-hostile).
  *
- * iOS notes:
- * - Use Pointer Events only (no touchstart+pointerdown double-fire).
- * - setPointerCapture so hold survives finger drift off the button.
- * - touch-action:none + preventDefault on pad root blocks rubber-band scroll.
+ * Mobile mode (forced pad):
+ * - Settings → "Mobile mode (on-screen controls)"
+ * - URL: /play?mobile=1  (or ?touch=1 / ?pad=1); ?mobile=0 forces off
+ * - Topbar MOBILE toggle on the play shell
+ *
+ * Auto-detect still runs when mobile mode is off.
  */
+
+import { loadSettings, patchSettings } from './settings';
 
 export type TouchAxis = 'up' | 'down' | 'left' | 'right';
 export type TouchAction =
@@ -38,6 +42,101 @@ const edge: Record<TouchAction, boolean> = {
 let padVisible = false;
 let bound = false;
 
+/**
+ * Session URL override: true/false from query, null if absent.
+ * Pure — pass search string for tests.
+ */
+export function parseMobileQuery(
+  search: string,
+): boolean | null {
+  try {
+    const q = new URLSearchParams(
+      search.startsWith('?') ? search.slice(1) : search,
+    );
+    const raw = q.get('mobile') ?? q.get('touch') ?? q.get('pad');
+    if (raw == null || raw === '') return null;
+    const v = raw.toLowerCase();
+    if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return true;
+    if (v === '0' || v === 'false' || v === 'off' || v === 'no') return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Whether pad + touch-play chrome should be used. */
+export function isTouchUiPreferred(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  // Explicit setting always wins when on
+  if (loadSettings().mobileMode) return true;
+
+  // URL session force (also written into settings on init)
+  const q = parseMobileQuery(window.location.search);
+  if (q === true) return true;
+  if (q === false) return false;
+
+  // Auto-detect phone / tablet
+  const coarse =
+    window.matchMedia('(pointer: coarse)').matches ||
+    window.matchMedia('(hover: none)').matches;
+  const narrow = window.matchMedia('(max-width: 900px)').matches;
+  const touchPoints =
+    typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+  const mobileUa = /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry/i.test(ua);
+  return coarse || mobileUa || (narrow && touchPoints);
+}
+
+/** True when user explicitly enabled mobile mode (settings or ?mobile=1). */
+export function isMobileModeEnabled(): boolean {
+  return !!loadSettings().mobileMode;
+}
+
+export function setMobileMode(on: boolean): void {
+  patchSettings({ mobileMode: !!on });
+  // Refresh pad chrome if a play scene already asked for the pad
+  if (padVisible) {
+    setTouchPadVisible(true);
+  } else {
+    // Still update body class if they toggle on title (prep layout)
+    document.body.classList.toggle('touch-play', false);
+    document.documentElement.classList.remove('touch-play-root');
+    syncMobileToggleUi();
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('dunjunz-mobile-mode', { detail: { on: !!on } }),
+    );
+  }
+  syncMobileToggleUi();
+}
+
+export function toggleMobileMode(): boolean {
+  const next = !isMobileModeEnabled();
+  setMobileMode(next);
+  return next;
+}
+
+function syncMobileToggleUi(): void {
+  if (typeof document === 'undefined') return;
+  const btn = document.getElementById('mobile-mode-toggle');
+  if (!(btn instanceof HTMLElement)) return;
+  const on = isMobileModeEnabled() || isTouchUiPreferred();
+  btn.classList.toggle('is-active', isMobileModeEnabled());
+  btn.setAttribute('aria-pressed', isMobileModeEnabled() ? 'true' : 'false');
+  btn.textContent = isMobileModeEnabled() ? 'MOBILE ON' : 'MOBILE';
+  // Hint auto-detect separately
+  if (!isMobileModeEnabled() && isTouchUiPreferred()) {
+    btn.title = 'Touch controls auto-on for this device. Click to force mobile mode.';
+  } else if (isMobileModeEnabled()) {
+    btn.title = 'Mobile mode ON — on-screen pad while playing. Click to turn off.';
+  } else {
+    btn.title = 'Turn on mobile mode (on-screen D-pad + buttons). Also: /play?mobile=1';
+  }
+  void on;
+}
+
 export function touchAxisDown(axis: TouchAxis): boolean {
   return held[axis];
 }
@@ -66,18 +165,6 @@ export function clearAllTouch(): void {
   for (const k of Object.keys(edge) as TouchAction[]) edge[k] = false;
 }
 
-export function isTouchUiPreferred(): boolean {
-  if (typeof window === 'undefined') return false;
-  // Coarse pointer or no hover ≈ phone/tablet
-  const coarse =
-    window.matchMedia('(pointer: coarse)').matches ||
-    window.matchMedia('(hover: none)').matches;
-  const narrow = window.matchMedia('(max-width: 900px)').matches;
-  const touchPoints =
-    typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
-  return coarse || (narrow && touchPoints);
-}
-
 /** Nudge Phaser Scale.FIT after DOM layout changes (pad dock / chrome). */
 function refreshGameScale(): void {
   if (typeof window === 'undefined') return;
@@ -86,6 +173,10 @@ function refreshGameScale(): void {
   });
 }
 
+/**
+ * Show/hide the pad. When `visible` is true, pad shows if mobile mode OR auto-detect.
+ * Forced mobileMode always shows the pad when a scene requests it.
+ */
 export function setTouchPadVisible(visible: boolean): void {
   padVisible = visible;
   const el = document.getElementById('touch-pad');
@@ -95,11 +186,11 @@ export function setTouchPadVisible(visible: boolean): void {
   el.setAttribute('aria-hidden', show ? 'false' : 'true');
   document.body.classList.toggle('touch-play', show);
   if (show) {
-    // iOS: reduce accidental page pan while pad is up
     document.documentElement.classList.add('touch-play-root');
   } else {
     document.documentElement.classList.remove('touch-play-root');
   }
+  syncMobileToggleUi();
   refreshGameScale();
 }
 
@@ -120,7 +211,6 @@ function bindHold(
 
   const down = (e: PointerEvent) => {
     if (activeId !== null) return;
-    // Primary contact only (ignore multi-finger noise on same button)
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     e.preventDefault();
     e.stopPropagation();
@@ -168,13 +258,22 @@ function bindTap(el: HTMLElement, action: TouchAction): void {
     e.stopPropagation();
     el.classList.add('is-down');
     pulseTouchAction(action);
-    // brief visual; release next frame
     window.setTimeout(() => el.classList.remove('is-down'), 120);
   });
 }
 
+/** Apply ?mobile=1 / ?mobile=0 into settings once per page load. */
+export function applyMobileQueryToSettings(
+  search: string = typeof window !== 'undefined' ? window.location.search : '',
+): boolean | null {
+  const parsed = parseMobileQuery(search);
+  if (parsed === null) return null;
+  patchSettings({ mobileMode: parsed });
+  return parsed;
+}
+
 /**
- * Wire #touch-pad buttons. Safe to call once from main.
+ * Wire #touch-pad buttons + MOBILE toggle. Safe to call once from main.
  */
 export function initTouchPad(): void {
   if (bound || typeof document === 'undefined') return;
@@ -182,8 +281,10 @@ export function initTouchPad(): void {
   if (!root) return;
   bound = true;
 
+  // Honor URL before first paint of pad preference
+  applyMobileQueryToSettings();
+
   // Block iOS scroll/callout on the dock without driving game input
-  // (input is pointer-only above).
   root.addEventListener(
     'touchstart',
     (e) => {
@@ -230,6 +331,18 @@ export function initTouchPad(): void {
     if (el instanceof HTMLElement) bindTap(el, action);
   }
 
+  // Topbar MOBILE toggle
+  const toggle = document.getElementById('mobile-mode-toggle');
+  if (toggle instanceof HTMLElement) {
+    toggle.addEventListener('click', () => {
+      const on = toggleMobileMode();
+      // If already in a crawl, re-show pad immediately
+      if (padVisible) setTouchPadVisible(true);
+      toggle.textContent = on ? 'MOBILE ON' : 'MOBILE';
+    });
+  }
+  syncMobileToggleUi();
+
   // Hide pad when shell modals open
   const modals = [
     'journal-modal',
@@ -265,7 +378,6 @@ export function initTouchPad(): void {
 
   window.addEventListener('resize', () => {
     if (padVisible) {
-      // Re-evaluate coarse/narrow; keep pad state consistent
       const el = document.getElementById('touch-pad');
       if (!el) return;
       const show = isTouchUiPreferred();
@@ -273,10 +385,10 @@ export function initTouchPad(): void {
       el.setAttribute('aria-hidden', show ? 'false' : 'true');
       document.body.classList.toggle('touch-play', show);
       document.documentElement.classList.toggle('touch-play-root', show);
+      syncMobileToggleUi();
     }
   });
 
-  // orientationchange: iOS often needs an extra layout tick
   window.addEventListener('orientationchange', () => {
     window.setTimeout(() => {
       if (padVisible) setTouchPadVisible(true);
@@ -284,9 +396,13 @@ export function initTouchPad(): void {
     }, 120);
   });
 
-  // iOS Safari address-bar show/hide changes visual viewport without window resize
   window.visualViewport?.addEventListener('resize', () => {
     if (padVisible) refreshGameScale();
+  });
+
+  window.addEventListener('dunjunz-mobile-mode', () => {
+    if (padVisible) setTouchPadVisible(true);
+    else syncMobileToggleUi();
   });
 
   // Start hidden until a play scene asks for it
