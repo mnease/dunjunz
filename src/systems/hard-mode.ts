@@ -198,6 +198,8 @@ export function hardProjectileForActor(
   if (kind === 'skeleton') return 'arrow';
   if (kind === 'redshirt') return 'phaser';
   if (id === 'captain' || id === 'captain-hard') return 'phaser';
+  // Mid wardens: arrow only (not DM fireball)
+  if (kind === 'miniboss' || id === 'floor-captain') return 'arrow';
   // Dungeon Master / "king" of the dunjun + any boss labeled king
   if (
     kind === 'boss' ||

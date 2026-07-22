@@ -1697,6 +1697,24 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#ffc857', 24, 16, 2, 6);
   });
 
+  // Floor Captain / mid wardens — redshirt manager + cape + clipboard
+  canvasTex(scene, 'miniboss', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#1a1a22', 9, 24, 6, 6);
+    fill(ctx, '#1a1a22', 17, 24, 6, 6);
+    // cape
+    shadedBlock(ctx, '#2a1840', '#4a2868', '#140c20', 4, 12, 6, 14);
+    shadedBlock(ctx, '#c0392b', '#e05050', '#7a1818', 8, 12, 16, 12);
+    fill(ctx, '#ffc857', 11, 14, 10, 2); // badge strip
+    fill(ctx, '#ffc857', 14, 16, 4, 3); // badge
+    hairMass(ctx, 10, 4, 12, { color: '#1a1a22', bangs: true });
+    cartoonFace(ctx, 10, 4, 12, 9);
+    // clipboard
+    fill(ctx, '#c9a882', 22, 14, 7, 9);
+    fill(ctx, '#888', 23, 16, 5, 1);
+    fill(ctx, '#888', 23, 18, 5, 1);
+    fill(ctx, '#888', 23, 20, 4, 1);
+  });
+
   canvasTex(scene, 'cube', ART_RES, ART_RES, (ctx) => {
     block(ctx, 'rgba(90, 220, 180, 0.85)', '#2a8f70', 4, 4, 24, 24);
     fill(ctx, 'rgba(255,255,255,0.4)', 7, 7, 8, 8);

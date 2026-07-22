@@ -73,6 +73,10 @@ import {
   resolveEnemyHp,
 } from '../systems/enemies';
 import {
+  applyMinibossKill,
+  shouldApplyMinibossReward,
+} from '../systems/mid-boss';
+import {
   autoEquipEmptySlots,
   computePlayerDamage,
   consumeWeaponAmmo,
@@ -272,6 +276,7 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   redshirt: 'redshirt',
   cube: 'cube',
   boss: 'boss',
+  miniboss: 'miniboss',
   npc: 'npc',
   merchant: 'merchant',
   key: 'key',
@@ -299,6 +304,7 @@ const MOBILE_HOSTILES = [
   'redshirt',
   'cube',
   'boss',
+  'miniboss',
   'wolf',
   'scorpion',
   'tarantula',
@@ -1806,7 +1812,12 @@ export class GameScene extends Phaser.Scene {
       actor.sprite.y,
     );
     const body = actor.sprite.body as Phaser.Physics.Arcade.Body;
-    const knock = actor.kind === 'cube' || actor.kind === 'boss' ? 50 : 100;
+    const knock =
+      actor.kind === 'cube' ||
+      actor.kind === 'boss' ||
+      actor.kind === 'miniboss'
+        ? 50
+        : 100;
     body.setVelocity(Math.cos(angle) * knock, Math.sin(angle) * knock);
 
     const bud = getBestBud(this.save.bestBudId);
@@ -1920,6 +1931,9 @@ export class GameScene extends Phaser.Scene {
     if (def.id === 'royal-goose') {
       sprite.setTint(0xffe08a);
     }
+    if (def.id === 'floor-captain' || def.kind === 'miniboss') {
+      sprite.setTint(0xffb090); // manager warmth; skip depth wash
+    }
 
     const contactHostile = (CONTACT_HOSTILES as readonly string[]).includes(
       def.kind,
@@ -1927,7 +1941,14 @@ export class GameScene extends Phaser.Scene {
     // Deeper basements: creeps get a sicklier wash so packs read meaner
     if (contactHostile && def.kind !== 'best_bud') {
       const et = depthEnemyTint(basementDepth(this.room.floor));
-      if (et != null && def.id !== 'royal-goose') sprite.setTint(et);
+      if (
+        et != null &&
+        def.id !== 'royal-goose' &&
+        def.kind !== 'miniboss' &&
+        def.id !== 'floor-captain'
+      ) {
+        sprite.setTint(et);
+      }
     }
     const mobileHostile = (MOBILE_HOSTILES as readonly string[]).includes(
       def.kind,
@@ -2325,7 +2346,12 @@ export class GameScene extends Phaser.Scene {
       actor.sprite.y,
     );
     const body = actor.sprite.body as Phaser.Physics.Arcade.Body;
-    const knock = actor.kind === 'cube' || actor.kind === 'boss' ? 80 : 140;
+    const knock =
+      actor.kind === 'cube' ||
+      actor.kind === 'boss' ||
+      actor.kind === 'miniboss'
+        ? 80
+        : 140;
     body.setVelocity(Math.cos(angle) * knock, Math.sin(angle) * knock);
 
     if (actor.hp > 0) {
@@ -2344,10 +2370,12 @@ export class GameScene extends Phaser.Scene {
 
   private killActor(actor: Actor): void {
     actor.alive = false;
+    const isMid = shouldApplyMinibossReward(actor.kind, actor.id);
     // Soft-respawn creeps: XP now, return on a clock (not permanent kill list)
+    // Mid wardens: permanent via applyMinibossKill (never land ceremony)
     if (canSoftRespawn(actor.kind, actor.id)) {
       this.scheduleCreepRespawn(actor);
-    } else {
+    } else if (!isMid) {
       this.save = recordKill(this.save, actor.id, this.room.land);
     }
 
@@ -2427,7 +2455,13 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    if (
+    // Mid wardens: permanent kill already recorded; never land ceremony
+    if (shouldApplyMinibossReward(actor.kind, actor.id)) {
+      const mid = applyMinibossKill(this.save, actor.id, this.room.land);
+      this.save = mid.save;
+      this.game.events.emit('toast', mid.toast);
+      this.game.events.emit('dialog-show', mid.dialog);
+    } else if (
       actor.kind === 'boss' ||
       actor.id === 'dungeon-master' ||
       actor.id === CAPTAIN_ID ||
@@ -2463,9 +2497,11 @@ export class GameScene extends Phaser.Scene {
                   ? 0x4a3030
                   : actor.kind === 'hornet'
                     ? 0xffc857
-                    : actor.kind === 'boss'
-                      ? 0xff6b9d
-                      : 0xffc857;
+                    : actor.kind === 'miniboss'
+                      ? 0xff8866
+                      : actor.kind === 'boss'
+                        ? 0xff6b9d
+                        : 0xffc857;
     const colors = [kindTint, 0xffc857, 0xffffff, kindTint];
     for (let i = 0; i < count; i++) {
       const p = this.add.image(px, py, i % 2 === 0 ? 'particle' : 'particle-hit');
@@ -3408,21 +3444,23 @@ export class GameScene extends Phaser.Scene {
         const speed =
           a.kind === 'boss'
             ? 70
-            : a.kind === 'wolf'
-              ? 65
-              : a.kind === 'hornet'
-                ? 90
-                : a.kind === 'scorpion'
-                  ? 50
-                  : a.kind === 'tarantula'
-                    ? 45
-                    : a.kind === 'skeleton'
-                      ? 55
-                      : a.kind === 'redshirt'
-                        ? 80
-                        : a.kind === 'cube'
-                          ? 28
-                          : 40;
+            : a.kind === 'miniboss'
+              ? 62
+              : a.kind === 'wolf'
+                ? 65
+                : a.kind === 'hornet'
+                  ? 90
+                  : a.kind === 'scorpion'
+                    ? 50
+                    : a.kind === 'tarantula'
+                      ? 45
+                      : a.kind === 'skeleton'
+                        ? 55
+                        : a.kind === 'redshirt'
+                          ? 80
+                          : a.kind === 'cube'
+                            ? 28
+                            : 40;
         // Prefer cardinal moves so wall colliders behave cleanly
         const dx = this.player.x - a.sprite.x;
         const dy = this.player.y - a.sprite.y;

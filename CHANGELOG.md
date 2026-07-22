@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Mid-boss wardens (P0 + P1)** — new `miniboss` combat tier (HP 36 / contact 3 / XP 18, between elite and land boss). Permanent kills only; never sets `bossDefeated`, land clear, or exit portals. **Floor Captain** on Dunjunz `b4_side` (BADGE CHECK, base HP 40) — soft mid (hall → descent stairs stay free).
 - **Mobile play (EMA council)** — on-screen D-pad + ATK / TALK / BAG / MAP / USE / MENU on `/play` for touch devices. DOM pad (not Phaser joystick) ORs into GameScene input.
 
 ### Fixed

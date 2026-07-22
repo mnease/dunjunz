@@ -2169,6 +2169,7 @@ import {
   scaleRespawnContact,
   scaleRespawnHp,
   RESPAWN_BASE_MS,
+  RESPAWN_KINDS,
 } from './respawn';
 import {
   flushAutoStatPackages,
@@ -2237,5 +2238,150 @@ describe('auto stat allocate', () => {
     // reset for other tests
     patchSettings({ autoStatAllocate: false });
     void loadSettings;
+  });
+});
+
+// ── Mid-boss wardens (P0 systems + P1 Floor Captain) ────────────────
+import {
+  ENEMY_CONTACT_DAMAGE,
+  enemyTierLabel,
+  resolveEnemyContactDamage,
+} from './enemies';
+import {
+  ENEMY_XP,
+  enemyXpReward,
+} from './progression';
+import {
+  applyMinibossKill,
+  FLOOR_CAPTAIN_BASE_HP,
+  FLOOR_CAPTAIN_ID,
+  FLOOR_CAPTAIN_ROOM_ID,
+  isMinibossEntity,
+  isMinibossKind,
+  midBossOpensLandExitPortal,
+  shouldApplyMinibossReward,
+} from './mid-boss';
+import { isBossRoom, BOSS_ROOM_META, shouldSpawnBossExitPortal } from './portal';
+import { hardProjectileForActor } from './hard-mode';
+import { ROOMS } from '../data/world';
+
+describe('mid-boss combat tier (P0)', () => {
+  it('miniboss base HP sits between elite cube and land boss', () => {
+    expect(ENEMY_BASE_HP.miniboss).toBeGreaterThan(ENEMY_BASE_HP.cube);
+    expect(ENEMY_BASE_HP.miniboss).toBeLessThan(ENEMY_BASE_HP.boss);
+    expect(ENEMY_CONTACT_DAMAGE.miniboss).toBe(3);
+    expect(ENEMY_CONTACT_DAMAGE.miniboss).toBeLessThan(ENEMY_CONTACT_DAMAGE.boss);
+    expect(ENEMY_XP.miniboss).toBe(18);
+    expect(ENEMY_XP.miniboss).toBeLessThan(ENEMY_XP.boss);
+    expect(enemyTierLabel('miniboss')).toBe('WARDEN');
+  });
+
+  it('resolveEnemyHp scales room override for Floor Captain band', () => {
+    const base = resolveEnemyHp('miniboss', FLOOR_CAPTAIN_BASE_HP, 0);
+    expect(base).toBe(FLOOR_CAPTAIN_BASE_HP);
+    const scaled = resolveEnemyHp('miniboss', FLOOR_CAPTAIN_BASE_HP, 6);
+    // threat 6 → * (1 + 0.18*6) = *2.08 → 83
+    expect(scaled).toBe(Math.round(40 * (1 + 0.18 * 6)));
+    expect(scaled).toBeGreaterThan(base);
+    expect(scaled).toBeLessThan(
+      resolveEnemyHp('boss', 72, 12), // DM band at B8
+    );
+    expect(resolveEnemyContactDamage('miniboss', 6)).toBe(3 + Math.floor(6 / 2));
+    expect(enemyXpReward('miniboss', 6)).toBe(
+      Math.round(18 * (1 + 0.1 * 6)),
+    );
+  });
+
+  it('miniboss is permanent kill, not soft-respawn', () => {
+    expect(isPermanentKill('miniboss', FLOOR_CAPTAIN_ID)).toBe(true);
+    expect(isPermanentKill('miniboss', 'some-warden')).toBe(true);
+    expect(canSoftRespawn('miniboss', FLOOR_CAPTAIN_ID)).toBe(false);
+    expect(RESPAWN_KINDS.has('miniboss')).toBe(false);
+  });
+});
+
+describe('mid-boss kill side effects (P0)', () => {
+  it('applyMinibossKill records kill and never sets land ceremony', () => {
+    const save = defaultSave();
+    expect(save.bossDefeated).toBe(false);
+    expect(save.landsCleared).toEqual([]);
+    expect(save.killed).not.toContain(FLOOR_CAPTAIN_ID);
+
+    const r = applyMinibossKill(save, FLOOR_CAPTAIN_ID, 'dunjunz');
+    expect(r.save.killed).toContain(FLOOR_CAPTAIN_ID);
+    expect(r.save.bossDefeated).toBe(false);
+    expect(r.setsBossDefeated).toBe(false);
+    expect(r.save.landsCleared).toEqual([]);
+    expect(r.landsClearedAdded).toEqual([]);
+    expect(r.opensLandExitPortal).toBe(false);
+    expect(r.toast.toLowerCase()).toMatch(/floor captain|middle management/);
+    expect(r.dialog.length).toBeGreaterThan(0);
+  });
+
+  it('applyMinibossKill preserves existing bossDefeated and landsCleared', () => {
+    let save = defaultSave();
+    save = {
+      ...save,
+      bossDefeated: true,
+      landsCleared: ['woodz'],
+      killed: ['wolf-lord'],
+    };
+    const r = applyMinibossKill(save, FLOOR_CAPTAIN_ID, 'dunjunz');
+    expect(r.save.bossDefeated).toBe(true);
+    expect(r.save.landsCleared).toEqual(['woodz']);
+    expect(r.save.killed).toContain('wolf-lord');
+    expect(r.save.killed).toContain(FLOOR_CAPTAIN_ID);
+  });
+
+  it('mid room is not a land-boss portal room', () => {
+    expect(isBossRoom(FLOOR_CAPTAIN_ROOM_ID)).toBe(false);
+    expect(BOSS_ROOM_META[FLOOR_CAPTAIN_ROOM_ID]).toBeUndefined();
+    expect(midBossOpensLandExitPortal(FLOOR_CAPTAIN_ROOM_ID)).toBe(false);
+    const save = defaultSave();
+    const after = applyMinibossKill(save, FLOOR_CAPTAIN_ID, 'dunjunz').save;
+    expect(
+      shouldSpawnBossExitPortal(after, FLOOR_CAPTAIN_ROOM_ID, 'dunjunz'),
+    ).toBe(false);
+  });
+
+  it('shouldApplyMinibossReward routes mid not land boss', () => {
+    expect(shouldApplyMinibossReward('miniboss', FLOOR_CAPTAIN_ID)).toBe(true);
+    expect(isMinibossKind('miniboss')).toBe(true);
+    expect(isMinibossEntity('miniboss', FLOOR_CAPTAIN_ID)).toBe(true);
+    expect(shouldApplyMinibossReward('boss', 'dungeon-master')).toBe(false);
+    expect(hardProjectileForActor('miniboss', FLOOR_CAPTAIN_ID)).toBe('arrow');
+    expect(hardProjectileForActor('boss', 'dungeon-master')).toBe('fireball');
+  });
+});
+
+describe('Floor Captain B4 placement (P1)', () => {
+  it('b4_side has named Floor Captain miniboss with base hp 40', () => {
+    const side = ROOMS.b4_side;
+    expect(side).toBeDefined();
+    expect(side.floor).toBe(-4);
+    expect(side.land).toBe('dunjunz');
+    const cap = side.entities?.find((e) => e.id === FLOOR_CAPTAIN_ID);
+    expect(cap).toBeDefined();
+    expect(cap!.kind).toBe('miniboss');
+    expect(cap!.hp).toBe(FLOOR_CAPTAIN_BASE_HP);
+    expect(cap!.dialog?.some((line) => /BADGE CHECK/i.test(line))).toBe(true);
+    // Chest is mid table (dungeon), not land boss table
+    const chest = side.entities?.find((e) => e.kind === 'chest');
+    expect(chest?.chestTable === 'boss').toBe(false);
+  });
+
+  it('B4 spine stays free without killing the captain (soft mid)', () => {
+    // hall → descent → next foyer; side is optional east
+    expect(ROOMS.b4_hall?.east).toBe('b4_side');
+    expect(ROOMS.b4_hall?.north).toBe('b4_descent');
+    expect(ROOMS.b4_descent?.stairsDown).toBe('b5_foyer');
+    expect(ROOMS.b4_side?.west).toBe('b4_hall');
+    // No locked door / must-kill link on descent
+    expect(ROOMS.b4_descent?.entities?.some((e) => e.id === FLOOR_CAPTAIN_ID)).toBe(
+      false,
+    );
+    expect(ROOMS.b4_hall?.entities?.some((e) => e.id === FLOOR_CAPTAIN_ID)).toBe(
+      false,
+    );
   });
 });

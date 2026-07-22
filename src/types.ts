@@ -19,6 +19,8 @@ export type EntityKind =
   | 'redshirt'
   | 'cube'
   | 'boss'
+  /** Mid-tier warden — permanent kill, no land ceremony. */
+  | 'miniboss'
   | 'npc'
   | 'merchant'
   | 'key'

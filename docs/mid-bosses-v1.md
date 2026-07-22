@@ -1,6 +1,6 @@
 # Mid-level bosses (wardens) — design v1
 
-**Status:** EMA council plan (Scout / Hexis / Waggle). Pending implement.
+**Status:** EMA council plan. **P0 + P1 shipped** (systems + Floor Captain @ B4). P2–P4 pending.
 
 **Problem:** After 4× dungeon depth, critical paths are long (Dunjunz ~24 spine rooms, Sewerz ~10) with a single land boss at the end. Creeps + hazards scale, but there is no midpoint *ceremony* — only the gel cube side den on B1 and hard-mode Captain.
 

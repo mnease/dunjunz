@@ -44,6 +44,7 @@ export const ENEMY_XP: Record<string, number> = {
   scorpion: 6,
   tarantula: 7,
   hornet: 5,
+  miniboss: 18, // ~2× elite pack; well under land boss 40
   boss: 40,
 };
 

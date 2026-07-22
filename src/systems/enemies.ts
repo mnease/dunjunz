@@ -17,6 +17,7 @@ export const ENEMY_BASE_HP: Record<string, number> = {
   tarantula: 24, // dezertz — fuzzy threat
   hornet: 14, // dezertz — glass cannon flyer
   cube: 30, // gelatinous tank
+  miniboss: 36, // mid-warden default (between cube and land boss)
   boss: 48, // default land-boss floor if room omits hp
 };
 
@@ -31,6 +32,7 @@ export const ENEMY_CONTACT_DAMAGE: Record<string, number> = {
   tarantula: 3,
   hornet: 2,
   cube: 3,
+  miniboss: 3, // elite tier — not full boss 4
   boss: 4,
 };
 
@@ -80,6 +82,8 @@ export function enemyTierLabel(kind: string): string {
       return 'TARANTULA';
     case 'hornet':
       return 'HORNET';
+    case 'miniboss':
+      return 'WARDEN';
     case 'boss':
       return 'BOSS';
     default:

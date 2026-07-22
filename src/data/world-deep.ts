@@ -707,6 +707,51 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
     );
   }
 
+  // B4 main mid-warden: Floor Captain (soft — stairs free via hall/descent)
+  if (out.b4_side) {
+    out.b4_side = {
+      ...out.b4_side,
+      title: 'BADGE CHECK · B4',
+      entities: [
+        sign('b4-captain-sign', 3, 8, [
+          'BADGE CHECK. MIDDLE MANAGEMENT.',
+          'THE FLOOR CAPTAIN SCHEDULES THE DM.',
+          'WEST: HALL. STAIRS STILL WORK. COWARD.',
+        ]),
+        {
+          kind: 'miniboss',
+          id: 'floor-captain',
+          x: 8,
+          y: 5,
+          hp: 40,
+          dialog: [
+            'FLOOR CAPTAIN: BADGE CHECK.',
+            'I MANAGE FLOORS THREE THROUGH FIVE.',
+            'THE DUNGEON MASTER IS ON B8. BUSY.',
+            'FIGHT ME OR BRIBE THE CHEST. YOUR CALL.',
+            'STAIRS? THOSE ARE FOR PEOPLE WITH BADGES.',
+            '(THE STAIRS DO NOT CARE ABOUT BADGES.)',
+          ],
+        },
+        chest('b4-captain-chest', 11, 3, 'dungeon'),
+      ],
+    };
+  }
+  if (out.b4_foyer) {
+    const foyerEnts = out.b4_foyer.entities ?? [];
+    out.b4_foyer = {
+      ...out.b4_foyer,
+      entities: [
+        sign('b4-foyer-mid-sign', 12, 8, [
+          'B4: BADGE CHECK EAST OF THE HALL.',
+          'MIDDLE MANAGEMENT. OPTIONAL-ISH.',
+          'N = HALL. U = UP. S DEEPER LATER.',
+        ]),
+        ...foyerEnts.filter((e) => e.kind !== 'sign'),
+      ],
+    };
+  }
+
   // B8 — final throne
   out.b8_foyer = {
     id: 'b8_foyer',

@@ -144,6 +144,7 @@ export function hostileEntityKinds(): readonly string[] {
     'redshirt',
     'cube',
     'boss',
+    'miniboss',
     'wolf',
     'cactus',
     'scorpion',

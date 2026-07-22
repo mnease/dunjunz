@@ -478,6 +478,13 @@ export const ENEMY_SPECIES_LOOT: Record<string, SpeciesLootDef> = {
   tarantula: { stackId: 'wolf_pelt', label: 'SPIDER FLUFF', chance: 0.38 },
   hornet: { stackId: 'cactus_spine', label: 'HORNET STINGER', chance: 0.42 },
   cube: { stackId: 'slime_gel', label: 'CUBE GOO', chance: 0.55, countMax: 2 },
+  miniboss: {
+    stackId: 'ensign_badge',
+    label: 'MANAGER BADGE',
+    chance: 0.6,
+    countMin: 1,
+    countMax: 2,
+  },
   boss: {
     stackId: 'ore_spark',
     label: 'SPARK ORE',
@@ -528,6 +535,7 @@ export function rollEnemyLoot(
     wolf: [7, 16],
     cactus: [7, 16],
     cube: [12, 26],
+    miniboss: [16, 32],
     boss: [30, 60],
   };
   const [lo, hi] = coinBase[kind] ?? [2, 8];
@@ -562,13 +570,15 @@ export function rollEnemyLoot(
   let gearChance =
     kind === 'boss'
       ? 0.55
-      : kind === 'cube'
-        ? 0.28
-        : kind === 'skeleton' || kind === 'wolf' || kind === 'cactus'
-          ? 0.14
-          : kind === 'slime'
-            ? 0.08
-            : 0.05;
+      : kind === 'miniboss'
+        ? 0.35
+        : kind === 'cube'
+          ? 0.28
+          : kind === 'skeleton' || kind === 'wolf' || kind === 'cactus'
+            ? 0.14
+            : kind === 'slime'
+              ? 0.08
+              : 0.05;
   gearChance = Math.min(0.65, gearChance + luck * 0.02);
 
   if (rng() < gearChance) {
@@ -609,9 +619,13 @@ export function rollEnemyLoot(
     });
   }
 
-  // Bosses always leave something if somehow empty
-  if (kind === 'boss' && !drops.length) {
-    drops.push({ kind: 'coins', label: '20 COINS', coins: 20 });
+  // Bosses / mids always leave something if somehow empty
+  if ((kind === 'boss' || kind === 'miniboss') && !drops.length) {
+    drops.push({
+      kind: 'coins',
+      label: kind === 'miniboss' ? '16 COINS' : '20 COINS',
+      coins: kind === 'miniboss' ? 16 : 20,
+    });
   }
 
   return drops;

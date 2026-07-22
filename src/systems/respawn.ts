@@ -28,8 +28,10 @@ export const RESPAWN_JITTER_MS = 20_000;
  */
 export function isPermanentKill(kind: string, id: string): boolean {
   if (kind === 'boss') return true;
+  if (kind === 'miniboss') return true;
   if (kind === 'cube') return true;
   if (id === 'captain' || id === 'captain-hard') return true;
+  if (id === 'floor-captain') return true;
   // Hard-mode trek ensigns must stay dead for captain promotion
   if (id.startsWith('ensign-')) return true;
   if (id === 'dungeon-master' || id === 'wolf-lord' || id === 'sand-wraith') {
