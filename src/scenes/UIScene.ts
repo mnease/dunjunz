@@ -995,6 +995,10 @@ export class UIScene extends Phaser.Scene {
     this.closeForjingPanel();
     this.closeShopPanel();
     this.pauseText?.setVisible(false);
+    this.pauseResumeHit?.setVisible(false);
+    this.pauseTitleHit?.setVisible(false);
+    this.pauseResumeLabel?.setVisible(false);
+    this.pauseTitleLabel?.setVisible(false);
     this.toastText?.setAlpha(0);
     this.game.events.emit('dialog-state', false);
     this.game.events.emit('inventory-state', false);
