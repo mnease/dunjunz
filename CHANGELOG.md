@@ -32,6 +32,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Fixed
 
+- **Dialog covers the action** — talk box docks at the bottom of the screen instead of mid-screen so combat/exploration stays visible.
 - **Beach load freeze** — outdoor shadow RenderTexture could be a dead GO after scene restart (`clear` → null `gl`). RTs are reset on create, validated before use, and rebuilt on WebGL errors. Crawler-id API failures no longer block wake.
 - **Turn-based mode not applying** — Mirror of Changing wrote `combatMode` to storage but GameScene kept a stale in-memory save; mode now syncs live so all creep fights use turn-based battles when selected.
 - **Title save slots after ESC → main menu** — TitleScene reuses its Phaser instance; slot text handles were stale after crawl return so cloud slots never re-drew. Reset GO lists on create and re-fetch `/api/auth/me` for live slot data.

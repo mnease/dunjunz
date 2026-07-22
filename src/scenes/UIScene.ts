@@ -372,10 +372,10 @@ export class UIScene extends Phaser.Scene {
       })
       .setOrigin(1, 0);
 
-    // Dialog: mid-high on mobile so thumbs/pad don't cover text (EMA mobile pass)
+    // Dialog: bottom dock so the playfield/action stays visible
     const dialogH = 168;
-    // Leave bottom ~200px free for overlay pad; desktop keeps lower dock
-    const dialogCy = Math.floor(GAME_H * 0.42);
+    const dialogMargin = 16;
+    const dialogCy = GAME_H - dialogH / 2 - dialogMargin;
     this.dialogBg = this.add
       .rectangle(GAME_W / 2, dialogCy, GAME_W - 48, dialogH, 0x12161f, 0.96)
       .setStrokeStyle(3, COLORS.green)
