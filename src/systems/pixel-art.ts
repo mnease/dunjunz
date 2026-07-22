@@ -554,6 +554,44 @@ export function drawDirtTile(
   fill(ctx, '#9a9080', 7, 8, 2, 2);
   fill(ctx, '#6a6050', 7, 9, 2, 1);
   fill(ctx, '#b0a898', 24, 16, 2, 2);
+}
+
+/** Soft beach sand — warm grains, no brick/cobble ruts. */
+export function drawSandTile(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  mid: string,
+  dark: string,
+): void {
+  vgrad(ctx, ['#f5e6c0', mid, dark, '#b89a70'], 0, 0, s, s);
+  dither(ctx, mid, dark, 0, 0, s, s, 0);
+  // soft dunes
+  fill(ctx, 'rgba(255,245,220,0.35)', 0, 6, s, 2);
+  fill(ctx, 'rgba(180,150,100,0.25)', 0, 18, s, 2);
+  // shell / grain flecks
+  fill(ctx, '#fff8e8', 5, 9, 2, 1);
+  fill(ctx, '#d0b888', 14, 4, 2, 1);
+  fill(ctx, '#fff0d0', 22, 15, 2, 1);
+  fill(ctx, '#c9a870', 8, 22, 2, 1);
+  fill(ctx, '#fff8e0', 26, 25, 2, 1);
+  grit(ctx, 'rgba(255,250,230,0.35)', 0, 0, s, s, 3, 2);
+}
+
+/** Sandy cliff / dune wall for beach borders (not dungeon brick). */
+export function drawSandWallTile(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+): void {
+  vgrad(ctx, ['#d4b888', '#c9a870', '#a88858', '#8a6a40'], 0, 0, s, s);
+  dither(ctx, '#c9a870', '#9a7850', 0, 0, s, s, 1);
+  // strata bands
+  fill(ctx, 'rgba(90,70,40,0.35)', 0, 8, s, 2);
+  fill(ctx, 'rgba(90,70,40,0.3)', 0, 18, s, 2);
+  fill(ctx, 'rgba(255,240,200,0.2)', 0, 10, s, 1);
+  // rock nubs
+  cobble(ctx, '#b89868', '#e0c890', '#7a5a38', 3, 4, 8, 6, true);
+  cobble(ctx, '#a88858', '#d0b070', '#6a4a30', 18, 12, 10, 7, false);
+  cobble(ctx, '#b89868', '#e0c890', '#7a5a38', 6, 22, 9, 6, true);
   fill(ctx, '#8a8070', 14, 26, 3, 2);
   fill(ctx, '#c0b8a8', 28, 7, 2, 1);
 
@@ -571,25 +609,31 @@ export function drawWaterTile(
   phase = 0,
 ): void {
   const deep = '#1a4068';
-  const shallow = phase === 0 ? '#3d7eb0' : '#4a8ec0';
-  const foam = phase === 0 ? 'rgba(200,230,255,0.55)' : 'rgba(220,240,255,0.5)';
+  const shallow = phase === 0 ? '#3d7eb0' : phase === 1 ? '#4a8ec0' : '#3580b0';
+  const foam =
+    phase === 0
+      ? 'rgba(200,230,255,0.55)'
+      : phase === 1
+        ? 'rgba(220,240,255,0.5)'
+        : 'rgba(230,245,255,0.6)';
   vgrad(ctx, [shallow, mid, '#245a88', deep], 0, 0, s, s);
 
   // depth mottling
   dither(ctx, mid, deep, 0, Math.floor(s * 0.4), s, Math.ceil(s * 0.6), phase);
 
-  // ripple arcs (shifted by phase)
-  const ox = phase * 4;
-  fill(ctx, foam, 4 + ox, 6, 10, 2);
-  fill(ctx, 'rgba(255,255,255,0.35)', 6 + ox, 7, 6, 1);
-  fill(ctx, foam, 14 - ox, 14, 12, 2);
-  fill(ctx, 'rgba(255,255,255,0.3)', 16 - ox, 15, 8, 1);
-  fill(ctx, foam, 2 + ox, 22, 9, 2);
-  fill(ctx, foam, 18 - ox, 8, 8, 1);
+  // Foam bands travel NORTH (toward shore) as phase increases (oy decreases)
+  const oy = phase * 5;
+  const ox = (phase % 2) * 3;
+  fill(ctx, foam, 2 + ox, 20 - oy, 14, 2);
+  fill(ctx, 'rgba(255,255,255,0.4)', 4 + ox, 21 - oy, 10, 1);
+  fill(ctx, foam, 10 - ox, 26 - oy, 16, 2);
+  fill(ctx, foam, 0 + ox, 12 - oy, 12, 2);
+  fill(ctx, 'rgba(255,255,255,0.3)', 2 + ox, 13 - oy, 8, 1);
+  fill(ctx, foam, 16 - ox, 8 - oy, 10, 1);
 
-  // dark troughs
-  fill(ctx, deep, 2, 12, 8, 1);
-  fill(ctx, deep, 18, 20, 10, 1);
+  // dark troughs (also shift north)
+  fill(ctx, deep, 2, 16 - Math.floor(oy / 2), 8, 1);
+  fill(ctx, deep, 18, 24 - Math.floor(oy / 2), 10, 1);
   fill(ctx, deep, 10, 4, 6, 1);
 
   // edge foam

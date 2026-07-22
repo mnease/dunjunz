@@ -352,6 +352,7 @@ const CHAR_TO_TILE: Record<string, TileKind> = {
   '.': 'floor',
   g: 'grass',
   d: 'dirt',
+  s: 'sand',
   '~': 'water',
   D: 'door',
   L: 'locked',
@@ -368,6 +369,7 @@ const TEX: Record<TileKind, string> = {
   wall: 'tile-wall',
   grass: 'tile-grass',
   dirt: 'tile-dirt',
+  sand: 'tile-sand',
   water: 'tile-water',
   door: 'tile-door',
   locked: 'tile-locked',
@@ -412,6 +414,9 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   table: 'table',
   lamp: 'lamp',
   mirror: 'mirror',
+  palm: 'palm',
+  seaweed: 'seaweed',
+  crab: 'crab',
 };
 
 const MOBILE_HOSTILES = [
@@ -539,8 +544,12 @@ export class GameScene extends Phaser.Scene {
   /** Inventory equip target: hero gear or buddy gear (toggle Y). */
   private gearTarget: EquipTarget = 'hero';
   /** Ambient animated map tiles (water/lava). */
-  private ambientTiles: { img: Phaser.GameObjects.Image; kind: 'water' | 'lava' }[] =
-    [];
+  private ambientTiles: {
+    img: Phaser.GameObjects.Image;
+    kind: 'water' | 'lava';
+    /** Authored tile row (for shoreward wave phase bias). */
+    ty?: number;
+  }[] = [];
   private animTime = 0;
   private ambientFrame = 0;
   /** Enemy + player projectiles (hard mode / ranged weapons). */
@@ -2200,26 +2209,41 @@ export class GameScene extends Phaser.Scene {
     // Depth personality: darker tiles + void as you go down basements
     const land = room.land ?? 'surface';
     this.cameras.main.setBackgroundColor(
-      depthBackdropColor(depth, land === 'surface' ? 'dunjunz' : land),
+      room.id === BEACH_START_ID
+        ? 0x87b8d8 // soft coastal sky
+        : depthBackdropColor(depth, land === 'surface' ? 'dunjunz' : land),
     );
 
     for (let y = 0; y < VIEW_TILES_H; y++) {
       for (let x = 0; x < VIEW_TILES_W; x++) {
         const kind = this.tileGrid[y][x];
         const pos = this.tileToWorld(x, y);
+        const onBeach = room.id === BEACH_START_ID;
         const texKey =
           kind === 'stairs' && (room.floor ?? 0) >= 0
             ? 'tile-cave-mouth'
-            : TEX[kind];
+            : kind === 'wall' && onBeach && this.textures.exists('tile-sand-wall')
+              ? 'tile-sand-wall'
+              : kind === 'floor' && onBeach && this.textures.exists('tile-sand')
+                ? 'tile-sand'
+                : TEX[kind];
         const img = this.add
           .image(pos.x, pos.y, texKey)
           .setScale(SPRITE_SCALE)
           .setDepth(0);
         img.setData('mapTile', true);
-        const tint = depthTileTint(depth, kind, land === 'surface' ? 'dunjunz' : land);
-        if (tint !== 0xffffff && kind !== 'stairs') img.setTint(tint);
+        img.setData('tileY', y);
+        // Beach stays bright sand — skip dungeon depth crush
+        if (!onBeach) {
+          const tint = depthTileTint(
+            depth,
+            kind,
+            land === 'surface' ? 'dunjunz' : land,
+          );
+          if (tint !== 0xffffff && kind !== 'stairs') img.setTint(tint);
+        }
         if (kind === 'water' || kind === 'lava') {
-          this.ambientTiles.push({ img, kind });
+          this.ambientTiles.push({ img, kind, ty: y });
         }
 
         if (SOLID.includes(kind)) {
@@ -2923,9 +2947,10 @@ export class GameScene extends Phaser.Scene {
     const mobileHostile = (MOBILE_HOSTILES as readonly string[]).includes(
       def.kind,
     );
-    const isTree = def.kind === 'tree';
+    const isTree = def.kind === 'tree' || def.kind === 'palm';
     const isTumbleweed = def.kind === 'tumbleweed';
     const isCactusPlant = def.kind === 'cactus';
+    const isCrab = def.kind === 'crab';
     const interactive = [
       'npc',
       'merchant',
@@ -2959,6 +2984,8 @@ export class GameScene extends Phaser.Scene {
       def.kind === 'merchant' ||
       def.kind === 'princess' ||
       def.kind === 'tree' ||
+      def.kind === 'palm' ||
+      def.kind === 'seaweed' ||
       def.kind === 'bookshelf' ||
       def.kind === 'chair' ||
       def.kind === 'table' ||
@@ -3042,16 +3069,20 @@ export class GameScene extends Phaser.Scene {
       body.setSize(12, 14);
       body.setOffset(2, 1);
       // overlap for spines handled below with contact hostiles
-    } else if (isTumbleweed) {
+    } else if (isTumbleweed || isCrab) {
       sprite.setImmovable(false);
       sprite.setCollideWorldBounds(true);
       const body = sprite.body as Phaser.Physics.Arcade.Body;
-      body.setSize(12, 12);
-      body.setOffset(2, 2);
-      body.setBounce(1, 1);
-      body.setMaxVelocity(60, 60);
+      body.setSize(isCrab ? 10 : 12, isCrab ? 8 : 12);
+      body.setOffset(isCrab ? 3 : 2, isCrab ? 4 : 2);
+      body.setBounce(isCrab ? 0.4 : 1, isCrab ? 0.4 : 1);
+      body.setMaxVelocity(isCrab ? 36 : 60, isCrab ? 28 : 60);
       body.enable = true;
       this.physics.add.collider(sprite, this.walls);
+      // Crabs are peaceful — walk through them, no player push-block needed
+      if (isCrab) {
+        body.moves = true;
+      }
     } else {
       sprite.setImmovable(true);
       if (
@@ -3080,13 +3111,15 @@ export class GameScene extends Phaser.Scene {
     let hp =
       isTree ||
       isTumbleweed ||
+      isCrab ||
       def.kind === 'dummy' ||
       def.kind === 'rack' ||
       def.kind === 'bookshelf' ||
       def.kind === 'chair' ||
       def.kind === 'table' ||
       def.kind === 'lamp' ||
-      def.kind === 'mirror'
+      def.kind === 'mirror' ||
+      def.kind === 'seaweed'
         ? 99
         : resolveEnemyHp(def.kind, def.hp, threat);
     let contactDamage = contactHostile
@@ -5012,8 +5045,30 @@ export class GameScene extends Phaser.Scene {
         continue;
       }
 
-      // Stationary cactus / trees: no chase
-      if (a.kind === 'cactus' || a.kind === 'tree') {
+      // Beach crabs — scuttle on sand, never fight
+      if (a.kind === 'crab') {
+        if (a.aiTimer <= 0) {
+          a.aiTimer = Phaser.Math.Between(500, 1200);
+          const body = a.sprite.body as Phaser.Physics.Arcade.Body;
+          if (body) {
+            // Prefer sideways scuttles along the beach
+            body.setVelocity(
+              Phaser.Math.Between(-32, 32),
+              Phaser.Math.Between(-12, 12),
+            );
+          }
+          a.sprite.setFlipX(Math.random() > 0.5);
+        }
+        continue;
+      }
+
+      // Stationary cactus / trees / palms / seaweed: no chase
+      if (
+        a.kind === 'cactus' ||
+        a.kind === 'tree' ||
+        a.kind === 'palm' ||
+        a.kind === 'seaweed'
+      ) {
         if (a.sprite.body) {
           (a.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
         }
@@ -5493,20 +5548,45 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Ambient water / lava texture ping-pong
+    // Ambient water / lava — beach waves push foam north toward shore
     if (motionAllowed() && this.ambientTiles.length) {
-      const next = Math.floor(this.animTime / 420) % 2;
+      const onBeach = this.room?.id === BEACH_START_ID;
+      const period = onBeach ? 260 : 420;
+      const frames = onBeach ? 3 : 2;
+      const next = Math.floor(this.animTime / period) % frames;
       if (next !== this.ambientFrame) {
         this.ambientFrame = next;
-        for (const { img, kind } of this.ambientTiles) {
+        for (const { img, kind, ty } of this.ambientTiles) {
           if (!img.active) continue;
           if (kind === 'water') {
-            const k = next === 0 ? 'tile-water' : 'tile-water-b';
+            // Deeper ocean (higher ty) lags so crests roll north to shore
+            const lag = onBeach ? Math.floor((ty ?? 0) / 2) : 0;
+            const phase = (next + lag) % frames;
+            const k =
+              phase === 0
+                ? 'tile-water'
+                : phase === 1
+                  ? 'tile-water-b'
+                  : this.textures.exists('tile-water-c')
+                    ? 'tile-water-c'
+                    : 'tile-water-b';
             if (this.textures.exists(k)) img.setTexture(k);
           } else if (kind === 'lava') {
-            const k = next === 0 ? 'tile-lava' : 'tile-lava-b';
+            const k = next % 2 === 0 ? 'tile-lava' : 'tile-lava-b';
             if (this.textures.exists(k)) img.setTexture(k);
           }
+        }
+      }
+      // Beach: continuous northward bob (waves wash toward shore)
+      if (onBeach) {
+        for (const { img, kind, ty } of this.ambientTiles) {
+          if (!img.active || kind !== 'water') continue;
+          if (img.getData('baseY') == null) img.setData('baseY', img.y);
+          const base = img.getData('baseY') as number;
+          // Negative Y = toward top of screen = north / shore
+          img.setY(
+            base - Math.sin(this.animTime / 380 + (ty ?? 0) * 0.55) * 1.6,
+          );
         }
       }
     }

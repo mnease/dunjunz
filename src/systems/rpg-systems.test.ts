@@ -3147,6 +3147,15 @@ describe('tutorial guild hall', () => {
     expect(westSign?.dialog?.some((l) => /TUTORIAL GUILD/i.test(l))).toBe(
       true,
     );
+    const beach = ROOMS[BEACH_START_ID]!;
+    expect(beach.tiles.some((row) => row.includes('s'))).toBe(true);
+    expect(beach.tiles.some((row) => row.includes('~'))).toBe(true);
+    const kinds = (beach.entities ?? []).map((e) => e.kind);
+    expect(kinds.filter((k) => k === 'palm').length).toBeGreaterThanOrEqual(2);
+    expect(kinds.filter((k) => k === 'crab').length).toBeGreaterThanOrEqual(2);
+    expect(kinds.filter((k) => k === 'seaweed').length).toBeGreaterThanOrEqual(
+      2,
+    );
   });
 
   it('guild hall is a decorated living quarters with light fixtures', async () => {

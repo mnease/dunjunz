@@ -4,6 +4,7 @@ export type TileKind =
   | 'wall'
   | 'grass'
   | 'dirt'
+  | 'sand' // beach sand (walkable)
   | 'water'
   | 'door'
   | 'locked'
@@ -56,7 +57,13 @@ export type EntityKind =
   /** Free-standing lamp — solid + warm light cookie. */
   | 'lamp'
   /** Mirror of Changing — combat mode select (live vs turn-based). */
-  | 'mirror';
+  | 'mirror'
+  /** Beach palm (coconut tree) — solid scenery. */
+  | 'palm'
+  /** Beach seaweed clumps — solid low prop. */
+  | 'seaweed'
+  /** Beach crab — non-combatant crawl NPC. */
+  | 'crab';
 
 /** Non-human best friend companion (randomized per playthrough). */
 export type BestBudId =

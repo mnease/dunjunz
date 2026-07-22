@@ -29,6 +29,8 @@ import {
   drawFloorTile,
   drawGrassTile,
   drawLavaTile,
+  drawSandTile,
+  drawSandWallTile,
   drawWaterTile,
   fill,
   grit,
@@ -1472,12 +1474,24 @@ export function generateTextures(scene: Phaser.Scene): void {
     drawDirtTile(ctx, ART_RES, hex(COLORS.dirt));
   });
 
+  canvasTex(scene, 'tile-sand', ART_RES, ART_RES, (ctx) => {
+    drawSandTile(ctx, ART_RES, hex(COLORS.sand), hex(COLORS.sandDark));
+  });
+
+  canvasTex(scene, 'tile-sand-wall', ART_RES, ART_RES, (ctx) => {
+    drawSandWallTile(ctx, ART_RES);
+  });
+
   canvasTex(scene, 'tile-water', ART_RES, ART_RES, (ctx) => {
     drawWaterTile(ctx, ART_RES, hex(COLORS.water), 0);
   });
 
   canvasTex(scene, 'tile-water-b', ART_RES, ART_RES, (ctx) => {
     drawWaterTile(ctx, ART_RES, hex(COLORS.water), 1);
+  });
+
+  canvasTex(scene, 'tile-water-c', ART_RES, ART_RES, (ctx) => {
+    drawWaterTile(ctx, ART_RES, hex(COLORS.water), 2);
   });
 
   canvasTex(scene, 'tile-lava', ART_RES, ART_RES, (ctx) => {
@@ -1623,6 +1637,69 @@ export function generateTextures(scene: Phaser.Scene): void {
     drawRackStand(ctx);
     fill(ctx, '#4a3018', 10, 16, 4, 2);
     fill(ctx, '#4a3018', 18, 16, 4, 2);
+  });
+
+  // Coconut palm
+  canvasTex(scene, 'palm', ART_RES, ART_RES, (ctx) => {
+    // trunk
+    fill(ctx, '#5a3d1a', 14, 12, 4, 18);
+    fill(ctx, '#8b5a2b', 15, 12, 2, 17);
+    fill(ctx, '#3a2410', 14, 18, 4, 1);
+    fill(ctx, '#3a2410', 14, 24, 4, 1);
+    // fronds
+    fill(ctx, '#1a5a28', 4, 8, 10, 3);
+    fill(ctx, '#2a8a40', 5, 7, 8, 2);
+    fill(ctx, '#1a5a28', 18, 8, 10, 3);
+    fill(ctx, '#2a8a40', 19, 7, 8, 2);
+    fill(ctx, '#1a5a28', 10, 2, 12, 4);
+    fill(ctx, '#3aaa50', 12, 1, 8, 3);
+    fill(ctx, '#1a5a28', 6, 4, 6, 3);
+    fill(ctx, '#1a5a28', 20, 4, 6, 3);
+    // coconuts
+    fill(ctx, '#6b4423', 12, 10, 3, 3);
+    fill(ctx, '#6b4423', 17, 10, 3, 3);
+    fill(ctx, '#8b5a2b', 13, 11, 1, 1);
+    spark(ctx, 14, 3, '#7dffb3');
+  });
+
+  // Seaweed clump
+  canvasTex(scene, 'seaweed', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#2a4a20', 8, 18, 16, 6);
+    fill(ctx, '#1a3018', 10, 22, 12, 4);
+    // ribbons
+    fill(ctx, '#3a6a30', 10, 8, 3, 14);
+    fill(ctx, '#4a8a40', 11, 6, 1, 12);
+    fill(ctx, '#3a6a30', 15, 10, 3, 12);
+    fill(ctx, '#2a5a28', 16, 8, 1, 10);
+    fill(ctx, '#3a6a30', 20, 7, 3, 15);
+    fill(ctx, '#5aaa50', 21, 5, 1, 12);
+    fill(ctx, '#2a5a28', 12, 12, 2, 10);
+    // wet sheen
+    fill(ctx, 'rgba(180,220,160,0.35)', 11, 10, 1, 4);
+    fill(ctx, 'rgba(180,220,160,0.3)', 21, 8, 1, 3);
+  });
+
+  // Beach crab (non-combat)
+  canvasTex(scene, 'crab', ART_RES, ART_RES, (ctx) => {
+    // body
+    fill(ctx, '#c04030', 10, 14, 12, 8);
+    fill(ctx, '#e06040', 11, 15, 10, 5);
+    fill(ctx, '#ff8060', 12, 16, 4, 2);
+    // claws
+    fill(ctx, '#c04030', 4, 12, 7, 5);
+    fill(ctx, '#c04030', 21, 12, 7, 5);
+    fill(ctx, '#e06040', 5, 13, 4, 3);
+    fill(ctx, '#e06040', 23, 13, 4, 3);
+    // legs
+    fill(ctx, '#a03028', 8, 20, 3, 5);
+    fill(ctx, '#a03028', 13, 21, 2, 5);
+    fill(ctx, '#a03028', 17, 21, 2, 5);
+    fill(ctx, '#a03028', 21, 20, 3, 5);
+    // eyes
+    fill(ctx, '#1a1010', 12, 12, 2, 3);
+    fill(ctx, '#1a1010', 18, 12, 2, 3);
+    fill(ctx, '#fff', 12, 12, 1, 1);
+    fill(ctx, '#fff', 18, 12, 1, 1);
   });
 
   // Mirror of Changing — tall oval looking-glass

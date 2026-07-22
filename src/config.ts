@@ -42,6 +42,9 @@ export const COLORS = {
   grass: 0x2f6b45,
   grassAlt: 0x3a7d52,
   dirt: 0x6b5344,
+  /** Beach sand (warmer / brighter than dirt). */
+  sand: 0xe8d4a8,
+  sandDark: 0xc9b080,
   water: 0x2a5f8f,
   lava: 0xc44b2b,
   gold: 0xffc857,

@@ -3,7 +3,7 @@ import { buildAllDeepRooms } from './world-deep';
 
 /**
  * Tile legend (authored 16×11 rooms, NES Zelda-style):
- *  . floor   # wall   g grass   d dirt   ~ water
+ *  . floor   # wall   g grass   d dirt   s sand   ~ water
  *  D open door   L locked door
  *  S stairs DOWN   U stairs UP
  *  = lava    P transporter pad
@@ -55,14 +55,15 @@ export const ROOMS: Record<string, RoomDef> = {
     mapX: 0,
     mapY: 1,
     north: 'overworld',
+    // s = sand, ~ = ocean (south). Shoreline mid-map; waves animate north.
     tiles: [
       '#######D########',
-      '#dddddddddddddd#',
-      '#dd..........dd#',
-      '#d............d#',
-      '#..............#',
-      '#..............#',
-      '#..~~~~~~~~~~..#',
+      '#ssssssssssssss#',
+      '#ssssssssssssss#',
+      '#ssssssssssssss#',
+      '#ssssssssssssss#',
+      '#sss~~~~~~~~sss#',
+      '#ss~~~~~~~~~~ss#',
       '#~~~~~~~~~~~~~~#',
       '#~~~~~~~~~~~~~~#',
       '#~~~~~~~~~~~~~~#',
@@ -80,6 +81,23 @@ export const ROOMS: Record<string, RoomDef> = {
           '"THE VOICE IS USUALLY RIGHT."',
         ],
       },
+      // Coconut palms (dune line)
+      { kind: 'palm', id: 'palm-nw', x: 2, y: 2, scale: 1.35 },
+      { kind: 'palm', id: 'palm-ne', x: 13, y: 2, scale: 1.45 },
+      { kind: 'palm', id: 'palm-w', x: 1, y: 4, scale: 1.2 },
+      { kind: 'palm', id: 'palm-e', x: 14, y: 3, scale: 1.25 },
+      // Seaweed near the waterline
+      { kind: 'seaweed', id: 'weed-a', x: 3, y: 5 },
+      { kind: 'seaweed', id: 'weed-b', x: 5, y: 5 },
+      { kind: 'seaweed', id: 'weed-c', x: 10, y: 5 },
+      { kind: 'seaweed', id: 'weed-d', x: 12, y: 5 },
+      { kind: 'seaweed', id: 'weed-e', x: 4, y: 4 },
+      { kind: 'seaweed', id: 'weed-f', x: 11, y: 4 },
+      // Non-combat crabs scuttling on the sand
+      { kind: 'crab', id: 'crab-1', x: 4, y: 3 },
+      { kind: 'crab', id: 'crab-2', x: 8, y: 4 },
+      { kind: 'crab', id: 'crab-3', x: 12, y: 3 },
+      { kind: 'crab', id: 'crab-4', x: 6, y: 2 },
     ],
   },
 
