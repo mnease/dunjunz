@@ -78,7 +78,11 @@ import {
 } from '../systems/enemies';
 import {
   applyMinibossKill,
+  applyRulesLawyerForgive,
+  isPeacefulMinibossUntilProvoked,
+  RULES_LAWYER_ID,
   shouldApplyMinibossReward,
+  shouldSkipMinibossSpawn,
 } from '../systems/mid-boss';
 import { actorHasLiveBody } from '../systems/actor-combat';
 import {
@@ -1604,6 +1608,7 @@ export class GameScene extends Phaser.Scene {
     const kills = killListForSpawn(this.save, room.land);
     for (const def of room.entities ?? []) {
       if (def.id && kills.includes(def.id)) continue;
+      if (def.id && shouldSkipMinibossSpawn(this.save, def.id)) continue;
       if (def.id && this.save.collected.includes(def.id)) continue;
       // Hard mode: skip friendly captain until redshirts cleared (promote later)
       if (
@@ -1961,7 +1966,7 @@ export class GameScene extends Phaser.Scene {
 
     // Strike — stretch / claw / spit / slam toward the creep
     if (dist <= profile.range && this.budAttackCd <= 0 && target.alive) {
-      if (target.kind === 'cube' && !target.aggressive) {
+      if (this.isUnprovokedPeaceful(target)) {
         this.updateCompanionFollow();
         return;
       }
@@ -2006,7 +2011,7 @@ export class GameScene extends Phaser.Scene {
     for (const a of this.actors) {
       if (!a.alive || !a.sprite?.active) continue;
       if (!isHostileKind(a.kind)) continue;
-      if (a.kind === 'cube' && !a.aggressive) continue;
+      if (this.isUnprovokedPeaceful(a)) continue;
       const d = Math.hypot(a.sprite.x - x, a.sprite.y - y);
       if (d < bestD) {
         bestD = d;
@@ -2014,6 +2019,24 @@ export class GameScene extends Phaser.Scene {
       }
     }
     return best;
+  }
+
+  /** Cube / Rules Lawyer idle until hit or chest loot. */
+  private isUnprovokedPeaceful(actor: Actor): boolean {
+    if (actor.kind === 'cube' && !actor.aggressive) return true;
+    if (isPeacefulMinibossUntilProvoked(actor.id) && !actor.aggressive) {
+      return true;
+    }
+    return false;
+  }
+
+  private provokePeaceful(
+    actor: Actor,
+    toast: string,
+  ): void {
+    if (!this.isUnprovokedPeaceful(actor)) return;
+    actor.aggressive = true;
+    this.game.events.emit('toast', toast);
   }
 
   /** Companion hit — independent of player swing flag. */
@@ -2025,8 +2048,9 @@ export class GameScene extends Phaser.Scene {
     if (!this.companionSprite?.active) return;
 
     if (actor.kind === 'cube' && !actor.aggressive) {
-      actor.aggressive = true;
-      this.game.events.emit('toast', 'THE CUBE IS MAD AT YOUR BUD');
+      this.provokePeaceful(actor, 'THE CUBE IS MAD AT YOUR BUD');
+    } else if (isPeacefulMinibossUntilProvoked(actor.id) && !actor.aggressive) {
+      this.provokePeaceful(actor, 'THE RULES LAWYER OPENS THE BINDER');
     }
 
     actor.hurtCooldown = 240;
@@ -2168,7 +2192,9 @@ export class GameScene extends Phaser.Scene {
     if (def.id === 'royal-goose') {
       sprite.setTint(0xffe08a);
     }
-    if (def.id === 'floor-captain' || def.kind === 'miniboss') {
+    if (def.id === RULES_LAWYER_ID) {
+      sprite.setTint(0xc8c0e8); // binder grey-purple skeleton clerk
+    } else if (def.id === 'floor-captain' || def.kind === 'miniboss') {
       sprite.setTint(0xffb090); // manager warmth; skip depth wash
     }
 
@@ -2182,7 +2208,8 @@ export class GameScene extends Phaser.Scene {
         et != null &&
         def.id !== 'royal-goose' &&
         def.kind !== 'miniboss' &&
-        def.id !== 'floor-captain'
+        def.id !== 'floor-captain' &&
+        def.id !== RULES_LAWYER_ID
       ) {
         sprite.setTint(et);
       }
@@ -2304,8 +2331,11 @@ export class GameScene extends Phaser.Scene {
       mapzId: def.mapzId,
       portalTarget: def.portalTarget,
       contactDamage,
-      // Cube is peaceful until struck; cactus is always "aggressive" for contact
-      aggressive: def.kind === 'cube' ? false : true,
+      // Cube / Rules Lawyer: peaceful until hit or chest; others chase
+      aggressive:
+        def.kind === 'cube' || isPeacefulMinibossUntilProvoked(def.id ?? '')
+          ? false
+          : true,
       respawnGen: generation,
     };
 
@@ -2441,8 +2471,8 @@ export class GameScene extends Phaser.Scene {
 
   private hurtPlayer(from: Actor): void {
     if (!from.alive || this.invuln > 0 || this.dialogLocked || this.paused) return;
-    // Peaceful cube (not yet hit) does not damage — walk up and press E
-    if (from.kind === 'cube' && !from.aggressive) return;
+    // Peaceful cube / Rules Lawyer (not yet hit) — walk up and press E
+    if (this.isUnprovokedPeaceful(from)) return;
 
     // Pebbo (guard bud) can eat a hit — magical coil shield
     if (
@@ -2551,10 +2581,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Provoking the cube makes it fight back
+    // Provoking peaceful dens makes them fight back
     if (actor.kind === 'cube' && !actor.aggressive) {
-      actor.aggressive = true;
-      this.game.events.emit('toast', 'THE CUBE IS HURT... AND MAD');
+      this.provokePeaceful(actor, 'THE CUBE IS HURT... AND MAD');
+    } else if (isPeacefulMinibossUntilProvoked(actor.id) && !actor.aggressive) {
+      this.provokePeaceful(actor, 'OBJECTION! THE RULES LAWYER IS MAD');
     }
 
     actor.hurtCooldown = 280;
@@ -2767,6 +2798,33 @@ export class GameScene extends Phaser.Scene {
     writeSave(this.save);
     this.emitHud();
     this.flushAchievements();
+  }
+
+  /** Talk path: Rules Lawyer — forgive (heal + bone) or litigating rant. */
+  private talkToRulesLawyer(npc: Actor): void {
+    if (!npc.alive) {
+      this.game.events.emit('toast', 'ONLY A BINDER REMAINS');
+      return;
+    }
+    if (npc.aggressive) {
+      this.game.events.emit('dialog-show', [
+        'RULES LAWYER: WE ARE IN LITIGATION.',
+        'NO CLEMENCY AFTER AGGRESSION.',
+        'SEE ALSO: YOU HIT ME.',
+      ]);
+      return;
+    }
+    const r = applyRulesLawyerForgive(this.save);
+    this.save = r.save;
+    writeSave(this.save);
+    this.emitHud();
+    this.game.events.emit('dialog-show', r.dialog);
+    this.game.events.emit('toast', r.toast);
+    // Forgive resolves the den — despawn without kill ceremony
+    if (!r.alreadyResolved && npc.alive) {
+      npc.alive = false;
+      if (npc.sprite?.active) npc.sprite.destroy();
+    }
   }
 
   /** Talk path: boots of apology (once). Cube stays until killed. */
@@ -3085,6 +3143,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (best.id === RULES_LAWYER_ID || isPeacefulMinibossUntilProvoked(best.id)) {
+      this.talkToRulesLawyer(best);
+      return;
+    }
+
     if (
       best.kind === 'princess' ||
       best.id === 'prizella' ||
@@ -3171,6 +3234,13 @@ export class GameScene extends Phaser.Scene {
       ...lootSummary(drops).map((l) => `+ ${l}`),
       ...(actor.dialog ?? []),
     ];
+    // Cube-style: looting the den chest provokes peaceful wardens
+    for (const a of this.actors) {
+      if (!a.alive || a === actor) continue;
+      if (isPeacefulMinibossUntilProvoked(a.id) && !a.aggressive) {
+        this.provokePeaceful(a, 'LOOTING VIOLATES SECTION 9 — HE\'S MAD');
+      }
+    }
     writeSave(this.save);
     this.emitHud();
     playSfx('pickup');
@@ -3674,8 +3744,8 @@ export class GameScene extends Phaser.Scene {
       // Safety: if clipped into solid, shove back toward room center
       this.unstickFromWall(a);
 
-      // Peaceful cube idles until provoked
-      if (a.kind === 'cube' && !a.aggressive) {
+      // Peaceful cube / Rules Lawyer idle until provoked
+      if (this.isUnprovokedPeaceful(a)) {
         if (a.sprite.body) {
           (a.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
         }
@@ -4365,7 +4435,7 @@ export class GameScene extends Phaser.Scene {
           for (const a of this.actors) {
             if (!a.alive || !a.sprite?.active) continue;
             if (!isHostileKind(a.kind) && a.kind !== 'boss') continue;
-            if (a.kind === 'cube' && !a.aggressive) continue;
+            if (this.isUnprovokedPeaceful(a)) continue;
             const hitR = this.projectileHitRadius(true);
             // Segment vs point: nearest distance along this step
             const d = this.distPointToSegment(
@@ -4448,8 +4518,9 @@ export class GameScene extends Phaser.Scene {
     if (fromProjectile && actor.hurtCooldown > 120) return false;
 
     if (actor.kind === 'cube' && !actor.aggressive) {
-      actor.aggressive = true;
-      this.game.events.emit('toast', 'THE CUBE IS MAD NOW');
+      this.provokePeaceful(actor, 'THE CUBE IS MAD NOW');
+    } else if (isPeacefulMinibossUntilProvoked(actor.id) && !actor.aggressive) {
+      this.provokePeaceful(actor, 'OBJECTION! THE RULES LAWYER IS MAD');
     }
     const amount = Math.max(1, dmg | 0);
     actor.hurtCooldown = fromProjectile ? 140 : 200;

@@ -2483,13 +2483,23 @@ import {
 } from './progression';
 import {
   applyMinibossKill,
+  applyRulesLawyerForgive,
   FLOOR_CAPTAIN_BASE_HP,
   FLOOR_CAPTAIN_ID,
   FLOOR_CAPTAIN_ROOM_ID,
   isMinibossEntity,
   isMinibossKind,
+  isPeacefulMinibossUntilProvoked,
+  isRulesLawyerForgiven,
   midBossOpensLandExitPortal,
+  RULES_LAWYER_BASE_HP,
+  RULES_LAWYER_FORGIVE_HEAL,
+  RULES_LAWYER_FORGIVE_MAT,
+  RULES_LAWYER_FORGIVEN_FLAG,
+  RULES_LAWYER_ID,
+  RULES_LAWYER_ROOM_ID,
   shouldApplyMinibossReward,
+  shouldSkipMinibossSpawn,
 } from './mid-boss';
 import { isBossRoom, BOSS_ROOM_META, shouldSpawnBossExitPortal } from './portal';
 import { hardProjectileForActor } from './hard-mode';
@@ -2613,5 +2623,105 @@ describe('Floor Captain B4 placement (P1)', () => {
     expect(ROOMS.b4_hall?.entities?.some((e) => e.id === FLOOR_CAPTAIN_ID)).toBe(
       false,
     );
+  });
+});
+
+describe('Rules Lawyer B6 dual-path den (P2)', () => {
+  it('b6_side places rules-lawyer miniboss with base hp 46 and dungeon chest', () => {
+    const side = ROOMS.b6_side;
+    expect(side).toBeDefined();
+    expect(side.floor).toBe(-6);
+    expect(side.land).toBe('dunjunz');
+    expect(side.title).toMatch(/ERRATA/i);
+    const lawyer = side.entities?.find((e) => e.id === RULES_LAWYER_ID);
+    expect(lawyer).toBeDefined();
+    expect(lawyer!.kind).toBe('miniboss');
+    expect(lawyer!.hp).toBe(RULES_LAWYER_BASE_HP);
+    expect(lawyer!.dialog?.some((l) => /BINDER|ERRATA|CLEMENCY|LITIGAT/i.test(l))).toBe(
+      true,
+    );
+    const chest = side.entities?.find((e) => e.kind === 'chest');
+    expect(chest).toBeDefined();
+    expect(chest!.chestTable === 'boss').toBe(false);
+    expect(chest!.chestTable ?? 'dungeon').not.toBe('boss');
+  });
+
+  it('B6 spine stays free without clearing the den (optional)', () => {
+    expect(ROOMS.b6_hall?.east).toBe('b6_side');
+    expect(ROOMS.b6_hall?.north).toBe('b6_descent');
+    expect(ROOMS.b6_descent?.stairsDown).toBe('b7_foyer');
+    expect(ROOMS.b6_side?.west).toBe('b6_hall');
+    expect(
+      ROOMS.b6_hall?.entities?.some((e) => e.id === RULES_LAWYER_ID),
+    ).toBe(false);
+    expect(
+      ROOMS.b6_descent?.entities?.some((e) => e.id === RULES_LAWYER_ID),
+    ).toBe(false);
+    expect(isBossRoom(RULES_LAWYER_ROOM_ID)).toBe(false);
+    expect(BOSS_ROOM_META[RULES_LAWYER_ROOM_ID]).toBeUndefined();
+    expect(midBossOpensLandExitPortal(RULES_LAWYER_ROOM_ID)).toBe(false);
+  });
+
+  it('rules-lawyer is peaceful dual-path mid entity', () => {
+    expect(isPeacefulMinibossUntilProvoked(RULES_LAWYER_ID)).toBe(true);
+    expect(isPeacefulMinibossUntilProvoked(FLOOR_CAPTAIN_ID)).toBe(false);
+    expect(isMinibossEntity('miniboss', RULES_LAWYER_ID)).toBe(true);
+    expect(shouldApplyMinibossReward('miniboss', RULES_LAWYER_ID)).toBe(true);
+    expect(isPermanentKill('miniboss', RULES_LAWYER_ID)).toBe(true);
+    expect(canSoftRespawn('miniboss', RULES_LAWYER_ID)).toBe(false);
+  });
+
+  it('kill path records kill and never sets land ceremony', () => {
+    let save = defaultSave();
+    save = {
+      ...save,
+      bossDefeated: true,
+      landsCleared: ['woodz'],
+    };
+    const r = applyMinibossKill(save, RULES_LAWYER_ID, 'dunjunz');
+    expect(r.save.killed).toContain(RULES_LAWYER_ID);
+    expect(r.save.bossDefeated).toBe(true);
+    expect(r.save.landsCleared).toEqual(['woodz']);
+    expect(r.setsBossDefeated).toBe(false);
+    expect(r.landsClearedAdded).toEqual([]);
+    expect(r.opensLandExitPortal).toBe(false);
+    expect(r.toast.toLowerCase()).toMatch(/rules lawyer|middle management/);
+    expect(
+      shouldSpawnBossExitPortal(r.save, RULES_LAWYER_ROOM_ID, 'dunjunz'),
+    ).toBe(false);
+  });
+
+  it('talk forgive grants heal+mat, durable flag, no kill, no ceremony', () => {
+    let save = defaultSave();
+    save = { ...save, hp: 10, maxHp: 35, bossDefeated: false, landsCleared: [] };
+    const beforeBones = save.stacks[RULES_LAWYER_FORGIVE_MAT] ?? 0;
+    const r = applyRulesLawyerForgive(save);
+    expect(r.alreadyResolved).toBe(false);
+    expect(r.heal).toBe(RULES_LAWYER_FORGIVE_HEAL);
+    expect(r.save.hp).toBe(10 + RULES_LAWYER_FORGIVE_HEAL);
+    expect(r.save.stacks[RULES_LAWYER_FORGIVE_MAT]).toBe(beforeBones + 1);
+    expect(r.save.flags[RULES_LAWYER_FORGIVEN_FLAG]).toBe(true);
+    expect(isRulesLawyerForgiven(r.save)).toBe(true);
+    expect(r.save.killed).not.toContain(RULES_LAWYER_ID);
+    expect(r.save.bossDefeated).toBe(false);
+    expect(r.save.landsCleared).toEqual([]);
+    expect(r.setsBossDefeated).toBe(false);
+    expect(r.opensLandExitPortal).toBe(false);
+    expect(shouldSkipMinibossSpawn(r.save, RULES_LAWYER_ID)).toBe(true);
+    expect(shouldSkipMinibossSpawn(defaultSave(), RULES_LAWYER_ID)).toBe(false);
+
+    // Second talk: no double loot, still no ceremony
+    const again = applyRulesLawyerForgive(r.save);
+    expect(again.alreadyResolved).toBe(true);
+    expect(again.save.stacks[RULES_LAWYER_FORGIVE_MAT]).toBe(beforeBones + 1);
+    expect(again.save.bossDefeated).toBe(false);
+  });
+
+  it('resolveEnemyHp scales Rules Lawyer under land boss band', () => {
+    const base = resolveEnemyHp('miniboss', RULES_LAWYER_BASE_HP, 0);
+    expect(base).toBe(RULES_LAWYER_BASE_HP);
+    const atB6 = resolveEnemyHp('miniboss', RULES_LAWYER_BASE_HP, 9);
+    expect(atB6).toBe(Math.round(46 * (1 + 0.18 * 9)));
+    expect(atB6).toBeLessThan(resolveEnemyHp('boss', 72, 12));
   });
 });

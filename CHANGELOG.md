@@ -14,6 +14,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 ### Added
 
 - **Mid-boss wardens (P0 + P1)** — new `miniboss` combat tier (HP 36 / contact 3 / XP 18, between elite and land boss). Permanent kills only; never sets `bossDefeated`, land clear, or exit portals. **Floor Captain** on Dunjunz `b4_side` (BADGE CHECK, base HP 40) — soft mid (hall → descent stairs stay free).
+- **Mid-boss P2 — Rules Lawyer** — optional Dunjunz B6 den (`b6_side`, ERRATA DEN, base HP 46). Peaceful until hit or chest open; talk grants +5 HP + bone mat + durable `rules_lawyer_forgiven` (skips re-spawn). Fight path mid XP/loot only — no land clear, portal, or boss chest table. Hall/descent stairs remain free.
 - **Mobile play (EMA council)** — on-screen D-pad + ATK / TALK / BAG / MAP / USE / MENU on `/play` for touch devices. DOM pad (not Phaser joystick) ORs into GameScene input.
 
 ### Added

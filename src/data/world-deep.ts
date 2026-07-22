@@ -752,6 +752,50 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
     };
   }
 
+  // B6 optional den: Rules Lawyer (peaceful until hit/chest; talk to forgive)
+  if (out.b6_side) {
+    out.b6_side = {
+      ...out.b6_side,
+      title: 'ERRATA DEN · B6',
+      entities: [
+        sign('b6-lawyer-sign', 3, 8, [
+          'ERRATA DEN. SIDE OFFICE.',
+          'THE RULES LAWYER FILES COMPLAINTS.',
+          'TALK, FIGHT, OR LOOT. STAIRS FREE WEST.',
+        ]),
+        {
+          kind: 'miniboss',
+          id: 'rules-lawyer',
+          x: 8,
+          y: 5,
+          hp: 46,
+          dialog: [
+            'RULES LAWYER: HOLD. SECTION 4A.',
+            'DID YOU READ THE BINDER? OF COURSE NOT.',
+            'TALK: I MAY GRANT PROCEDURAL CLEMENCY.',
+            'HIT ME OR OPEN THE CHEST: WE LITIGATE.',
+            'STAIRS REMAIN A SEPARATE STATUTE. GO AROUND.',
+          ],
+        },
+        chest('b6-lawyer-chest', 11, 3, 'dungeon'),
+      ],
+    };
+  }
+  if (out.b6_foyer) {
+    const foyerEnts = out.b6_foyer.entities ?? [];
+    out.b6_foyer = {
+      ...out.b6_foyer,
+      entities: [
+        sign('b6-foyer-mid-sign', 12, 8, [
+          'B6: ERRATA DEN EAST OF THE HALL.',
+          'OPTIONAL MIDDLE MANAGEMENT.',
+          'N = HALL. U = UP. S DEEPER.',
+        ]),
+        ...foyerEnts.filter((e) => e.kind !== 'sign'),
+      ],
+    };
+  }
+
   // B8 — final throne
   out.b8_foyer = {
     id: 'b8_foyer',

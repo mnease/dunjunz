@@ -1,7 +1,7 @@
 /**
  * Mid-tier wardens (minibosses) — permanent kills, mid loot/XP,
  * never land ceremony (bossDefeated, landsCleared, exit portal).
- * Pure helpers for tests + GameScene kill path.
+ * Pure helpers for tests + GameScene kill/forgive paths.
  */
 
 import type { LandId, SaveData } from '../types';
@@ -17,8 +17,29 @@ export const FLOOR_CAPTAIN_ROOM_ID = 'b4_side';
 /** Authored base HP before threat scale (plan band ~40). */
 export const FLOOR_CAPTAIN_BASE_HP = 40;
 
+/** Dunjunz B6 optional den — dual talk/fight. */
+export const RULES_LAWYER_ID = 'rules-lawyer';
+
+/** Room where Rules Lawyer is placed (optional — stairs free via hall). */
+export const RULES_LAWYER_ROOM_ID = 'b6_side';
+
+/** Authored base HP before threat scale (plan band ~46). */
+export const RULES_LAWYER_BASE_HP = 46;
+
+/** Durable flag: talk path resolved den without a kill. */
+export const RULES_LAWYER_FORGIVEN_FLAG = 'rules_lawyer_forgiven';
+
+/** Small heal on forgive talk. */
+export const RULES_LAWYER_FORGIVE_HEAL = 5;
+
+/** Joke forjing mat on forgive. */
+export const RULES_LAWYER_FORGIVE_MAT = 'bone';
+
 /** Known mid-warden entity ids (kind miniboss preferred). */
-export const MINIBOSS_IDS: ReadonlySet<string> = new Set([FLOOR_CAPTAIN_ID]);
+export const MINIBOSS_IDS: ReadonlySet<string> = new Set([
+  FLOOR_CAPTAIN_ID,
+  RULES_LAWYER_ID,
+]);
 
 export function isMinibossKind(kind: string): boolean {
   return kind === 'miniboss';
@@ -26,6 +47,27 @@ export function isMinibossKind(kind: string): boolean {
 
 export function isMinibossEntity(kind: string, id: string): boolean {
   return kind === 'miniboss' || MINIBOSS_IDS.has(id);
+}
+
+/**
+ * Dual-path dens (cube-style): idle until hit or chest open.
+ * Floor Captain is chase-on-sight — not in this set.
+ */
+export function isPeacefulMinibossUntilProvoked(id: string): boolean {
+  return id === RULES_LAWYER_ID;
+}
+
+export function isRulesLawyerForgiven(save: SaveData): boolean {
+  return !!save.flags?.[RULES_LAWYER_FORGIVEN_FLAG];
+}
+
+/**
+ * Skip spawning a mid den entity when already resolved by talk or kill.
+ * Kill path uses killListForSpawn; forgive uses this flag check.
+ */
+export function shouldSkipMinibossSpawn(save: SaveData, id: string): boolean {
+  if (id === RULES_LAWYER_ID && isRulesLawyerForgiven(save)) return true;
+  return false;
 }
 
 /**
@@ -48,6 +90,24 @@ export interface MinibossKillResult {
   dialog: string[];
 }
 
+export interface MinibossForgiveResult {
+  save: SaveData;
+  setsBossDefeated: false;
+  landsClearedAdded: LandId[];
+  opensLandExitPortal: false;
+  toast: string;
+  dialog: string[];
+  heal: number;
+  matStackId: string;
+  alreadyResolved: boolean;
+}
+
+function wardenDisplayName(id: string): string {
+  if (id === FLOOR_CAPTAIN_ID) return 'FLOOR CAPTAIN';
+  if (id === RULES_LAWYER_ID) return 'RULES LAWYER';
+  return id.toUpperCase().replace(/-/g, ' ');
+}
+
 /**
  * Apply permanent kill + mid feedback flags. Does not mutate land ceremony.
  * Callers must NOT also run applyBossReward / reward*Clear for this entity.
@@ -67,8 +127,7 @@ export function applyMinibossKill(
     landsCleared: beforeLands,
   };
 
-  const name =
-    id === FLOOR_CAPTAIN_ID ? 'FLOOR CAPTAIN' : id.toUpperCase().replace(/-/g, ' ');
+  const name = wardenDisplayName(id);
 
   return {
     save: next,
@@ -83,10 +142,84 @@ export function applyMinibossKill(
             '"I WAS ONLY SCHEDULING THE DM\'S CALENDAR…"',
             'NO EXIT PORTAL. STAIRS STILL WORK. GO DEEPER.',
           ]
-        : [
-            'A WARDEN FALLS.',
-            'NOT THE LAND BOSS. KEEP GOING.',
-          ],
+        : id === RULES_LAWYER_ID
+          ? [
+              'THE RULES LAWYER\'S BINDER SCATTERS.',
+              '"THAT WAS… NOT IN THE ERRATA."',
+              'NO LAND CLEAR. NO EXIT PORTAL. OPTIONAL DEN DONE.',
+            ]
+          : [
+              'A WARDEN FALLS.',
+              'NOT THE LAND BOSS. KEEP GOING.',
+            ],
+  };
+}
+
+/**
+ * Talk path for Rules Lawyer: small heal + joke bone mat + durable forgive flag.
+ * Never records a kill, never touches land ceremony. Den can skip-spawn after.
+ */
+export function applyRulesLawyerForgive(save: SaveData): MinibossForgiveResult {
+  const beforeBoss = save.bossDefeated;
+  const beforeLands = [...(save.landsCleared ?? [])];
+  const already =
+    isRulesLawyerForgiven(save) || save.killed.includes(RULES_LAWYER_ID);
+
+  if (already) {
+    return {
+      save: {
+        ...save,
+        bossDefeated: beforeBoss,
+        landsCleared: beforeLands,
+      },
+      setsBossDefeated: false,
+      landsClearedAdded: [],
+      opensLandExitPortal: false,
+      toast: 'ERRATA ALREADY FILED',
+      dialog: [
+        'RULES LAWYER: WE ALREADY SETTLED THIS.',
+        'SEE SECTION 12B: "DO NOT BOTHER ME AGAIN."',
+        'WEST BACK TO THE HALL. STAIRS STILL WORK.',
+      ],
+      heal: 0,
+      matStackId: RULES_LAWYER_FORGIVE_MAT,
+      alreadyResolved: true,
+    };
+  }
+
+  const heal = RULES_LAWYER_FORGIVE_HEAL;
+  const mat = RULES_LAWYER_FORGIVE_MAT;
+  let next: SaveData = {
+    ...save,
+    hp: Math.min(save.maxHp, save.hp + heal),
+    stacks: {
+      ...save.stacks,
+      [mat]: (save.stacks[mat] ?? 0) + 1,
+    },
+    flags: {
+      ...save.flags,
+      [RULES_LAWYER_FORGIVEN_FLAG]: true,
+    },
+    bossDefeated: beforeBoss,
+    landsCleared: beforeLands,
+  };
+
+  return {
+    save: next,
+    setsBossDefeated: false,
+    landsClearedAdded: [],
+    opensLandExitPortal: false,
+    toast: 'FORGIVEN — +HP · BONE ERRATA',
+    dialog: [
+      'RULES LAWYER: FINE. PROCEDURAL CLEMENCY.',
+      'TAKE THIS BONE. IT IS CITED AS "JOKE MAT."',
+      `HEALED +${heal} HP. BINDER CLOSED.`,
+      'I WILL NOT BE HERE IF YOU RETURN. STAIRS? FREE.',
+      'NO PORTAL. NO LAND CLEAR. THAT WOULD BE A VIOLATION.',
+    ],
+    heal,
+    matStackId: mat,
+    alreadyResolved: false,
   };
 }
 
