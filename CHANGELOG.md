@@ -27,6 +27,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Mobile full-screen overlay controls** — game fills the viewport; D-pad (left) and actions (right) sit as a translucent HUD on the playfield (no dock that squishes the canvas).
 - **Larger inventory icons** — bag cells ~68px with ~2× icon scale; equip-slot frames/icons enlarged so gear silhouettes are readable.
 
 ### Fixed

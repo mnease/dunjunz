@@ -72,28 +72,28 @@
           <div id="game-frame">
             <div id="game-container" tabindex="-1"></div>
             <div class="crt-overlay" aria-hidden="true"></div>
-          </div>
-          <!-- Mobile pad: dock BELOW canvas on iPhone (not over a short 16:9 frame) -->
-          <div
-            id="touch-pad"
-            class="touch-pad"
-            hidden
-            aria-hidden="true"
-            aria-label="Touch controls"
-          >
-            <div class="touch-cluster touch-dpad" role="group" aria-label="Move">
-              <button type="button" id="touch-up" class="touch-btn touch-dir" data-axis="up" aria-label="Up">▲</button>
-              <button type="button" id="touch-left" class="touch-btn touch-dir" data-axis="left" aria-label="Left">◀</button>
-              <button type="button" id="touch-right" class="touch-btn touch-dir" data-axis="right" aria-label="Right">▶</button>
-              <button type="button" id="touch-down" class="touch-btn touch-dir" data-axis="down" aria-label="Down">▼</button>
-            </div>
-            <div class="touch-cluster touch-actions" role="group" aria-label="Actions">
-              <button type="button" id="touch-attack" class="touch-btn touch-a" data-action="attack" aria-label="Attack">ATK</button>
-              <button type="button" id="touch-talk" class="touch-btn touch-b" data-action="interact" aria-label="Talk or interact">TALK</button>
-              <button type="button" id="touch-inv" class="touch-btn touch-c" data-action="inventory" aria-label="Inventory">BAG</button>
-              <button type="button" id="touch-map" class="touch-btn touch-c" data-action="map" aria-label="Map">MAP</button>
-              <button type="button" id="touch-use" class="touch-btn touch-c" data-action="use" aria-label="Use item">USE</button>
-              <button type="button" id="touch-menu" class="touch-btn touch-c" data-action="menu" aria-label="Pause menu">MENU</button>
+            <!-- Mobile pad: OVERLAY on the game (not a dock that squishes the canvas) -->
+            <div
+              id="touch-pad"
+              class="touch-pad"
+              hidden
+              aria-hidden="true"
+              aria-label="Touch controls"
+            >
+              <div class="touch-cluster touch-dpad" role="group" aria-label="Move">
+                <button type="button" id="touch-up" class="touch-btn touch-dir" data-axis="up" aria-label="Up">▲</button>
+                <button type="button" id="touch-left" class="touch-btn touch-dir" data-axis="left" aria-label="Left">◀</button>
+                <button type="button" id="touch-right" class="touch-btn touch-dir" data-axis="right" aria-label="Right">▶</button>
+                <button type="button" id="touch-down" class="touch-btn touch-dir" data-axis="down" aria-label="Down">▼</button>
+              </div>
+              <div class="touch-cluster touch-actions" role="group" aria-label="Actions">
+                <button type="button" id="touch-attack" class="touch-btn touch-a" data-action="attack" aria-label="Attack">ATK</button>
+                <button type="button" id="touch-talk" class="touch-btn touch-b" data-action="interact" aria-label="Talk or interact">TALK</button>
+                <button type="button" id="touch-inv" class="touch-btn touch-c" data-action="inventory" aria-label="Inventory">BAG</button>
+                <button type="button" id="touch-map" class="touch-btn touch-c" data-action="map" aria-label="Map">MAP</button>
+                <button type="button" id="touch-use" class="touch-btn touch-c" data-action="use" aria-label="Use item">USE</button>
+                <button type="button" id="touch-menu" class="touch-btn touch-c" data-action="menu" aria-label="Pause menu">MENU</button>
+              </div>
             </div>
           </div>
         </div>
@@ -111,7 +111,7 @@
               equip
             </li>
             <li><kbd>1</kbd>–<kbd>5</kbd> attrs (+2 then +1) · <kbd>U</kbd> potion / beam</li>
-            <li><strong>Phone:</strong> on-screen pad (move · ATK · TALK · BAG · MAP)</li>
+            <li><strong>Phone:</strong> full-screen play · overlay D-pad (move · ATK · TALK · BAG · MAP)</li>
             <li>Hard gate at cleared dungeon mouths · classes at Lv5/15 · race at 25</li>
             <li>Modes: Dunjunz · Humanz · Army (L20+ press <kbd>P</kbd> to enlist)</li>
           </ul>
