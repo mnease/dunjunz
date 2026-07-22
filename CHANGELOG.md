@@ -18,6 +18,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Fixed
 
+- **Room-exit freeze (buddy strike)** — Best Bud delayed lash could call `setVelocity` after the target sprite was destroyed on room transition (`budStrike` crash). Now marks actors dead on clear, bumps a room epoch for in-flight hits, and guards live body before knockback.
 - **iPhone layout** — pad docks **under** the canvas (not over a short 16:9 frame). Full-viewport `touch-play` shell, safe-area insets, rubber-band lock, Phaser scale refresh on dock/orientation. Pointer-only pad input with `setPointerCapture` (no pointer+touch double-fire). Site chrome hidden while crawling so the playfield + dock fit.
 
 ### Changed

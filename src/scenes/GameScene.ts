@@ -76,6 +76,7 @@ import {
   applyMinibossKill,
   shouldApplyMinibossReward,
 } from '../systems/mid-boss';
+import { actorHasLiveBody } from '../systems/actor-combat';
 import {
   autoEquipEmptySlots,
   computePlayerDamage,
@@ -376,6 +377,12 @@ export class GameScene extends Phaser.Scene {
   private budBlockCd = 0;
   /** While >0, skip follow/bob so attack/grab tweens own the sprite. */
   private budAnimLock = 0;
+  /**
+   * Bumps on every room load. Delayed buddy strikes capture the epoch and
+   * no-op if the player left the room before the lash lands (prevents
+   * setVelocity on destroyed physics bodies).
+   */
+  private roomEpoch = 0;
   /** Time since last combat action — drives idle stretch yawns. */
   private budIdleMs = 0;
   /** Inventory equip target: hero gear or buddy gear (toggle Y). */
@@ -1223,9 +1230,13 @@ export class GameScene extends Phaser.Scene {
     this.respawnGen.clear();
     this.walls.clear(true, true);
     for (const a of this.actors) {
+      // Mark dead first so in-flight delayed bud/player hits no-op
+      a.alive = false;
       // Kill ambient pulses before destroy so room transitions leave no ghosts
-      this.tweens.killTweensOf(a.sprite);
-      a.sprite.destroy();
+      if (a.sprite) {
+        this.tweens.killTweensOf(a.sprite);
+        a.sprite.destroy();
+      }
     }
     this.actors = [];
     this.ambientTiles = [];
@@ -1287,6 +1298,9 @@ export class GameScene extends Phaser.Scene {
     if (!room) return;
 
     this.transitionLock = false;
+    // Invalidate delayed combat callbacks from the previous room
+    this.roomEpoch += 1;
+    this.budAnimLock = 0;
     // Prevent walk-on portals from firing the frame you enter a room
     this.portalCooldown = 700;
     this.clearRoomObjects();
@@ -1748,6 +1762,7 @@ export class GameScene extends Phaser.Scene {
       this.budAnimLock = profile.style === 'stretch' ? 420 : 320;
       this.budIdleMs = 0;
 
+      const strikeEpoch = this.roomEpoch;
       playBuddyAttackAnim(this, this.companionSprite, {
         fromX,
         fromY,
@@ -1756,12 +1771,17 @@ export class GameScene extends Phaser.Scene {
         style: profile.style,
         tint: getBestBud(this.save.bestBudId)?.tint,
         onComplete: () => {
+          if (this.roomEpoch !== strikeEpoch) return;
           this.budAnimLock = Math.min(this.budAnimLock, 40);
         },
       });
-      // Damage lands mid-lash (readable with the stretch ghost)
+      // Damage lands mid-lash (readable with the stretch ghost).
+      // Capture roomEpoch so leaving mid-animation never hits a destroyed body.
       this.time.delayedCall(profile.style === 'slash' ? 70 : 100, () => {
-        if (target.alive) this.budStrike(target, dmg, profile.abilityName);
+        if (this.roomEpoch !== strikeEpoch) return;
+        if (target.alive && actorHasLiveBody(target)) {
+          this.budStrike(target, dmg, profile.abilityName);
+        }
       });
     }
   }
@@ -1790,6 +1810,9 @@ export class GameScene extends Phaser.Scene {
   private budStrike(actor: Actor, dmg: number, abilityName: string): void {
     if (!actor.alive || actor.hurtCooldown > 0) return;
     if (actor.kind === 'best_bud') return;
+    // Room left mid-lash: sprite/body already destroyed
+    if (!actorHasLiveBody(actor)) return;
+    if (!this.companionSprite?.active) return;
 
     if (actor.kind === 'cube' && !actor.aggressive) {
       actor.aggressive = true;
@@ -1801,24 +1824,28 @@ export class GameScene extends Phaser.Scene {
     playSfx('hit_enemy');
     actor.sprite.setTint(0xa0ffe8);
     sparkBurst(this, actor.sprite.x, actor.sprite.y, 0x7dffb3, 3);
+    const tintEpoch = this.roomEpoch;
     this.time.delayedCall(90, () => {
-      if (actor.alive) actor.sprite.clearTint();
+      if (this.roomEpoch !== tintEpoch) return;
+      if (actor.alive && actor.sprite?.active) actor.sprite.clearTint();
     });
 
-    const angle = Phaser.Math.Angle.Between(
-      this.companionSprite!.x,
-      this.companionSprite!.y,
-      actor.sprite.x,
-      actor.sprite.y,
-    );
-    const body = actor.sprite.body as Phaser.Physics.Arcade.Body;
-    const knock =
-      actor.kind === 'cube' ||
-      actor.kind === 'boss' ||
-      actor.kind === 'miniboss'
-        ? 50
-        : 100;
-    body.setVelocity(Math.cos(angle) * knock, Math.sin(angle) * knock);
+    const body = actor.sprite.body as Phaser.Physics.Arcade.Body | null;
+    if (body) {
+      const angle = Phaser.Math.Angle.Between(
+        this.companionSprite.x,
+        this.companionSprite.y,
+        actor.sprite.x,
+        actor.sprite.y,
+      );
+      const knock =
+        actor.kind === 'cube' ||
+        actor.kind === 'boss' ||
+        actor.kind === 'miniboss'
+          ? 50
+          : 100;
+      body.setVelocity(Math.cos(angle) * knock, Math.sin(angle) * knock);
+    }
 
     const bud = getBestBud(this.save.bestBudId);
     const name = bud?.name ?? 'BUD';
@@ -2306,6 +2333,7 @@ export class GameScene extends Phaser.Scene {
   private hitEnemy(actor: Actor): void {
     if (!actor.alive || actor.hurtCooldown > 0 || !this.attacking) return;
     if (!hasWeaponEquipped(this.save)) return;
+    if (!actorHasLiveBody(actor)) return;
 
     // Best Bud is immortal friendship — not a target
     if (actor.kind === 'best_bud') {
@@ -2339,20 +2367,22 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Knockback away from player (blocked by wall colliders)
-    const angle = Phaser.Math.Angle.Between(
-      this.player.x,
-      this.player.y,
-      actor.sprite.x,
-      actor.sprite.y,
-    );
-    const body = actor.sprite.body as Phaser.Physics.Arcade.Body;
-    const knock =
-      actor.kind === 'cube' ||
-      actor.kind === 'boss' ||
-      actor.kind === 'miniboss'
-        ? 80
-        : 140;
-    body.setVelocity(Math.cos(angle) * knock, Math.sin(angle) * knock);
+    const body = actor.sprite.body as Phaser.Physics.Arcade.Body | null;
+    if (body && this.player) {
+      const angle = Phaser.Math.Angle.Between(
+        this.player.x,
+        this.player.y,
+        actor.sprite.x,
+        actor.sprite.y,
+      );
+      const knock =
+        actor.kind === 'cube' ||
+        actor.kind === 'boss' ||
+        actor.kind === 'miniboss'
+          ? 80
+          : 140;
+      body.setVelocity(Math.cos(angle) * knock, Math.sin(angle) * knock);
+    }
 
     if (actor.hp > 0) {
       this.game.events.emit(

@@ -2241,6 +2241,39 @@ describe('auto stat allocate', () => {
   });
 });
 
+// ── Actor combat guards (room-transition safety) ──────────────────
+import { actorHasLiveBody } from './actor-combat';
+
+describe('actorHasLiveBody', () => {
+  it('rejects dead actors and missing physics bodies', () => {
+    expect(actorHasLiveBody({ alive: false, sprite: { active: true, body: {} } })).toBe(
+      false,
+    );
+    expect(actorHasLiveBody({ alive: true, sprite: null })).toBe(false);
+    expect(
+      actorHasLiveBody({ alive: true, sprite: { active: false, body: {} } }),
+    ).toBe(false);
+    expect(
+      actorHasLiveBody({ alive: true, sprite: { active: true, body: undefined } }),
+    ).toBe(false);
+    expect(
+      actorHasLiveBody({ alive: true, sprite: { active: true, body: null } }),
+    ).toBe(false);
+  });
+
+  it('accepts live actors with a body (post-room-clear safe path)', () => {
+    expect(
+      actorHasLiveBody({ alive: true, sprite: { active: true, body: { setVelocity: () => {} } } }),
+    ).toBe(true);
+    // Mimic clearRoomObjects: alive=false after destroy
+    const ghost = {
+      alive: false,
+      sprite: { active: false, body: undefined as unknown },
+    };
+    expect(actorHasLiveBody(ghost)).toBe(false);
+  });
+});
+
 // ── Mid-boss wardens (P0 systems + P1 Floor Captain) ────────────────
 import {
   ENEMY_CONTACT_DAMAGE,
