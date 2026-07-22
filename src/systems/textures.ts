@@ -161,11 +161,12 @@ export function drawPlayerLook(
   spec: AppearanceSpec,
 ): void {
   // —— Legs ——
-  if (spec.greaves === 'leather') {
+  if (spec.greaves === 'plate') {
+    shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#4a5060', 10, 22, 5, 6);
+    shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#4a5060', 17, 22, 5, 6);
+  } else if (spec.greaves === 'leather') {
     shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 10, 22, 5, 6);
     shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 17, 22, 5, 6);
-    fill(ctx, '#5a3d1a', 10, 24, 5, 1);
-    fill(ctx, '#5a3d1a', 17, 24, 5, 1);
   } else {
     shadedBlock(ctx, '#2d6cdf', '#4a8cff', '#1a3a8a', 10, 23, 5, 5);
     shadedBlock(ctx, '#2d6cdf', '#4a8cff', '#1a3a8a', 17, 23, 5, 5);
@@ -173,12 +174,11 @@ export function drawPlayerLook(
 
   drawShoes(ctx, spec.shoes);
 
-  // —— Torso ——
+  // —— Torso (class clothing + armor) ——
   if (spec.breastplate === 'leather') {
     shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 8, 12, 16, 12);
     fill(ctx, '#a06830', 10, 14, 12, 3);
     fill(ctx, '#5a3d1a', 8, 20, 16, 1);
-    // straps
     fill(ctx, '#3d2b1f', 10, 15, 2, 6);
     fill(ctx, '#3d2b1f', 20, 15, 2, 6);
     dither(ctx, '#8b5a2b', '#7a4a20', 11, 18, 10, 2);
@@ -187,26 +187,52 @@ export function drawPlayerLook(
     fill(ctx, '#8a7a60', 10, 14, 12, 5);
     fill(ctx, '#ffc857', 14, 16, 4, 4);
     fill(ctx, '#fff3a0', 15, 17, 2, 1);
-    fill(ctx, '#3a2a18', 8, 22, 16, 1);
-    // pauldrons
     block(ctx, '#c0b090', '#6a6040', 7, 12, 4, 6);
     block(ctx, '#c0b090', '#6a6040', 21, 12, 4, 6);
+  } else if (spec.breastplate === 'cloth_arcane') {
+    // Wizard cloak — purple stars
+    shadedBlock(ctx, '#4a2a7a', '#7a5ab0', '#2a1848', 7, 11, 18, 14);
+    fill(ctx, '#6a4a9a', 9, 13, 14, 4);
+    spark(ctx, 12, 16, '#ffc857');
+    spark(ctx, 18, 19, '#7dffb3');
+    spark(ctx, 14, 21, '#ffc857');
+    fill(ctx, '#2a1848', 12, 12, 8, 2);
+  } else if (spec.breastplate === 'cloak_ranger') {
+    shadedBlock(ctx, '#3a5a38', '#5a8a50', '#1a3018', 7, 11, 18, 14);
+    fill(ctx, '#2a4a28', 8, 12, 16, 3);
+    fill(ctx, '#8b5a2b', 14, 18, 4, 4);
+    fill(ctx, '#c9a227', 15, 19, 2, 1);
+  } else if (spec.breastplate === 'plate') {
+    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', 8, 12, 16, 12);
+    fill(ctx, '#a8b8c8', 10, 14, 12, 5);
+    block(ctx, '#c0d0e0', '#5a6878', 6, 12, 5, 7);
+    block(ctx, '#c0d0e0', '#5a6878', 21, 12, 5, 7);
+    spark(ctx, 15, 16);
+  } else if (spec.breastplate === 'holy') {
+    shadedBlock(ctx, '#e8e0d0', '#ffffff', '#8a8070', 8, 12, 16, 12);
+    fill(ctx, '#ffc857', 13, 15, 6, 6);
+    fill(ctx, '#fff3a0', 15, 17, 2, 2);
+  } else if (spec.breastplate === 'hide') {
+    shadedBlock(ctx, '#6a4a30', '#8a6a48', '#3a2818', 8, 12, 16, 12);
+    dither(ctx, '#6a4a30', '#5a3a28', 10, 14, 12, 6);
+    fill(ctx, '#c0392b', 14, 16, 4, 3);
   } else {
-    // Hero blue tunic
     shadedBlock(ctx, '#2d6cdf', '#5a9aff', '#1a4aaf', 8, 12, 16, 12);
     fill(ctx, '#4a8cef', 10, 14, 12, 3);
     fill(ctx, '#1a4aaf', 14, 18, 4, 5);
-    // collar
     fill(ctx, '#1a3a8a', 12, 12, 8, 2);
     spark(ctx, 11, 15, '#a0c8ff');
   }
 
   // —— Arms / gloves ——
-  if (spec.gloves === 'leather') {
+  if (spec.gloves === 'sheath') {
+    shadedBlock(ctx, '#5a3d1a', '#8b5a2b', '#2a1810', 4, 14, 5, 8);
+    shadedBlock(ctx, '#5a3d1a', '#8b5a2b', '#2a1810', 23, 14, 5, 8);
+    fill(ctx, '#c8b090', 25, 12, 2, 6); // arrow nocks
+    fill(ctx, '#7dffb3', 25, 11, 2, 2);
+  } else if (spec.gloves === 'leather') {
     shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 5, 15, 4, 7);
     shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 23, 15, 4, 7);
-    fill(ctx, '#5a3d1a', 5, 20, 4, 1);
-    fill(ctx, '#5a3d1a', 23, 20, 4, 1);
   } else {
     shadedBlock(ctx, '#f0c8a4', '#ffe0c0', '#c09070', 5, 16, 3, 5);
     shadedBlock(ctx, '#f0c8a4', '#ffe0c0', '#c09070', 24, 16, 3, 5);
@@ -214,34 +240,34 @@ export function drawPlayerLook(
 
   // —— Head ——
   shadedBlock(ctx, '#f0c8a4', '#ffe0c8', '#c09070', 10, 4, 12, 9);
-  // eyes
   fill(ctx, '#1a1a2e', 12, 7, 2, 2);
   fill(ctx, '#1a1a2e', 18, 7, 2, 2);
   spark(ctx, 13, 7, '#ffffff');
   spark(ctx, 19, 7, '#ffffff');
-  // brows
   fill(ctx, '#c9a227', 12, 6, 2, 1);
   fill(ctx, '#c9a227', 18, 6, 2, 1);
-  // mouth / blush
   fill(ctx, '#d09080', 14, 10, 4, 1);
-  fill(ctx, 'rgba(255,120,140,0.45)', 11, 9, 2, 1);
-  fill(ctx, 'rgba(255,120,140,0.45)', 19, 9, 2, 1);
 
-  if (spec.helmet === 'leather') {
+  if (spec.helmet === 'plate') {
+    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', 8, 1, 16, 8);
+    fill(ctx, '#1a1a2e', 12, 6, 3, 2);
+    fill(ctx, '#1a1a2e', 17, 6, 3, 2);
+    spark(ctx, 14, 3);
+  } else if (spec.helmet === 'cloth_arcane') {
+    // Pointed mage hat
+    fill(ctx, '#4a2a7a', 10, 0, 12, 6);
+    fill(ctx, '#7a5ab0', 14, 0, 4, 8);
+    fill(ctx, '#2a1848', 15, 0, 2, 3);
+    spark(ctx, 16, 1, '#ffc857');
+  } else if (spec.helmet === 'leather') {
     shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 8, 2, 16, 6);
-    fill(ctx, '#5a3d1a', 10, 2, 12, 1);
-    // cheek guards
     fill(ctx, '#8b5a2b', 7, 6, 3, 4);
     fill(ctx, '#8b5a2b', 22, 6, 3, 4);
-    fill(ctx, '#5a3d1a', 8, 8, 2, 1);
-    fill(ctx, '#5a3d1a', 22, 8, 2, 1);
   } else {
-    // Blond hair with volume
     shadedBlock(ctx, '#c9a227', '#e8c050', '#8a7010', 8, 2, 16, 4);
     fill(ctx, '#e8c050', 10, 2, 12, 2);
     fill(ctx, '#c9a227', 8, 5, 3, 3);
     fill(ctx, '#c9a227', 21, 5, 3, 3);
-    spark(ctx, 12, 3, '#fff3a0');
   }
 
   drawAmulet(ctx, spec.amulet);
@@ -354,7 +380,45 @@ function drawItemIcon(
     fill(ctx, '#5a3d1a', 20, 14, 6, 8);
     return;
   }
-  if (itemId === 'leather_armor' || itemId === 'reinforced_leather') {
+  if (
+    itemId === 'leather_armor' ||
+    itemId === 'reinforced_leather' ||
+    itemId === 'studded_leather' ||
+    itemId === 'wizard_cloak' ||
+    itemId === 'ranger_cloak' ||
+    itemId === 'fighter_plate' ||
+    itemId === 'cleric_vestments' ||
+    itemId === 'barbarian_hide'
+  ) {
+    if (itemId === 'wizard_cloak') {
+      block(ctx, '#4a2a7a', '#2a1848', 6, 6, 20, 22);
+      fill(ctx, '#7a5ab0', 9, 10, 14, 6);
+      spark(ctx, 12, 14, '#ffc857');
+      spark(ctx, 18, 18, '#7dffb3');
+      return;
+    }
+    if (itemId === 'ranger_cloak') {
+      block(ctx, '#3a5a38', '#1a3018', 6, 6, 20, 22);
+      fill(ctx, '#5a8a50', 9, 10, 14, 5);
+      fill(ctx, '#8b5a2b', 14, 18, 4, 4);
+      return;
+    }
+    if (itemId === 'fighter_plate') {
+      block(ctx, '#8a98a8', '#3a4050', 6, 6, 20, 22);
+      fill(ctx, '#c0d0e0', 9, 10, 14, 8);
+      spark(ctx, 15, 14);
+      return;
+    }
+    if (itemId === 'cleric_vestments') {
+      block(ctx, '#e8e0d0', '#8a8070', 6, 6, 20, 22);
+      fill(ctx, '#ffc857', 12, 12, 8, 8);
+      return;
+    }
+    if (itemId === 'barbarian_hide') {
+      block(ctx, '#6a4a30', '#3a2818', 6, 6, 20, 22);
+      fill(ctx, '#c0392b', 13, 14, 6, 5);
+      return;
+    }
     const base = itemId === 'reinforced_leather' ? '#5c4030' : '#8b5a2b';
     const hi = itemId === 'reinforced_leather' ? '#8a7a60' : '#a06830';
     block(ctx, base, '#2a1810', 6, 6, 20, 20);
@@ -362,10 +426,39 @@ function drawItemIcon(
     if (itemId === 'reinforced_leather') {
       fill(ctx, '#ffc857', 13, 13, 6, 6);
       spark(ctx, 15, 14);
+    } else if (itemId === 'studded_leather') {
+      fill(ctx, '#c0c0c0', 10, 12, 2, 2);
+      fill(ctx, '#c0c0c0', 16, 14, 2, 2);
+      fill(ctx, '#c0c0c0', 20, 12, 2, 2);
     } else {
       fill(ctx, '#5a3d1a', 10, 12, 3, 10);
       fill(ctx, '#5a3d1a', 19, 12, 3, 10);
     }
+    return;
+  }
+  if (itemId === 'mage_hat') {
+    fill(ctx, '#4a2a7a', 8, 4, 16, 10);
+    fill(ctx, '#7a5ab0', 14, 2, 4, 14);
+    spark(ctx, 16, 3, '#ffc857');
+    return;
+  }
+  if (itemId === 'plate_helm') {
+    block(ctx, '#8a98a8', '#3a4050', 6, 6, 20, 18);
+    fill(ctx, '#1a1a2e', 10, 14, 4, 3);
+    fill(ctx, '#1a1a2e', 18, 14, 4, 3);
+    spark(ctx, 15, 10);
+    return;
+  }
+  if (itemId === 'plate_greaves') {
+    block(ctx, '#8a98a8', '#3a4050', 6, 8, 8, 18);
+    block(ctx, '#8a98a8', '#3a4050', 18, 8, 8, 18);
+    return;
+  }
+  if (itemId === 'ranger_sheath') {
+    block(ctx, '#5a3d1a', '#2a1810', 6, 10, 10, 14);
+    block(ctx, '#5a3d1a', '#2a1810', 16, 10, 10, 14);
+    fill(ctx, '#c8b090', 18, 6, 3, 10);
+    fill(ctx, '#7dffb3', 18, 4, 3, 3);
     return;
   }
   if (itemId === 'leather_greaves') {
@@ -656,6 +749,16 @@ export function generateTextures(scene: Phaser.Scene): void {
     'leather_shoes',
     'sorry_boots',
     'leather_gloves',
+    'wizard_cloak',
+    'mage_hat',
+    'ranger_cloak',
+    'ranger_sheath',
+    'fighter_plate',
+    'plate_helm',
+    'plate_greaves',
+    'studded_leather',
+    'cleric_vestments',
+    'barbarian_hide',
     'gold_trinket',
     'shiny_bauble',
     'cube_core',

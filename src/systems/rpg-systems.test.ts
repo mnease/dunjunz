@@ -537,6 +537,37 @@ describe('bud anim poses', () => {
   });
 });
 
+describe('class gear proficiency (D&D-style)', () => {
+  it('wizard cloak synergizes with wizard; heavy plate penalizes wizard', async () => {
+    const { effectiveGearDef } = await import('./class-gear');
+    let save = defaultSave();
+    save.primaryClass = 'wizard';
+    const cloak = mintItem(save, 'wizard_cloak', 'common', 0);
+    save = cloak.save;
+    const cloakDef = effectiveGearDef(save, cloak.instance);
+    // base 1 + affinity 1
+    expect(cloakDef).toBeGreaterThanOrEqual(2);
+
+    const plate = mintItem(save, 'fighter_plate', 'common', 0);
+    save = plate.save;
+    const plateDef = effectiveGearDef(save, plate.instance);
+    // base 3 * 0.65 unproficient, no affinity
+    expect(plateDef).toBeLessThan(3);
+    expect(plateDef).toBe(Math.floor(3 * 0.65));
+  });
+
+  it('dual class: secondary ranger gets ranger cloak affinity', async () => {
+    const { effectiveGearDef } = await import('./class-gear');
+    let save = defaultSave();
+    save.primaryClass = 'fighter';
+    save.secondaryClass = 'ranger';
+    const cloak = mintItem(save, 'ranger_cloak', 'common', 0);
+    save = cloak.save;
+    // base 2 + affinity 1
+    expect(effectiveGearDef(save, cloak.instance)).toBe(3);
+  });
+});
+
 describe('equip compare arrows', () => {
   it('marks stronger weapon as up and weaker as down', () => {
     let save = grantMildSword(defaultSave());

@@ -1,7 +1,16 @@
-import type { EquipSlot, ItemInstance, Rarity, SaveData } from '../types';
+import type {
+  ClassId,
+  EquipSlot,
+  ItemInstance,
+  Rarity,
+  SaveData,
+} from '../types';
 import { effectivePrimary, rarityLabel } from './rarity';
 
 export type WeaponStyle = 'melee' | 'ranged' | 'magic';
+
+/** D&D-style armor band (see class-gear.ts). */
+export type ArmorCategory = 'cloth' | 'light' | 'medium' | 'heavy';
 
 export interface ItemTemplate {
   id: string;
@@ -23,6 +32,15 @@ export interface ItemTemplate {
   ammoId?: string;
   /** Projectile visual key for player shots. */
   projectile?: 'arrow' | 'phaser' | 'fireball' | 'bolt';
+  /**
+   * Armor category for proficiency (cloth / light / medium / heavy).
+   * Weapons omit this.
+   */
+  armorCategory?: ArmorCategory;
+  /**
+   * Classes that get affinity DEF bonus when worn (primary or secondary).
+   */
+  classAffinity?: ClassId[];
 }
 
 export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
@@ -218,56 +236,175 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   leather_helmet: {
     id: 'leather_helmet',
     name: 'LEATHER CAP',
-    blurb: 'Helmet slot. [H]',
+    blurb: 'Light helm. [H]',
     kind: 'gear',
     slot: 'helmet',
     baseDef: 1,
     look: 'leather',
+    armorCategory: 'light',
   },
   leather_armor: {
     id: 'leather_armor',
     name: 'LEATHER BREASTPLATE',
-    blurb: 'Breastplate slot. [C]',
+    blurb: 'Light chest. [C]',
     kind: 'gear',
     slot: 'breastplate',
     baseDef: 1,
     look: 'leather',
+    armorCategory: 'light',
   },
   reinforced_leather: {
     id: 'reinforced_leather',
     name: 'REINFORCED BREASTPLATE',
-    blurb: 'Breastplate slot. [C]',
+    blurb: 'Medium chest. [C]',
     kind: 'gear',
     slot: 'breastplate',
     baseDef: 2,
     look: 'reinforced',
+    armorCategory: 'medium',
   },
   leather_greaves: {
     id: 'leather_greaves',
     name: 'LEATHER GREAVES',
-    blurb: 'Legs slot. [L]',
+    blurb: 'Light legs. [L]',
     kind: 'gear',
     slot: 'greaves',
     baseDef: 1,
     look: 'leather',
+    armorCategory: 'light',
   },
   leather_shoes: {
     id: 'leather_shoes',
     name: 'LEATHER BOOTS',
-    blurb: 'Feet slot. [F]',
+    blurb: 'Light feet. [F]',
     kind: 'gear',
     slot: 'shoes',
     baseDef: 1,
     look: 'leather',
+    armorCategory: 'light',
   },
   sorry_boots: {
     id: 'sorry_boots',
     name: 'BOOTS OF APOLOGY',
-    blurb: 'Gift from the cube. Won\'t dissolve. [F]',
+    blurb: 'Gift from the cube. Light. [F]',
     kind: 'gear',
     slot: 'shoes',
     baseDef: 2,
     look: 'apology',
+    armorCategory: 'light',
+  },
+  /** —— Class clothing (D&D cloth / light / heavy) —— */
+  wizard_cloak: {
+    id: 'wizard_cloak',
+    name: 'WIZARD CLOAK',
+    blurb: 'Cloth. Stars optional. Synergy: wizard/sorc/warlock. [C]',
+    kind: 'gear',
+    slot: 'breastplate',
+    baseDef: 1,
+    look: 'cloth_arcane',
+    armorCategory: 'cloth',
+    classAffinity: ['wizard', 'sorcerer', 'warlock'],
+    potionHealBonus: 0,
+  },
+  mage_hat: {
+    id: 'mage_hat',
+    name: 'POINTED MAGE HAT',
+    blurb: 'Cloth hat. Very on-brand. [H]',
+    kind: 'gear',
+    slot: 'helmet',
+    baseDef: 1,
+    look: 'cloth_arcane',
+    armorCategory: 'cloth',
+    classAffinity: ['wizard', 'sorcerer', 'warlock', 'bard'],
+  },
+  ranger_cloak: {
+    id: 'ranger_cloak',
+    name: 'RANGER CLOAK',
+    blurb: 'Light trail cloak. Synergy: ranger/druid. [C]',
+    kind: 'gear',
+    slot: 'breastplate',
+    baseDef: 2,
+    look: 'cloak_ranger',
+    armorCategory: 'light',
+    classAffinity: ['ranger', 'druid'],
+  },
+  ranger_sheath: {
+    id: 'ranger_sheath',
+    name: 'RANGER SHEATH',
+    blurb: 'Quiver + blade loops. Light gloves slot. [G]',
+    kind: 'gear',
+    slot: 'gloves',
+    baseDef: 1,
+    look: 'sheath',
+    armorCategory: 'light',
+    classAffinity: ['ranger', 'rogue'],
+  },
+  fighter_plate: {
+    id: 'fighter_plate',
+    name: 'FIGHTER PLATE',
+    blurb: 'Heavy chest. Synergy: fighter/paladin. [C]',
+    kind: 'gear',
+    slot: 'breastplate',
+    baseDef: 3,
+    look: 'plate',
+    armorCategory: 'heavy',
+    classAffinity: ['fighter', 'paladin'],
+  },
+  plate_helm: {
+    id: 'plate_helm',
+    name: 'PLATE HELM',
+    blurb: 'Heavy head. Clanky confidence. [H]',
+    kind: 'gear',
+    slot: 'helmet',
+    baseDef: 2,
+    look: 'plate',
+    armorCategory: 'heavy',
+    classAffinity: ['fighter', 'paladin', 'cleric'],
+  },
+  plate_greaves: {
+    id: 'plate_greaves',
+    name: 'PLATE GREAVES',
+    blurb: 'Heavy legs. [L]',
+    kind: 'gear',
+    slot: 'greaves',
+    baseDef: 2,
+    look: 'plate',
+    armorCategory: 'heavy',
+    classAffinity: ['fighter', 'paladin', 'cleric'],
+  },
+  studded_leather: {
+    id: 'studded_leather',
+    name: 'STUDDED LEATHER',
+    blurb: 'Light chest. Rogue-friendly. [C]',
+    kind: 'gear',
+    slot: 'breastplate',
+    baseDef: 2,
+    look: 'leather',
+    armorCategory: 'light',
+    classAffinity: ['rogue', 'ranger', 'bard'],
+  },
+  cleric_vestments: {
+    id: 'cleric_vestments',
+    name: 'CLERIC VESTMENTS',
+    blurb: 'Medium holy cloth-mail. [C]',
+    kind: 'gear',
+    slot: 'breastplate',
+    baseDef: 2,
+    look: 'holy',
+    armorCategory: 'medium',
+    classAffinity: ['cleric', 'paladin'],
+    potionHealBonus: 1,
+  },
+  barbarian_hide: {
+    id: 'barbarian_hide',
+    name: 'BARBARIAN HIDE',
+    blurb: 'Medium rage wrap. [C]',
+    kind: 'gear',
+    slot: 'breastplate',
+    baseDef: 2,
+    look: 'hide',
+    armorCategory: 'medium',
+    classAffinity: ['barbarian', 'druid'],
   },
   cube_core: {
     id: 'cube_core',
@@ -278,15 +415,17 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     baseDef: 2,
     potionHealBonus: 1,
     look: 'cube',
+    armorCategory: 'cloth',
   },
   leather_gloves: {
     id: 'leather_gloves',
     name: 'LEATHER GLOVES',
-    blurb: 'Gloves slot. [G]',
+    blurb: 'Light gloves. [G]',
     kind: 'gear',
     slot: 'gloves',
     baseDef: 1,
     look: 'leather',
+    armorCategory: 'light',
   },
   gold_trinket: {
     id: 'gold_trinket',
@@ -296,6 +435,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     slot: 'amulet',
     baseDef: 1,
     look: 'gold',
+    armorCategory: 'cloth',
   },
   shiny_bauble: {
     id: 'shiny_bauble',
@@ -305,60 +445,69 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     slot: 'amulet',
     potionHealBonus: 2,
     look: 'bauble',
+    armorCategory: 'cloth',
   },
   wood_shield: {
     id: 'wood_shield',
     name: 'WOOD SHIELD',
-    blurb: 'Shield slot. Blocks regret. [O]',
+    blurb: 'Shield. Light. [O]',
     kind: 'gear',
     slot: 'shield',
     baseDef: 1,
     look: 'wood',
+    armorCategory: 'light',
   },
   iron_shield: {
     id: 'iron_shield',
     name: 'IRON SHIELD',
-    blurb: 'Shield slot. Sturdier. [O]',
+    blurb: 'Shield. Medium. [O]',
     kind: 'gear',
     slot: 'shield',
     baseDef: 2,
     look: 'iron',
+    armorCategory: 'medium',
   },
   tower_shield: {
     id: 'tower_shield',
     name: 'TOWER SHIELD',
-    blurb: 'Shield slot. Door with a handle. [O]',
+    blurb: 'Shield. Heavy door energy. [O]',
     kind: 'gear',
     slot: 'shield',
     baseDef: 3,
     look: 'tower',
+    armorCategory: 'heavy',
+    classAffinity: ['fighter', 'paladin', 'cleric'],
   },
   copper_ring: {
     id: 'copper_ring',
     name: 'COPPER RING',
-    blurb: 'Ring slot. +DEF. [R]',
+    blurb: 'Ring. Cloth-tier trinket. [R]',
     kind: 'gear',
     slot: 'ring',
     baseDef: 1,
     look: 'copper',
+    armorCategory: 'cloth',
   },
   silver_ring: {
     id: 'silver_ring',
     name: 'SILVER RING',
-    blurb: 'Ring slot. Fancy +DEF. [R]',
+    blurb: 'Ring. Fancy +DEF. [R]',
     kind: 'gear',
     slot: 'ring',
     baseDef: 2,
     look: 'silver',
+    armorCategory: 'cloth',
   },
   luck_ring: {
     id: 'luck_ring',
     name: 'RING OF MILD LUCK',
-    blurb: 'Ring slot. Feels lucky. [R]',
+    blurb: 'Ring. Feels lucky. [R]',
     kind: 'gear',
     slot: 'ring',
     baseDef: 1,
     look: 'luck',
+    armorCategory: 'cloth',
+    classAffinity: ['rogue', 'bard'],
   },
   dungeon_key: {
     id: 'dungeon_key',
@@ -436,9 +585,12 @@ export function equipCompareArrow(dir: EquipCompareDir): string {
 
 /**
  * Primary combat score for an instance in its slot.
- * Weapon → ATK. Other equip slots with def/heal → DEF (heal as tie-break via +0.01).
+ * Weapon → ATK. Armor uses class-aware DEF when `save` is provided.
  */
-export function gearPrimaryScore(inst: ItemInstance): {
+export function gearPrimaryScore(
+  inst: ItemInstance,
+  save?: Pick<SaveData, 'primaryClass' | 'secondaryClass' | 'bag'>,
+): {
   stat: 'ATK' | 'DEF' | '';
   value: number;
   display: number;
@@ -451,15 +603,34 @@ export function gearPrimaryScore(inst: ItemInstance): {
     const atk = instanceAtk(inst);
     return { stat: 'ATK', value: atk, display: atk };
   }
-  const def = instanceDef(inst);
+  // Lazy import avoided — class-aware DEF inlined via optional save
+  let def = instanceDef(inst);
   const heal = instanceHealBonus(inst);
-  // DEF dominates; tiny heal weight so +heal alone can still show ▲ vs equal DEF
+  if (save) {
+    // Mirror class-gear effectiveGearDef without circular import:
+    // inventory imports class-gear; class-gear imports items. So we
+    // re-export a thin wrapper below after class-gear exists.
+    def = _effectiveDefForCompare(save, inst);
+  }
   return { stat: 'DEF', value: def + heal * 0.01, display: def };
+}
+
+/** Filled by registerEffectiveDefHook from class-gear to avoid cycles. */
+let _effectiveDefForCompare: (
+  save: Pick<SaveData, 'primaryClass' | 'secondaryClass' | 'bag'>,
+  inst: ItemInstance,
+) => number = (_s, inst) => instanceDef(inst);
+
+export function registerEffectiveDefHook(
+  fn: typeof _effectiveDefForCompare,
+): void {
+  _effectiveDefForCompare = fn;
 }
 
 /**
  * Compare bag item to equipped piece in the same slot on hero or buddy.
  * Already-equipped items return `same`. Stacks / non-gear → `none`.
+ * DEF compares use class proficiency + affinity when save has a class.
  */
 export function compareToEquipped(
   save: SaveData,
@@ -478,7 +649,7 @@ export function compareToEquipped(
   const t = getTemplate(inst.templateId);
   if (!t.slot || t.slot === 'key') return empty;
 
-  const cand = gearPrimaryScore(inst);
+  const cand = gearPrimaryScore(inst, save);
   if (!cand.stat) return empty;
 
   const equipMap = target === 'bud' ? save.budEquipped : save.equipped;
@@ -499,7 +670,7 @@ export function compareToEquipped(
   if (eqUid) {
     const eqInst = findInBag(save, eqUid);
     if (eqInst) {
-      const s = gearPrimaryScore(eqInst);
+      const s = gearPrimaryScore(eqInst, save);
       eqScore = s.value;
       eqDisplay = s.display;
     }

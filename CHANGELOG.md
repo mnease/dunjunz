@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Class clothing & D&D armor categories** — gear is **cloth / light / medium / heavy**. Class proficiency (primary *or* secondary) keeps full DEF; wrong category soft-nerfs DEF (×0.65). Affinity pieces (wizard cloak, ranger cloak/sheath, fighter plate, cleric vestments, barbarian hide…) grant **+1 DEF** when you have that class. Loot biases armor by class.
 - **Equip compare arrows** — bag gear shows **green ▲** if ATK/DEF beats the piece in that slot (hero or buddy mode), **red ▼** if worse. Detail line: e.g. `ATK 4 ▲ (+2 vs equipped 2)`.
 - **4× dungeon depth** — each dunjun land is much deeper: **Dunjunz B1–B8** (throne on B8), **Woodz / Dezertz B1–B3** under deep/tower, **Sewerz B1–B4** (goose on B4). Stairs chain + mapz floors; old `b2_boss` saves alias to `b8_boss`.
 - **16-bit graphics pass** — art resolution **32×32** (was 16×16) with shading, outlines, dither, and gradients across tiles, avatar gear layers, inventory icons, enemies, props, and buddies. World layout unchanged (`SPRITE_SCALE` keeps footprint); inventory doll scaled up to show detail.

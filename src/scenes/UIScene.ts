@@ -15,7 +15,11 @@ import {
   displayItemName,
   equipCompareDetailLine,
   findInBag,
+  getTemplate,
 } from '../systems/items';
+import { classGearHint } from '../systems/class-gear';
+// Ensure class-gear registers DEF compare hook
+import '../systems/class-gear';
 import { getBestBud, isCompanionActive } from '../systems/best-bud';
 import {
   budArmorDef,
@@ -2182,6 +2186,15 @@ export class UIScene extends Phaser.Scene {
         bits.push(`CLICK TO EQUIP · SLOT ${sel.slot.toUpperCase()}`);
       } else if (sel.slot) {
         bits.push(`CLICK TO EQUIP · SLOT ${sel.slot.toUpperCase()}`);
+      }
+      // D&D-style class proficiency / affinity line
+      if (sel.slot && sel.slot !== 'weapon' && sel.slot !== 'key') {
+        const hint = classGearHint(save, sel.templateId);
+        if (hint.text) bits.push(hint.text);
+        const cat = getTemplate(sel.templateId).armorCategory;
+        if (cat && !hint.text.includes(cat.toUpperCase())) {
+          bits.push(`${cat.toUpperCase()} ARMOR`);
+        }
       }
       this.invBagDetail?.setText(bits.join('\n'));
       // Color detail hint line via full text color (Phaser Text is single color)

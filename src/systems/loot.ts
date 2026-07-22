@@ -45,7 +45,73 @@ const ARMOR_POOL = [
   'leather_gloves',
   'wood_shield',
   'iron_shield',
+  'wizard_cloak',
+  'mage_hat',
+  'ranger_cloak',
+  'ranger_sheath',
+  'fighter_plate',
+  'plate_helm',
+  'plate_greaves',
+  'studded_leather',
+  'cleric_vestments',
+  'barbarian_hide',
+  'tower_shield',
 ];
+
+/** Class-biased armor / clothing (D&D categories + affinity sets). */
+export const CLASS_ARMOR_PREFS: Record<
+  ClassId,
+  { armor: string[]; bias: number }
+> = {
+  fighter: {
+    armor: ['fighter_plate', 'plate_helm', 'plate_greaves', 'tower_shield', 'iron_shield'],
+    bias: 0.6,
+  },
+  paladin: {
+    armor: ['fighter_plate', 'plate_helm', 'cleric_vestments', 'tower_shield'],
+    bias: 0.58,
+  },
+  barbarian: {
+    armor: ['barbarian_hide', 'leather_armor', 'reinforced_leather', 'leather_greaves'],
+    bias: 0.55,
+  },
+  ranger: {
+    armor: ['ranger_cloak', 'ranger_sheath', 'studded_leather', 'leather_armor'],
+    bias: 0.62,
+  },
+  rogue: {
+    armor: ['studded_leather', 'leather_armor', 'leather_gloves', 'luck_ring'],
+    bias: 0.55,
+  },
+  monk: {
+    armor: ['leather_shoes', 'leather_gloves', 'gold_trinket'],
+    bias: 0.4,
+  },
+  cleric: {
+    armor: ['cleric_vestments', 'plate_helm', 'iron_shield', 'reinforced_leather'],
+    bias: 0.58,
+  },
+  bard: {
+    armor: ['studded_leather', 'leather_armor', 'mage_hat', 'luck_ring'],
+    bias: 0.5,
+  },
+  druid: {
+    armor: ['ranger_cloak', 'barbarian_hide', 'leather_armor'],
+    bias: 0.55,
+  },
+  wizard: {
+    armor: ['wizard_cloak', 'mage_hat', 'gold_trinket', 'shiny_bauble'],
+    bias: 0.7,
+  },
+  sorcerer: {
+    armor: ['wizard_cloak', 'mage_hat', 'shiny_bauble'],
+    bias: 0.68,
+  },
+  warlock: {
+    armor: ['wizard_cloak', 'mage_hat', 'leather_armor', 'shiny_bauble'],
+    bias: 0.65,
+  },
+};
 
 /** Full weapon table available in random loot. */
 export const WEAPON_POOL = [
@@ -189,10 +255,31 @@ export function maybeClassAmmoDrop(
   };
 }
 
+/** Prefer class armor/clothing when primary/secondary is set. */
+export function pickArmor(rng: Rng, ctx: LootClassContext = {}): string {
+  const primary = ctx.primaryClass
+    ? CLASS_ARMOR_PREFS[ctx.primaryClass]
+    : null;
+  const secondary =
+    ctx.secondaryClass && ctx.secondaryClass !== ctx.primaryClass
+      ? CLASS_ARMOR_PREFS[ctx.secondaryClass]
+      : null;
+  if (!primary && !secondary) return pick(rng, ARMOR_POOL);
+  const roll = rng();
+  if (primary && roll < primary.bias) return pick(rng, primary.armor);
+  if (secondary) {
+    const secShare = secondary.bias * 0.45;
+    if (roll < (primary?.bias ?? 0) + secShare) {
+      return pick(rng, secondary.armor);
+    }
+  }
+  return pick(rng, ARMOR_POOL);
+}
+
 function randomGear(rng: Rng, ctx: LootClassContext = {}): string {
-  // ~22% of mixed gear rolls are weapons (slightly up from pure pool share)
+  // ~22% weapons · ~55% armor/clothing (class-biased) · jewels
   if (rng() < 0.22) return pickWeapon(rng, ctx);
-  if (rng() < 0.55) return pick(rng, ARMOR_POOL);
+  if (rng() < 0.55) return pickArmor(rng, ctx);
   return pick(rng, JEWEL_POOL);
 }
 

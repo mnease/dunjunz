@@ -7,11 +7,19 @@
 import type { SaveData } from '../types';
 import { findInBag, getTemplate } from './items';
 
-export type BreastLook = 'none' | 'leather' | 'reinforced';
-export type HelmetLook = 'none' | 'leather';
-export type GreavesLook = 'none' | 'leather';
+export type BreastLook =
+  | 'none'
+  | 'leather'
+  | 'reinforced'
+  | 'cloth_arcane'
+  | 'cloak_ranger'
+  | 'plate'
+  | 'holy'
+  | 'hide';
+export type HelmetLook = 'none' | 'leather' | 'cloth_arcane' | 'plate';
+export type GreavesLook = 'none' | 'leather' | 'plate';
 export type ShoesLook = 'none' | 'leather' | 'apology';
-export type GlovesLook = 'none' | 'leather';
+export type GlovesLook = 'none' | 'leather' | 'sheath';
 export type AmuletLook = 'none' | 'gold' | 'bauble' | 'cube';
 export type RingLook = 'none' | 'copper' | 'silver' | 'luck';
 export type WeaponLook =
@@ -97,25 +105,44 @@ function mapShoes(look: string | undefined): ShoesLook {
   return look ? 'leather' : 'none';
 }
 
+function mapBreast(look: string | undefined): BreastLook {
+  switch (look) {
+    case 'reinforced':
+    case 'leather':
+    case 'cloth_arcane':
+    case 'cloak_ranger':
+    case 'plate':
+    case 'holy':
+    case 'hide':
+      return look;
+    default:
+      return look ? 'leather' : 'none';
+  }
+}
+
+function mapHelmet(look: string | undefined): HelmetLook {
+  if (look === 'leather' || look === 'cloth_arcane' || look === 'plate') {
+    return look;
+  }
+  return look ? 'leather' : 'none';
+}
+
+function mapGreaves(look: string | undefined): GreavesLook {
+  if (look === 'leather' || look === 'plate') return look;
+  return look ? 'leather' : 'none';
+}
+
+function mapGloves(look: string | undefined): GlovesLook {
+  if (look === 'leather' || look === 'sheath') return look;
+  return look ? 'leather' : 'none';
+}
+
 export function appearanceFromSave(save: SaveData): AppearanceSpec {
-  const bodyLook = lookFromUid(save, save.equipped.breastplate);
-  const breastplate: BreastLook =
-    bodyLook === 'reinforced'
-      ? 'reinforced'
-      : bodyLook === 'leather'
-        ? 'leather'
-        : 'none';
-
-  const helmLook = lookFromUid(save, save.equipped.helmet);
-  const helmet: HelmetLook = helmLook === 'leather' ? 'leather' : 'none';
-
-  const greavesLook = lookFromUid(save, save.equipped.greaves);
-  const greaves: GreavesLook = greavesLook === 'leather' ? 'leather' : 'none';
-
+  const breastplate = mapBreast(lookFromUid(save, save.equipped.breastplate));
+  const helmet = mapHelmet(lookFromUid(save, save.equipped.helmet));
+  const greaves = mapGreaves(lookFromUid(save, save.equipped.greaves));
   const shoes = mapShoes(lookFromUid(save, save.equipped.shoes));
-
-  const glovesLook = lookFromUid(save, save.equipped.gloves);
-  const gloves: GlovesLook = glovesLook === 'leather' ? 'leather' : 'none';
+  const gloves = mapGloves(lookFromUid(save, save.equipped.gloves));
 
   const amulet = mapAmulet(lookFromUid(save, save.equipped.amulet));
   const ring = mapRing(lookFromUid(save, save.equipped.ring));

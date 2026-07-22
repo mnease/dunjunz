@@ -11,8 +11,8 @@ import {
   findInBag,
   getTemplate,
   instanceAtk,
-  instanceDef,
 } from './items';
+import { effectiveGearDef } from './class-gear';
 import { levelFromXp, xpToAdvanceFrom, xpToReachLevel } from './progression';
 import { budAttackDamage, budCombatProfile } from './best-bud-combat';
 import { getBestBud, isCompanionActive } from './best-bud';
@@ -126,7 +126,7 @@ export function budArmorDef(save: SaveData): number {
     const uid = s.budEquipped[slot];
     if (!uid) continue;
     const inst = findInBag(s, uid);
-    if (inst) def += instanceDef(inst);
+    if (inst) def += effectiveGearDef(save, inst);
   }
   return def;
 }

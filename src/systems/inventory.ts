@@ -15,9 +15,10 @@ import {
   emptyEquipped,
   findInBag,
   getTemplate,
-  instanceDef,
   mintItem,
 } from './items';
+import { effectiveGearDef } from './class-gear';
+// class-gear registers compare-hook on load
 
 export {
   computePlayerDamage,
@@ -37,7 +38,8 @@ export function computeArmor(save: SaveData): number {
     const uid = save.equipped[slot];
     if (!uid) continue;
     const inst = findInBag(save, uid);
-    if (inst) def += instanceDef(inst);
+    // D&D-style: proficiency + class affinity applied per piece
+    if (inst) def += effectiveGearDef(save, inst);
   }
   const dex = effectiveAttrs(save).dex + weaponAttrBonus(save, 'dex');
   def += Math.floor(Math.max(0, dex - 1) / 4);
