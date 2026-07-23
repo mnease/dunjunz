@@ -1,6 +1,16 @@
 import type Phaser from 'phaser';
 import { ART_BASE, ART_RES, COLORS } from '../config';
 import {
+  EDGE_E,
+  EDGE_N,
+  EDGE_S,
+  EDGE_W,
+  allEdgeMasks,
+  autotileTextureKey,
+  isFullFillMask,
+  type AutotileMaterial,
+} from './autotile';
+import {
   BARE_APPEARANCE,
   buddyTextureKey,
   playerTextureKey,
@@ -148,6 +158,95 @@ function canvasTex(
     applyMicroDetail(ctx, w, h, Math.abs(seed));
   }
   scene.textures.addCanvas(key, canvas);
+}
+
+/**
+ * Phase A fluid autotile frame (author space = ART_BASE).
+ * Full-cell solid fill always — open edges get foam/crust only (no holes).
+ */
+function drawAutotileFluidFrame(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  material: AutotileMaterial,
+  mask: number,
+): void {
+  const full = isFullFillMask(mask);
+  if (material === 'water') {
+    // Style Bible mid-blue pond body — never near-black
+    const body = full ? '#2a5f8f' : '#2f6a98';
+    const deep = '#1c3d81';
+    const mid = '#3d7aab';
+    const foam = '#b2cee9';
+    const hi = '#5a9cba';
+    ctx.fillStyle = body;
+    ctx.fillRect(0, 0, s, s);
+    // Subtle grit (fill only — silhouette fixed)
+    ctx.fillStyle = mid;
+    for (let i = 2; i < s - 2; i += 4) {
+      for (let j = 2; j < s - 2; j += 5) {
+        if (((i * 17 + j * 31 + mask * 3) & 7) === 0) ctx.fillRect(i, j, 1, 1);
+      }
+    }
+    ctx.fillStyle = hi;
+    for (let i = 3; i < s - 3; i += 6) {
+      if (((i + mask) & 3) === 0) ctx.fillRect(i, 4 + (mask % 5), 2, 1);
+    }
+    // Open-edge foam (bit clear = open to non-water)
+    const openN = (mask & EDGE_N) === 0;
+    const openE = (mask & EDGE_E) === 0;
+    const openS = (mask & EDGE_S) === 0;
+    const openW = (mask & EDGE_W) === 0;
+    ctx.fillStyle = deep;
+    if (openN) ctx.fillRect(0, 0, s, 2);
+    if (openS) ctx.fillRect(0, s - 2, s, 2);
+    if (openW) ctx.fillRect(0, 0, 2, s);
+    if (openE) ctx.fillRect(s - 2, 0, 2, s);
+    ctx.fillStyle = foam;
+    if (openN) ctx.fillRect(1, 1, s - 2, 1);
+    if (openS) ctx.fillRect(1, s - 2, s - 2, 1);
+    if (openW) ctx.fillRect(1, 1, 1, s - 2);
+    if (openE) ctx.fillRect(s - 2, 1, 1, s - 2);
+  } else {
+    // Lava — orange body + dark crust on open edges
+    const body = full ? '#c44b2b' : '#d45530';
+    const hot = '#e88b35';
+    const core = '#ffe82e';
+    const crust = '#5a2a18';
+    ctx.fillStyle = body;
+    ctx.fillRect(0, 0, s, s);
+    ctx.fillStyle = hot;
+    for (let i = 3; i < s - 3; i += 5) {
+      for (let j = 3; j < s - 3; j += 5) {
+        if (((i * 13 + j * 19 + mask) & 5) === 0) ctx.fillRect(i, j, 2, 1);
+      }
+    }
+    if (full || ((mask + 1) & 3) === 0) {
+      ctx.fillStyle = core;
+      ctx.fillRect(s / 2 - 2, s / 2 - 1, 3, 2);
+    }
+    const openN = (mask & EDGE_N) === 0;
+    const openE = (mask & EDGE_E) === 0;
+    const openS = (mask & EDGE_S) === 0;
+    const openW = (mask & EDGE_W) === 0;
+    ctx.fillStyle = crust;
+    if (openN) ctx.fillRect(0, 0, s, 3);
+    if (openS) ctx.fillRect(0, s - 3, s, 3);
+    if (openW) ctx.fillRect(0, 0, 3, s);
+    if (openE) ctx.fillRect(s - 3, 0, 3, s);
+  }
+}
+
+/** Boot all 16 fluid autotile keys for a material. */
+function generateAutotileFluidSet(
+  scene: Phaser.Scene,
+  material: AutotileMaterial,
+): void {
+  for (const mask of allEdgeMasks()) {
+    const key = autotileTextureKey(material, mask);
+    canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
+      drawAutotileFluidFrame(ctx, ART_BASE, material, mask);
+    });
+  }
 }
 
 /** 64-bit: double an author-space drawing to final texture pixels. */
@@ -1838,6 +1937,10 @@ export function generateTextures(scene: Phaser.Scene): void {
   canvasTex(scene, 'tile-lava-b', ART_RES, ART_RES, (ctx) => {
     drawLavaTile(ctx, ART_BASE, hex(COLORS.lava), 1);
   });
+
+  // Graphics-v2 Phase A: 16 edge-mask fluid frames (solid interior, foam on open edges)
+  generateAutotileFluidSet(scene, 'water');
+  generateAutotileFluidSet(scene, 'lava');
 
   canvasTex(scene, 'tile-door', ART_RES, ART_RES, (ctx) => {
     // floor behind so open sides read as passage

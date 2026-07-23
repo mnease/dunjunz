@@ -1,11 +1,11 @@
 # Dunjunz Graphics-v2 Rebuild Plan
 
-**Status:** Design LOCK + **Phase S shipped** (continuous-ground hard-deleted on `graphics-v2`).  
+**Status:** Design LOCK + **Phase S + Phase A shipped** on `graphics-v2`.  
 **North star:** Core Keeper–inspired discrete autotile world on clean-slate render path  
 **Style law:** [`graphics-v2-style-bible.md`](./graphics-v2-style-bible.md)  
 **Architecture detail:** [`graphics-system-v2-architecture.md`](./graphics-system-v2-architecture.md) (refined by this doc)  
 **Branch:** `graphics-v2` (preview always on) · **Live `main`:** classic discrete tiles after full graphics revert  
-**Next implement:** Phase A autotile core
+**Next implement:** Phase B shore ring
 
 | URL | Role |
 | --- | --- |
@@ -247,13 +247,13 @@ Goal: **clean-slate render path** — no half-dead continuous path that can be r
 | Risks | Accidental delete of shared pixel helpers — review diff carefully |
 | Rollback | Revert strip commit on branch |
 
-### Phase A — Autotile core (2–3 days)
+### Phase A — Autotile core (2–3 days) — **DONE on graphics-v2**
 
 | Field | Content |
 | --- | --- |
-| Goal | `autotile.ts` + 16-frame procedural sets for water, sand, grass, dirt, wall, floor |
-| Work | Mask math + vitest fixtures; generators in textures; feature flag `GRAPHICS_V2_AUTOTILE` if needed; VisualTilemap resolve uses masks for water first |
-| Acceptance | Mask tables golden; 3×3 pond interiors 100% water frames; no holes; corridor edges correct |
+| Goal | `autotile.ts` + 16-frame procedural fluid sets (water + lava); land still TEX[kind] |
+| Work | 4-bit mask + vitest; `at-water-*` / `at-lava-*` boot generation; `placeRoomTiles` resolves fluids via autotile |
+| Acceptance | 3×3 pond interiors 100% `at-water-*` frames; center mask 15 full-fill; no continuous paint |
 | Playtest | beach_start water line; woodz pond; lava room |
 | Risks | Wrong connect rules → checkerboard edges; performance if over-generating textures at boot |
 | Mitigate | Generate once in Boot; atlas keys stable; tests first |
