@@ -216,7 +216,8 @@ export type LightSourceKind =
   | 'wall_ambient' // legacy full-room (rare)
   | 'gear_emit'
   | 'env' // lava / hazards
-  | 'creature'; // gel creeps, etc.
+  | 'creature' // gel creeps, etc.
+  | 'projectile'; // fireball etc. — follows flight
 
 export type LightSource = {
   kind: LightSourceKind;
@@ -244,6 +245,8 @@ export const LIGHT_RADIUS_TILES = {
   gel_slime: 2.0,
   /** Gelatinous cube / large gel. */
   gel_cube: 2.8,
+  /** Fire staff fireball — bright moving pool as it flies. */
+  fireball: 4.8,
 } as const;
 
 export const LIGHT_PEAK = {
@@ -259,6 +262,7 @@ export const LIGHT_PEAK = {
   lava: 0.48,
   gel_slime: 0.28,
   gel_cube: 0.38,
+  fireball: 0.92,
 } as const;
 
 /** Cap lava cookies so big lakes don't thrash the RT erase path. */

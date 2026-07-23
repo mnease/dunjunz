@@ -149,6 +149,8 @@ import {
   roomNeedsCarriedLight,
   GUILD_FIXTURE_INTENSITY_MUL,
   GUILD_FIXTURE_RADIUS_MUL,
+  LIGHT_PEAK,
+  LIGHT_RADIUS_TILES,
   sampleBrightness,
   shouldBurnCarriedFuel,
   stepAmbushState,
@@ -620,6 +622,8 @@ export class GameScene extends Phaser.Scene {
     dmg: number;
     life: number;
     fromPlayer: boolean;
+    /** Fireball / etc. — contributes a light cookie each frame while alive. */
+    emitsLight?: boolean;
   }[] = [];
   private rangedCd = 0;
   /** Soft-respawn generation per entity id (room-local). */
@@ -2070,6 +2074,19 @@ export class GameScene extends Phaser.Scene {
       creatures,
       cell,
     });
+    // Fire staff fireballs light the room as they fly (moving cookie)
+    let fireIdx = 0;
+    for (const p of this.projectiles) {
+      if (!p.emitsLight || !p.img?.active) continue;
+      sources.push({
+        kind: 'projectile',
+        x: p.img.x,
+        y: p.img.y,
+        intensity: LIGHT_PEAK.fireball,
+        radiusPx: tilesToPx(LIGHT_RADIUS_TILES.fireball, cell),
+        id: `fireball-${fireIdx++}`,
+      });
+    }
     // Training Guild: punchier torch/lamp cookies against deeper ambient gloom
     if (this.room.id === GUILD_HALL_ID) {
       for (const s of sources) {
@@ -6690,12 +6707,17 @@ export class GameScene extends Phaser.Scene {
       true,
       1100,
       angle,
+      projKind === 'fireball',
     );
     sparkBurst(
       this,
       this.player.x + dir.x * 16,
       this.player.y + dir.y * 16,
-      projKind === 'phaser' ? 0xff3344 : 0x7dffb3,
+      projKind === 'phaser'
+        ? 0xff3344
+        : projKind === 'fireball'
+          ? 0xff7722
+          : 0x7dffb3,
       3,
     );
     this.time.delayedCall(160, () => {
@@ -6853,6 +6875,8 @@ export class GameScene extends Phaser.Scene {
       spec.texture,
       false,
       1200,
+      0,
+      spec.kind === 'fireball' || spec.texture === 'proj-fireball',
     );
   }
 
@@ -6866,10 +6890,14 @@ export class GameScene extends Phaser.Scene {
     fromPlayer: boolean,
     life: number,
     angleDeg = 0,
+    emitsLight = false,
   ): void {
     const key = this.textures.exists(texture) ? texture : 'particle-hit';
     const img = this.add.image(x, y, key).setDepth(14).setScale(SCALE * 0.95);
     if (angleDeg) img.setAngle(angleDeg);
+    // Fireballs always light the room mid-flight (staff or hard-mode DM)
+    const lights =
+      emitsLight || texture === 'proj-fireball' || key === 'proj-fireball';
     this.projectiles.push({
       img,
       vx,
@@ -6877,6 +6905,7 @@ export class GameScene extends Phaser.Scene {
       dmg: Math.max(1, dmg | 0),
       life,
       fromPlayer,
+      emitsLight: lights,
     });
   }
 
