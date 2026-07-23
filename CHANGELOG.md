@@ -23,6 +23,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Active beta banner** — site-wide notice on the landing and play pages that DUNJUNZ is in active beta with new story lines and features shipping often.
 - **Throne room decor** — Princess Prizella’s hall gets a **dais carpet**, **throne**, wall **pillars**, **banners**, torches, and lamps so the Kingdomz office reads royal.
 - **Quest tracker + WHERE hints** — journal (**J** / Quests button) lists active jobs first with a **WHERE** line (where to go next). HUD strip under the chrome always shows the current objective. Elf errands and Fellowship get path-specific hints.
 - **The Fellowship Of The Few** — after the Wood Elf queen’s Legendary Elven Box reward: earthquake, light burst, and **Glamdolph** (grey wizard) appears with ominous news of **Zoron**, the black sword, and **Moredorkz**. Quest: recruit Dwarvez (far north) + Roarhimz (far NW), return for an elven warrior, stop Zoron. Journal side entry tracks progress (lands stubbed for later).

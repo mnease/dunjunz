@@ -107,6 +107,45 @@ body {
   box-shadow: var(--focus);
 }
 
+/* —— Active beta notice (site-wide) —— */
+.beta-banner {
+  width: 100%;
+  margin: 0;
+  padding: 0.55rem 1rem;
+  text-align: center;
+  background: linear-gradient(
+    90deg,
+    rgba(74, 32, 96, 0.92),
+    rgba(20, 48, 40, 0.95),
+    rgba(74, 32, 96, 0.92)
+  );
+  border-bottom: 1px solid rgba(125, 255, 179, 0.35);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.beta-banner-text {
+  margin: 0 auto;
+  max-width: 52rem;
+  font-family: var(--font-body, 'IBM Plex Mono', ui-monospace, monospace);
+  font-size: clamp(0.72rem, 1.6vw, 0.85rem);
+  line-height: 1.45;
+  color: #e8f0e8;
+}
+
+.beta-banner-label {
+  display: inline-block;
+  margin-right: 0.45rem;
+  padding: 0.12rem 0.4rem;
+  border-radius: 3px;
+  font-family: var(--font-display, 'Press Start 2P', monospace);
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  color: #0a0c10;
+  background: #7dffb3;
+  box-shadow: 0 0 10px rgba(125, 255, 179, 0.45);
+  vertical-align: middle;
+}
+
 /* —— Shell layout —— */
 #shell {
   width: min(100%, var(--shell-max));
@@ -806,6 +845,7 @@ body.touch-play #shell {
 }
 
 /* Give canvas room: hide site chrome during crawl play */
+body.touch-play .beta-banner,
 body.touch-play .topbar,
 body.touch-play .tagline,
 body.touch-play .nav-kbd,
