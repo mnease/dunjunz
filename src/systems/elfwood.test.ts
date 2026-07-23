@@ -200,4 +200,24 @@ describe('elfwood world graph', () => {
       }
     }
   });
+
+  it('elfwood kingdom is dense sky-redwoods with queen + guards', () => {
+    for (const id of [
+      'elfwood_gate',
+      'elfwood_waters',
+      'elfwood_court',
+      'elfwood_thicket',
+    ] as const) {
+      const trees = (ROOMS[id].entities ?? []).filter((e) => e.kind === 'tree');
+      expect(trees.length, id).toBeGreaterThanOrEqual(10);
+      for (const t of trees) {
+        expect(t.scale ?? 0, t.id).toBeGreaterThanOrEqual(7);
+      }
+    }
+    const court = ROOMS.elfwood_court.entities ?? [];
+    expect(court.some((e) => e.id === 'queen-wood-elves')).toBe(true);
+    expect(court.some((e) => e.id === 'elf-courtier')).toBe(true);
+    const gate = ROOMS.elfwood_gate.entities ?? [];
+    expect(gate.some((e) => e.id === 'elf-sentry')).toBe(true);
+  });
 });

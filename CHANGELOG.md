@@ -20,6 +20,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Wood Elf kingdom atmosphere** — ~3× sky-piercing redwoods (tops cropped off-frame), denser glade/arch/kingdom rooms; wood elves with green cloaks, long blonde hair, blades & longbows; queen in all-white with long blonde hair.
 - **Enchanted Woodz + Wood Elf kingdom** — gigantic redwoods across Woodz; west of Edge: Riddle Glade (Root→Trunk→Crown) unlocks Living Arch portal into a Wood Elf pocket realm (gate, healing waters, queen’s court, blight thicket). Queen gives 3 errands → **Legendary Elven Box** (one random mithril weapon/armor/jewelry). Design: `docs/elfwood-kingdom-v1.md`.
 - **Fire staff lights the room** — fireballs emit a bright moving light cookie as they fly, illuminating dark crawl rooms mid-flight (hard-mode DM fireballs too).
 - **Visual detail pass** — richer cobbles/moss/grass blades/flowers, deeper water glints, denser tree canopies, sharper faces, and micro-grit on every upscaled 64-bit texture after draw.

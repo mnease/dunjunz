@@ -921,6 +921,154 @@ export function drawTreeSprite(ctx: CanvasRenderingContext2D, _s: number): void 
 }
 
 /**
+ * Sky-piercing enchanted redwood — canopy cropped at the top of the frame
+ * so you never see the crown (too tall for the canvas).
+ * Author space: 32 wide × 56 tall (taller than standard 32×32 trees).
+ */
+export function drawSkyRedwoodSprite(
+  ctx: CanvasRenderingContext2D,
+  _s: number,
+): void {
+  const H = 56;
+  // Soft ground shadow at feet
+  fill(ctx, 'rgba(0,0,0,0.3)', 8, H - 4, 16, 3);
+  fill(ctx, 'rgba(0,0,0,0.15)', 6, H - 3, 20, 2);
+
+  // Tall trunk — roots at bottom, bark climbs off-frame
+  shadedBlock(ctx, '#4a3018', '#6b4423', '#2a1808', 13, 18, 6, H - 22);
+  fill(ctx, '#3a2410', 13, 24, 6, 1);
+  fill(ctx, '#3a2410', 13, 32, 6, 1);
+  fill(ctx, '#3a2410', 13, 40, 6, 1);
+  fill(ctx, '#3a2410', 13, 48, 6, 1);
+  fill(ctx, '#7a5a38', 14, 20, 1, H - 28);
+  fill(ctx, '#1a1008', 18, 22, 1, H - 30);
+  // Root flare
+  fill(ctx, '#3a2410', 10, H - 6, 5, 3);
+  fill(ctx, '#3a2410', 17, H - 6, 5, 3);
+  fill(ctx, '#2a1808', 8, H - 4, 4, 2);
+  fill(ctx, '#2a1808', 20, H - 4, 4, 2);
+
+  // Mid canopy bands (still on frame)
+  const bands: [number, number, number, number, string, string, string][] = [
+    [2, 10, 28, 14, '#0e3820', '#1a5030', '#082418'],
+    [4, 6, 24, 12, '#164828', '#2a6a40', '#0e3018'],
+    [6, 2, 20, 12, '#1e5840', '#3a8f5a', '#123828'],
+    [8, -2, 16, 12, '#246838', '#4aaa60', '#164028'], // top cropped
+    [10, -6, 12, 12, '#2a7048', '#5ad47a', '#1a4830'], // far above crop
+  ];
+  for (const [x, y, w, h, mid, li, da] of bands) {
+    const yy = Math.max(0, y);
+    const hh = h - (yy - y);
+    if (hh <= 2) continue;
+    shadedBlock(ctx, mid, li, da, x, yy, w, hh);
+    fill(ctx, li, x + 2, yy + 1, Math.max(2, w - 6), 2);
+    fill(ctx, da, x + 1, yy, 2, 2);
+    fill(ctx, da, x + w - 3, yy, 2, 2);
+  }
+  // Magical fireflies / moss glints along trunk
+  spark(ctx, 11, 22, '#7dffb3');
+  spark(ctx, 20, 28, '#c9ffe0');
+  spark(ctx, 12, 36, '#a0ffe0');
+  spark(ctx, 19, 14, '#7dffb3');
+  spark(ctx, 9, 8, '#e8ffe8');
+  // Canopy bleeds off top edge (no crown outline)
+  fill(ctx, '#0e3820', 0, 0, 32, 3);
+  fill(ctx, '#1a5030', 4, 0, 24, 2);
+}
+
+/**
+ * Wood elf sentry — green cloak, long blonde hair, pointed ears,
+ * mithril blade + longbow.
+ * Author 32×32.
+ */
+export function drawWoodElfGuard(ctx: CanvasRenderingContext2D): void {
+  // Cloak (green)
+  shadedBlock(ctx, '#1a6040', '#2a9058', '#0e3820', 6, 12, 20, 14);
+  fill(ctx, '#164830', 5, 14, 3, 12); // left fold
+  fill(ctx, '#164830', 24, 14, 3, 12);
+  // Legs
+  fill(ctx, '#2a4030', 10, 24, 4, 6);
+  fill(ctx, '#2a4030', 18, 24, 4, 6);
+  fill(ctx, '#1a2818', 10, 28, 4, 2);
+  fill(ctx, '#1a2818', 18, 28, 4, 2);
+  // Torso tunic under cloak
+  shadedBlock(ctx, '#2a7850', '#3a9860', '#1a5030', 10, 14, 12, 8);
+  // Head / pale skin
+  shadedBlock(ctx, '#e8c4a0', '#ffe8d0', '#c09070', 11, 5, 10, 8);
+  // Long blonde hair (shoulders + fall)
+  fill(ctx, '#e8d070', 9, 4, 14, 4);
+  fill(ctx, '#f0e090', 10, 3, 12, 3);
+  fill(ctx, '#d4b848', 8, 8, 3, 10); // left fall
+  fill(ctx, '#d4b848', 21, 8, 3, 10); // right fall
+  fill(ctx, '#f0e090', 8, 8, 2, 6);
+  fill(ctx, '#f0e090', 22, 8, 2, 6);
+  // Pointed ears
+  fill(ctx, '#e8c4a0', 8, 7, 3, 2);
+  fill(ctx, '#e8c4a0', 21, 7, 3, 2);
+  fill(ctx, '#ffe8d0', 7, 6, 2, 2);
+  fill(ctx, '#ffe8d0', 23, 6, 2, 2);
+  // Face
+  fill(ctx, '#222', 13, 8, 2, 2);
+  fill(ctx, '#222', 18, 8, 2, 2);
+  fill(ctx, '#c07060', 15, 11, 2, 1);
+  // Magical sword (right hip / hand)
+  fill(ctx, '#c0e8e0', 24, 10, 3, 14);
+  fill(ctx, '#e8fff8', 25, 11, 1, 12);
+  fill(ctx, '#a0d0c8', 23, 16, 5, 2); // guard
+  fill(ctx, '#8a6820', 24, 22, 3, 3); // pommel
+  // Longbow (left)
+  fill(ctx, '#8b5a2b', 4, 8, 2, 16);
+  fill(ctx, '#c9a227', 3, 8, 1, 2);
+  fill(ctx, '#c9a227', 3, 22, 1, 2);
+  fill(ctx, '#e8e0c0', 5, 10, 1, 12); // string
+  spark(ctx, 25, 12, '#7dffb3');
+}
+
+/**
+ * Queen of the Wood Elves — all white robes, long blonde hair, crown spark.
+ * Author 32×32.
+ */
+export function drawWoodElfQueen(ctx: CanvasRenderingContext2D): void {
+  // Full white gown
+  shadedBlock(ctx, '#d8dce8', '#f4f6ff', '#a8b0c0', 6, 12, 20, 16);
+  fill(ctx, '#e8ecf8', 5, 14, 3, 14);
+  fill(ctx, '#e8ecf8', 24, 14, 3, 14);
+  fill(ctx, '#ffffff', 10, 14, 12, 8);
+  // Soft train
+  fill(ctx, '#c8d0e0', 8, 26, 16, 3);
+  fill(ctx, '#b0b8c8', 10, 28, 12, 2);
+  // Head
+  shadedBlock(ctx, '#e8c4a0', '#ffe8d0', '#c09070', 11, 5, 10, 8);
+  // Very long blonde hair
+  fill(ctx, '#f0e090', 9, 3, 14, 5);
+  fill(ctx, '#e8d070', 8, 4, 16, 3);
+  fill(ctx, '#f8f0b0', 7, 7, 4, 14); // left cascade
+  fill(ctx, '#f8f0b0', 21, 7, 4, 14); // right cascade
+  fill(ctx, '#e8d070', 7, 10, 3, 12);
+  fill(ctx, '#e8d070', 22, 10, 3, 12);
+  // Pointed ears
+  fill(ctx, '#e8c4a0', 8, 7, 3, 2);
+  fill(ctx, '#e8c4a0', 21, 7, 3, 2);
+  fill(ctx, '#ffe8d0', 7, 6, 2, 2);
+  fill(ctx, '#ffe8d0', 23, 6, 2, 2);
+  // Delicate crown
+  fill(ctx, '#e8e8f0', 11, 2, 10, 2);
+  fill(ctx, '#ffffff', 12, 1, 2, 2);
+  fill(ctx, '#ffffff', 15, 0, 2, 3);
+  fill(ctx, '#ffffff', 18, 1, 2, 2);
+  fill(ctx, '#7dffb3', 15, 0, 2, 1); // gem
+  // Face
+  fill(ctx, '#222', 13, 8, 2, 2);
+  fill(ctx, '#222', 18, 8, 2, 2);
+  fill(ctx, '#d08080', 15, 11, 2, 1);
+  // White staff / scepter
+  fill(ctx, '#e8e8f0', 25, 8, 2, 16);
+  fill(ctx, '#7dffb3', 24, 6, 4, 4);
+  spark(ctx, 25, 6, '#ffffff');
+  spark(ctx, 12, 16, '#c9ffe0');
+}
+
+/**
  * Koi fish — orange/white/black pattern, non-combat pond swimmer.
  */
 export function drawKoiSprite(ctx: CanvasRenderingContext2D, _s: number): void {

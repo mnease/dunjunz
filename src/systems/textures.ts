@@ -41,8 +41,11 @@ import {
   drawLavaTile,
   drawSandTile,
   drawSandWallTile,
+  drawSkyRedwoodSprite,
   drawTreeSprite,
   drawWaterTile,
+  drawWoodElfGuard,
+  drawWoodElfQueen,
   fill,
   grit,
   hairMass,
@@ -2970,6 +2973,19 @@ export function generateTextures(scene: Phaser.Scene): void {
 
   canvasTex(scene, 'tree', ART_RES, ART_RES, (ctx) => {
     drawTreeSprite(ctx, ART_BASE);
+  });
+
+  // Sky-piercing redwood — taller canvas; canopy cropped (tops never visible)
+  canvasTex2x(scene, 'tree_redwood', 32, 56, (ctx) => {
+    drawSkyRedwoodSprite(ctx, 32);
+  });
+
+  canvasTex(scene, 'elf_guard', ART_RES, ART_RES, (ctx) => {
+    drawWoodElfGuard(ctx);
+  });
+
+  canvasTex(scene, 'elf_queen', ART_RES, ART_RES, (ctx) => {
+    drawWoodElfQueen(ctx);
   });
 
   canvasTex(scene, 'koi', ART_RES, ART_RES, (ctx) => {

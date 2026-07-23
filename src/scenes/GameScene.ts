@@ -3377,19 +3377,39 @@ export class GameScene extends Phaser.Scene {
             rackPresentTemplates(this.save, rackWeapon),
           )
         : null;
+    const isSkyRedwood =
+      def.kind === 'tree' &&
+      ((def.scale ?? 1) >= 6 ||
+        (def.id ?? '').includes('redwood') ||
+        (def.id ?? '').includes('sky-'));
     const tex =
-      def.id === 'captain' && this.textures.exists('captain')
-        ? 'captain'
-        : def.id === 'royal-goose' && this.textures.exists('boss')
-          ? 'boss'
-          : rackTex && this.textures.exists(rackTex)
-            ? rackTex
-            : (ENTITY_TEX[def.kind] ?? 'npc');
+      def.id === 'queen-wood-elves' && this.textures.exists('elf_queen')
+        ? 'elf_queen'
+        : (def.id === 'elf-sentry' ||
+              def.id === 'elf-archer' ||
+              def.id === 'elf-courtier' ||
+              def.id === 'elf-healer' ||
+              (def.id ?? '').startsWith('elf-guard')) &&
+            this.textures.exists('elf_guard')
+          ? 'elf_guard'
+          : def.id === 'captain' && this.textures.exists('captain')
+            ? 'captain'
+            : def.id === 'royal-goose' && this.textures.exists('boss')
+              ? 'boss'
+              : isSkyRedwood && this.textures.exists('tree_redwood')
+                ? 'tree_redwood'
+                : rackTex && this.textures.exists(rackTex)
+                  ? rackTex
+                  : (ENTITY_TEX[def.kind] ?? 'npc');
     const placed = this.roomExpand
       ? mapEntityTile(def.x, def.y, this.roomExpand)
       : { x: def.x, y: def.y };
     const pos = this.tileToWorld(placed.x, placed.y);
     const sprite = this.physics.add.sprite(pos.x, pos.y, tex);
+    // Tall redwoods: feet on tile, canopy climbs off the top of the screen
+    if (isSkyRedwood) {
+      sprite.setOrigin(0.5, 0.92);
+    }
     const displayScale =
       typeof def.scale === 'number' && def.scale > 0
         ? SPRITE_SCALE * def.scale
@@ -3535,9 +3555,18 @@ export class GameScene extends Phaser.Scene {
       let bw = 12;
       let bh = 12;
       if (isTree) {
-        // Trunk-sized collider so big canopy trees don't block whole meadows
-        bw = (def.scale ?? 1) > 1.5 ? 10 : 12;
-        bh = 12;
+        // Trunk-sized collider so big canopy trees don't block whole meadows.
+        // Sky redwoods use a thinner trunk in texture-px (scale multiplies body).
+        if ((def.scale ?? 1) >= 6) {
+          bw = 5;
+          bh = 7;
+        } else if ((def.scale ?? 1) > 1.5) {
+          bw = 10;
+          bh = 12;
+        } else {
+          bw = 12;
+          bh = 12;
+        }
       } else if (def.kind === 'dummy') {
         bw = 14;
         bh = 12;
