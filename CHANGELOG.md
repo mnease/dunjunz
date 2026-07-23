@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Fixed
 
+- **Best Bud unrecruitable after princess rescue** — hollow sign and den critter shared one tile; solid sign always stole **E**. Sign moved off the bud, den critter is solid + always tinted, and interact prefers buddies/NPCs over signs.
 - **Equip slot frames after 64-bit textures** — inventory equip boxes used pre-upgrade `setScale(1.15/1.5)` on 2× textures, so frames/icons were ~double size and stacked over the doll. Scales now use `ART_BASE/ART_RES` (same pattern as bag icons).
 
 ### Added

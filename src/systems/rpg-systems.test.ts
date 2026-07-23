@@ -2006,6 +2006,17 @@ describe('best bud quest', () => {
     expect(ROOMS.woodz_hollow.land).toBe('woodz');
   });
 
+  it('woodz_hollow den bud and sign do not share a tile', () => {
+    const ents = ROOMS.woodz_hollow.entities ?? [];
+    const sign = ents.find((e) => e.id === 'hollow-sign');
+    const bud = ents.find((e) => e.id === 'best-bud-den');
+    expect(sign).toBeTruthy();
+    expect(bud).toBeTruthy();
+    expect(bud!.kind).toBe('best_bud');
+    // Same-tile stacking made E always hit the solid sign → unrecruitable
+    expect(`${sign!.x},${sign!.y}`).not.toBe(`${bud!.x},${bud!.y}`);
+  });
+
   it('woodz_hollow continue spawn is walkable and not sealed', async () => {
     const { spawnForContinue, isWalkableTile } = await import('./map-spawn');
     const room = ROOMS.woodz_hollow;

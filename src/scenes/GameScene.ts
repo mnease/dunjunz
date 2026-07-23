@@ -3374,8 +3374,9 @@ export class GameScene extends Phaser.Scene {
     this.applyYSortDepth(sprite);
 
     if (def.kind === 'best_bud') {
+      // Pre-roll: default teal so the den critter is visible before quest accept
       const bud = getBestBud(this.save.bestBudId);
-      if (bud) sprite.setTint(bud.tint);
+      sprite.setTint(bud?.tint ?? 0x4ad4c8);
     }
     if (def.id === 'royal-goose') {
       sprite.setTint(0xffe08a);
@@ -3463,6 +3464,7 @@ export class GameScene extends Phaser.Scene {
       def.kind === 'npc' ||
       def.kind === 'merchant' ||
       def.kind === 'princess' ||
+      def.kind === 'best_bud' ||
       def.kind === 'tree' ||
       def.kind === 'palm' ||
       def.kind === 'seaweed' ||
@@ -3533,7 +3535,8 @@ export class GameScene extends Phaser.Scene {
       } else if (
         def.kind === 'npc' ||
         def.kind === 'merchant' ||
-        def.kind === 'princess'
+        def.kind === 'princess' ||
+        def.kind === 'best_bud'
       ) {
         bw = 12;
         bh = 12;
@@ -4715,10 +4718,44 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
   }
 
+  /**
+   * Quest-critical targets beat ambient props when both are in reach.
+   * Prevents signs/dummies from stealing E off a Best Bud / NPC / chest
+   * (hollow used to stack sign + bud on one tile → unrecruitable buddy).
+   */
+  private interactPriority(kind: string): number {
+    switch (kind) {
+      case 'best_bud':
+      case 'princess':
+      case 'merchant':
+      case 'npc':
+      case 'chest':
+      case 'loot_crate':
+      case 'portal':
+      case 'forje':
+      case 'key':
+      case 'heart':
+      case 'sword':
+      case 'mapz':
+      case 'rack':
+      case 'cube':
+        return 10;
+      case 'sign':
+      case 'bookshelf':
+      case 'dummy':
+      case 'chair':
+      case 'table':
+      case 'mirror':
+        return 1;
+      default:
+        return 5;
+    }
+  }
+
   private findInteractable(reach?: number): Actor | null {
     const max = reach ?? this.interactReach();
     let best: Actor | null = null;
-    let bestDist = max;
+    let bestScore = -Infinity;
     for (const a of this.actors) {
       if (!a.alive || !a.interactive) continue;
       if (
@@ -4745,8 +4782,11 @@ export class GameScene extends Phaser.Scene {
         a.sprite.x,
         a.sprite.y,
       );
-      if (dist < bestDist) {
-        bestDist = dist;
+      if (dist >= max) continue;
+      // Higher priority wins; closer distance breaks ties
+      const score = this.interactPriority(a.kind) * 1000 - dist;
+      if (score > bestScore) {
+        bestScore = score;
         best = a;
       }
     }

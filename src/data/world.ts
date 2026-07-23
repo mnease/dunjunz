@@ -1045,19 +1045,22 @@ export const ROOMS: Record<string, RoomDef> = {
       {
         kind: 'sign',
         id: 'hollow-sign',
-        x: 8,
+        // West of the den critter — must NOT share a tile with best-bud-den
+        // (stacked interactables used to steal E every time → unrecruitable bud).
+        x: 6,
         y: 2,
         dialog: [
           'BEST BUD DEN.',
           'SOMEONE WEIRD AND LOYAL LIVES HERE.',
-          'TALK TO THEM WITH E. BE COOL ABOUT IT.',
+          'STAND ON THE CRITTER AND PRESS E.',
+          'BE COOL ABOUT IT.',
         ],
       },
       {
         kind: 'best_bud',
         id: 'best-bud-den',
-        // Walkable north shore of the koi pond
-        x: 8,
+        // Walkable north shore of the koi pond (center — visible from west mouth)
+        x: 9,
         y: 2,
         dialog: [
           '...A WEIRD CREATURE LOOKS UP.',
