@@ -1,5 +1,13 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_W, GAME_H, HUD_H, SPRITE_SCALE } from '../config';
+import {
+  ART_BASE,
+  ART_RES,
+  COLORS,
+  GAME_W,
+  GAME_H,
+  HUD_H,
+  SPRITE_SCALE,
+} from '../config';
 import { ROOMS } from '../data/world';
 import {
   appearanceFromSave,
@@ -213,8 +221,12 @@ export class UIScene extends Phaser.Scene {
   /** Bag cell size (px) — large enough to read 32×32 craft icons. */
   private static readonly BAG_CELL = 68;
   private static readonly BAG_GAP = 12;
-  /** Icon display scale (ART_RES 32 → ~66px in cell). */
-  private static readonly BAG_ICON_SCALE = 2.05;
+  /**
+   * Icon display scales — calibrated for 32-author craft; keep on-screen size
+   * stable when textures are 64-bit (ART_RES).
+   */
+  private static readonly BAG_ICON_SCALE = 2.05 * (ART_BASE / ART_RES);
+  private static readonly UI_ICON_SCALE = 1.35 * (ART_BASE / ART_RES);
 
   /**
    * Inventory layout (Comb + Pollen pass-2).
@@ -2572,7 +2584,7 @@ export class UIScene extends Phaser.Scene {
       const tex = this.textures.exists(iconKey) ? iconKey : 'icon_empty';
       const icon = this.add
         .image(x, y - 6, tex)
-        .setScale(1.35)
+        .setScale(UIScene.UI_ICON_SCALE)
         .setScrollFactor(0)
         .setAlpha(afford ? 1 : 0.4);
       this.shopLayer!.add(icon);
@@ -2687,7 +2699,7 @@ export class UIScene extends Phaser.Scene {
         const tex = this.textures.exists(k) ? k : 'icon_empty';
         const icon = this.add
           .image(x, y - 6, tex)
-          .setScale(1.35)
+          .setScale(UIScene.UI_ICON_SCALE)
           .setScrollFactor(0);
         this.shopLayer!.add(icon);
         this.shopPieces.push(icon);
@@ -2917,7 +2929,7 @@ export class UIScene extends Phaser.Scene {
           : 'icon_empty';
       const icon = this.add
         .image(x, y - 6, tex)
-        .setScale(1.35)
+        .setScale(UIScene.UI_ICON_SCALE)
         .setScrollFactor(0)
         .setAlpha(afford ? 1 : 0.4);
       this.forjingLayer!.add(icon);
@@ -2971,7 +2983,7 @@ export class UIScene extends Phaser.Scene {
         const tex = this.textures.exists(k) ? k : 'icon_empty';
         const icon = this.add
           .image(x, y - 6, tex)
-          .setScale(1.35)
+          .setScale(UIScene.UI_ICON_SCALE)
           .setScrollFactor(0)
           .setAlpha(has ? 1 : 0.35);
         this.forjingLayer!.add(icon);

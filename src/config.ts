@@ -18,14 +18,17 @@ export function formatGameVersion(version: string = GAME_VERSION): string {
 }
 /**
  * Logical tile step in the room grid (world units before display scale).
- * Textures render at ART_RES (64-bit craft density); authoring unit is ART_BASE
- * (legacy 32px drawings are scaled 2× into ART_RES for denser on-screen sampling).
- * SPRITE_SCALE keeps sprites at TILE×SCALE world pixels.
+ *
+ * **64-bit craft everywhere:** textures are generated at ART_RES (64) (or 2×
+ * their author size). Draw code still paints in ART_BASE (32) author units;
+ * canvasTex / canvasTex2x nearest-neighbor upscale for density. Icons, FX,
+ * projectiles, mapz widgets, and HTML previews all use this path.
+ * SPRITE_SCALE keeps world sprites at TILE×SCALE world pixels.
  */
 export const TILE = 16;
-/** Authoring unit for procedural pixel draws (historical 32-bit craft). */
+/** Authoring unit for procedural pixel draws. */
 export const ART_BASE = 32;
-/** Canvas resolution for map tiles, avatar, enemies (64-bit density). */
+/** Output canvas resolution for world sprites / tiles / icons (64-bit). */
 export const ART_RES = 64;
 export const SCALE = 3;
 /** Phaser scale so an ART_RES×ART_RES texture covers TILE×SCALE world pixels. */

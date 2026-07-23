@@ -1,5 +1,5 @@
 /**
- * 32-bit craft density helpers (ART_RES=32) — outlines, faces, hair, blades.
+ * Pixel craft helpers (author unit ART_BASE=32, textures ART_RES=64).
  * EMA council: silhouette first, ≤3 values per form + 1 specular, no muddy face dither.
  */
 

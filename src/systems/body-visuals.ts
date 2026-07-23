@@ -27,7 +27,7 @@ export const DEFAULT_BODY: BodyLook = { gender: 'male', race: 'human' };
 
 export type HeightBand = 'tall' | 'medium' | 'short' | 'tiny';
 
-/** Integer canvas metrics (ART_RES=32). Shared ground plant footY=27. */
+/** Integer canvas metrics (ART_BASE=32 author space; scaled to ART_RES=64). Shared ground plant footY=27. */
 export interface BodyMetrics {
   band: HeightBand;
   footY: number;

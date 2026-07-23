@@ -52,12 +52,21 @@ import {
   vgrad,
 } from './pixel-art';
 
+/**
+ * Create a canvas texture.
+ * `draw` always paints in **author space** (legacy 32-bit coords for sprites).
+ * Default: square ART_RES textures use author ART_BASE (2× upscale to 64-bit).
+ * Pass authorW/authorH for non-square or custom craft sizes (also upscaled when
+ * final w/h differ — use canvasTex2x for a simple 2× of any author size).
+ */
 function canvasTex(
   scene: Phaser.Scene,
   key: string,
   w: number,
   h: number,
   draw: (ctx: CanvasRenderingContext2D) => void,
+  authorW?: number,
+  authorH?: number,
 ): void {
   if (scene.textures.exists(key)) return;
   const canvas = document.createElement('canvas');
@@ -65,15 +74,35 @@ function canvasTex(
   canvas.height = h;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  // Crisp pixels — no smoothing when we later scale
   ctx.imageSmoothingEnabled = false;
-  // 64-bit craft: art authored in ART_BASE (32) space is scaled into ART_RES
-  const artScale = ART_RES / ART_BASE;
-  if (w === ART_RES && h === ART_RES && artScale !== 1) {
-    ctx.scale(artScale, artScale);
+  const aw =
+    authorW ?? (w === ART_RES && h === ART_RES ? ART_BASE : w);
+  const ah =
+    authorH ?? (w === ART_RES && h === ART_RES ? ART_BASE : h);
+  if (aw !== w || ah !== h) {
+    ctx.scale(w / aw, h / ah);
   }
   draw(ctx);
   scene.textures.addCanvas(key, canvas);
+}
+
+/** 64-bit: double an author-space drawing to final texture pixels. */
+function canvasTex2x(
+  scene: Phaser.Scene,
+  key: string,
+  authorW: number,
+  authorH: number,
+  draw: (ctx: CanvasRenderingContext2D) => void,
+): void {
+  canvasTex(
+    scene,
+    key,
+    authorW * (ART_RES / ART_BASE),
+    authorH * (ART_RES / ART_BASE),
+    draw,
+    authorW,
+    authorH,
+  );
 }
 
 function drawWeapon(
@@ -2030,11 +2059,14 @@ export function generateTextures(scene: Phaser.Scene): void {
     'bud_fang',
   ];
   for (const id of iconIds) {
-    canvasTex(scene, `icon_${id}`, 32, 32, (ctx) => drawItemIcon(ctx, id));
+    // 64-bit inventory / shop icons (author 32 → ART_RES)
+    canvasTex(scene, `icon_${id}`, ART_RES, ART_RES, (ctx) =>
+      drawItemIcon(ctx, id),
+    );
   }
 
-  // Slot frame chrome
-  canvasTex(scene, 'slot_frame', 40, 40, (ctx) => {
+  // Slot frame chrome (author 40 → 80)
+  canvasTex2x(scene, 'slot_frame', 40, 40, (ctx) => {
     ctx.fillStyle = '#12161f';
     ctx.fillRect(0, 0, 40, 40);
     ctx.strokeStyle = '#7dffb3';
@@ -2065,17 +2097,17 @@ export function generateTextures(scene: Phaser.Scene): void {
     'staff_fire',
     'staff_ice',
   ];
-  canvasTex(scene, 'sword-swing', 20, 20, (ctx) => {
+  canvasTex2x(scene, 'sword-swing', 20, 20, (ctx) => {
     drawWeaponSwing(ctx, 'sword');
   });
   for (const look of swingLooks) {
-    canvasTex(scene, swingTextureKey(look), 20, 20, (ctx) => {
+    canvasTex2x(scene, swingTextureKey(look), 20, 20, (ctx) => {
       drawWeaponSwing(ctx, look);
     });
   }
 
-  // Motion arc for attack VFX
-  canvasTex(scene, 'slash-arc', 24, 24, (ctx) => {
+  // Motion arc for attack VFX (author 24 → 48)
+  canvasTex2x(scene, 'slash-arc', 24, 24, (ctx) => {
     ctx.strokeStyle = 'rgba(255,255,255,0.85)';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -2608,7 +2640,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     canvasTex(scene, key, cell, cell, draw);
   }
 
-  // Feature icons (24×24, scaled up on big cells)
+  // Feature icons (author 28 → 56 at 64-bit density)
   const iconS = 28;
   const featureIcons: [string, (ctx: CanvasRenderingContext2D) => void][] = [
     [
@@ -2742,20 +2774,20 @@ export function generateTextures(scene: Phaser.Scene): void {
     ],
   ];
   for (const [key, draw] of featureIcons) {
-    canvasTex(scene, key, iconS, iconS, (ctx) => {
+    canvasTex2x(scene, key, iconS, iconS, (ctx) => {
       fill(ctx, 'rgba(10,12,16,0.55)', 0, 0, iconS, iconS);
       draw(ctx);
     });
   }
 
-  canvasTex(scene, 'mapz_stairs', 28, 28, (ctx) => {
+  canvasTex2x(scene, 'mapz_stairs', 28, 28, (ctx) => {
     fill(ctx, '#2a1520', 0, 0, 28, 28);
     for (let i = 0; i < 6; i++) {
       const y = 22 - i * 3;
       shadedBlock(ctx, '#ff6b9d', '#ffb0c8', '#a03050', 3 + i, y, 22 - i * 2, 3);
     }
   });
-  canvasTex(scene, 'mapz_link_h', 40, 16, (ctx) => {
+  canvasTex2x(scene, 'mapz_link_h', 40, 16, (ctx) => {
     fill(ctx, '#0a0c10', 0, 0, 40, 16);
     shadedBlock(ctx, '#4a7060', '#7dffb3', '#2a4a38', 0, 3, 40, 10);
     fill(ctx, 'rgba(255,255,255,0.25)', 0, 4, 40, 2);
@@ -2765,7 +2797,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, 'rgba(0,0,0,0.2)', 20, 3, 1, 10);
     fill(ctx, 'rgba(0,0,0,0.2)', 30, 3, 1, 10);
   });
-  canvasTex(scene, 'mapz_link_v', 16, 40, (ctx) => {
+  canvasTex2x(scene, 'mapz_link_v', 16, 40, (ctx) => {
     fill(ctx, '#0a0c10', 0, 0, 16, 40);
     shadedBlock(ctx, '#4a7060', '#7dffb3', '#2a4a38', 3, 0, 10, 40);
     fill(ctx, 'rgba(255,255,255,0.25)', 4, 0, 2, 40);
@@ -2775,33 +2807,29 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, 'rgba(0,0,0,0.2)', 3, 30, 10, 1);
   });
 
-  // Parchment map backdrop (tiled/stretched under grid)
+  // Parchment map backdrop (128 already ≥64-bit density)
   canvasTex(scene, 'mapz_parchment', 128, 128, (ctx) => {
     vgrad(ctx, ['#e8d8b0', '#d4c090', '#c4b080', '#b8a070'], 0, 0, 128, 128);
     dither(ctx, '#d4c090', '#c0ac7a', 0, 0, 128, 128, 0);
     grit(ctx, 'rgba(80,60,30,0.12)', 0, 0, 128, 128, 5, 1);
-    // edge wear
     fill(ctx, 'rgba(90,70,40,0.15)', 0, 0, 128, 4);
     fill(ctx, 'rgba(90,70,40,0.15)', 0, 124, 128, 4);
     fill(ctx, 'rgba(90,70,40,0.12)', 0, 0, 4, 128);
     fill(ctx, 'rgba(90,70,40,0.12)', 124, 0, 4, 128);
-    // faint grid
     for (let i = 16; i < 128; i += 16) {
       fill(ctx, 'rgba(90,70,40,0.08)', i, 0, 1, 128);
       fill(ctx, 'rgba(90,70,40,0.08)', 0, i, 128, 1);
     }
   });
 
-  // Compass rose
-  canvasTex(scene, 'mapz_compass', 64, 64, (ctx) => {
+  // Compass rose (64 author → 128 final for dense UI)
+  canvasTex2x(scene, 'mapz_compass', 64, 64, (ctx) => {
     fill(ctx, 'rgba(10,12,16,0.65)', 0, 0, 64, 64);
-    // ring
     ctx.strokeStyle = '#c9a227';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(32, 32, 26, 0, Math.PI * 2);
     ctx.stroke();
-    // N pointer
     fill(ctx, '#ffc857', 30, 6, 4, 22);
     fill(ctx, '#e74c3c', 28, 6, 8, 8);
     fill(ctx, '#7dffb3', 30, 36, 4, 20);
@@ -2933,8 +2961,8 @@ export function generateTextures(scene: Phaser.Scene): void {
   canvasTex(scene, 'best_bud_heal', ART_RES, ART_RES, (ctx) => {
     drawBuddyBase(ctx, buddyDrawOptsForPose('heal'));
   });
-  // Elastic limb for stretch ghost (wide strip, tinted in anim)
-  canvasTex(scene, 'bud_stretch_limb', 24, 8, (ctx) => {
+  // Elastic limb for stretch ghost (wide strip, tinted in anim) — 64-bit 2×
+  canvasTex2x(scene, 'bud_stretch_limb', 24, 8, (ctx) => {
     ctx.fillStyle = '#d0d0d8';
     ctx.fillRect(0, 2, 24, 4);
     ctx.fillStyle = '#e8e8f0';
@@ -2968,13 +2996,14 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#4ecdc4', 12, 20, 8, 2);
   });
 
-  canvasTex(scene, 'particle', 4, 4, (ctx) => {
+  // Particles / projectiles — 64-bit 2× of classic craft sizes
+  canvasTex2x(scene, 'particle', 4, 4, (ctx) => {
     ctx.fillStyle = hex(COLORS.gold);
     ctx.fillRect(1, 0, 2, 4);
     ctx.fillRect(0, 1, 4, 2);
   });
 
-  canvasTex(scene, 'particle-hit', 6, 6, (ctx) => {
+  canvasTex2x(scene, 'particle-hit', 6, 6, (ctx) => {
     ctx.fillStyle = '#fff';
     ctx.fillRect(2, 0, 2, 6);
     ctx.fillRect(0, 2, 6, 2);
@@ -2982,8 +3011,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(2, 2, 2, 2);
   });
 
-  // Projectiles (hard mode + player ranged)
-  canvasTex(scene, 'proj-arrow', 8, 4, (ctx) => {
+  canvasTex2x(scene, 'proj-arrow', 8, 4, (ctx) => {
     ctx.fillStyle = '#c8b090';
     ctx.fillRect(0, 1, 6, 2);
     ctx.fillStyle = '#e8e0d0';
@@ -2991,13 +3019,13 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillStyle = '#8b5a2b';
     ctx.fillRect(0, 1, 2, 2);
   });
-  canvasTex(scene, 'proj-phaser', 8, 4, (ctx) => {
+  canvasTex2x(scene, 'proj-phaser', 8, 4, (ctx) => {
     ctx.fillStyle = '#ff3344';
     ctx.fillRect(0, 1, 8, 2);
     ctx.fillStyle = '#ffaaaa';
     ctx.fillRect(2, 0, 4, 4);
   });
-  canvasTex(scene, 'proj-fireball', 8, 8, (ctx) => {
+  canvasTex2x(scene, 'proj-fireball', 8, 8, (ctx) => {
     ctx.fillStyle = '#ff8a4c';
     ctx.beginPath();
     ctx.arc(4, 4, 3, 0, Math.PI * 2);
@@ -3005,14 +3033,14 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillStyle = '#ffe08a';
     ctx.fillRect(3, 3, 2, 2);
   });
-  canvasTex(scene, 'proj-bolt', 6, 6, (ctx) => {
+  canvasTex2x(scene, 'proj-bolt', 6, 6, (ctx) => {
     ctx.fillStyle = '#7dffb3';
     ctx.fillRect(2, 0, 2, 6);
     ctx.fillRect(0, 2, 6, 2);
     ctx.fillStyle = '#fff';
     ctx.fillRect(2, 2, 2, 2);
   });
-  canvasTex(scene, 'proj-lightning', 8, 8, (ctx) => {
+  canvasTex2x(scene, 'proj-lightning', 8, 8, (ctx) => {
     ctx.fillStyle = '#4ac0ff';
     ctx.fillRect(3, 0, 2, 3);
     ctx.fillRect(2, 2, 4, 2);
@@ -3023,7 +3051,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(3, 2, 2, 2);
     ctx.fillRect(4, 4, 1, 2);
   });
-  canvasTex(scene, 'proj-ice', 8, 8, (ctx) => {
+  canvasTex2x(scene, 'proj-ice', 8, 8, (ctx) => {
     ctx.fillStyle = '#2a60a0';
     ctx.beginPath();
     ctx.moveTo(4, 0);
@@ -3039,7 +3067,7 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   // ── Humanz & Villagez ──────────────────────────────────
-  canvasTex(scene, 'dragon', 32, 24, (ctx) => {
+  canvasTex2x(scene, 'dragon', 32, 24, (ctx) => {
     ctx.fillStyle = '#3d8b5a';
     ctx.fillRect(8, 8, 18, 10);
     ctx.fillRect(4, 6, 8, 6);
@@ -3058,7 +3086,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(12, 12, 10, 4);
   });
 
-  canvasTex(scene, 'hoard-gold', 16, 12, (ctx) => {
+  canvasTex2x(scene, 'hoard-gold', 16, 12, (ctx) => {
     ctx.fillStyle = '#ffc857';
     ctx.fillRect(2, 4, 12, 6);
     ctx.fillRect(4, 2, 8, 4);
