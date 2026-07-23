@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   FLUID_SHORE_AMP,
+  FLUID_SHORE_BAND,
   MATERIAL_WARP,
   TERRARIA_PIXEL,
   WATER_SHIMMER_PHASES,
@@ -100,7 +101,8 @@ describe('continuous ground', () => {
   });
 
   it('fluid SDF is positive inside lava/water and negative outside', () => {
-    expect(FLUID_SHORE_AMP).toBeGreaterThan(0.3);
+    expect(FLUID_SHORE_AMP).toBeGreaterThan(0.2);
+    expect(FLUID_SHORE_BAND).toBeGreaterThan(0.15);
     const grid: TileKind[][] = [
       ['void', 'void', 'void', 'void'],
       ['void', 'lava', 'lava', 'void'],
@@ -114,8 +116,26 @@ describe('continuous ground', () => {
     expect(fluidSignedDistance(grid, 1.5, 1.5, 'water')).toBeLessThan(0);
   });
 
-  it('resolveVisualKind morphs rectangular lava into organic shores', () => {
-    // Single-cell lava island — classic "perfect square" bug case
+  it('pond interiors stay solid water (no blotchy holes)', () => {
+    const grid: TileKind[][] = [
+      ['dirt', 'dirt', 'dirt', 'dirt'],
+      ['dirt', 'water', 'water', 'dirt'],
+      ['dirt', 'water', 'water', 'dirt'],
+      ['dirt', 'dirt', 'dirt', 'dirt'],
+    ];
+    // Sample dense interior of the 2×2 pond — every point must be water
+    let holes = 0;
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        const tx = 1.25 + x * 0.06;
+        const ty = 1.25 + y * 0.06;
+        if (resolveVisualKind(grid, tx, ty, 5) !== 'water') holes++;
+      }
+    }
+    expect(holes).toBe(0);
+  });
+
+  it('resolveVisualKind morphs rectangular lava shore without erasing core', () => {
     const grid: TileKind[][] = [
       ['void', 'void', 'void'],
       ['void', 'lava', 'void'],
@@ -123,13 +143,11 @@ describe('continuous ground', () => {
     ];
     // Deep center stays lava
     expect(resolveVisualKind(grid, 1.5, 1.5, 7)).toBe('lava');
-    // Sample a ring of edge/corner points — organic morph should not be
-    // 100% lava on the square boundary (some eroded or spilled)
+    // Edge ring has mix of lava and land (organic shore, not perfect square)
     let lava = 0;
     let other = 0;
     for (let i = 0; i < 48; i++) {
       const ang = (i / 48) * Math.PI * 2;
-      // ring near cell edge (radius ~0.48 from center)
       const tx = 1.5 + Math.cos(ang) * 0.48;
       const ty = 1.5 + Math.sin(ang) * 0.48;
       const k = resolveVisualKind(grid, tx, ty, 11 + i);
@@ -137,7 +155,20 @@ describe('continuous ground', () => {
       else other++;
     }
     expect(lava).toBeGreaterThan(8);
-    expect(other).toBeGreaterThan(4); // not a perfect square ring
+    expect(other).toBeGreaterThan(2);
+  });
+
+  it('water paint stays in readable blue band (no near-black body)', () => {
+    const grid: TileKind[][] = [
+      ['dirt', 'dirt', 'dirt'],
+      ['dirt', 'water', 'dirt'],
+      ['dirt', 'dirt', 'dirt'],
+    ];
+    const c = terrariaPixelColor(grid, 1.5, 1.5, 10, 10, 'surface', false, 3);
+    // Mid-blue body: green and blue channels strong, not void-dark
+    expect(c[1]).toBeGreaterThan(90);
+    expect(c[2]).toBeGreaterThan(140);
+    expect(c[0] + c[1] + c[2]).toBeGreaterThan(250);
   });
 
   it('structures stay lattice-aligned under visual resolve', () => {

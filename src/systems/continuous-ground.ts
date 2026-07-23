@@ -30,14 +30,16 @@ export const TERRARIA_PIXEL = 2;
 export const MATERIAL_WARP = 0.38;
 
 /**
- * Fluid shore morph strength (tile-space).
- * SDF + fBm threshold — large enough to break single-cell lava squares
- * into organic blobs (Core Keeper pools).
+ * Shore nibble band (tile-space). Only the outer rim morphs —
+ * fluid interiors stay solid (no blotchy holes in ponds).
  */
-export const FLUID_SHORE_AMP = 0.48;
+export const FLUID_SHORE_BAND = 0.28;
+
+/** Noise strength along the shore band only. */
+export const FLUID_SHORE_AMP = 0.34;
 
 /** How far fluid can spill into adjacent non-fluid (tile units). */
-export const FLUID_SPILL = 0.42;
+export const FLUID_SPILL = 0.28;
 
 /** RGB 0–255 */
 type RGB = [number, number, number];
@@ -92,12 +94,13 @@ function materialPalette(
         [180, 196, 214],
       ];
     case 'water':
+      // Tight mid-blue band — no near-black (readable pond body)
       return [
+        [48, 130, 178],
         hexToRgb(COLORS.water),
-        [35, 90, 140],
-        [55, 120, 170],
-        [25, 60, 100],
-        [90, 160, 200],
+        [56, 142, 188],
+        [64, 152, 196],
+        [100, 175, 210],
       ];
     case 'lava':
       return [
@@ -274,8 +277,10 @@ export function fluidSignedDistance(
 
 /**
  * Resolve visual material kind for a micro-pixel.
- * Fluids use SDF + multi-octave noise threshold (organic shores).
- * Land uses domain warp. Structures stay lattice-aligned for readability.
+ *
+ * Fluids: **shore-only** morph. Authored water/lava interiors are always fluid
+ * (fixes blotchy void holes). Noise only nibbles the rim and spills slightly
+ * outward for organic shores. Land uses domain warp. Structures stay lattice.
  */
 export function resolveVisualKind(
   grid: TileKind[][],
@@ -293,49 +298,45 @@ export function resolveVisualKind(
     return sampleKindWarped(grid, tx, ty, seed, MATERIAL_WARP * 0.55);
   }
 
-  // Organic fluid field — both water and lava (Core Keeper pools)
-  const n1 = fbm01(tx * 2.1, ty * 2.1, seed + 60, 4);
-  const n2 = fbm01(tx * 5.3 + 8, ty * 5.3 - 3, seed + 61, 2);
-  const shoreNoise = (n1 * 0.72 + n2 * 0.28) * 2 - 1; // [-1, 1]
+  // Shore noise — low frequency meander + fine jig
+  const n1 = fbm01(tx * 1.9, ty * 1.9, seed + 60, 3);
+  const n2 = fbm01(tx * 4.8 + 8, ty * 4.8 - 3, seed + 61, 2);
+  const shoreNoise = (n1 * 0.75 + n2 * 0.25) * 2 - 1; // [-1, 1]
 
-  // Prefer authored fluid when competing
-  const fluids: Array<'water' | 'lava'> =
-    raw === 'lava'
-      ? ['lava', 'water']
-      : raw === 'water'
-        ? ['water', 'lava']
-        : ['water', 'lava'];
-
-  for (const fluid of fluids) {
-    const sdf = fluidSignedDistance(grid, tx, ty, fluid);
-    // Inside fluid if SDF exceeds noise bite; spill when near shore outside
-    const threshold = shoreNoise * FLUID_SHORE_AMP;
-    if (sdf > threshold) {
-      return fluid;
-    }
-    // Thin river / 1-cell channel guard: keep authored fluid near cell core
-    // so noise does not erase narrow streams into dashed puddles
-    if (raw === fluid && sdf > 0.12) {
-      return fluid;
-    }
-    // Controlled spill into walkable/void near fluid (natural beach/pool rim)
-    if (
-      sdf > -FLUID_SPILL &&
-      sdf + shoreNoise * FLUID_SHORE_AMP * 0.85 > 0 &&
-      (raw === 'void' ||
-        raw === 'floor' ||
-        raw === 'dirt' ||
-        raw === 'sand' ||
-        raw === 'grass' ||
-        raw === 'snow')
-    ) {
-      return fluid;
-    }
+  // --- Authored fluid: keep solid interior, only nibble the rim ---
+  if (raw === 'water' || raw === 'lava') {
+    const sdf = fluidSignedDistance(grid, tx, ty, raw);
+    // Deep enough inside the body → always fluid (no interior holes)
+    if (sdf >= FLUID_SHORE_BAND) return raw;
+    // Shore band: noise can eat corners / leave scallops
+    // Higher noise → more keep; only low noise + very edge erodes
+    const keep = sdf + shoreNoise * FLUID_SHORE_AMP + 0.06;
+    if (keep > 0) return raw;
+    // True rim nibble → land fill (prefer dirt/sand, never leave black void if avoidable)
+    const land = nearestLandKind(grid, tx, ty, seed);
+    if (land && land !== 'void') return land;
+    // Prefer a soft shore material over pure void for pond edges
+    return land === 'void' || !land ? (raw === 'water' ? 'dirt' : 'floor') : land;
   }
 
-  // If we eroded fluid away (corners), fill with nearest land (not ghost fluid)
-  if (isFluidKind(raw)) {
-    return nearestLandKind(grid, tx, ty, seed) ?? 'void';
+  // --- Outside fluid: controlled spill for organic outer shore ---
+  for (const fluid of ['water', 'lava'] as const) {
+    const sdf = fluidSignedDistance(grid, tx, ty, fluid);
+    if (sdf > -FLUID_SPILL) {
+      // Spill only when noise + proximity agree
+      const spill = sdf + shoreNoise * FLUID_SHORE_AMP * 0.7 + 0.04;
+      if (
+        spill > 0 &&
+        (raw === 'void' ||
+          raw === 'floor' ||
+          raw === 'dirt' ||
+          raw === 'sand' ||
+          raw === 'grass' ||
+          raw === 'snow')
+      ) {
+        return fluid;
+      }
+    }
   }
 
   // Land materials: domain warp for organic dirt/grass transitions
@@ -514,62 +515,56 @@ export function terrariaPixelColor(
       ];
     }
   } else if (kind === 'water') {
-    // Continuous depth bands via fBm — no per-cell rectangular shade blocks
-    const depth = fbm01(tx * 1.8, ty * 1.8, seed + 40, 4);
+    // Coherent pond surface — mid blue-teal, gentle wave, no black holes.
+    // Core Keeper / Terraria water: readable body + sparse glints.
+    const wave = fbm01(tx * 1.35 + 0.4, ty * 1.35, seed + 40, 3);
+    const ripple = fbm01(tx * 3.2 - 1.1, ty * 3.2 + 0.7, seed + 41, 2);
     const spark = hash2(mx, my, seed + 5);
-    // Near shore (low SDF): lighter foam / shallow tint (Core Keeper shallows)
-    const shallow = fluidShore < 0.22;
-    if (shallow) {
-      c = pick(
-        [
-          [90, 160, 200],
-          [110, 180, 215],
-          [70, 140, 185],
-          [130, 195, 220],
-        ],
-        h * 0.5 + clump * 0.5,
-      );
-      if (spark > 0.85) c = [180, 230, 255];
-    } else if (depth < 0.28) {
-      c = pick(
-        [
-          [55, 120, 170],
-          [70, 140, 190],
-          [90, 160, 200],
-        ],
-        h,
-      );
-    } else if (depth < 0.55) {
-      c = pick(
-        [
-          [40, 100, 155],
-          [35, 90, 140],
-          [50, 115, 165],
-        ],
-        h,
-      );
-    } else if (depth < 0.78) {
-      c = pick(
-        [
-          [30, 75, 125],
-          [25, 65, 110],
-          [40, 90, 140],
-        ],
-        h,
-      );
+    // Shore lighten (sdf small near edge)
+    const shoreT = fluidShore < 0
+      ? 1
+      : Math.max(0, Math.min(1, 1 - fluidShore / 0.35));
+
+    // Base palette stays in a tight readable band (no near-black)
+    // Deep-ish center still clearly blue, not void
+    const base: RGB =
+      wave < 0.35
+        ? [42, 118, 168]
+        : wave < 0.55
+          ? [48, 130, 178]
+          : wave < 0.75
+            ? [56, 142, 188]
+            : [64, 152, 196];
+    // Gentle ripple darken/lighten (±12)
+    const rShift = Math.round((ripple - 0.5) * 22);
+    c = [
+      Math.max(28, Math.min(200, base[0] + rShift)),
+      Math.max(90, Math.min(210, base[1] + rShift)),
+      Math.max(140, Math.min(230, base[2] + Math.round(rShift * 0.6))),
+    ];
+    // Shallow shore: lighter cyan foam band
+    if (shoreT > 0.35) {
+      const t = (shoreT - 0.35) / 0.65;
+      c = [
+        Math.round(c[0] + (120 - c[0]) * t * 0.55),
+        Math.round(c[1] + (190 - c[1]) * t * 0.5),
+        Math.round(c[2] + (220 - c[2]) * t * 0.45),
+      ];
+      if (spark > 0.9) c = [200, 235, 255];
+      else if (spark > 0.82) c = [160, 210, 235];
     } else {
-      c = pick(
-        [
-          [22, 55, 95],
-          [28, 65, 105],
-          [18, 48, 85],
-        ],
-        h,
-      );
+      // Sparse surface glints only
+      if (spark > 0.96) c = [170, 220, 245];
+      else if (spark > 0.93) c = [100, 175, 215];
     }
-    // highlight sparkle pixel (Terraria / Core Keeper water glints)
-    if (!shallow && spark > 0.93) c = [140, 195, 230];
-    else if (!shallow && spark > 0.88) c = [100, 170, 210];
+    // Soft horizontal caustic streak (1px, rare)
+    if (hash2(mx, Math.floor(my / 3), seed + 8) > 0.97 && ripple > 0.55) {
+      c = [
+        Math.min(255, c[0] + 28),
+        Math.min(255, c[1] + 32),
+        Math.min(255, c[2] + 30),
+      ];
+    }
   } else if (kind === 'lava') {
     const heat = fbm01(tx * 2.2, ty * 2.2, seed + 55, 3);
     const spark = hash2(mx, my, seed + 6);
@@ -905,20 +900,16 @@ export function paintContinuousWaterOverlay(
         3,
       );
       if (kind === 'water') {
-        if (h > 0.88 || wave > 0.72) {
-          data[i] = 170;
-          data[i + 1] = 220;
+        // Sparse light glints only — no dark mud overlay (that made ponds blotchy)
+        if (h > 0.92 || (wave > 0.78 && h > 0.7)) {
+          data[i] = 210;
+          data[i + 1] = 240;
           data[i + 2] = 255;
-          data[i + 3] = beach ? 200 : 160;
-        } else if (h > 0.7 || wave > 0.55) {
-          data[i] = 90;
-          data[i + 1] = 160;
-          data[i + 2] = 210;
-          data[i + 3] = 90;
-        } else if (h > 0.45) {
-          data[i] = 45;
-          data[i + 1] = 105;
-          data[i + 2] = 165;
+          data[i + 3] = beach ? 140 : 110;
+        } else if (h > 0.86) {
+          data[i] = 150;
+          data[i + 1] = 200;
+          data[i + 2] = 235;
           data[i + 3] = 55;
         } else {
           data[i] = 0;
