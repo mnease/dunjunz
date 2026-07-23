@@ -13,6 +13,7 @@ import {
   VIEW_TILES_H,
   VIEW_TILES_W,
 } from '../config';
+// MAP_PIXEL_* used by continuous ground surface
 import { ROOMS, resolveRoomId } from '../data/world';
 import {
   entryFromOpposite,
@@ -27,17 +28,13 @@ import {
 } from '../systems/room-expand';
 import {
   autoKoiEntities,
-  classifyRoomWater,
   waterTextureKeySafe,
   type WaterBodyKind,
 } from '../systems/water-bodies';
 import {
-  TERRAIN_VARIANT_COUNT,
-  fractalTerrainTint,
-  fractalTerrainVariant,
-  seedFromString,
-  worldCell,
-} from '../systems/fractal-noise';
+  continuousGroundKey,
+  paintContinuousGround,
+} from '../systems/continuous-ground';
 import {
   clearAllTouch,
   consumeTouchAction,
@@ -446,22 +443,6 @@ interface Actor {
   lootBoxId?: string;
 }
 
-/** Multiply two 0xRRGGBB tints (approx component multiply). */
-function mulTint(a: number, b: number): number {
-  if (a === 0xffffff) return b;
-  if (b === 0xffffff) return a;
-  const ar = (a >> 16) & 0xff;
-  const ag = (a >> 8) & 0xff;
-  const ab = a & 0xff;
-  const br = (b >> 16) & 0xff;
-  const bg = (b >> 8) & 0xff;
-  const bb = b & 0xff;
-  const r = Math.min(255, Math.round((ar * br) / 255));
-  const g = Math.min(255, Math.round((ag * bg) / 255));
-  const bl = Math.min(255, Math.round((ab * bb) / 255));
-  return (r << 16) | (g << 8) | bl;
-}
-
 const SOLID: TileKind[] = ['wall', 'water', 'void', 'locked'];
 const CHAR_TO_TILE: Record<string, TileKind> = {
   '#': 'wall',
@@ -684,7 +665,7 @@ export class GameScene extends Phaser.Scene {
   private budIdleMs = 0;
   /** Inventory equip target: hero gear or buddy gear (toggle Y). */
   private gearTarget: EquipTarget = 'hero';
-  /** Ambient animated map tiles (water/lava). */
+  /** Ambient animated map tiles (legacy; unused when continuous ground on). */
   private ambientTiles: {
     img: Phaser.GameObjects.Image;
     kind: 'water' | 'lava';
@@ -693,8 +674,9 @@ export class GameScene extends Phaser.Scene {
     /** Water body style when kind is water. */
     waterBody?: WaterBodyKind;
   }[] = [];
-  /** Live water body kinds for this room (key "x,y"). */
-  private waterBodies = new Map<string, WaterBodyKind>();
+  /** Single fluid ground surface (no tile grid visuals). */
+  private continuousGround: Phaser.GameObjects.Image | null = null;
+  private continuousGroundGen = 0;
   /** Calendar season + rotating weather (outdoor surface). */
   private seasonWeather: SeasonWeatherState = resolveSeasonWeather();
   private weatherParticles: Phaser.GameObjects.Image[] = [];
@@ -2034,16 +2016,58 @@ export class GameScene extends Phaser.Scene {
     }
     this.actors = [];
     this.ambientTiles = [];
+    if (this.continuousGround?.active) {
+      this.continuousGround.destroy();
+    }
+    this.continuousGround = null;
     if (this.companionSprite) {
       this.tweens.killTweensOf(this.companionSprite);
       this.companionSprite.destroy();
       this.companionSprite = null;
     }
-    // Destroy map tiles (images tagged)
+    // Destroy any legacy map tiles (images tagged)
     this.children.list
       .filter((c) => (c as Phaser.GameObjects.Image).getData?.('mapTile'))
       .forEach((c) => c.destroy());
     // Keep light RT; redrawn every frame / room
+  }
+
+  /**
+   * Paint one continuous fractal ground for the room (no square tile sprites).
+   * Logical tileGrid still drives collision / hazards / doors.
+   */
+  private paintRoomGround(room: RoomDef): void {
+    if (this.continuousGround?.active) {
+      this.continuousGround.destroy();
+      this.continuousGround = null;
+    }
+    this.continuousGroundGen += 1;
+    const key = continuousGroundKey(room.id, this.continuousGroundGen);
+    if (this.textures.exists(key)) {
+      this.textures.remove(key);
+    }
+    const canvas = paintContinuousGround({
+      grid: this.tileGrid,
+      roomId: room.id,
+      land: room.land ?? 'surface',
+      mapX: room.mapX,
+      mapY: room.mapY,
+      floor: room.floor ?? 0,
+      pixelStep: 2,
+    });
+    this.textures.addCanvas(key, canvas);
+    // Top-left of the map grid in world space
+    const origin = this.tileToWorld(0, 0);
+    const left = origin.x - (TILE * SCALE) / 2;
+    const top = origin.y - (TILE * SCALE) / 2;
+    const img = this.add
+      .image(left, top, key)
+      .setOrigin(0, 0)
+      .setDisplaySize(MAP_PIXEL_W, MAP_PIXEL_H)
+      .setDepth(0);
+    img.setData('mapTile', true);
+    img.setData('continuousGround', true);
+    this.continuousGround = img;
   }
 
   /** Build light sources for current room + player (world px). */
@@ -2713,7 +2737,6 @@ export class GameScene extends Phaser.Scene {
     this.tileGrid = this.applyPersistentDoorUnlocks(this.parseTiles(room));
     this.ambientTiles = [];
     this.ambientFrame = 0;
-    this.waterBodies = classifyRoomWater(room.id, this.tileGrid);
 
     // Depth personality / outdoor season sky
     const land = room.land ?? 'surface';
@@ -2735,129 +2758,29 @@ export class GameScene extends Phaser.Scene {
       );
     }
 
+    // Continuous fluid ground (no square tile sprites) + invisible solid colliders
+    this.paintRoomGround(room);
     for (let y = 0; y < VIEW_TILES_H; y++) {
       for (let x = 0; x < VIEW_TILES_W; x++) {
         const kind = this.tileGrid[y][x];
-        const pos = this.tileToWorld(x, y);
-        const onBeach = room.id === BEACH_START_ID;
-        const isMountainApproach =
-          room.id.startsWith('road_north') || land === 'dwarvez';
-        const waterBody = kind === 'water' ? this.waterBodies.get(`${x},${y}`) ?? 'pond' : undefined;
-        let texKey =
-          kind === 'stairs' && (room.floor ?? 0) >= 0
-            ? 'tile-cave-mouth'
-            : kind === 'wall' && onBeach && this.textures.exists('tile-sand-wall')
-              ? 'tile-sand-wall'
-              : kind === 'floor' && onBeach && this.textures.exists('tile-sand')
-                ? 'tile-sand'
-              : kind === 'wall' &&
-                  isMountainApproach &&
-                  this.textures.exists('tile-dwarf-wall')
-                ? 'tile-dwarf-wall'
-              : kind === 'floor' &&
-                  land === 'dwarvez' &&
-                  this.textures.exists('tile-dwarf-floor')
-                ? 'tile-dwarf-floor'
-                : kind === 'water' && waterBody
-                  ? waterTextureKeySafe(waterBody, 0, (k) => this.textures.exists(k))
-                  : TEX[kind];
-        // Fractal terrain variants — fluid non-repeating patterns (same kinds/places)
-        const fluidKinds =
-          kind === 'floor' ||
-          kind === 'wall' ||
-          kind === 'grass' ||
-          kind === 'dirt' ||
-          kind === 'snow';
-        const { wx, wy } = worldCell(
-          x,
-          y,
-          room.mapX,
-          room.mapY,
-          room.floor ?? 0,
-        );
-        const roomSeed = seedFromString(room.id);
-        if (
-          fluidKinds &&
-          !(onBeach && (kind === 'wall' || kind === 'floor'))
-        ) {
-          const v = fractalTerrainVariant(
-            wx,
-            wy,
-            TERRAIN_VARIANT_COUNT,
-            roomSeed,
-          );
-          const baseKey =
-            kind === 'wall' && isMountainApproach
-              ? 'tile-dwarf-wall'
-              : kind === 'floor' && land === 'dwarvez'
-                ? 'tile-dwarf-floor'
-                : TEX[kind];
-          const keyed = v === 0 ? baseKey : `${baseKey}-${v}`;
-          if (this.textures.exists(keyed)) texKey = keyed;
-        }
-        const img = this.add
-          .image(pos.x, pos.y, texKey)
-          .setScale(SPRITE_SCALE)
-          .setDepth(0);
-        img.setData('mapTile', true);
-        img.setData('tileY', y);
-        // Continuous fractal color drift (subtle) so neighbors don't match
-        const fluidTint =
-          fluidKinds || kind === 'sand'
-            ? fractalTerrainTint(wx, wy, roomSeed + 9)
-            : 0xffffff;
-        // Outdoor weather rooms: season ground tint; dungeons: depth crush
-        if (weatherHere) {
-          if (
-            kind === 'grass' ||
-            kind === 'dirt' ||
-            kind === 'sand' ||
-            kind === 'snow' ||
-            (kind === 'floor' && onBeach)
-          ) {
-            const gt = this.seasonWeather.groundTint;
-            // Snow already white — skip warm seasonal dirt tints
-            if (kind !== 'snow' && gt !== 0xffffff) {
-              img.setTint(mulTint(gt, fluidTint));
-            } else if (fluidTint !== 0xffffff) {
-              img.setTint(fluidTint);
-            }
-          }
-          // Icy / snowy: cool sheen on water
-          if (kind === 'water' && this.seasonWeather.weather === 'icy') {
-            img.setTint(0xa8d0f0);
-          } else if (kind === 'water' && this.seasonWeather.weather === 'snowy') {
-            img.setTint(0xc0d8e8);
-          }
-        } else if (!onBeach) {
-          const tint = depthTileTint(
-            depth,
-            kind,
-            land === 'surface' ? 'dunjunz' : land,
-          );
-          if (kind !== 'stairs') {
-            const base = tint !== 0xffffff ? tint : 0xffffff;
-            const combined =
-              fluidKinds && fluidTint !== 0xffffff
-                ? mulTint(base, fluidTint)
-                : base;
-            if (combined !== 0xffffff) img.setTint(combined);
-          }
-        } else if (fluidTint !== 0xffffff && fluidKinds) {
-          img.setTint(fluidTint);
-        }
-        if (kind === 'water' || kind === 'lava') {
-          this.ambientTiles.push({
-            img,
-            kind,
-            ty: y,
-            waterBody: kind === 'water' ? waterBody : undefined,
-          });
-        }
-
         if (SOLID.includes(kind)) {
+          const pos = this.tileToWorld(x, y);
           this.addWallAt(pos.x, pos.y, kind);
         }
+      }
+    }
+    // Soft seasonal / depth mood on the whole surface (not per-tile stamps)
+    if (this.continuousGround?.active) {
+      if (weatherHere) {
+        const gt = this.seasonWeather.groundTint;
+        if (gt !== 0xffffff) this.continuousGround.setTint(gt);
+      } else {
+        const tint = depthTileTint(
+          depth,
+          'floor',
+          land === 'surface' ? 'dunjunz' : land,
+        );
+        if (tint !== 0xffffff) this.continuousGround.setTint(tint);
       }
     }
 
@@ -6466,26 +6389,18 @@ export class GameScene extends Phaser.Scene {
       'APPLAUDS POLITELY.',
     ]);
 
-    // Rebuild walls for this room without full reload
+    // Rebuild continuous ground + solid colliders (no tile sprites)
     this.walls.clear(true, true);
     this.children.list
       .filter((c) => (c as Phaser.GameObjects.Image).getData?.('mapTile'))
       .forEach((c) => c.destroy());
-
+    this.continuousGround = null;
+    this.paintRoomGround(this.room);
     for (let y = 0; y < VIEW_TILES_H; y++) {
       for (let x = 0; x < VIEW_TILES_W; x++) {
         const kind = this.tileGrid[y][x];
-        const pos = this.tileToWorld(x, y);
-        const texKey =
-          kind === 'stairs' && (this.room.floor ?? 0) >= 0
-            ? 'tile-cave-mouth'
-            : TEX[kind];
-        const img = this.add
-          .image(pos.x, pos.y, texKey)
-          .setScale(SPRITE_SCALE)
-          .setDepth(0);
-        img.setData('mapTile', true);
         if (SOLID.includes(kind)) {
+          const pos = this.tileToWorld(x, y);
           this.addWallAt(pos.x, pos.y, kind);
         }
       }
