@@ -53,6 +53,45 @@ import {
 } from './pixel-art';
 
 /**
+ * Native-resolution micro-detail after author→ART_RES upscale.
+ * Adds fine grit / edge light that only exists at 64px (true density).
+ */
+function applyMicroDetail(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  seed = 0,
+): void {
+  // Soft NW light rim
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  for (let i = 0; i < w; i++) {
+    if ((i + seed) % 3 === 0) ctx.fillRect(i, 0, 1, 1);
+  }
+  for (let j = 0; j < h; j++) {
+    if ((j + seed * 2) % 4 === 0) ctx.fillRect(0, j, 1, 1);
+  }
+  // Fine dark grit
+  ctx.fillStyle = 'rgba(0,0,0,0.1)';
+  for (let j = 1; j < h - 1; j++) {
+    for (let i = 1; i < w - 1; i++) {
+      const n = (i * 17 + j * 31 + seed * 13) & 31;
+      if (n === 0) ctx.fillRect(i, j, 1, 1);
+    }
+  }
+  // Fine light flecks
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  for (let j = 2; j < h - 2; j++) {
+    for (let i = 2; i < w - 2; i++) {
+      const n = (i * 23 + j * 11 + seed * 7) & 47;
+      if (n === 0) ctx.fillRect(i, j, 1, 1);
+    }
+  }
+  // Bottom contact shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.12)';
+  ctx.fillRect(0, h - 1, w, 1);
+}
+
+/**
  * Create a canvas texture.
  * `draw` always paints in **author space** (legacy 32-bit coords for sprites).
  * Default: square ART_RES textures use author ART_BASE (2× upscale to 64-bit).
@@ -79,10 +118,18 @@ function canvasTex(
     authorW ?? (w === ART_RES && h === ART_RES ? ART_BASE : w);
   const ah =
     authorH ?? (w === ART_RES && h === ART_RES ? ART_BASE : h);
-  if (aw !== w || ah !== h) {
+  const upscaled = aw !== w || ah !== h;
+  if (upscaled) {
     ctx.scale(w / aw, h / ah);
   }
   draw(ctx);
+  if (upscaled) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // Stable seed from key so textures don't shimmer between loads
+    let seed = 0;
+    for (let i = 0; i < key.length; i++) seed = (seed * 31 + key.charCodeAt(i)) | 0;
+    applyMicroDetail(ctx, w, h, Math.abs(seed));
+  }
   scene.textures.addCanvas(key, canvas);
 }
 
@@ -1846,14 +1893,18 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#4a3018', 17, 10, 3, 3);
     fill(ctx, '#6b4423', 18, 11, 2, 2);
     fill(ctx, '#8b5a2b', 14, 11, 1, 1);
+    fill(ctx, '#5a3d1a', 15, 12, 2, 1); // third coconut shadow
     spark(ctx, 14, 2, '#7dffb3');
     spark(ctx, 18, 3, '#5ad47a');
+    spark(ctx, 8, 6, '#6ad48a');
+    spark(ctx, 24, 5, '#8ef0a8');
   });
 
   // Seaweed clump
   canvasTex(scene, 'seaweed', ART_RES, ART_RES, (ctx) => {
     fill(ctx, '#2a4a20', 8, 18, 16, 6);
     fill(ctx, '#1a3018', 10, 22, 12, 4);
+    fill(ctx, 'rgba(40,30,20,0.3)', 9, 24, 14, 2);
     // ribbons
     fill(ctx, '#3a6a30', 10, 8, 3, 14);
     fill(ctx, '#4a8a40', 11, 6, 1, 12);
@@ -1862,9 +1913,11 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#3a6a30', 20, 7, 3, 15);
     fill(ctx, '#5aaa50', 21, 5, 1, 12);
     fill(ctx, '#2a5a28', 12, 12, 2, 10);
-    // wet sheen
+    fill(ctx, '#4a8a40', 18, 9, 1, 8);
+    // wet sheen + bubbles
     fill(ctx, 'rgba(180,220,160,0.35)', 11, 10, 1, 4);
     fill(ctx, 'rgba(180,220,160,0.3)', 21, 8, 1, 3);
+    spark(ctx, 12, 7, 'rgba(200,255,180,0.5)');
   });
 
   // Beach crab (non-combat)
@@ -1873,11 +1926,14 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#c04030', 10, 14, 12, 8);
     fill(ctx, '#e06040', 11, 15, 10, 5);
     fill(ctx, '#ff8060', 12, 16, 4, 2);
+    fill(ctx, '#a02820', 14, 19, 4, 2); // shell ridge
     // claws
     fill(ctx, '#c04030', 4, 12, 7, 5);
     fill(ctx, '#c04030', 21, 12, 7, 5);
     fill(ctx, '#e06040', 5, 13, 4, 3);
     fill(ctx, '#e06040', 23, 13, 4, 3);
+    fill(ctx, '#ff8060', 5, 13, 2, 1);
+    fill(ctx, '#ff8060', 25, 13, 2, 1);
     // legs
     fill(ctx, '#a03028', 8, 20, 3, 5);
     fill(ctx, '#a03028', 13, 21, 2, 5);
@@ -2125,6 +2181,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     block(ctx, '#5ad45a', '#1a4a20', 5, 9, 22, 19);
     fill(ctx, '#7dffb3', 7, 11, 18, 9);
     fill(ctx, '#9ef0b8', 9, 12, 8, 4);
+    fill(ctx, '#4aba60', 6, 20, 20, 6); // lower body volume
     fill(ctx, '#fff', 9, 14, 5, 5);
     fill(ctx, '#fff', 18, 14, 5, 5);
     fill(ctx, '#1a1a2e', 11, 16, 3, 3);
@@ -2132,19 +2189,28 @@ export function generateTextures(scene: Phaser.Scene): void {
     spark(ctx, 11, 15, '#ffffff');
     spark(ctx, 20, 15, '#ffffff');
     fill(ctx, '#2a6a2a', 13, 22, 6, 2);
+    // bubble glints + drip
+    fill(ctx, 'rgba(200,255,220,0.5)', 10, 18, 2, 2);
+    fill(ctx, 'rgba(200,255,220,0.4)', 20, 20, 2, 1);
+    fill(ctx, '#3a8a48', 8, 26, 2, 3);
+    fill(ctx, '#3a8a48', 22, 25, 2, 2);
     spark(ctx, 14, 13, '#c9ffe0');
+    spark(ctx, 22, 12, '#e0ffe8');
   });
 
   canvasTex(scene, 'slime-b', ART_RES, ART_RES, (ctx) => {
     fill(ctx, 'rgba(0,0,0,0.2)', 4, 26, 24, 4);
     block(ctx, '#5ad45a', '#1a4a20', 4, 11, 24, 17);
     fill(ctx, '#7dffb3', 6, 13, 20, 7);
+    fill(ctx, '#4aba60', 5, 21, 22, 5);
     fill(ctx, '#fff', 8, 14, 5, 5);
     fill(ctx, '#fff', 19, 13, 5, 5);
     fill(ctx, '#1a1a2e', 10, 16, 3, 3);
     fill(ctx, '#1a1a2e', 21, 15, 3, 3);
     spark(ctx, 10, 15, '#ffffff');
     spark(ctx, 21, 14, '#ffffff');
+    fill(ctx, 'rgba(200,255,220,0.45)', 12, 18, 2, 2);
+    spark(ctx, 16, 12, '#c9ffe0');
   });
 
   canvasTex(scene, 'skeleton', ART_RES, ART_RES, (ctx) => {
@@ -2159,11 +2225,13 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#1a1a2e', 14, 11, 4, 1);
     fill(ctx, '#c8c0b0', 13, 12, 2, 1);
     fill(ctx, '#c8c0b0', 17, 12, 2, 1);
+    fill(ctx, '#d8d0c0', 15, 10, 2, 1); // nasal
     // ribcage
     fill(ctx, '#e8e0d0', 11, 14, 10, 10);
     fill(ctx, '#c8c0b0', 12, 16, 8, 1);
     fill(ctx, '#c8c0b0', 12, 19, 8, 1);
     fill(ctx, '#c8c0b0', 12, 22, 8, 1);
+    fill(ctx, '#b8b0a0', 15, 15, 2, 8); // sternum
     fill(ctx, '#e8e0d0', 5, 14, 6, 4);
     fill(ctx, '#e8e0d0', 21, 14, 6, 4);
     fill(ctx, '#e8e0d0', 10, 24, 5, 6);

@@ -169,6 +169,8 @@ export function cartoonFace(
   ctx.fillRect(x - 1, y, w + 2, h);
   ctx.fillRect(x, y - 1, w, h + 2);
   shadedBlock(ctx, skin, skinHi, skinSh, x, y, w, h);
+  // soft nose bridge shadow
+  fill(ctx, skinSh, x + Math.floor(w / 2) - 1, y + Math.floor(h * 0.55), 2, 1);
   // cheek blush (solid, not dither)
   fill(ctx, opts?.soft ? 'rgba(255,150,160,0.55)' : 'rgba(255,120,140,0.4)', x + 1, y + h - 3, 2, 1);
   fill(ctx, opts?.soft ? 'rgba(255,150,160,0.55)' : 'rgba(255,120,140,0.4)', x + w - 3, y + h - 3, 2, 1);
@@ -183,9 +185,11 @@ export function cartoonFace(
     // sclera
     fill(ctx, '#ffffff', leftEx, eyeY, 3, 3);
     fill(ctx, '#ffffff', rightEx, eyeY, 3, 3);
-    // iris
+    // iris + pupil
     fill(ctx, '#2a3a6a', leftEx + 1, eyeY + 1, 2, 2);
     fill(ctx, '#2a3a6a', rightEx + 1, eyeY + 1, 2, 2);
+    fill(ctx, '#0a0a14', leftEx + 1, eyeY + 2, 1, 1);
+    fill(ctx, '#0a0a14', rightEx + 1, eyeY + 2, 1, 1);
     // catchlight
     spark(ctx, leftEx + 1, eyeY, '#ffffff');
     spark(ctx, rightEx + 1, eyeY, '#ffffff');
@@ -193,10 +197,11 @@ export function cartoonFace(
     fill(ctx, '#3d2b1f', leftEx, eyeY - 1, 3, 1);
     fill(ctx, '#3d2b1f', rightEx, eyeY - 1, 3, 1);
   }
-  // smile
+  // smile + lower lip hint
   const my = y + h - 2;
   fill(ctx, '#c07070', x + Math.floor(w / 2) - 2, my, 4, 1);
   fill(ctx, '#e09090', x + Math.floor(w / 2) - 1, my, 2, 1);
+  fill(ctx, skinHi, x + Math.floor(w / 2) - 1, my - 1, 2, 1);
 }
 
 /**
@@ -220,16 +225,21 @@ export function hairMass(
   fill(ctx, mid, headX + headW - 1, headY - 1, 2, 6); // right lock
   fill(ctx, dark, headX - 1, headY + 2, 1, 3);
   fill(ctx, dark, headX + headW, headY + 2, 1, 3);
+  // volume clumps on crown
+  fill(ctx, dark, headX + 2, headY - 4, 2, 2);
+  fill(ctx, dark, headX + headW - 4, headY - 3, 2, 1);
   // bangs breaking the forehead
   if (opts?.bangs !== false) {
     fill(ctx, mid, headX + 1, headY, 3, 3);
     fill(ctx, mid, headX + 5, headY, 2, 2);
     fill(ctx, mid, headX + headW - 4, headY, 3, 3);
     fill(ctx, dark, headX + 2, headY + 2, 2, 1);
+    fill(ctx, light, headX + 3, headY + 1, 1, 1);
   }
   // single specular streak (not stripes)
   fill(ctx, light, headX + 3, headY - 3, 2, 1);
   spark(ctx, headX + 4, headY - 3, '#a07840');
+  spark(ctx, headX + headW - 3, headY - 2, light);
 }
 
 /**
@@ -276,7 +286,7 @@ export function hiltBelow(
   spark(ctx, cx, y + 6, '#fff3a0');
 }
 
-/** One cobble stone with bevel + optional chip. */
+/** One cobble stone with bevel, grain, optional chip. */
 function cobble(
   ctx: CanvasRenderingContext2D,
   mid: string,
@@ -294,6 +304,12 @@ function cobble(
     fill(ctx, mid, x + 1, y + 1, w - 2, h - 2);
     fill(ctx, light, x + 1, y + 1, w - 3, 1);
     fill(ctx, dark, x + 1, y + h - 2, w - 2, 1);
+    // micro grain / mineral flecks
+    if (w > 6 && h > 6) {
+      fill(ctx, light, x + 2, y + 2, 1, 1);
+      fill(ctx, dark, x + w - 3, y + Math.floor(h / 2), 1, 1);
+      if (w > 8) fill(ctx, light, x + Math.floor(w / 2), y + 3, 1, 1);
+    }
   }
   if (chip && w > 5 && h > 5) {
     fill(ctx, dark, x + w - 3, y + 2, 2, 1);
@@ -383,13 +399,20 @@ export function drawBrickTile(
     fill(ctx, mortar, 0, y + rowH - 1, s, 1);
   }
 
-  // moss / lichen in mortar
+  // moss / lichen in mortar + chips
   fill(ctx, 'rgba(70,120,80,0.45)', 4 + shift, capH + rowH - 1, 3, 1);
   fill(ctx, 'rgba(70,120,80,0.35)', s - 10 - shift, capH + rowH * 2 - 1, 4, 1);
   fill(ctx, 'rgba(90,140,70,0.3)', 14, s - 2, 5, 1);
+  fill(ctx, 'rgba(80,130,90,0.35)', 8, capH + 2, 2, 2);
+  fill(ctx, 'rgba(100,150,80,0.25)', s - 8, capH + rowH + 2, 3, 1);
+  // mortar grit + cracks
+  fill(ctx, 'rgba(0,0,0,0.25)', 10 + shift, capH + rowH, 4, 1);
+  fill(ctx, 'rgba(0,0,0,0.2)', 18, capH + rowH * 2, 3, 1);
+  fill(ctx, 'rgba(255,255,255,0.08)', 6, capH + 1, 5, 1);
 
-  grit(ctx, 'rgba(0,0,0,0.18)', 2, capH + 1, s - 4, s - capH - 3, 5, 1 + variant);
-  grit(ctx, 'rgba(255,255,255,0.08)', 2, capH + 1, s - 4, s - capH - 3, 7, 3);
+  grit(ctx, 'rgba(0,0,0,0.18)', 2, capH + 1, s - 4, s - capH - 3, 4, 1 + variant);
+  grit(ctx, 'rgba(255,255,255,0.08)', 2, capH + 1, s - 4, s - capH - 3, 6, 3);
+  spark(ctx, 8 + shift, capH + 3, 'rgba(200,190,230,0.25)');
 
   // Bottom ground contact shadow (wall sits on floor)
   fill(ctx, 'rgba(0,0,0,0.28)', 0, s - 1, s, 1);
@@ -463,6 +486,8 @@ export function drawFloorTile(
   fill(ctx, 'rgba(0,0,0,0.18)', 11, 9, 2, 2);
   fill(ctx, 'rgba(0,0,0,0.14)', 22, 11, 2, 2);
   fill(ctx, 'rgba(0,0,0,0.12)', 8, 21, 3, 1);
+  fill(ctx, 'rgba(0,0,0,0.1)', 16, 16, 2, 2);
+  fill(ctx, 'rgba(0,0,0,0.1)', 25, 20, 2, 1);
 
   // hairline fractures (diagonal-ish, not full cross grid)
   fill(ctx, dark, 6 + variant, 4, 1, 3);
@@ -470,20 +495,32 @@ export function drawFloorTile(
   fill(ctx, dark, 26 - variant, 6, 1, 4);
   fill(ctx, dark, 9, 18, 1, 2);
   fill(ctx, dark, 19, 7, 2, 1);
+  fill(ctx, dark, 14, 22, 1, 3);
+  fill(ctx, dark, 3, 15, 2, 1);
 
-  // moss flecks
+  // moss flecks + wet glints
   fill(ctx, 'rgba(70,130,90,0.4)', 4 + variant, 6, 2, 1);
   fill(ctx, 'rgba(70,130,90,0.35)', 15, 25 - variant, 3, 1);
   fill(ctx, 'rgba(90,150,100,0.3)', 27, 18, 2, 2);
   fill(ctx, 'rgba(60,110,80,0.3)', 8, 28, 2, 1);
+  fill(ctx, 'rgba(90,150,100,0.25)', 22, 4, 2, 1);
+  fill(ctx, 'rgba(70,130,90,0.3)', 12, 12, 1, 2);
 
-  grit(ctx, 'rgba(0,0,0,0.2)', 1, 1, s - 2, s - 2, 6, 2 + variant);
+  // pebble litter
+  fill(ctx, light, 7, 8, 2, 1);
+  fill(ctx, dark, 7, 9, 2, 1);
+  fill(ctx, lightAlt, 20, 26, 2, 1);
+
+  grit(ctx, 'rgba(0,0,0,0.2)', 1, 1, s - 2, s - 2, 5, 2 + variant);
+  grit(ctx, 'rgba(255,255,255,0.06)', 2, 2, s - 4, s - 4, 7, 1 + variant);
   spark(ctx, 5 + variant, 3, 'rgba(200,190,230,0.35)');
   spark(ctx, 18, 12, 'rgba(200,190,230,0.25)');
   spark(ctx, 28 - variant, 24, 'rgba(200,190,230,0.3)');
+  spark(ctx, 11, 19, 'rgba(180,170,220,0.3)');
 
   // Subtle ground plane shadow along south edge
-  fill(ctx, 'rgba(0,0,0,0.1)', 0, s - 1, s, 1);
+  fill(ctx, 'rgba(0,0,0,0.12)', 0, s - 1, s, 1);
+  fill(ctx, 'rgba(0,0,0,0.06)', 0, s - 2, s, 1);
 }
 
 /**
@@ -517,11 +554,17 @@ export function drawGrassTile(
   }
 
   grit(ctx, 'rgba(40,30,20,0.2)', 0, Math.floor(s * 0.6), s, Math.floor(s * 0.4), 4, 1 + variant);
+  grit(ctx, 'rgba(90,180,100,0.12)', 0, 0, s, Math.floor(s * 0.5), 5, 2 + variant);
 
   // dirt nubs / bare patches (offset per variant)
   fill(ctx, 'rgba(90,70,45,0.4)', 8 + variant * 2, 26, 5, 3);
   fill(ctx, 'rgba(70,55,35,0.35)', 20 - variant, 4 + variant, 4, 2);
   fill(ctx, 'rgba(100,80,50,0.3)', 2, 18, 3, 2);
+  fill(ctx, 'rgba(80,60,40,0.3)', 14, 8, 3, 2);
+  // pebbles
+  fill(ctx, '#9a9080', 11, 22, 2, 1);
+  fill(ctx, '#6a6050', 11, 23, 2, 1);
+  fill(ctx, '#a09888', 24, 14, 2, 1);
 
   const bladeSets: [number, number, number, number][][] = [
     [
@@ -564,7 +607,7 @@ export function drawGrassTile(
     fill(ctx, '#8ef0a8', x, y0, 1, 1);
   }
 
-  // tiny flowers (moved per variant)
+  // tiny flowers (moved per variant) — denser meadow
   const fx = 9 + variant * 3;
   const fy = 17 - variant;
   fill(ctx, '#ffc857', fx % 28, fy, 2, 2);
@@ -572,10 +615,15 @@ export function drawGrassTile(
   fill(ctx, '#ff6b9d', (21 + variant) % 28, 13, 2, 2);
   fill(ctx, '#ffb0c8', (21 + variant) % 28, 13, 1, 1);
   fill(ctx, '#c9a0ff', 15, 27 - (variant % 2), 2, 1);
+  fill(ctx, '#7dffb3', (5 + variant * 2) % 28, 9, 1, 1);
+  fill(ctx, '#fff3a0', (18 + variant) % 28, 22, 2, 1);
+  fill(ctx, '#ffb0c8', 26, 6 + (variant % 2), 1, 1);
 
-  // turf depth rim
+  // turf depth rim + soft top light
   fill(ctx, 'rgba(0,0,0,0.14)', 0, s - 1, s, 1);
+  fill(ctx, 'rgba(0,0,0,0.06)', 0, s - 2, s, 1);
   fill(ctx, 'rgba(255,255,255,0.06)', 0, 0, s, 1);
+  fill(ctx, 'rgba(180,255,200,0.08)', 4, 2, s - 8, 1);
 }
 
 /**
@@ -603,15 +651,20 @@ export function drawDirtTile(
   // Soft depth between clumps
   fill(ctx, 'rgba(0,0,0,0.12)', 10, 10, 3, 2);
   fill(ctx, 'rgba(0,0,0,0.1)', 20, 18, 2, 2);
+  fill(ctx, 'rgba(0,0,0,0.08)', 6, 20, 2, 2);
 
   // wagon / foot ruts (slightly wavy via offset)
   fill(ctx, 'rgba(40,28,20,0.45)', 0, 11 + (o % 2), s, 1);
   fill(ctx, 'rgba(40,28,20,0.35)', 0, 20 - (o % 2), s, 1);
   fill(ctx, 'rgba(100,85,70,0.25)', 0, 12 + (o % 2), s, 1);
+  fill(ctx, 'rgba(40,28,20,0.2)', 0, 15, s, 1);
 
   fill(ctx, '#9a9080', 7 + o, 8, 2, 2);
   fill(ctx, '#6a6050', 7 + o, 9, 2, 1);
   fill(ctx, '#b0a898', 24 - o, 16, 2, 2);
+  fill(ctx, '#8a8070', 14, 24, 2, 1);
+  fill(ctx, '#c0b8a8', 3, 16, 1, 1);
+  grit(ctx, 'rgba(0,0,0,0.12)', 1, 1, s - 2, s - 2, 5, o);
   fill(ctx, 'rgba(0,0,0,0.12)', 0, s - 1, s, 1);
 }
 
@@ -627,13 +680,22 @@ export function drawSandTile(
   // soft dunes
   fill(ctx, 'rgba(255,245,220,0.35)', 0, 6, s, 2);
   fill(ctx, 'rgba(180,150,100,0.25)', 0, 18, s, 2);
+  fill(ctx, 'rgba(255,240,200,0.2)', 0, 12, s, 1);
+  fill(ctx, 'rgba(160,130,80,0.2)', 0, 24, s, 2);
   // shell / grain flecks
   fill(ctx, '#fff8e8', 5, 9, 2, 1);
   fill(ctx, '#d0b888', 14, 4, 2, 1);
   fill(ctx, '#fff0d0', 22, 15, 2, 1);
   fill(ctx, '#c9a870', 8, 22, 2, 1);
   fill(ctx, '#fff8e0', 26, 25, 2, 1);
+  fill(ctx, '#e8d4a0', 18, 20, 2, 1);
+  fill(ctx, '#fff8e8', 3, 16, 1, 1);
+  // tiny shell
+  fill(ctx, '#f0e8d8', 16, 10, 3, 2);
+  fill(ctx, '#d0c0a0', 17, 11, 1, 1);
   grit(ctx, 'rgba(255,250,230,0.35)', 0, 0, s, s, 3, 2);
+  grit(ctx, 'rgba(120,90,50,0.12)', 0, 0, s, s, 6, 1);
+  fill(ctx, 'rgba(0,0,0,0.08)', 0, s - 1, s, 1);
 }
 
 /** Sandy cliff / dune wall for beach borders (not dungeon brick). */
@@ -710,6 +772,10 @@ export function drawWaterTile(
   spark(ctx, 10 + ox, 8, '#e8f8ff');
   spark(ctx, 22 - ox, 16, '#ffffff');
   spark(ctx, 8 + ox, 24, 'rgba(255,255,255,0.7)');
+  spark(ctx, 15, 5 + phase, 'rgba(200,230,255,0.5)');
+  // subsurface glints
+  fill(ctx, 'rgba(100,180,220,0.2)', 12 + ox, 14, 3, 1);
+  fill(ctx, 'rgba(40,80,120,0.25)', 5, 22, 4, 1);
 }
 
 /** Calm green-blue pond with soft ripples + lily pads. */
@@ -745,6 +811,13 @@ function drawPondWater(
   // tiny flower on pad
   fill(ctx, '#f0e8ff', lx + 3, ly + 1, 2, 2);
   fill(ctx, '#ffc857', lx + 3, ly + 1, 1, 1);
+  // reed tips at bank
+  fill(ctx, '#3a6a30', 2, 4, 1, 5);
+  fill(ctx, '#5aaa50', 2, 3, 1, 2);
+  fill(ctx, '#3a6a30', s - 4, 8, 1, 4);
+  // water bugs / glints
+  spark(ctx, 12, 15, 'rgba(255,255,255,0.5)');
+  spark(ctx, 22, 10, 'rgba(200,255,240,0.45)');
 
   // Depth rim
   fill(ctx, 'rgba(0,0,0,0.18)', 0, s - 1, s, 1);
@@ -794,16 +867,21 @@ export function drawTreeSprite(ctx: CanvasRenderingContext2D, _s: number): void 
   // Ground shadow under trunk (depth cue)
   fill(ctx, 'rgba(0,0,0,0.25)', 10, 28, 12, 3);
   fill(ctx, 'rgba(0,0,0,0.15)', 8, 29, 16, 2);
+  fill(ctx, 'rgba(0,0,0,0.1)', 6, 30, 20, 1);
 
-  // Trunk with bark bands + bevel
+  // Trunk with bark bands + bevel + knots
   shadedBlock(ctx, '#5a3a22', '#7a5a38', '#3a2410', 13, 16, 6, 14);
   fill(ctx, '#4a3018', 13, 20, 6, 1);
   fill(ctx, '#4a3018', 13, 25, 6, 1);
   fill(ctx, '#6b4423', 14, 17, 1, 12);
   fill(ctx, '#2a1808', 18, 18, 1, 10);
+  fill(ctx, '#3a2410', 15, 22, 2, 2); // knot
+  fill(ctx, '#6b4423', 15, 22, 1, 1);
   // Root flare
   fill(ctx, '#4a3018', 11, 28, 4, 2);
   fill(ctx, '#4a3018', 17, 28, 4, 2);
+  fill(ctx, '#3a2410', 10, 29, 2, 1);
+  fill(ctx, '#3a2410', 20, 29, 2, 1);
 
   // Canopy lobes (back → front for depth)
   const lobes: [number, number, number, number, string, string, string][] = [
@@ -813,6 +891,7 @@ export function drawTreeSprite(ctx: CanvasRenderingContext2D, _s: number): void 
     [4, 8, 12, 11, '#246838', '#3a9050', '#164028'], // front left
     [14, 9, 13, 10, '#286c3c', '#42a058', '#184828'], // front right
     [10, 5, 10, 9, '#3a9050', '#5ad47a', '#246838'], // crown highlight
+    [8, 12, 8, 6, '#2a7040', '#4aaa60', '#1a4828'], // lower front fluff
   ];
   for (const [x, y, w, h, mid, li, da] of lobes) {
     // Soft oval mass via inset corners (not rectangle)
@@ -822,16 +901,23 @@ export function drawTreeSprite(ctx: CanvasRenderingContext2D, _s: number): void 
     fill(ctx, da, x, y + h - 2, 2, 2);
     fill(ctx, da, x + w - 2, y + h - 2, 2, 2);
     fill(ctx, li, x + 2, y + 1, Math.max(2, w - 6), 2);
+    // leaf cluster dots
+    fill(ctx, li, x + 3, y + 3, 1, 1);
+    fill(ctx, da, x + w - 4, y + 4, 1, 1);
   }
   // Leaf speckles + depth holes
   fill(ctx, '#1a4028', 8, 10, 2, 2);
   fill(ctx, '#1a4028', 20, 8, 2, 2);
   fill(ctx, '#1a4028', 14, 14, 2, 1);
+  fill(ctx, '#0e3018', 22, 14, 2, 1);
   spark(ctx, 12, 6, '#7dffb3');
   spark(ctx, 18, 5, '#6ad48a');
   spark(ctx, 9, 12, '#5ad47a');
+  spark(ctx, 24, 10, '#8ef0a8');
+  spark(ctx, 15, 9, '#c9ffe0');
   // Canopy drop-shadow on trunk
   fill(ctx, 'rgba(0,0,0,0.2)', 12, 16, 8, 2);
+  fill(ctx, 'rgba(0,0,0,0.12)', 13, 18, 6, 1);
 }
 
 /**
