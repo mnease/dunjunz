@@ -6,7 +6,7 @@
  * per material, speckles/blades like Terraria dirt/grass/stone.
  */
 
-import type { LandId, TileKind } from '../types';
+import type { TileKind } from '../types';
 import { COLORS, MAP_PIXEL_H, MAP_PIXEL_W, TILE, SCALE } from '../config';
 import { hash2, seedFromString, valueNoise2 } from './fractal-noise';
 
