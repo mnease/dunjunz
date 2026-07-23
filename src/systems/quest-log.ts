@@ -26,6 +26,11 @@ export interface QuestLogEntry {
   title: string;
   /** One-line where/what. */
   blurb: string;
+  /**
+   * Where to go / what to do next (shown in journal + HUD tracker).
+   * Always fill for active/available; empty ok for locked/done.
+   */
+  hint: string;
   status: QuestStatus;
   /** Progress label e.g. "2/3" or "FOUND" or "". */
   progress: string;
@@ -49,6 +54,9 @@ function mainEntries(save: SaveData): QuestLogEntry[] {
       kind: 'main',
       title: 'THE DUNJUNZ HOLE',
       blurb: 'Meadow stairs → bonk the Dunjun Master. Politely.',
+      hint: dunj
+        ? 'Done. Optional: deeper floors or Woodz / Dezertz.'
+        : 'GO: Meadow · stairs down · clear floors · Throne of Meta (B8).',
       status: dunj ? 'done' : 'active',
       progress: dunj ? 'CLEARED' : 'IN PROGRESS',
       order: 10,
@@ -58,6 +66,11 @@ function mainEntries(save: SaveData): QuestLogEntry[] {
       kind: 'main',
       title: 'WOODZ SIDE BITE',
       blurb: 'Trail north. Wolf Lord. Optional but cool.',
+      hint: woodz
+        ? 'Cleared. Hollow east of Woodz Edge for Best Bud later.'
+        : !dunj
+          ? 'Locked until Dunjunz is cleared (or just explore north anytime).'
+          : 'GO: Trope Trail · north · Woodz · Wolf Lord clearing.',
       status: !dunj ? 'locked' : woodz ? 'done' : 'available',
       progress: woodz ? 'CLEARED' : dunj ? 'OPEN' : 'LOCKED',
       order: 20,
@@ -67,6 +80,11 @@ function mainEntries(save: SaveData): QuestLogEntry[] {
       kind: 'main',
       title: 'DEZERTZ + PRINCESS PRIZELLA',
       blurb: 'Trail south. Sand Wraith. Save the Princess.',
+      hint: rescued
+        ? 'Rescued. Talk to her on the throne for champion jobs.'
+        : !dunj
+          ? 'Finish Dunjunz first (or brave the south early).'
+          : 'GO: Trail south · Dezertz · Sand Tower · bonk Sand Wraith.',
       status: !dunj ? 'locked' : rescued || dez ? 'done' : 'active',
       progress: rescued ? 'RESCUED' : dunj ? 'FIND HER' : 'LOCKED',
       order: 30,
@@ -76,6 +94,11 @@ function mainEntries(save: SaveData): QuestLogEntry[] {
       kind: 'main',
       title: 'GO HOME, RULER',
       blurb: 'After rescue: trail east → Kingdomz throne.',
+      hint: !rescued
+        ? 'Unlocks after Princess Prizella is saved.'
+        : save.visitedRooms?.some((r) => r.startsWith('kingdom'))
+          ? 'Throne visited. More jobs from the Princess.'
+          : 'GO: Trope Trail · east · Kingdom Gate · Throne.',
       status: !rescued
         ? 'locked'
         : save.visitedRooms?.some((r) => r.startsWith('kingdom'))
@@ -115,11 +138,22 @@ function bestBudEntry(save: SaveData): QuestLogEntry {
     status = 'available';
     progress = 'TALK TO PRINCESS PRIZELLA';
   }
+  let hint = 'Save Princess Prizella first.';
+  if (stage === 'complete') {
+    hint = 'Bud follows you. Bag Y = buddy gear.';
+  } else if (stage === 'found') {
+    hint = 'GO: Report to Princess Prizella (tower or Kingdom throne).';
+  } else if (stage === 'accepted' || stage === 'offered') {
+    hint = 'GO: Woodz Edge · east · Best Bud Hollow · talk (E) to the critter.';
+  } else if (rescued) {
+    hint = 'GO: Talk to Princess Prizella for Champion Job #1.';
+  }
   return {
     id: 'champ-best-bud',
     kind: 'champion',
     title: 'CHAMPION #1 · BEST BUD',
     blurb: 'Not a sidekick. A bud. Woodz Hollow east of edge.',
+    hint,
     status,
     progress,
     order: 100,
@@ -133,6 +167,7 @@ function championEntries(save: SaveData): QuestLogEntry[] {
   CHAMPION_QUESTS.forEach((q, i) => {
     const done = isQuestCompleted(save, q.id);
     const active = save.activeQuestId === q.id;
+    const bossDead = save.killed.includes(q.bossId);
     let status: QuestStatus = 'locked';
     let progress = 'LOCKED';
     if (done) {
@@ -140,7 +175,6 @@ function championEntries(save: SaveData): QuestLogEntry[] {
       progress = 'DONE';
     } else if (active) {
       status = 'active';
-      const bossDead = save.killed.includes(q.bossId);
       progress = bossDead ? 'TURN IN AT THRONE' : 'IN THE FIELD';
     } else if (budDone && save.princessSaved) {
       status = 'available';
@@ -149,11 +183,20 @@ function championEntries(save: SaveData): QuestLogEntry[] {
       status = 'locked';
       progress = budDone ? 'SAVE PRINCESS PRIZELLA' : 'FINISH BEST BUD';
     }
+    let hint = progress;
+    if (done) hint = 'Complete.';
+    else if (active && bossDead) {
+      hint = 'GO: Kingdom throne · turn in to Princess Prizella.';
+    } else if (active) hint = q.shortHint;
+    else if (status === 'available') {
+      hint = 'GO: Kingdom throne · ask Princess Prizella for a job.';
+    }
     out.push({
       id: `champ-${q.id}`,
       kind: 'champion',
       title: `CHAMPION · ${q.title}`,
       blurb: q.shortHint,
+      hint,
       status,
       progress,
       order: 110 + i,
@@ -211,12 +254,28 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
 
   let errandsStatus: QuestStatus = queenMet ? 'available' : 'locked';
   let errandsProgress = 'TALK TO THE QUEEN';
+  let errandsHint = 'GO: Living Arch portal · Queen\'s Court · talk (E).';
   if (queenDone) {
     errandsStatus = 'done';
     errandsProgress = 'LEGENDARY BOX';
+    errandsHint = 'Done. Glamdolph may have more news.';
   } else if (qActive || qDoneN > 0) {
     errandsStatus = 'active';
     errandsProgress = `${qDoneN}/3 DONE`;
+    if (!save.flags?.['elf_q_wolves_done']) {
+      errandsHint =
+        'GO: Elven Gate · south · Blighted Thicket · kill both blight wolves · return to Queen.';
+    } else if (!save.flags?.['elf_q_shards_done']) {
+      errandsHint =
+        'GO: Gather 3 WOOD SHARDS (Woodz creeps / forje leftovers) · return to Queen.';
+    } else if (!save.flags?.['elf_q_waters_done']) {
+      errandsHint =
+        'GO: Healing Waters (east of Gate) · E on the spring · return to Queen.';
+    } else {
+      errandsHint = 'GO: Queen\'s Court · talk for the Legendary Elven Box.';
+    }
+  } else if (!queenMet) {
+    errandsHint = 'GO: Unlock Living Arch · enter kingdom · talk to the Queen first.';
   }
 
   // Fellowship of the Few (post–queen reward epic)
@@ -227,9 +286,12 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
   const zoronDown = !!save.flags?.['zoron_defeated'];
   let fellowshipStatus: QuestStatus = queenDone ? 'available' : 'locked';
   let fellowshipProgress = 'QUEEN\'S REWARD FIRST';
+  let fellowshipHint =
+    'Finish the Queen\'s three errands first (Legendary Box).';
   if (zoronDown) {
     fellowshipStatus = 'done';
     fellowshipProgress = 'SWORD OF MANY LIVEZ';
+    fellowshipHint = 'Zoron fallen. The white sword of many Livez is yours.';
   } else if (fellowshipOn) {
     fellowshipStatus = 'active';
     const n =
@@ -240,6 +302,22 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
         : n < 3
           ? `${n}/3 ALLIES`
           : 'MOREDORKZ — ZORON';
+    if (!dwarves) {
+      fellowshipHint =
+        'GO: Far north — Land of the Dwarvez · recruit greatest warriors. (Road opens later.)';
+    } else if (!roarhimz) {
+      fellowshipHint =
+        'GO: Far north-west — Roarhimz horse-folk · recruit fighters. (Road opens later.)';
+    } else if (!elfJoin) {
+      fellowshipHint =
+        'GO: Queen\'s Court · she will send an elven warrior.';
+    } else {
+      fellowshipHint =
+        'GO: Far south — Moredorkz · face Zoron · take the black sword to the volcano.';
+    }
+  } else if (queenDone) {
+    fellowshipHint =
+      'GO: Queen\'s Court · talk again if Glamdolph has not appeared yet.';
   }
 
   return [
@@ -248,6 +326,10 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
       kind: 'side',
       title: 'THE APOLOGY CUBE',
       blurb: 'B1 cube room. Talk or fight. Mixed vibes either way.',
+      hint:
+        cubeStatus === 'done'
+          ? 'Resolved.'
+          : 'GO: Dunjunz B1 · east of entrance · cube room · talk or fight.',
       status: cubeStatus,
       progress: cubeProgress,
       order: 200,
@@ -257,6 +339,7 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
       kind: 'side',
       title: 'COLLECT MAPZ',
       blurb: 'Scroll pickups unfurl lands. Press M.',
+      hint: 'GO: Find mapz scrolls in each land · press M to open Mapz.',
       status: mapzN >= 4 ? 'done' : mapzN > 1 ? 'active' : 'available',
       progress: `${mapzN} LANDS`,
       order: 210,
@@ -266,6 +349,9 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
       kind: 'side',
       title: 'LIVING ARCH',
       blurb: 'West of Woodz Edge. Root → Trunk → Crown.',
+      hint: doorOpen
+        ? 'Door open. GO: Riddle Glade · north · Living Arch · step on cyan portal.'
+        : 'GO: Woodz Edge · west · Riddle Glade · E statues Root→Trunk→Crown · north to Arch.',
       status: doorStatus,
       progress: doorProgress,
       order: 220,
@@ -275,6 +361,11 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
       kind: 'side',
       title: 'QUEEN OF THE WOOD ELVES',
       blurb: 'Pocket realm via Living Arch portal.',
+      hint: queenDone
+        ? 'Audience complete.'
+        : doorOpen
+          ? 'GO: Living Arch portal · east to Waters · north to Court · talk (E).'
+          : 'Open the Living Arch first (Riddle Glade west of Woodz Edge).',
       status: queenStatus,
       progress: queenProgress,
       order: 230,
@@ -284,6 +375,7 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
       kind: 'side',
       title: 'ELVEN ERRANDS',
       blurb: '3 jobs. Full clear → Legendary Elven Box.',
+      hint: errandsHint,
       status: errandsStatus,
       progress: errandsProgress,
       order: 240,
@@ -294,6 +386,7 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
       title: 'THE FELLOWSHIP OF THE FEW',
       blurb:
         'Glamdolph: recruit Dwarvez (N) + Roarhimz (NW), return for an elven warrior, stop Zoron in Moredorkz.',
+      hint: fellowshipHint,
       status: fellowshipStatus,
       progress: fellowshipProgress,
       order: 250,
@@ -301,14 +394,37 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
   ];
 }
 
-/** Full journal list, sorted. */
+const STATUS_RANK: Record<QuestStatus, number> = {
+  active: 0,
+  available: 1,
+  done: 2,
+  locked: 3,
+};
+
+/** Full journal list — active first, then available, then done/locked. */
 export function listQuests(save: SaveData): QuestLogEntry[] {
   const all = [
     ...mainEntries(save),
     ...championEntries(save),
     ...sideEntries(save),
   ];
-  return all.sort((a, b) => a.order - b.order);
+  return all.sort((a, b) => {
+    const sr = STATUS_RANK[a.status] - STATUS_RANK[b.status];
+    if (sr !== 0) return sr;
+    return a.order - b.order;
+  });
+}
+
+/** Best active (or ready) quest for HUD tracker. */
+export function primaryQuestTracker(
+  save: SaveData,
+): { title: string; hint: string } | null {
+  const list = listQuests(save);
+  const pick =
+    list.find((q) => q.status === 'active') ??
+    list.find((q) => q.status === 'available');
+  if (!pick) return null;
+  return { title: pick.title, hint: pick.hint || pick.blurb };
 }
 
 export function questStatusLabel(s: QuestStatus): string {
@@ -339,18 +455,11 @@ export function countQuestProgress(save: SaveData): {
 
 /** Active blurb for HUD/toast — first active quest. */
 export function primaryActiveQuestLine(save: SaveData): string | null {
+  const t = primaryQuestTracker(save);
+  if (t) return `${t.title} · ${t.hint}`;
   if (save.activeQuestId) {
     const q = getQuest(save.activeQuestId);
     if (q) return q.shortHint;
-  }
-  if (save.princessSaved && save.bestBudStage !== 'complete') {
-    return 'CHAMPION #1: BEST BUD · WOODZ HOLLOW';
-  }
-  if (!save.princessSaved && !hasLand(save, 'dunjunz') && !save.bossDefeated) {
-    return 'MAIN: DUNJUNZ · MEADOW STAIRS';
-  }
-  if (!save.princessSaved) {
-    return 'MAIN: SAVE PRINCESS PRIZELLA · DEZERTZ SOUTH';
   }
   return null;
 }

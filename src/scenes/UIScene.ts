@@ -43,6 +43,7 @@ import { ATTR_IDS, ATTR_LABELS } from '../systems/attributes';
 import type { AttrId } from '../types';
 import { isTouchUiPreferred } from '../systems/touch-input';
 import { getBestBud, isCompanionActive } from '../systems/best-bud';
+import { primaryQuestTracker } from '../systems/quest-log';
 import {
   budArmorDef,
   budGearSummary,
@@ -166,6 +167,9 @@ export class UIScene extends Phaser.Scene {
   private roomText: Phaser.GameObjects.Text | null = null;
   /** Row 2 right: control hints + quest mark (separate so they never collide). */
   private hintsText: Phaser.GameObjects.Text | null = null;
+  /** Slim quest tracker under HUD — always shows next step. */
+  private questTrackBg: Phaser.GameObjects.Rectangle | null = null;
+  private questTrackText: Phaser.GameObjects.Text | null = null;
   private dialogBg: Phaser.GameObjects.Rectangle | null = null;
   private dialogText: Phaser.GameObjects.Text | null = null;
   private dialogNextHit: Phaser.GameObjects.Rectangle | null = null;
@@ -421,6 +425,25 @@ export class UIScene extends Phaser.Scene {
         align: 'right',
       })
       .setOrigin(1, 0);
+
+    // Quest tracker strip just under HUD (always-on next step)
+    const trackY = HUD_H + 2;
+    this.questTrackBg = this.add
+      .rectangle(GAME_W / 2, trackY + 11, GAME_W - 20, 22, 0x0a1210, 0.72)
+      .setStrokeStyle(1, 0x3a6a50, 0.55)
+      .setDepth(50)
+      .setScrollFactor(0)
+      .setVisible(false);
+    this.questTrackText = this.add
+      .text(16, trackY + 4, '', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
+        color: '#ffe08a',
+        wordWrap: { width: GAME_W - 40 },
+      })
+      .setDepth(51)
+      .setScrollFactor(0)
+      .setVisible(false);
 
     // Dialog: bottom dock so the playfield/action stays visible
     const dialogH = 168;
@@ -3698,20 +3721,11 @@ export class UIScene extends Phaser.Scene {
     const itemsMaxW = Math.max(120, GAME_W - heartsRight - 24);
     this.itemsText?.setWordWrapWidth(itemsMaxW, true);
 
-    // Row 2 right — controls + quest (never mixed into vitals)
-    const quest =
-      save.activeQuestId
-        ? 'JOB'
-        : save.princessSaved
-          ? '★'
-          : save.landsCleared.includes('dunjunz')
-            ? 'Q'
-            : '';
+    // Row 2 right — controls (J = quest log with WHERE hints)
     const hints = [
       '[I] BAG',
-      '[J] LOG',
+      '[J] QUESTS',
       (save.discoveredMapz?.length ?? 0) > 0 ? '[M] MAP' : null,
-      quest || null,
     ]
       .filter(Boolean)
       .join('  ');
@@ -3728,6 +3742,24 @@ export class UIScene extends Phaser.Scene {
     const hintsW = this.hintsText?.width ?? 160;
     const roomMax = Math.max(160, GAME_W - 32 - hintsW - 28);
     this.roomText?.setWordWrapWidth(roomMax, true);
+
+    // On-screen quest tracker (next step / where to go)
+    const track = primaryQuestTracker(save);
+    const hideTrack =
+      this.inventoryOpen ||
+      this.mapzOpen ||
+      this.forjingOpen ||
+      this.shopOpen ||
+      this.dialogOpen;
+    if (track && !hideTrack && this.questTrackText && this.questTrackBg) {
+      const line = `▶ ${track.title}  ·  ${track.hint}`;
+      this.questTrackText.setText(line);
+      this.questTrackText.setVisible(true);
+      this.questTrackBg.setVisible(true);
+    } else {
+      this.questTrackText?.setVisible(false);
+      this.questTrackBg?.setVisible(false);
+    }
 
     if (this.inventoryOpen) this.renderInventory(save);
   };

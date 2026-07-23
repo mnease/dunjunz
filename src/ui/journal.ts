@@ -67,10 +67,20 @@ export function initJournalUi(): void {
     if (activeTab === 'quests') {
       const list = listQuests(save);
       const prog = countQuestProgress(save);
+      const active = list.filter((q) => q.status === 'active');
       if (summary) {
-        summary.textContent = `QUESTS  ${prog.done}/${prog.total} DONE · ${prog.active} ACTIVE`;
+        summary.textContent = `QUESTS  ${prog.done}/${prog.total} DONE · ${prog.active} ACTIVE · Press J anytime`;
       }
-      body.innerHTML = list.map((q) => questRowHtml(q)).join('');
+      const focus =
+        active.length > 0
+          ? `<div class="journal-focus" role="status">
+              <p class="journal-focus-label">NOW TRACKING</p>
+              ${active.map((q) => questRowHtml(q, true)).join('')}
+            </div>
+            <p class="journal-section-label">ALL QUESTS</p>`
+          : `<p class="journal-section-label">ALL QUESTS</p>`;
+      body.innerHTML =
+        focus + list.map((q) => questRowHtml(q, false)).join('');
     } else {
       const list = listAchievementsForUi(save);
       const prog = achievementProgress(save);
@@ -127,16 +137,25 @@ export function initJournalUi(): void {
     };
 }
 
-function questRowHtml(q: QuestLogEntry): string {
+function questRowHtml(q: QuestLogEntry, focused = false): string {
   const st = questStatusLabel(q.status);
+  const hint =
+    q.hint && (q.status === 'active' || q.status === 'available' || focused)
+      ? `<p class="journal-hint"><span class="journal-hint-label">WHERE</span> ${escapeHtml(q.hint)}</p>`
+      : q.hint && q.status === 'done'
+        ? ''
+        : q.hint
+          ? `<p class="journal-hint journal-hint-muted"><span class="journal-hint-label">WHERE</span> ${escapeHtml(q.hint)}</p>`
+          : '';
   return `
-    <article class="journal-row is-${q.status}" data-status="${q.status}" data-kind="${q.kind}">
+    <article class="journal-row is-${q.status}${focused ? ' is-focus' : ''}" data-status="${q.status}" data-kind="${q.kind}">
       <header class="journal-row-head">
         <span class="journal-status" aria-label="${st}">${statusGlyph(q.status)}</span>
         <h3 class="journal-title">${escapeHtml(q.title)}</h3>
         <span class="journal-progress">${escapeHtml(q.progress)}</span>
       </header>
       <p class="journal-blurb">${escapeHtml(q.blurb)}</p>
+      ${hint}
       <p class="journal-meta">${q.kind.toUpperCase()} · ${st}</p>
     </article>`;
 }
