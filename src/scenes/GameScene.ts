@@ -2388,7 +2388,7 @@ export class GameScene extends Phaser.Scene {
     const rate =
       sw.precip === 'rain' ? 0.085 : sw.precip === 'snow' ? 0.045 : 0.06;
     this.weatherSpawnAcc += delta * rate;
-    // Terraria-style hard pixel precip (not soft particle blobs)
+    // Hard pixel precip (simple textures; fallback to particle)
     const texRain = this.textures.exists('precip_rain')
       ? 'precip_rain'
       : this.textures.exists('particle')

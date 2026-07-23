@@ -30,12 +30,6 @@ import {
   weaponLookFromTemplateId,
 } from './weapon-visuals';
 import {
-  applyTerrariaEntityPass,
-  drawTerrariaLightCookie,
-  shouldApplyTerrariaEntityPass,
-  terrariaEntityPassOpts,
-} from './terraria-style';
-import {
   block,
   cartoonFace,
   dither,
@@ -152,11 +146,6 @@ function canvasTex(
     let seed = 0;
     for (let i = 0; i < key.length; i++) seed = (seed * 31 + key.charCodeAt(i)) | 0;
     applyMicroDetail(ctx, w, h, Math.abs(seed));
-  }
-  // Terraria-style entity pass: outline, jagged edge, drop shadow
-  // Soft ambient (koi/crab/sign…) skips jagged grow — that was the tile-cage artifact.
-  if (shouldApplyTerrariaEntityPass(key)) {
-    applyTerrariaEntityPass(ctx, w, h, terrariaEntityPassOpts(key));
   }
   scene.textures.addCanvas(key, canvas);
 }
@@ -3420,14 +3409,27 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(9, 5, 1, 1);
   });
 
-  // Terraria-style stepped light cookie (hard rings, not pure soft radial).
+  // Soft radial light cookie (white→transparent) for erase-blend lighting.
   // Large enough to scale down for torch / lantern / wall radii.
   const cookieSize = 256;
   canvasTex(scene, 'light_cookie', cookieSize, cookieSize, (ctx) => {
-    drawTerrariaLightCookie(ctx, cookieSize);
+    const g = ctx.createRadialGradient(
+      cookieSize / 2,
+      cookieSize / 2,
+      0,
+      cookieSize / 2,
+      cookieSize / 2,
+      cookieSize / 2,
+    );
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.35, 'rgba(255,255,255,0.75)');
+    g.addColorStop(0.7, 'rgba(255,255,255,0.25)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, cookieSize, cookieSize);
   });
 
-  // Terraria precip — hard pixel flakes / rain streaks
+  // Weather precip (simple hard pixels; not terraria post-process)
   canvasTex(scene, 'precip_rain', 4, 10, (ctx) => {
     ctx.fillStyle = '#88b0d8';
     ctx.fillRect(1, 0, 2, 9);
@@ -3439,8 +3441,6 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(1, 1, 3, 3);
     ctx.fillRect(2, 0, 1, 5);
     ctx.fillRect(0, 2, 5, 1);
-    ctx.fillStyle = '#e8f0ff';
-    ctx.fillRect(2, 2, 1, 1);
   });
   canvasTex(scene, 'precip_sleet', 4, 8, (ctx) => {
     ctx.fillStyle = '#c8e0f0';

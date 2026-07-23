@@ -3,7 +3,7 @@
 **Status:** Council plan LOCKED + **P0 live restore shipped** (2026-07-23).  
 **Trigger:** Continuous ground + Terraria post-process still fails Core Keeper quality; blotchy water, no clean tan shores.  
 **North star:** Discrete autotile truth (Terraria / Core Keeper), not noise-skinned continuous paint.  
-**Live `main`:** discrete per-cell tiles restored (`placeRoomTiles`); soft entity outlines kept.  
+**Live `main`:** full graphics revert — discrete tiles + pre-terraria sprites/light (no entity outline pass, soft radial light cookie).  
 **Archive tag:** `archive/continuous-ground-2026-07-23`  
 **Rebuild branch:** `graphics-v2` (autotile + land-aware shore rings next).
 
