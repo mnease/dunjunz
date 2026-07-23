@@ -29,6 +29,8 @@ import {
 } from '../systems/class-gear';
 // Ensure class-gear registers DEF compare hook
 import '../systems/class-gear';
+import { getClass } from '../systems/classes';
+import { getRace } from '../systems/races';
 import { ATTR_IDS, ATTR_LABELS } from '../systems/attributes';
 import type { AttrId } from '../types';
 import { isTouchUiPreferred } from '../systems/touch-input';
@@ -3094,12 +3096,16 @@ export class UIScene extends Phaser.Scene {
         ].join('\n'),
       );
     } else {
+      const raceName = getRace(s.race).name;
+      const className =
+        getClass(s.primaryClass)?.name ??
+        (s.level >= 5 ? 'UNCLASSED' : 'NO CLASS YET');
       this.invStats?.setText(
         [
-          `COINS ${s.coins}c`,
-          `HP ${s.hp}/${s.maxHp}`,
-          `DEF ${s.armor}`,
-          `WPN ${s.hasSword ? 'Y' : '-'} KEY ${s.hasKey ? 'Y' : '-'}`,
+          `RACE ${raceName}`,
+          `CLASS ${className}`,
+          `COINS ${s.coins}c  HP ${s.hp}/${s.maxHp}`,
+          `DEF ${s.armor}  WPN ${s.hasSword ? 'Y' : '-'}  KEY ${s.hasKey ? 'Y' : '-'}`,
         ].join('\n'),
       );
       const packages = s.attrPoints > 0 || !!s.pendingAttrMajor;

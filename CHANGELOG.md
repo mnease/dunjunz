@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Inventory shows race** — character details plate lists **RACE** (and class) with coins/HP/def.
 - **Mapz major upgrade** — rooms scale up (72–148px, was fixed 56), parchment backdrop, compass, land terrain overlays, feature icons (beach/guild/cave/boss/chest/shop/forje/water/stairs…), thicker corridors, room list panel, longer labels.
 - **Loot crate flash + big reveal** — tutorial graduate and brag boxes materialize mid-room in a **flash of light**. Open with **E** on the crate (or bag **U**) to a **large window** with big item icons of everything inside.
 - **Race-first beach identity** — pick ancestry (all 10 races) then **Male / Female** portraits of that race. Shared `drawBodyBase` previews (no more generic stump). Height bands: tall elf, medium human/orc, short dwarf (long beard), tiny gnome/halfling; half-orc green skin, etc. Cosmetic until L25 ritual.
