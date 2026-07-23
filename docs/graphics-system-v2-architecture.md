@@ -7,6 +7,18 @@
 **Archive tag:** `archive/continuous-ground-2026-07-23`  
 **Rebuild branch:** `graphics-v2` (autotile + land-aware shore rings next).
 
+### Permanent preview (always on)
+
+| URL | Role |
+| --- | --- |
+| **https://dunjunz-graphics-v2.vercel.app** | Stable alias — points at latest `graphics-v2` deploy |
+| **https://graphics.dunjunz.com** | Branch domain (Vercel `gitBranch=graphics-v2`) — needs DNS CNAME if not resolving yet |
+| **https://www.dunjunz.com** | Production (`main` only) |
+
+**Workflow:** push to `graphics-v2` → Vercel Preview rebuilds → stable alias / branch domain update. Do not merge unfinished v2 to `main`.
+
+**DNS for graphics.dunjunz.com (if blank):** CNAME `graphics` → `cname.vercel-dns.com` on the dunjunz.com registrar (or A records Vercel recommends). Domain already registered on the dunjunz Vercel project.
+
 ---
 
 ## A. How reference games build graphics (ground-up)
