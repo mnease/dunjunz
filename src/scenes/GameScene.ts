@@ -219,6 +219,16 @@ import {
   touchElfStatue,
 } from '../systems/elfwood';
 import {
+  FLAG_FELLOWSHIP_STARTED,
+  GLAMDOLPH_ID,
+  GLAMDOLPH_ROOM,
+  GLAMDOLPH_TILE,
+  glamdolphArrivalDialog,
+  glamdolphBanterDialog,
+  markFellowshipStarted,
+  shouldTriggerFellowshipCutscene,
+} from '../systems/fellowship';
+import {
   markLandCleared,
   princessChampionDialog,
   questHint,
@@ -2799,6 +2809,7 @@ export class GameScene extends Phaser.Scene {
     this.ensureBossExitPortal();
     this.ensureHardModeGates();
     this.maybePromoteCaptain();
+    this.ensureGlamdolphInCourt();
     this.startRoomAmbience();
     this.spawnSavedPlacedTorches();
     // New outdoor cloud field per room
@@ -3385,22 +3396,24 @@ export class GameScene extends Phaser.Scene {
     const tex =
       def.id === 'queen-wood-elves' && this.textures.exists('elf_queen')
         ? 'elf_queen'
-        : (def.id === 'elf-sentry' ||
-              def.id === 'elf-archer' ||
-              def.id === 'elf-courtier' ||
-              def.id === 'elf-healer' ||
-              (def.id ?? '').startsWith('elf-guard')) &&
-            this.textures.exists('elf_guard')
-          ? 'elf_guard'
-          : def.id === 'captain' && this.textures.exists('captain')
-            ? 'captain'
-            : def.id === 'royal-goose' && this.textures.exists('boss')
-              ? 'boss'
-              : isSkyRedwood && this.textures.exists('tree_redwood')
-                ? 'tree_redwood'
-                : rackTex && this.textures.exists(rackTex)
-                  ? rackTex
-                  : (ENTITY_TEX[def.kind] ?? 'npc');
+        : def.id === GLAMDOLPH_ID && this.textures.exists('glamdolph')
+          ? 'glamdolph'
+          : (def.id === 'elf-sentry' ||
+                def.id === 'elf-archer' ||
+                def.id === 'elf-courtier' ||
+                def.id === 'elf-healer' ||
+                (def.id ?? '').startsWith('elf-guard')) &&
+              this.textures.exists('elf_guard')
+            ? 'elf_guard'
+            : def.id === 'captain' && this.textures.exists('captain')
+              ? 'captain'
+              : def.id === 'royal-goose' && this.textures.exists('boss')
+                ? 'boss'
+                : isSkyRedwood && this.textures.exists('tree_redwood')
+                  ? 'tree_redwood'
+                  : rackTex && this.textures.exists(rackTex)
+                    ? rackTex
+                    : (ENTITY_TEX[def.kind] ?? 'npc');
     const placed = this.roomExpand
       ? mapEntityTile(def.x, def.y, this.roomExpand)
       : { x: def.x, y: def.y };
@@ -4608,6 +4621,100 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
     this.game.events.emit('dialog-show', r.dialog);
     if (r.toast) this.game.events.emit('toast', r.toast);
+    if (r.triggerFellowshipCutscene) {
+      this.queueFellowshipCutsceneAfterDialog();
+    }
+  }
+
+  private talkGlamdolph(): void {
+    this.game.events.emit(
+      'dialog-show',
+      glamdolphBanterDialog(this.save),
+    );
+  }
+
+  /**
+   * After queen's final reward dialog closes: earthquake → light burst →
+   * Glamdolph appears with Fellowship of the Few briefing.
+   */
+  private queueFellowshipCutsceneAfterDialog(): void {
+    if (!shouldTriggerFellowshipCutscene(this.save)) return;
+    const onClose = (open: boolean) => {
+      if (open) return;
+      this.game.events.off('dialog-state', onClose);
+      this.time.delayedCall(200, () => this.runFellowshipCutscene());
+    };
+    this.game.events.on('dialog-state', onClose);
+  }
+
+  private runFellowshipCutscene(): void {
+    if (!shouldTriggerFellowshipCutscene(this.save)) return;
+    if (this.room?.id !== GLAMDOLPH_ROOM && this.room?.id !== 'elfwood_court') {
+      // Still mark so we don't softlock; spawn when they re-enter court
+      this.save = markFellowshipStarted(this.save);
+      writeSave(this.save);
+      this.game.events.emit(
+        'toast',
+        'THE ROOTS TREMBLE… FIND THE COURT AGAIN',
+      );
+      return;
+    }
+
+    playSfx('error'); // low rumble stand-in
+    // Earthquake
+    this.cameras.main.shake(1400, 0.018);
+    this.game.events.emit('toast', 'THE GROUND SHAKES…');
+
+    this.time.delayedCall(900, () => {
+      // Bright burst of light
+      playSfx('success');
+      const cx = this.player?.x ?? this.cameras.main.centerX;
+      const cy = this.player?.y ?? this.cameras.main.centerY;
+      sparkBurst(this, cx, cy, 0xffffff, 16);
+      sparkBurst(this, cx, cy, 0xfff8c0, 12);
+      sparkBurst(this, cx, cy, 0x7dffb3, 8);
+      if (motionAllowed()) {
+        const flash = this.add
+          .rectangle(cx, cy, GAME_W * 2, GAME_H * 2, 0xffffff, 0.95)
+          .setDepth(40)
+          .setScrollFactor(0);
+        this.tweens.add({
+          targets: flash,
+          alpha: 0,
+          duration: 700,
+          ease: 'Cubic.easeOut',
+          onComplete: () => flash.destroy(),
+        });
+        this.cameras.main.flash(500, 255, 255, 240);
+      }
+
+      this.time.delayedCall(400, () => {
+        this.spawnGlamdolph();
+        this.save = markFellowshipStarted(this.save);
+        writeSave(this.save);
+        this.emitHud();
+        this.game.events.emit('toast', 'THE FELLOWSHIP OF THE FEW');
+        this.game.events.emit('dialog-show', glamdolphArrivalDialog());
+      });
+    });
+  }
+
+  private spawnGlamdolph(): void {
+    if (this.actors.some((a) => a.alive && a.id === GLAMDOLPH_ID)) return;
+    this.spawnEntity({
+      kind: 'npc',
+      id: GLAMDOLPH_ID,
+      x: GLAMDOLPH_TILE.x,
+      y: GLAMDOLPH_TILE.y,
+      dialog: glamdolphArrivalDialog(),
+    });
+  }
+
+  /** Persist Glamdolph in court after the cutscene. */
+  private ensureGlamdolphInCourt(): void {
+    if (this.room?.id !== GLAMDOLPH_ROOM) return;
+    if (!this.save.flags?.[FLAG_FELLOWSHIP_STARTED]) return;
+    this.spawnGlamdolph();
   }
 
   private useHealingSpring(): void {
@@ -5496,6 +5603,10 @@ export class GameScene extends Phaser.Scene {
     }
     if (best.id === QUEEN_ID) {
       this.talkElfQueen();
+      return;
+    }
+    if (best.id === GLAMDOLPH_ID) {
+      this.talkGlamdolph();
       return;
     }
     if (best.id === HEALING_SPRING_ID) {

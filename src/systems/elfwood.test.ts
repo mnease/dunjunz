@@ -27,6 +27,7 @@ import {
   talkQueen,
   touchElfStatue,
 } from './elfwood';
+import { markFellowshipStarted } from './fellowship';
 
 describe('elfwood statue puzzle', () => {
   it('root → trunk → crown unlocks door', () => {
@@ -133,17 +134,24 @@ describe('elfwood queen quests', () => {
     s = r.save;
     expect(s.flags[FLAG_Q_WATERS_DONE]).toBe(true);
 
-    // final box
+    // final box → queues Fellowship of the Few cutscene
     r = talkQueen(s);
     s = r.save;
     expect(s.flags[FLAG_GOT_ELVEN_BOX]).toBe(true);
     expect(s.flags[FLAG_QUEEN_COMPLETE]).toBe(true);
     expect(s.stacks[LEGENDARY_ELVEN_BOX_ID]).toBe(1);
+    expect(r.triggerFellowshipCutscene).toBe(true);
 
-    // idempotent
+    // box grant is idempotent; cutscene re-prompts until Glamdolph fires
     const again = talkQueen(s);
     expect(again.save.stacks[LEGENDARY_ELVEN_BOX_ID]).toBe(1);
-    expect(again.dialog.join(' ')).toMatch(/FORJE|NAP|FONDLY/i);
+    expect(again.triggerFellowshipCutscene).toBe(true);
+
+    // after fellowship starts, idle banter (or quest reminder)
+    s = markFellowshipStarted(s);
+    const idle = talkQueen(s);
+    expect(idle.save.stacks[LEGENDARY_ELVEN_BOX_ID]).toBe(1);
+    expect(idle.dialog.join(' ')).toMatch(/GLAMDOLPH|FELLOWSHIP|MOREDORKZ|FORJE|NAP/i);
   });
 });
 

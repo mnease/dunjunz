@@ -219,6 +219,29 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
     errandsProgress = `${qDoneN}/3 DONE`;
   }
 
+  // Fellowship of the Few (post–queen reward epic)
+  const fellowshipOn = !!save.flags?.['fellowship_of_the_few'];
+  const dwarves = !!save.flags?.['fellowship_dwarves'];
+  const roarhimz = !!save.flags?.['fellowship_roarhimz'];
+  const elfJoin = !!save.flags?.['fellowship_elf_warrior'];
+  const zoronDown = !!save.flags?.['zoron_defeated'];
+  let fellowshipStatus: QuestStatus = queenDone ? 'available' : 'locked';
+  let fellowshipProgress = 'QUEEN\'S REWARD FIRST';
+  if (zoronDown) {
+    fellowshipStatus = 'done';
+    fellowshipProgress = 'SWORD OF MANY LIVEZ';
+  } else if (fellowshipOn) {
+    fellowshipStatus = 'active';
+    const n =
+      (dwarves ? 1 : 0) + (roarhimz ? 1 : 0) + (elfJoin ? 1 : 0);
+    fellowshipProgress =
+      n === 0
+        ? 'N: DWARVEZ · NW: ROARHIMZ'
+        : n < 3
+          ? `${n}/3 ALLIES`
+          : 'MOREDORKZ — ZORON';
+  }
+
   return [
     {
       id: 'side-cube',
@@ -264,6 +287,16 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
       status: errandsStatus,
       progress: errandsProgress,
       order: 240,
+    },
+    {
+      id: 'side-fellowship',
+      kind: 'side',
+      title: 'THE FELLOWSHIP OF THE FEW',
+      blurb:
+        'Glamdolph: recruit Dwarvez (N) + Roarhimz (NW), return for an elven warrior, stop Zoron in Moredorkz.',
+      status: fellowshipStatus,
+      progress: fellowshipProgress,
+      order: 250,
     },
   ];
 }

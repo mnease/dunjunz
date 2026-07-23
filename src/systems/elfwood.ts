@@ -7,6 +7,10 @@
 import type { SaveData } from '../types';
 import { mintItem, getTemplate } from './items';
 import { syncDerivedStats } from './inventory';
+import {
+  queenFellowshipIdleDialog,
+  shouldTriggerFellowshipCutscene,
+} from './fellowship';
 
 // ── Room / entity ids ──────────────────────────────────────────────
 
@@ -251,6 +255,8 @@ export type QueenTalkResult = {
   save: SaveData;
   dialog: string[];
   toast?: string;
+  /** After box grant (or re-talk if cutscene missed): run Glamdolph arrival. */
+  triggerFellowshipCutscene?: boolean;
 };
 
 function wolvesKilled(save: SaveData): boolean {
@@ -354,7 +360,7 @@ export function talkQueen(save: SaveData): QueenTalkResult {
     }
   }
 
-  // 3. Final box when all three done
+  // 3. Final box when all three done → Fellowship of the Few cutscene
   if (
     flag(next, FLAG_Q_WOLVES_DONE) &&
     flag(next, FLAG_Q_SHARDS_DONE) &&
@@ -374,18 +380,31 @@ export function talkQueen(save: SaveData): QueenTalkResult {
         'TAKE THE LEGENDARY ELVEN BOX.',
         'ONE MITHRIL GIFT. RANDOM. FATE IS A JERK.',
         'OPEN IT FROM INVENTORY. TRY NOT TO CRY ON THE MOSS.',
+        '',
+        '…WAIT. DO YOU FEEL THAT?',
+        'THE ROOTS ARE TREMBLING.',
       ],
       toast: 'LEGENDARY ELVEN BOX!',
+      triggerFellowshipCutscene: true,
     };
   }
 
   if (flag(next, FLAG_QUEEN_COMPLETE) || flag(next, FLAG_GOT_ELVEN_BOX)) {
+    // Safety: box already granted but cutscene never fired (old save / reload)
+    if (shouldTriggerFellowshipCutscene(next)) {
+      return {
+        save: next,
+        dialog: [
+          'QUEEN: THE BOX WAS ONLY THE BEGINNING.',
+          'THE ROOTS TREMBLE AGAIN…',
+        ],
+        toast: 'SOMETHING APPROACHES…',
+        triggerFellowshipCutscene: true,
+      };
+    }
     return {
       save: next,
-      dialog: [
-        'QUEEN: THE WOODZ REMEMBER YOU. MOSTLY FONDLY.',
-        'GO FORJE. OR NAP. BOTH VALID.',
-      ],
+      dialog: queenFellowshipIdleDialog(next),
     };
   }
 

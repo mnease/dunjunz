@@ -44,6 +44,7 @@ import {
   drawSkyRedwoodSprite,
   drawTreeSprite,
   drawWaterTile,
+  drawGlamdolph,
   drawWoodElfGuard,
   drawWoodElfQueen,
   fill,
@@ -2986,6 +2987,10 @@ export function generateTextures(scene: Phaser.Scene): void {
 
   canvasTex(scene, 'elf_queen', ART_RES, ART_RES, (ctx) => {
     drawWoodElfQueen(ctx);
+  });
+
+  canvasTex(scene, 'glamdolph', ART_RES, ART_RES, (ctx) => {
+    drawGlamdolph(ctx);
   });
 
   canvasTex(scene, 'koi', ART_RES, ART_RES, (ctx) => {

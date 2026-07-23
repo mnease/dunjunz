@@ -1025,6 +1025,40 @@ export function drawWoodElfGuard(ctx: CanvasRenderingContext2D): void {
 }
 
 /**
+ * Glamdolph — grey wizard, long white beard, staff, ominous news delivery.
+ * Author 32×32.
+ */
+export function drawGlamdolph(ctx: CanvasRenderingContext2D): void {
+  // Grey robes
+  shadedBlock(ctx, '#6a6a78', '#9a9aa8', '#3a3a48', 7, 12, 18, 16);
+  fill(ctx, '#5a5a68', 6, 14, 3, 14);
+  fill(ctx, '#5a5a68', 23, 14, 3, 14);
+  fill(ctx, '#8a8a98', 10, 14, 12, 8);
+  // Hood / hat point
+  fill(ctx, '#5a5a68', 10, 2, 12, 6);
+  fill(ctx, '#4a4a58', 12, 0, 8, 4);
+  fill(ctx, '#3a3a48', 14, 0, 4, 2);
+  // Head
+  shadedBlock(ctx, '#e0c0a0', '#f0d8b8', '#b89070', 11, 6, 10, 7);
+  // Long white beard
+  fill(ctx, '#e8e8f0', 10, 12, 12, 10);
+  fill(ctx, '#f4f4fa', 11, 13, 10, 10);
+  fill(ctx, '#d0d0d8', 12, 18, 8, 6);
+  fill(ctx, '#f8f8ff', 13, 20, 6, 5);
+  fill(ctx, '#c8c8d0', 14, 24, 4, 4);
+  // Eyes under brow
+  fill(ctx, '#222', 13, 8, 2, 2);
+  fill(ctx, '#222', 18, 8, 2, 2);
+  fill(ctx, '#7dffb3', 13, 8, 1, 1); // knowing glint
+  // Staff
+  fill(ctx, '#8b5a2b', 25, 4, 2, 22);
+  fill(ctx, '#c9a227', 24, 3, 4, 4);
+  fill(ctx, '#7dffb3', 25, 2, 2, 2);
+  spark(ctx, 25, 2, '#ffffff');
+  spark(ctx, 14, 16, '#e8e8f0');
+}
+
+/**
  * Queen of the Wood Elves — all white robes, long blonde hair, crown spark.
  * Author 32×32.
  */

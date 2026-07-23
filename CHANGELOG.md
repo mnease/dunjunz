@@ -21,6 +21,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **The Fellowship Of The Few** — after the Wood Elf queen’s Legendary Elven Box reward: earthquake, light burst, and **Glamdolph** (grey wizard) appears with ominous news of **Zoron**, the black sword, and **Moredorkz**. Quest: recruit Dwarvez (far north) + Roarhimz (far NW), return for an elven warrior, stop Zoron. Journal side entry tracks progress (lands stubbed for later).
 - **Wood Elf kingdom atmosphere** — ~3× sky-piercing redwoods (tops cropped off-frame), denser glade/arch/kingdom rooms; wood elves with green cloaks, long blonde hair, blades & longbows; queen in all-white with long blonde hair.
 - **Enchanted Woodz + Wood Elf kingdom** — gigantic redwoods across Woodz; west of Edge: Riddle Glade (Root→Trunk→Crown) unlocks Living Arch portal into a Wood Elf pocket realm (gate, healing waters, queen’s court, blight thicket). Queen gives 3 errands → **Legendary Elven Box** (one random mithril weapon/armor/jewelry). Design: `docs/elfwood-kingdom-v1.md`.
 - **Fire staff lights the room** — fireballs emit a bright moving light cookie as they fly, illuminating dark crawl rooms mid-flight (hard-mode DM fireballs too).
