@@ -2017,6 +2017,40 @@ describe('best bud quest', () => {
     expect(`${sign!.x},${sign!.y}`).not.toBe(`${bud!.x},${bud!.y}`);
   });
 
+  it('woodz_edge west mouth reaches dirt path (creek bridged)', () => {
+    const tiles = ROOMS.woodz_edge.tiles;
+    const H = tiles.length;
+    const W = tiles[0]!.length;
+    const blocked = (c: string) => c === '#' || c === '~';
+    const start = { x: 0, y: 5 }; // west mouth mid-row
+    const q = [start];
+    const seen = new Set<string>(['0,5']);
+    while (q.length) {
+      const { x, y } = q.shift()!;
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ] as const) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const k = `${nx},${ny}`;
+        if (seen.has(k)) continue;
+        const ch = tiles[ny]![nx]!;
+        if (blocked(ch)) continue;
+        seen.add(k);
+        q.push({ x: nx, y: ny });
+      }
+    }
+    // Must reach central dirt corridor and all four exits
+    expect(seen.has('8,5')).toBe(true); // mid dirt
+    expect(seen.has('15,5')).toBe(true); // east hollow
+    expect(seen.has('8,1')).toBe(true); // toward north door
+    expect(seen.has('8,9')).toBe(true); // toward south door
+  });
+
   it('woodz_hollow continue spawn is walkable and not sealed', async () => {
     const { spawnForContinue, isWalkableTile } = await import('./map-spawn');
     const room = ROOMS.woodz_hollow;

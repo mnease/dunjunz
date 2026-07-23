@@ -915,16 +915,17 @@ export const ROOMS: Record<string, RoomDef> = {
     north: 'woodz_deep',
     east: 'woodz_hollow',
     west: 'woodz_glade',
-    // Same creek as woodz_path — river strip continues north through the edge.
-    // Rows 4–6 open west (glade) and east (hollow).
+    // Creek runs N–S west of the dirt path (same as woodz_path).
+    // Rows 4–6: west↔east mouths stay open with a DIRT BRIDGE over the creek
+    // so the west glade link is never a water dead-end.
     tiles: [
       '########D#######',
       '#g~~.dddddd..gg#',
       '#g~~##dddd##..g#',
       '#g~~#dddddd#..g#',
-      '.g~~#dddddd#.gg.',
-      'g~~.dddddddddddd',
-      '.g~~#dddddd#.gg.',
+      '.gdd#dddddd#.gg.',
+      'gddd.ddddddddddd',
+      '.gdd#dddddd#.gg.',
       '#g~~#dddddd#..g#',
       '#g~~##dddd##..g#',
       '#g~~.dddddd..gg#',
