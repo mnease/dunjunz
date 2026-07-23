@@ -1024,6 +1024,81 @@ export function drawWoodElfGuard(ctx: CanvasRenderingContext2D): void {
   spark(ctx, 25, 12, '#7dffb3');
 }
 
+/** Royal carpet / dais floor tile — purple with gold inlay. Author 32. */
+export function drawCarpetTile(ctx: CanvasRenderingContext2D, _s: number): void {
+  fill(ctx, '#3a1a48', 0, 0, 32, 32);
+  fill(ctx, '#4a2860', 1, 1, 30, 30);
+  fill(ctx, '#5a3878', 2, 2, 28, 28);
+  // Gold border
+  fill(ctx, '#c9a227', 0, 0, 32, 2);
+  fill(ctx, '#c9a227', 0, 30, 32, 2);
+  fill(ctx, '#c9a227', 0, 0, 2, 32);
+  fill(ctx, '#c9a227', 30, 0, 2, 32);
+  // Center diamond
+  fill(ctx, '#ffc857', 14, 10, 4, 12);
+  fill(ctx, '#ffc857', 10, 14, 12, 4);
+  fill(ctx, '#e8d070', 15, 15, 2, 2);
+  // Corner flecks
+  fill(ctx, '#7a50a0', 4, 4, 3, 3);
+  fill(ctx, '#7a50a0', 25, 4, 3, 3);
+  fill(ctx, '#7a50a0', 4, 25, 3, 3);
+  fill(ctx, '#7a50a0', 25, 25, 3, 3);
+}
+
+/** Throne chair — tall back, gold, cushions. Author 32. */
+export function drawThrone(ctx: CanvasRenderingContext2D): void {
+  // Base plinth
+  shadedBlock(ctx, '#6b4423', '#8b5a2b', '#3a2410', 4, 24, 24, 6);
+  fill(ctx, '#c9a227', 5, 24, 22, 2);
+  // Seat
+  shadedBlock(ctx, '#6a2040', '#a04068', '#3a1020', 7, 16, 18, 10);
+  fill(ctx, '#ff6b9d', 9, 18, 14, 6);
+  // Arms
+  shadedBlock(ctx, '#c9a227', '#ffc857', '#8a6820', 4, 14, 5, 12);
+  shadedBlock(ctx, '#c9a227', '#ffc857', '#8a6820', 23, 14, 5, 12);
+  // High back
+  shadedBlock(ctx, '#4a2060', '#7a40a0', '#2a1040', 8, 2, 16, 16);
+  fill(ctx, '#ffc857', 9, 3, 14, 2);
+  fill(ctx, '#c9a227', 14, 0, 4, 4); // crest
+  fill(ctx, '#ffc857', 15, 0, 2, 3);
+  fill(ctx, '#7dffb3', 15, 1, 2, 1);
+  // Cushion tufts
+  fill(ctx, '#ffb0c8', 12, 8, 3, 3);
+  fill(ctx, '#ffb0c8', 17, 8, 3, 3);
+  spark(ctx, 15, 2, '#ffffff');
+}
+
+/** Stone pillar with gold capital. Author 32. */
+export function drawPillar(ctx: CanvasRenderingContext2D): void {
+  // Capital
+  shadedBlock(ctx, '#c9a227', '#ffc857', '#8a6820', 6, 2, 20, 5);
+  fill(ctx, '#e8d070', 8, 3, 16, 2);
+  // Shaft
+  shadedBlock(ctx, '#6a6a78', '#9a9aa8', '#3a3a48', 10, 6, 12, 22);
+  fill(ctx, '#b0b0c0', 11, 8, 2, 18);
+  fill(ctx, '#4a4a58', 20, 8, 1, 18);
+  // Base
+  shadedBlock(ctx, '#5a5a68', '#8a8a98', '#2a2a35', 7, 26, 18, 5);
+  fill(ctx, '#c9a227', 8, 26, 16, 1);
+}
+
+/** Wall banner / hanging flag (purple + gold). Author 32. */
+export function drawBanner(ctx: CanvasRenderingContext2D): void {
+  // Pole
+  fill(ctx, '#5a3d1a', 14, 0, 4, 6);
+  fill(ctx, '#c9a227', 13, 0, 6, 3);
+  // Cloth
+  shadedBlock(ctx, '#6a2040', '#c04070', '#3a1028', 6, 5, 20, 22);
+  fill(ctx, '#ff6b9d', 8, 7, 16, 3);
+  fill(ctx, '#ffc857', 12, 12, 8, 8);
+  fill(ctx, '#c9a227', 14, 14, 4, 4);
+  // Bottom points
+  fill(ctx, '#4a1830', 6, 24, 6, 4);
+  fill(ctx, '#4a1830', 13, 26, 6, 4);
+  fill(ctx, '#4a1830', 20, 24, 6, 4);
+  spark(ctx, 15, 15, '#fff0a0');
+}
+
 /**
  * Royal Goose — white goose, orange bill, crown, boss presence.
  * Author 32×32. (Not a tinted humanoid.)

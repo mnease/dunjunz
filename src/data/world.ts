@@ -4,6 +4,7 @@ import { buildAllDeepRooms } from './world-deep';
 /**
  * Tile legend (authored 16×11 rooms, NES Zelda-style):
  *  . floor   # wall   g grass   d dirt   s sand   ~ water
+ *  c royal carpet / dais (kingdom throne)
  *  Water auto-classifies: ocean (beach), pond (closed → koi), river (channels / edge strips).
  *  D open door   L locked door
  *  S stairs DOWN   U stairs UP
@@ -2048,20 +2049,33 @@ export const ROOMS: Record<string, RoomDef> = {
     mapX: 3,
     mapY: 1,
     south: 'kingdom_courtyard',
+    // `c` = royal carpet / dais (walkable). Pillars leave side aisles open.
     tiles: [
       '################',
       '#..............#',
       '#..##......##..#',
-      '#..............#',
-      '#..............#',
-      '#..............#',
-      '#..##......##..#',
-      '#..............#',
-      '#..............#',
-      '#..............#',
+      '#....cccccc....#',
+      '#....cccccc....#',
+      '#....cccccc....#',
+      '#..##cccccc##..#',
+      '#......cc......#',
+      '#......cc......#',
+      '#......cc......#',
       '########D#######',
     ],
     entities: [
+      // Throne on the dais (behind the princess)
+      {
+        kind: 'throne',
+        id: 'royal-throne',
+        x: 8,
+        y: 2,
+        scale: 1.25,
+        dialog: [
+          'THE ROYAL THRONE.',
+          'DO NOT SIT. SHE WILL NOTICE.',
+        ],
+      },
       {
         kind: 'princess',
         id: 'prizella-throne',
@@ -2069,18 +2083,51 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 3,
         dialog: [
           'PRINCESS PRIZELLA: WELCOME TO MY OFFICE.',
-          'IT HAS A THRONE. THAT\'S THE LOOK.',
+          'THRONE. DAIS. BANNERS. THE WHOLE LOOK.',
         ],
       },
+      // Pillars along the side walls
+      { kind: 'pillar', id: 'throne-pillar-nw', x: 2, y: 2, scale: 1.2 },
+      { kind: 'pillar', id: 'throne-pillar-ne', x: 13, y: 2, scale: 1.2 },
+      { kind: 'pillar', id: 'throne-pillar-w1', x: 2, y: 4, scale: 1.15 },
+      { kind: 'pillar', id: 'throne-pillar-e1', x: 13, y: 4, scale: 1.15 },
+      { kind: 'pillar', id: 'throne-pillar-w2', x: 2, y: 6, scale: 1.15 },
+      { kind: 'pillar', id: 'throne-pillar-e2', x: 13, y: 6, scale: 1.15 },
+      { kind: 'pillar', id: 'throne-pillar-sw', x: 2, y: 8, scale: 1.1 },
+      { kind: 'pillar', id: 'throne-pillar-se', x: 13, y: 8, scale: 1.1 },
+      // Banners between pillars
+      { kind: 'banner', id: 'throne-banner-nw', x: 1, y: 3, scale: 1.1 },
+      { kind: 'banner', id: 'throne-banner-ne', x: 14, y: 3, scale: 1.1 },
+      { kind: 'banner', id: 'throne-banner-w', x: 1, y: 5, scale: 1.1 },
+      { kind: 'banner', id: 'throne-banner-e', x: 14, y: 5, scale: 1.1 },
+      { kind: 'banner', id: 'throne-banner-sw', x: 1, y: 7, scale: 1.05 },
+      { kind: 'banner', id: 'throne-banner-se', x: 14, y: 7, scale: 1.05 },
+      // Torches for warm royal light
+      { kind: 'torch_wall', id: 'throne-torch-w', x: 3, y: 1 },
+      { kind: 'torch_wall', id: 'throne-torch-e', x: 12, y: 1 },
+      { kind: 'torch_wall', id: 'throne-torch-w2', x: 3, y: 8 },
+      { kind: 'torch_wall', id: 'throne-torch-e2', x: 12, y: 8 },
       {
         kind: 'sign',
         id: 'throne-sign',
-        x: 4,
-        y: 5,
+        x: 5,
+        y: 7,
         dialog: [
           'CHAMPION BOARD.',
           'TALK TO PRINCESS PRIZELLA. GET A JOB.',
         ],
+      },
+      {
+        kind: 'lamp',
+        id: 'throne-lamp-w',
+        x: 5,
+        y: 4,
+      },
+      {
+        kind: 'lamp',
+        id: 'throne-lamp-e',
+        x: 11,
+        y: 4,
       },
     ],
   },

@@ -429,6 +429,8 @@ const CHAR_TO_TILE: Record<string, TileKind> = {
   U: 'stairs_up',
   '=': 'lava',
   P: 'pad',
+  /** Royal carpet / dais (kingdom throne). */
+  c: 'carpet',
   ' ': 'void',
 };
 
@@ -447,6 +449,7 @@ const TEX: Record<TileKind, string> = {
   entrance: 'tile-cave-mouth',
   lava: 'tile-lava',
   pad: 'tile-pad',
+  carpet: 'tile-carpet',
 };
 
 const ENTITY_TEX: Record<EntityKind, string> = {
@@ -488,6 +491,9 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   crab: 'crab',
   koi: 'koi',
   loot_crate: 'loot_crate',
+  throne: 'throne',
+  pillar: 'pillar',
+  banner: 'banner',
 };
 
 const MOBILE_HOSTILES = [
@@ -3515,6 +3521,7 @@ export class GameScene extends Phaser.Scene {
       'chair',
       'table',
       'mirror',
+      'throne',
     ].includes(def.kind);
 
     // Props the hero cannot walk through (interact still uses reach radius)
@@ -3535,7 +3542,10 @@ export class GameScene extends Phaser.Scene {
       def.kind === 'chair' ||
       def.kind === 'table' ||
       def.kind === 'lamp' ||
-      def.kind === 'mirror';
+      def.kind === 'mirror' ||
+      def.kind === 'throne' ||
+      def.kind === 'pillar' ||
+      def.kind === 'banner';
 
     // Mobile hostiles: chase + walls. Cactus: rooted hazard (overlap only).
     // Solid props: immovable footprint collider. Tumbleweed: drifts, no combat.
@@ -3612,6 +3622,15 @@ export class GameScene extends Phaser.Scene {
       ) {
         bw = 12;
         bh = 12;
+      } else if (def.kind === 'throne') {
+        bw = 14;
+        bh = 12;
+      } else if (def.kind === 'pillar') {
+        bw = 10;
+        bh = 14;
+      } else if (def.kind === 'banner') {
+        bw = 8;
+        bh = 10;
       }
       body.setSize(bw, bh);
       body.setOffset((fw - bw) / 2, Math.max(0, fh - bh - 1));
@@ -3702,6 +3721,9 @@ export class GameScene extends Phaser.Scene {
       def.kind === 'table' ||
       def.kind === 'lamp' ||
       def.kind === 'mirror' ||
+      def.kind === 'throne' ||
+      def.kind === 'pillar' ||
+      def.kind === 'banner' ||
       def.kind === 'seaweed'
         ? 99
         : resolveEnemyHp(def.kind, def.hp, threat);

@@ -12,7 +12,9 @@ export type TileKind =
   | 'stairs_up'
   | 'entrance'
   | 'lava'
-  | 'pad';
+  | 'pad'
+  /** Royal carpet / dais floor (kingdom throne room). */
+  | 'carpet';
 
 export type EntityKind =
   | 'slime'
@@ -67,7 +69,11 @@ export type EntityKind =
   /** Pond koi — non-combatant swimmer (ponds only). */
   | 'koi'
   /** Loot crate drop — mid-room gift; E to open big reveal. */
-  | 'loot_crate';
+  | 'loot_crate'
+  /** Kingdom throne room — solid royal props. */
+  | 'throne'
+  | 'pillar'
+  | 'banner';
 
 /** Non-human best friend companion (randomized per playthrough). */
 export type BestBudId =

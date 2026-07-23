@@ -21,7 +21,7 @@ export type EntryFrom =
 export type WalkGrid = string[][]; // TileKind strings; 'wall'|'void'|'water'|'locked' = blocked
 
 const BLOCKED = new Set(['wall', 'void', 'water', 'locked', 'lava']);
-// sand / dirt / grass / floor are walkable
+// sand / dirt / grass / floor / carpet are walkable
 
 function isWalkable(kind: string | undefined): boolean {
   return !!kind && !BLOCKED.has(kind);

@@ -45,8 +45,12 @@ import {
   drawTreeSprite,
   drawWaterTile,
   drawAssistantHonk,
+  drawBanner,
+  drawCarpetTile,
   drawGlamdolph,
+  drawPillar,
   drawRoyalGoose,
+  drawThrone,
   drawWoodElfGuard,
   drawWoodElfQueen,
   fill,
@@ -1690,6 +1694,10 @@ export function generateTextures(scene: Phaser.Scene): void {
     });
   }
 
+  canvasTex(scene, 'tile-carpet', ART_RES, ART_RES, (ctx) => {
+    drawCarpetTile(ctx, ART_BASE);
+  });
+
   canvasTex(scene, 'tile-sand', ART_RES, ART_RES, (ctx) => {
     drawSandTile(ctx, ART_BASE, hex(COLORS.sand), hex(COLORS.sandDark));
   });
@@ -2956,6 +2964,16 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#222', 18, 9, 2, 2);
     fill(ctx, '#c07090', 10, 26, 5, 5);
     fill(ctx, '#c07090', 17, 26, 5, 5);
+  });
+
+  canvasTex(scene, 'throne', ART_RES, ART_RES, (ctx) => {
+    drawThrone(ctx);
+  });
+  canvasTex(scene, 'pillar', ART_RES, ART_RES, (ctx) => {
+    drawPillar(ctx);
+  });
+  canvasTex(scene, 'banner', ART_RES, ART_RES, (ctx) => {
+    drawBanner(ctx);
   });
 
   canvasTex(scene, 'wolf', ART_RES, ART_RES, (ctx) => {
