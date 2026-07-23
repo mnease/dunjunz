@@ -11,6 +11,11 @@ import {
   type AutotileMaterial,
 } from './autotile';
 import {
+  allShoreMaterials,
+  shoreTextureKey,
+  type ShoreMaterial,
+} from './shore';
+import {
   BARE_APPEARANCE,
   buddyTextureKey,
   playerTextureKey,
@@ -245,6 +250,46 @@ function generateAutotileFluidSet(
     const key = autotileTextureKey(material, mask);
     canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
       drawAutotileFluidFrame(ctx, ART_BASE, material, mask);
+    });
+  }
+}
+
+/** Style Bible shore ramps — solid land fill (no holes). */
+function drawShoreFrame(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  material: ShoreMaterial,
+): void {
+  const pal: Record<ShoreMaterial, { deep: string; base: string; light: string }> =
+    {
+      sand: { deep: '#a89068', base: '#e8d4a8', light: '#f0e4c4' },
+      dirt: { deep: '#7f5f32', base: '#b8946a', light: '#c7944f' },
+      cave: { deep: '#604926', base: '#7f5f32', light: '#8d663d' },
+      snow: { deep: '#6a5a52', base: '#8f7c77', light: '#c8c0b8' },
+    };
+  const p = pal[material];
+  ctx.fillStyle = p.base;
+  ctx.fillRect(0, 0, s, s);
+  ctx.fillStyle = p.deep;
+  for (let i = 1; i < s - 1; i += 3) {
+    for (let j = 1; j < s - 1; j += 4) {
+      if (((i * 11 + j * 17) & 5) === 0) ctx.fillRect(i, j, 1, 1);
+    }
+  }
+  ctx.fillStyle = p.light;
+  for (let i = 2; i < s - 2; i += 5) {
+    if ((i & 2) === 0) ctx.fillRect(i, 3, 1, 1);
+  }
+  // Soft top edge (beach-y highlight)
+  ctx.fillStyle = p.light;
+  ctx.fillRect(0, 0, s, 1);
+}
+
+function generateShoreTextures(scene: Phaser.Scene): void {
+  for (const mat of allShoreMaterials()) {
+    const key = shoreTextureKey(mat);
+    canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
+      drawShoreFrame(ctx, ART_BASE, mat);
     });
   }
 }
@@ -1941,6 +1986,8 @@ export function generateTextures(scene: Phaser.Scene): void {
   // Graphics-v2 Phase A: 16 edge-mask fluid frames (solid interior, foam on open edges)
   generateAutotileFluidSet(scene, 'water');
   generateAutotileFluidSet(scene, 'lava');
+  // Phase B: land-aware shore fills (1-cell ring around water)
+  generateShoreTextures(scene);
 
   canvasTex(scene, 'tile-door', ART_RES, ART_RES, (ctx) => {
     // floor behind so open sides read as passage

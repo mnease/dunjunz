@@ -1,11 +1,11 @@
 # Dunjunz Graphics-v2 Rebuild Plan
 
-**Status:** Design LOCK + **Phase S + Phase A shipped** on `graphics-v2`.  
+**Status:** Design LOCK + **Phase S + A + B shipped** on `graphics-v2`.  
 **North star:** Core Keeper–inspired discrete autotile world on clean-slate render path  
 **Style law:** [`graphics-v2-style-bible.md`](./graphics-v2-style-bible.md)  
 **Architecture detail:** [`graphics-system-v2-architecture.md`](./graphics-system-v2-architecture.md) (refined by this doc)  
 **Branch:** `graphics-v2` (preview always on) · **Live `main`:** classic discrete tiles after full graphics revert  
-**Next implement:** Phase B shore ring
+**Next implement:** Phase C land autotile + structure
 
 | URL | Role |
 | --- | --- |
@@ -258,13 +258,13 @@ Goal: **clean-slate render path** — no half-dead continuous path that can be r
 | Risks | Wrong connect rules → checkerboard edges; performance if over-generating textures at boot |
 | Mitigate | Generate once in Boot; atlas keys stable; tests first |
 
-### Phase B — ShoreBorder (1–2 days)
+### Phase B — ShoreBorder (1–2 days) — **DONE on graphics-v2**
 
 | Field | Content |
 | --- | --- |
 | Goal | Land-aware 1-cell tan/dirt shore ring |
-| Work | `expandShore`; sand shore frames; wet-edge variant on water-facing land |
-| Acceptance | Beach screenshot: continuous tan ring; water body solid; collision unchanged; walls not sanded |
+| Work | `shore.ts` N4 adjacency + land-aware materials; `at-shore-*` boot textures; `placeRoomTiles` override |
+| Acceptance | Rim land → shore keys; water stays `at-water-*`; walls/doors never shore; 4-neigh only |
 | Playtest | beach_start, woodz healing waters, any river room |
 | Risks | Shore on doors/stairs; double-wide ring from 8-neigh too early |
 | Mitigate | 4-neigh only P0; structure skip list |

@@ -42,6 +42,7 @@ import {
   isAutotileFluid,
   resolveAutotileTextureKey,
 } from '../systems/autotile';
+import { resolveShoreTextureKey } from '../systems/shore';
 import {
   clearAllTouch,
   consumeTouchAction,
@@ -2073,34 +2074,48 @@ export class GameScene extends Phaser.Scene {
           isAutotileFluid(kind)
             ? resolveAutotileTextureKey(this.tileGrid, x, y)
             : null;
+        // Phase B: land N4 to water → land-aware shore (never walls/structures/water)
+        const shoreKey =
+          !atKey
+            ? resolveShoreTextureKey(
+                this.tileGrid,
+                x,
+                y,
+                land,
+                room.id,
+              )
+            : null;
         let texKey =
           atKey && this.textures.exists(atKey)
             ? atKey
-            : kind === 'stairs' && (room.floor ?? 0) >= 0
-              ? 'tile-cave-mouth'
-              : kind === 'wall' &&
-                  onBeach &&
-                  this.textures.exists('tile-sand-wall')
-                ? 'tile-sand-wall'
-                : kind === 'floor' &&
+            : shoreKey && this.textures.exists(shoreKey)
+              ? shoreKey
+              : kind === 'stairs' && (room.floor ?? 0) >= 0
+                ? 'tile-cave-mouth'
+                : kind === 'wall' &&
                     onBeach &&
-                    this.textures.exists('tile-sand')
-                  ? 'tile-sand'
-                  : kind === 'wall' &&
-                      isMountainApproach &&
-                      this.textures.exists('tile-dwarf-wall')
-                    ? 'tile-dwarf-wall'
-                    : kind === 'floor' &&
-                        land === 'dwarvez' &&
-                        this.textures.exists('tile-dwarf-floor')
-                      ? 'tile-dwarf-floor'
-                      : kind === 'water' && waterBody
-                        ? waterTextureKeySafe(waterBody, 0, (k) =>
-                            this.textures.exists(k),
-                          )
-                        : TEX[kind];
+                    this.textures.exists('tile-sand-wall')
+                  ? 'tile-sand-wall'
+                  : kind === 'floor' &&
+                      onBeach &&
+                      this.textures.exists('tile-sand')
+                    ? 'tile-sand'
+                    : kind === 'wall' &&
+                        isMountainApproach &&
+                        this.textures.exists('tile-dwarf-wall')
+                      ? 'tile-dwarf-wall'
+                      : kind === 'floor' &&
+                          land === 'dwarvez' &&
+                          this.textures.exists('tile-dwarf-floor')
+                        ? 'tile-dwarf-floor'
+                        : kind === 'water' && waterBody
+                          ? waterTextureKeySafe(waterBody, 0, (k) =>
+                              this.textures.exists(k),
+                            )
+                          : TEX[kind];
 
         // Fractal terrain variants — same kinds, varied frames (not continuous paint)
+        // Skip when fluid autotile or shore override owns the cell
         const fluidKinds =
           kind === 'floor' ||
           kind === 'wall' ||
@@ -2114,7 +2129,14 @@ export class GameScene extends Phaser.Scene {
           room.mapY,
           room.floor ?? 0,
         );
-        if (fluidKinds && !(onBeach && (kind === 'wall' || kind === 'floor'))) {
+        const usedSpecial =
+          (atKey && this.textures.exists(atKey)) ||
+          (shoreKey && this.textures.exists(shoreKey));
+        if (
+          !usedSpecial &&
+          fluidKinds &&
+          !(onBeach && (kind === 'wall' || kind === 'floor'))
+        ) {
           const v = fractalTerrainVariant(
             wx,
             wy,
