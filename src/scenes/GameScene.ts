@@ -3892,8 +3892,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Gender pick (M/F only) must complete before the lie→sit→stand wake.
-   * Random race is rolled inside chooseIdentity.
+   * Race first, then binary M/F of that race — before lie→sit→stand wake.
+   * chooseIdentity stores player race (cosmetic until L25 ritual).
    */
   private maybeStartBeachIdentityThenWake(): void {
     this.save = migrateIdentity(this.save);

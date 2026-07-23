@@ -3,11 +3,9 @@ import { ART_RES, COLORS } from '../config';
 import {
   BARE_APPEARANCE,
   buddyTextureKey,
-  DEFAULT_BODY,
   playerTextureKey,
   playerWakeTextureKey,
   type AppearanceSpec,
-  type BodyLook,
   type BuddyPoseName,
   type PlayerWalkFrame,
   type PlayerWakePose,
@@ -17,7 +15,13 @@ import {
   type RingLook,
   type ShoesLook,
 } from './appearance';
-import { drawBodyBase, bodyPalette } from './body-visuals';
+import {
+  bodyMetrics,
+  bodyPalette,
+  drawBodyBase,
+  type BodyLook,
+  DEFAULT_BODY,
+} from './body-visuals';
 import {
   drawWeaponAvatar,
   drawWeaponIcon,
@@ -215,7 +219,9 @@ function drawShoes(
   ctx: CanvasRenderingContext2D,
   look: ShoesLook,
   walk: PlayerWalkFrame = 0,
+  body: BodyLook = DEFAULT_BODY,
 ): void {
+  const m = bodyMetrics(body.race, body.gender);
   const [lo, ro] = footOffsets(walk);
   const drawBoot = (
     x: number,
@@ -226,17 +232,12 @@ function drawShoes(
     sole: string,
     fancy = false,
   ) => {
-    const y = 25 + yOff;
-    // ankle shaft (up the shin)
+    const y = m.footY - 2 + yOff;
     shadedBlock(ctx, mid, light, dark, x, y, 5, 4);
-    // foot body
     shadedBlock(ctx, mid, light, dark, x, y + 3, 7, 3);
-    // toe box pointing forward
     fill(ctx, mid, x + 5, y + 4, 3, 2);
     fill(ctx, light, x + 5, y + 4, 2, 1);
-    // sole
     fill(ctx, sole, x, y + 6, 8, 1);
-    // lace / buckle
     fill(ctx, dark, x + 1, y + 2, 3, 1);
     if (fancy) {
       fill(ctx, '#ff6b9d', x + 1, y + 1, 2, 1);
@@ -245,18 +246,17 @@ function drawShoes(
   };
 
   if (look === 'apology') {
-    drawBoot(8 + lo.dx, lo.dy, '#5ad4a0', '#9ef0c8', '#2a6a50', '#1a4030', true);
-    drawBoot(17 + ro.dx, ro.dy, '#5ad4a0', '#9ef0c8', '#2a6a50', '#1a4030', true);
+    drawBoot(m.leftLegX - 2 + lo.dx, lo.dy, '#5ad4a0', '#9ef0c8', '#2a6a50', '#1a4030', true);
+    drawBoot(m.rightLegX - 1 + ro.dx, ro.dy, '#5ad4a0', '#9ef0c8', '#2a6a50', '#1a4030', true);
     return;
   }
   if (look === 'leather') {
-    drawBoot(8 + lo.dx, lo.dy, '#6b4423', '#a06830', '#2a1810', '#1a1008');
-    drawBoot(17 + ro.dx, ro.dy, '#6b4423', '#a06830', '#2a1810', '#1a1008');
+    drawBoot(m.leftLegX - 2 + lo.dx, lo.dy, '#6b4423', '#a06830', '#2a1810', '#1a1008');
+    drawBoot(m.rightLegX - 1 + ro.dx, ro.dy, '#6b4423', '#a06830', '#2a1810', '#1a1008');
     return;
   }
-  // bare shoes
-  drawBoot(9 + lo.dx, lo.dy, '#3d2b1f', '#5a4030', '#1a1008', '#0a0804');
-  drawBoot(17 + ro.dx, ro.dy, '#3d2b1f', '#5a4030', '#1a1008', '#0a0804');
+  drawBoot(m.leftLegX - 1 + lo.dx, lo.dy, '#3d2b1f', '#5a4030', '#1a1008', '#0a0804');
+  drawBoot(m.rightLegX + ro.dx, ro.dy, '#3d2b1f', '#5a4030', '#1a1008', '#0a0804');
 }
 
 /** Shin guards — knee cap + shin plate; walk shortens the lifting leg. */
@@ -264,32 +264,34 @@ function drawGreaves(
   ctx: CanvasRenderingContext2D,
   look: AppearanceSpec['greaves'],
   walk: PlayerWalkFrame = 0,
+  body: BodyLook = DEFAULT_BODY,
 ): void {
+  const m = bodyMetrics(body.race, body.gender);
   const [lo, ro] = footOffsets(walk);
   const legs: [number, number][] = [
-    [10 + lo.dx, lo.dy],
-    [17 + ro.dx, ro.dy],
+    [m.leftLegX + lo.dx, lo.dy],
+    [m.rightLegX + ro.dx, ro.dy],
   ];
+  const baseY = m.footY - m.legH + 1;
   if (look === 'plate') {
     for (const [x, dy] of legs) {
-      const y = 21 + dy;
-      block(ctx, '#a8b8c8', '#4a5060', x, y, 5, 3);
-      fill(ctx, '#c0d0e0', x + 1, y, 3, 1);
-      shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#3a4050', x, y + 3, 5, 5);
-      fill(ctx, '#6a7888', x + 2, y + 4, 1, 3);
+      const y = baseY + dy;
+      block(ctx, '#a8b8c8', '#4a5060', x, y, m.legW, 3);
+      fill(ctx, '#c0d0e0', x + 1, y, Math.max(1, m.legW - 2), 1);
+      shadedBlock(ctx, '#8a98a8', '#c0c8d0', '#3a4050', x, y + 3, m.legW, Math.max(3, m.legH - 3));
+      fill(ctx, '#6a7888', x + Math.floor(m.legW / 2), y + 4, 1, 3);
     }
   } else if (look === 'leather') {
     for (const [x, dy] of legs) {
-      const y = 22 + dy;
-      shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', x, y, 5, 6);
-      fill(ctx, '#5a3d1a', x + 1, y + 2, 3, 1);
-      fill(ctx, '#c9a227', x + 2, y + 2, 1, 1);
+      const y = baseY + 1 + dy;
+      shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', x, y, m.legW, Math.max(4, m.legH - 1));
+      fill(ctx, '#5a3d1a', x + 1, y + 2, Math.max(1, m.legW - 2), 1);
+      fill(ctx, '#c9a227', x + Math.floor(m.legW / 2), y + 2, 1, 1);
     }
   } else {
-    // pants
     for (const [x, dy] of legs) {
-      const y = 23 + dy;
-      shadedBlock(ctx, '#2d6cdf', '#4a8cff', '#1a3a8a', x, y, 5, 5);
+      const y = baseY + 2 + dy;
+      shadedBlock(ctx, '#2d6cdf', '#4a8cff', '#1a3a8a', x, y, m.legW, Math.max(3, m.legH - 2));
     }
   }
 }
@@ -301,7 +303,12 @@ function drawGreaves(
 function drawGloves(
   ctx: CanvasRenderingContext2D,
   look: AppearanceSpec['gloves'],
+  body: BodyLook = DEFAULT_BODY,
 ): void {
+  const m = bodyMetrics(body.race, body.gender);
+  const leftX = m.torsoX - m.armW + m.shoulderBias;
+  const rightX = m.torsoX + m.torsoW - m.shoulderBias;
+  const cuffY = m.torsoY + 3;
   const hand = (
     x: number,
     mid: string,
@@ -309,32 +316,28 @@ function drawGloves(
     dark: string,
     sheath = false,
   ) => {
-    // forearm cuff
-    shadedBlock(ctx, mid, light, dark, x, 14, 4, 5);
-    // palm
-    shadedBlock(ctx, mid, light, dark, x - (x < 16 ? 1 : 0), 18, 5, 4);
-    // fingers (3 stubs) — horizontal/down, glove signature
-    fill(ctx, mid, x - (x < 16 ? 1 : 0), 22, 2, 2);
-    fill(ctx, mid, x + 1, 22, 2, 2);
-    fill(ctx, mid, x + 3, 22, 1, 2);
-    fill(ctx, light, x, 18, 3, 1);
+    shadedBlock(ctx, mid, light, dark, x, cuffY, Math.max(3, m.armW), 5);
+    shadedBlock(ctx, mid, light, dark, x - (x < 16 ? 1 : 0), cuffY + 4, 5, 4);
+    fill(ctx, mid, x - (x < 16 ? 1 : 0), cuffY + 8, 2, 2);
+    fill(ctx, mid, x + 1, cuffY + 8, 2, 2);
+    fill(ctx, mid, x + 3, cuffY + 8, 1, 2);
+    fill(ctx, light, x, cuffY + 4, 3, 1);
     if (sheath) {
-      // arrow nock peeking
-      fill(ctx, '#c8b090', x + (x < 16 ? 3 : -1), 12, 2, 5);
-      fill(ctx, '#7dffb3', x + (x < 16 ? 3 : -1), 11, 2, 2);
+      fill(ctx, '#c8b090', x + (x < 16 ? 3 : -1), cuffY - 2, 2, 5);
+      fill(ctx, '#7dffb3', x + (x < 16 ? 3 : -1), cuffY - 3, 2, 2);
     }
   };
 
   if (look === 'sheath') {
-    hand(4, '#5a3d1a', '#8b5a2b', '#2a1810', true);
-    hand(24, '#5a3d1a', '#8b5a2b', '#2a1810', true);
+    hand(leftX, '#5a3d1a', '#8b5a2b', '#2a1810', true);
+    hand(rightX, '#5a3d1a', '#8b5a2b', '#2a1810', true);
   } else if (look === 'leather') {
-    hand(4, '#8b5a2b', '#a06830', '#5a3d1a');
-    hand(24, '#8b5a2b', '#a06830', '#5a3d1a');
+    hand(leftX, '#8b5a2b', '#a06830', '#5a3d1a');
+    hand(rightX, '#8b5a2b', '#a06830', '#5a3d1a');
   } else {
-    // bare hands (skin)
-    hand(5, '#f0c8a4', '#ffe0c0', '#c09070');
-    hand(23, '#f0c8a4', '#ffe0c0', '#c09070');
+    const p = bodyPalette(body.race);
+    hand(leftX, p.skin, p.skinHi, p.skinSh);
+    hand(rightX, p.skin, p.skinHi, p.skinSh);
   }
 }
 
@@ -342,124 +345,90 @@ function drawGloves(
 function drawBreastplate(
   ctx: CanvasRenderingContext2D,
   look: AppearanceSpec['breastplate'],
+  body: BodyLook = DEFAULT_BODY,
 ): void {
+  const m = bodyMetrics(body.race, body.gender);
+  const tx = m.torsoX;
+  const ty = m.torsoY;
+  const tw = m.torsoW;
+  const th = m.torsoH;
+  const cx = tx + Math.floor(tw / 2);
+
   if (look === 'plate') {
-    // neck opening
-    fill(ctx, '#1a1a2e', 13, 11, 6, 2);
-    // main cuirass (tapered waist)
-    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', 8, 12, 16, 11);
-    fill(ctx, '#a8b8c8', 10, 13, 12, 4);
-    // chest ridge / muscle line
-    fill(ctx, '#c0d0e0', 15, 14, 2, 6);
-    fill(ctx, '#6a7888', 10, 18, 12, 1);
-    // fauld (bottom plates)
-    fill(ctx, '#7a8a9a', 9, 22, 14, 2);
-    fill(ctx, '#5a6878', 10, 24, 12, 1);
-    // pauldrons
-    block(ctx, '#c0d0e0', '#4a5060', 5, 11, 5, 6);
-    block(ctx, '#c0d0e0', '#4a5060', 22, 11, 5, 6);
-    fill(ctx, '#e0e8f0', 6, 12, 3, 1);
-    fill(ctx, '#e0e8f0', 23, 12, 3, 1);
-    // rivets
-    spark(ctx, 11, 15, '#ffffff');
-    spark(ctx, 20, 15, '#ffffff');
-    spark(ctx, 15, 13, '#ffffff');
+    fill(ctx, '#1a1a2e', cx - 3, ty - 1, 6, 2);
+    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', tx, ty, tw, th);
+    fill(ctx, '#a8b8c8', tx + 2, ty + 1, tw - 4, 4);
+    fill(ctx, '#c0d0e0', cx - 1, ty + 2, 2, 6);
+    fill(ctx, '#6a7888', tx + 2, ty + Math.floor(th / 2) + 1, tw - 4, 1);
+    fill(ctx, '#7a8a9a', tx + 1, ty + th - 2, tw - 2, 2);
+    block(ctx, '#c0d0e0', '#4a5060', tx - 3, ty - 1, 5, 6);
+    block(ctx, '#c0d0e0', '#4a5060', tx + tw - 2, ty - 1, 5, 6);
+    spark(ctx, tx + 3, ty + 3, '#ffffff');
+    spark(ctx, tx + tw - 4, ty + 3, '#ffffff');
     return;
   }
   if (look === 'reinforced') {
-    shadedBlock(ctx, '#5c4030', '#8a7a60', '#3a2a18', 8, 12, 16, 12);
-    // metal chest plate inset
-    block(ctx, '#a8b0b8', '#4a5060', 11, 14, 10, 7);
-    fill(ctx, '#c0c8d0', 12, 15, 8, 2);
-    fill(ctx, '#ffc857', 14, 17, 4, 3);
-    fill(ctx, '#fff3a0', 15, 18, 2, 1);
-    // shoulder cops
-    block(ctx, '#c0b090', '#6a6040', 6, 12, 4, 5);
-    block(ctx, '#c0b090', '#6a6040', 22, 12, 4, 5);
-    fill(ctx, '#3d2b1f', 9, 22, 14, 2); // belt
+    shadedBlock(ctx, '#5c4030', '#8a7a60', '#3a2a18', tx, ty, tw, th);
+    block(ctx, '#a8b0b8', '#4a5060', tx + 3, ty + 2, tw - 6, 7);
+    fill(ctx, '#c0c8d0', tx + 4, ty + 3, tw - 8, 2);
+    fill(ctx, '#ffc857', cx - 2, ty + 5, 4, 3);
+    block(ctx, '#c0b090', '#6a6040', tx - 2, ty, 4, 5);
+    block(ctx, '#c0b090', '#6a6040', tx + tw - 2, ty, 4, 5);
+    fill(ctx, '#3d2b1f', tx + 1, ty + th - 2, tw - 2, 2);
     return;
   }
   if (look === 'leather') {
-    // jacket with collar + straps (not a metal plate)
-    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 8, 12, 16, 12);
-    // open collar V
-    fill(ctx, '#f0c8a4', 13, 12, 6, 3);
-    fill(ctx, '#5a3d1a', 12, 12, 1, 4);
-    fill(ctx, '#5a3d1a', 19, 12, 1, 4);
-    // cross straps
-    fill(ctx, '#3d2b1f', 10, 16, 12, 2);
-    fill(ctx, '#c9a227', 14, 16, 4, 2); // buckle
-    fill(ctx, '#5a3d1a', 10, 15, 2, 6);
-    fill(ctx, '#5a3d1a', 20, 15, 2, 6);
-    dither(ctx, '#8b5a2b', '#7a4a20', 11, 19, 10, 3);
-    fill(ctx, '#3d2b1f', 9, 23, 14, 1);
+    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', tx, ty, tw, th);
+    fill(ctx, '#f0c8a4', cx - 3, ty, 6, 3);
+    fill(ctx, '#5a3d1a', cx - 4, ty, 1, 4);
+    fill(ctx, '#5a3d1a', cx + 3, ty, 1, 4);
+    fill(ctx, '#3d2b1f', tx + 2, ty + 4, tw - 4, 2);
+    fill(ctx, '#c9a227', cx - 2, ty + 4, 4, 2);
+    dither(ctx, '#8b5a2b', '#7a4a20', tx + 3, ty + 6, tw - 6, 3);
+    fill(ctx, '#3d2b1f', tx + 1, ty + th - 1, tw - 2, 1);
     return;
   }
   if (look === 'cloth_arcane') {
-    // draped cloak — wide shoulders, starfield, hanging sleeves
-    shadedBlock(ctx, '#4a2a7a', '#7a5ab0', '#2a1848', 6, 11, 20, 14);
-    fill(ctx, '#6a4a9a', 8, 12, 16, 4);
-    // hood collar
-    fill(ctx, '#2a1848', 11, 11, 10, 3);
-    fill(ctx, '#5a3a8a', 12, 12, 8, 1);
-    spark(ctx, 10, 16, '#ffc857');
-    spark(ctx, 20, 18, '#7dffb3');
-    spark(ctx, 14, 20, '#ffc857');
-    spark(ctx, 17, 15, '#c9a0ff');
-    // hanging cloth flaps
-    fill(ctx, '#3a1a60', 6, 22, 4, 3);
-    fill(ctx, '#3a1a60', 22, 22, 4, 3);
+    shadedBlock(ctx, '#4a2a7a', '#7a5ab0', '#2a1848', tx - 2, ty - 1, tw + 4, th + 2);
+    fill(ctx, '#6a4a9a', tx, ty, tw, 4);
+    fill(ctx, '#2a1848', cx - 5, ty - 1, 10, 3);
+    spark(ctx, tx + 2, ty + 4, '#ffc857');
+    spark(ctx, tx + tw - 3, ty + 6, '#7dffb3');
+    fill(ctx, '#3a1a60', tx - 2, ty + th - 1, 4, 3);
+    fill(ctx, '#3a1a60', tx + tw - 2, ty + th - 1, 4, 3);
     return;
   }
   if (look === 'cloak_ranger') {
-    // hooded forest cloak
-    shadedBlock(ctx, '#3a5a38', '#5a8a50', '#1a3018', 6, 11, 20, 14);
-    // hood shape over shoulders
-    fill(ctx, '#2a4a28', 9, 10, 14, 4);
-    fill(ctx, '#1a3018', 12, 11, 8, 2);
-    // clasp
-    fill(ctx, '#8b5a2b', 14, 14, 4, 3);
-    fill(ctx, '#c9a227', 15, 15, 2, 1);
-    // leaf dither
-    dither(ctx, '#3a5a38', '#2a4a28', 8, 17, 16, 5);
+    shadedBlock(ctx, '#3a5a38', '#5a8a50', '#1a3018', tx - 2, ty - 1, tw + 4, th + 2);
+    fill(ctx, '#2a4a28', tx + 1, ty - 2, tw - 2, 4);
+    fill(ctx, '#8b5a2b', cx - 2, ty + 2, 4, 3);
+    fill(ctx, '#c9a227', cx - 1, ty + 3, 2, 1);
+    dither(ctx, '#3a5a38', '#2a4a28', tx, ty + 5, tw, 5);
     return;
   }
   if (look === 'holy') {
-    shadedBlock(ctx, '#e8e0d0', '#ffffff', '#8a8070', 8, 12, 16, 12);
-    fill(ctx, '#f8f0e0', 10, 13, 12, 3);
-    // gold cross breastplate
-    fill(ctx, '#ffc857', 14, 15, 4, 7);
-    fill(ctx, '#ffc857', 12, 17, 8, 3);
-    fill(ctx, '#fff3a0', 15, 16, 2, 2);
-    fill(ctx, '#c9a227', 9, 23, 14, 1);
+    shadedBlock(ctx, '#e8e0d0', '#ffffff', '#8a8070', tx, ty, tw, th);
+    fill(ctx, '#f8f0e0', tx + 2, ty + 1, tw - 4, 3);
+    fill(ctx, '#ffc857', cx - 2, ty + 3, 4, 7);
+    fill(ctx, '#ffc857', cx - 4, ty + 5, 8, 3);
+    fill(ctx, '#fff3a0', cx - 1, ty + 4, 2, 2);
+    fill(ctx, '#c9a227', tx + 1, ty + th - 1, tw - 2, 1);
     return;
   }
   if (look === 'hide') {
-    // fur pelt cuirass with ragged edge + bone pin
-    shadedBlock(ctx, '#6a4a30', '#8a6a48', '#3a2818', 7, 12, 18, 12);
-    dither(ctx, '#6a4a30', '#5a3a28', 9, 14, 14, 7);
-    // fur tufts on shoulders
-    fill(ctx, '#8a6a48', 6, 11, 3, 3);
-    fill(ctx, '#8a6a48', 23, 11, 3, 3);
-    fill(ctx, '#a08060', 7, 12, 2, 1);
-    fill(ctx, '#a08060', 24, 12, 2, 1);
-    // bone pin
-    fill(ctx, '#e8e0d0', 14, 15, 4, 2);
-    fill(ctx, '#c0392b', 15, 17, 2, 3);
-    // ragged hem
-    fill(ctx, '#3a2818', 8, 23, 2, 2);
-    fill(ctx, '#3a2818', 12, 24, 3, 1);
-    fill(ctx, '#3a2818', 18, 23, 2, 2);
-    fill(ctx, '#3a2818', 22, 24, 2, 1);
+    shadedBlock(ctx, '#6a4a30', '#8a6a48', '#3a2818', tx - 1, ty, tw + 2, th);
+    dither(ctx, '#6a4a30', '#5a3a28', tx + 1, ty + 2, tw - 2, 7);
+    fill(ctx, '#8a6a48', tx - 2, ty - 1, 3, 3);
+    fill(ctx, '#8a6a48', tx + tw - 1, ty - 1, 3, 3);
+    fill(ctx, '#e8e0d0', cx - 2, ty + 3, 4, 2);
+    fill(ctx, '#c0392b', cx - 1, ty + 5, 2, 3);
     return;
   }
   // default tunic
-  shadedBlock(ctx, '#2d6cdf', '#5a9aff', '#1a4aaf', 8, 12, 16, 12);
-  fill(ctx, '#4a8cef', 10, 14, 12, 3);
-  fill(ctx, '#1a4aaf', 14, 18, 4, 5);
-  fill(ctx, '#1a3a8a', 12, 12, 8, 2);
-  fill(ctx, '#c9a227', 13, 20, 6, 2); // belt
-  spark(ctx, 11, 15, '#a0c8ff');
+  shadedBlock(ctx, '#2d6cdf', '#5a9aff', '#1a4aaf', tx, ty, tw, th);
+  fill(ctx, '#4a8cef', tx + 2, ty + 2, tw - 4, 3);
+  fill(ctx, '#c9a227', tx + 3, ty + th - 3, tw - 6, 2);
+  spark(ctx, tx + 3, ty + 3, '#a0c8ff');
 }
 
 /**
@@ -472,19 +441,18 @@ function drawHelmet(
   body: BodyLook = DEFAULT_BODY,
 ): void {
   if (look === 'none') return;
-  const fx = 10;
-  const fy = 5;
-  const fw = 12;
-  const fh = 9;
+  const m = bodyMetrics(body.race, body.gender);
+  const fx = m.headX;
+  const fy = m.headY;
+  const fw = m.headW;
+  const fh = m.headH;
   const p = bodyPalette(body.race);
 
-  // side locks peek from open helms
   if (look === 'leather' || look === 'cloth_arcane') {
     fill(ctx, p.hair, fx - 1, fy + 1, 2, 5);
     fill(ctx, p.hair, fx + fw - 1, fy + 1, 2, 5);
   }
 
-  // Face under open helms
   if (look !== 'plate') {
     shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, fx, fy, fw, fh);
     cartoonFace(ctx, fx, fy, fw, fh, {
@@ -493,60 +461,41 @@ function drawHelmet(
   }
 
   if (look === 'plate') {
-    // closed great-helm dome + horns (face mostly covered)
-    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', 8, 1, 16, 11);
-    fill(ctx, '#a8b8c8', 10, 2, 12, 3);
-    fill(ctx, '#0a0a12', 11, 7, 10, 3); // visor
-    fill(ctx, '#1a1a2e', 12, 8, 3, 2);
-    fill(ctx, '#1a1a2e', 17, 8, 3, 2);
-    spark(ctx, 13, 8, '#ffffff');
-    spark(ctx, 18, 8, '#ffffff');
-    fill(ctx, '#6a7888', 15, 6, 2, 6); // nasal
-    fill(ctx, '#7a8a9a', 8, 8, 3, 5);
-    fill(ctx, '#7a8a9a', 21, 8, 3, 5);
-    // horns
-    fill(ctx, '#e8e0d0', 5, 0, 4, 6);
-    fill(ctx, '#e8e0d0', 23, 0, 4, 6);
-    fill(ctx, '#c0b8a0', 4, 0, 2, 3);
-    fill(ctx, '#c0b8a0', 26, 0, 2, 3);
-    fill(ctx, '#ffffff', 6, 1, 1, 2);
-    fill(ctx, '#ffffff', 25, 1, 1, 2);
-    fill(ctx, '#c0d0e0', 10, 5, 12, 1);
-    spark(ctx, 14, 2, '#ffffff');
+    const hx = Math.max(0, fx - 2);
+    const hw = Math.min(32 - hx, fw + 4);
+    shadedBlock(ctx, '#8a98a8', '#c0d0e0', '#3a4050', hx, Math.max(0, fy - 2), hw, fh + 3);
+    fill(ctx, '#a8b8c8', hx + 2, Math.max(0, fy - 1), hw - 4, 3);
+    fill(ctx, '#0a0a12', hx + 3, fy + 3, hw - 6, 3);
+    fill(ctx, '#6a7888', hx + Math.floor(hw / 2) - 1, fy + 2, 2, 6);
+    fill(ctx, '#e8e0d0', hx - 3, Math.max(0, fy - 3), 4, 6);
+    fill(ctx, '#e8e0d0', hx + hw - 1, Math.max(0, fy - 3), 4, 6);
+    spark(ctx, hx + 4, fy + 1, '#ffffff');
     return;
   }
   if (look === 'leather') {
-    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 8, 1, 16, 7);
-    fill(ctx, '#a06830', 10, 2, 12, 2);
-    fill(ctx, '#6b4423', 7, 6, 4, 6);
-    fill(ctx, '#6b4423', 21, 6, 4, 6);
-    fill(ctx, '#3d2b1f', 12, 12, 8, 1);
-    fill(ctx, '#e8e0d0', 8, 0, 3, 3);
-    fill(ctx, '#e8e0d0', 21, 0, 3, 3);
-    fill(ctx, '#c9a227', 13, 3, 6, 1);
-    // bangs peek under cap
-    fill(ctx, '#3d2b1f', 12, 5, 3, 2);
-    fill(ctx, '#3d2b1f', 17, 5, 3, 2);
+    shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', fx - 2, Math.max(0, fy - 2), fw + 4, 7);
+    fill(ctx, '#a06830', fx, Math.max(0, fy - 1), fw, 2);
+    fill(ctx, '#6b4423', fx - 3, fy + 2, 4, 6);
+    fill(ctx, '#6b4423', fx + fw - 1, fy + 2, 4, 6);
+    fill(ctx, '#e8e0d0', fx - 2, Math.max(0, fy - 3), 3, 3);
+    fill(ctx, '#e8e0d0', fx + fw - 1, Math.max(0, fy - 3), 3, 3);
+    fill(ctx, '#c9a227', fx + 2, fy, fw - 4, 1);
     return;
   }
   if (look === 'cloth_arcane') {
-    fill(ctx, '#2a1848', 5, 5, 22, 3); // brim
-    fill(ctx, '#4a2a7a', 6, 5, 20, 2);
-    fill(ctx, '#4a2a7a', 10, 0, 12, 7);
-    fill(ctx, '#7a5ab0', 12, 0, 8, 7);
-    fill(ctx, '#5a3a8a', 14, 0, 4, 2);
-    fill(ctx, '#2a1848', 15, 0, 2, 1);
-    spark(ctx, 16, 1, '#ffc857');
-    spark(ctx, 12, 3, '#c9a0ff');
-    fill(ctx, '#c9a227', 10, 5, 12, 1);
+    fill(ctx, '#2a1848', fx - 5, fy + 1, fw + 10, 3);
+    fill(ctx, '#4a2a7a', fx - 4, fy + 1, fw + 8, 2);
+    fill(ctx, '#4a2a7a', fx, Math.max(0, fy - 3), fw, 7);
+    fill(ctx, '#7a5ab0', fx + 2, Math.max(0, fy - 3), fw - 4, 7);
+    spark(ctx, fx + Math.floor(fw / 2), Math.max(0, fy - 2), '#ffc857');
+    fill(ctx, '#c9a227', fx, fy + 1, fw, 1);
     return;
   }
-  // bare: circlet on hair
-  shadedBlock(ctx, '#c9a227', '#e8c050', '#8a7010', 9, 2, 14, 3);
-  fill(ctx, '#ffc857', 10, 1, 2, 3);
-  fill(ctx, '#ffc857', 14, 0, 4, 3);
-  fill(ctx, '#ffc857', 20, 1, 2, 3);
-  fill(ctx, '#fff3a0', 15, 0, 2, 1);
+  // circlet
+  shadedBlock(ctx, '#c9a227', '#e8c050', '#8a7010', fx - 1, Math.max(0, fy - 1), fw + 2, 3);
+  fill(ctx, '#ffc857', fx + 1, Math.max(0, fy - 2), 2, 3);
+  fill(ctx, '#ffc857', fx + Math.floor(fw / 2) - 1, Math.max(0, fy - 3), 4, 3);
+  fill(ctx, '#fff3a0', fx + Math.floor(fw / 2), Math.max(0, fy - 3), 2, 1);
 }
 
 /**
@@ -563,12 +512,11 @@ export function drawPlayerLook(
   const bareHead = spec.helmet === 'none';
   // Body first (legs/torso/arms/head when bare)
   drawBodyBase(ctx, body, walk, { bareHead });
-  // Gear layers (may paint over body limbs)
-  if (spec.greaves !== 'none') drawGreaves(ctx, spec.greaves, walk);
-  if (spec.shoes !== 'none') drawShoes(ctx, spec.shoes, walk);
-  if (spec.breastplate !== 'none') drawBreastplate(ctx, spec.breastplate);
-  if (spec.gloves !== 'none') drawGloves(ctx, spec.gloves);
-  // Helm always draws when present (covers head features partially)
+  // Gear layers (metrics-aligned to race proportions)
+  if (spec.greaves !== 'none') drawGreaves(ctx, spec.greaves, walk, body);
+  if (spec.shoes !== 'none') drawShoes(ctx, spec.shoes, walk, body);
+  if (spec.breastplate !== 'none') drawBreastplate(ctx, spec.breastplate, body);
+  if (spec.gloves !== 'none') drawGloves(ctx, spec.gloves, body);
   if (spec.helmet !== 'none') {
     drawHelmet(ctx, spec.helmet, body);
   }

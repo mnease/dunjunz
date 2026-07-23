@@ -1,6 +1,10 @@
 /**
  * Race × gender body silhouettes for the 32×32 hero.
  * Binary gender only (male | female). Gear layers draw on top.
+ *
+ * EMA Council 2026-07: height bands share foot plant (footY=27);
+ * tall = longer legs + higher crown, short/tiny = stouter / shorter legs.
+ * Single metrics source for body + gear alignment.
  */
 
 import type { RaceId } from './races';
@@ -20,6 +24,261 @@ export interface BodyLook {
 }
 
 export const DEFAULT_BODY: BodyLook = { gender: 'male', race: 'human' };
+
+export type HeightBand = 'tall' | 'medium' | 'short' | 'tiny';
+
+/** Integer canvas metrics (ART_RES=32). Shared ground plant footY=27. */
+export interface BodyMetrics {
+  band: HeightBand;
+  footY: number;
+  legH: number;
+  torsoY: number;
+  torsoH: number;
+  headY: number;
+  headH: number;
+  torsoW: number;
+  torsoX: number;
+  headW: number;
+  headX: number;
+  legW: number;
+  leftLegX: number;
+  rightLegX: number;
+  armW: number;
+  armLen: number;
+  shoulderBias: number;
+}
+
+export function heightBandFor(race: RaceId): HeightBand {
+  switch (race) {
+    case 'elf':
+      return 'tall';
+    case 'dwarf':
+      return 'short';
+    case 'halfling':
+    case 'gnome':
+      return 'tiny';
+    default:
+      return 'medium';
+  }
+}
+
+/** Male baseline rows (EMA table). Female deltas applied in bodyMetrics. */
+const MALE_BASE: Record<
+  RaceId,
+  Omit<BodyMetrics, 'torsoX' | 'leftLegX' | 'rightLegX' | 'headX'> & {
+    leftLegX: number;
+    rightLegX: number;
+    headX: number;
+    torsoX: number;
+  }
+> = {
+  elf: {
+    band: 'tall',
+    footY: 27,
+    legH: 9,
+    torsoY: 9,
+    torsoH: 10,
+    torsoW: 13,
+    torsoX: 9,
+    headY: 1,
+    headW: 10,
+    headH: 8,
+    headX: 11,
+    legW: 4,
+    leftLegX: 11,
+    rightLegX: 17,
+    armW: 3,
+    armLen: 9,
+    shoulderBias: 0,
+  },
+  human: {
+    band: 'medium',
+    footY: 27,
+    legH: 7,
+    torsoY: 11,
+    torsoH: 10,
+    torsoW: 15,
+    torsoX: 8,
+    headY: 3,
+    headW: 11,
+    headH: 8,
+    headX: 10,
+    legW: 5,
+    leftLegX: 10,
+    rightLegX: 17,
+    armW: 4,
+    armLen: 8,
+    shoulderBias: 0,
+  },
+  half_elf: {
+    band: 'medium',
+    footY: 27,
+    legH: 8,
+    torsoY: 10,
+    torsoH: 10,
+    torsoW: 14,
+    torsoX: 9,
+    headY: 2,
+    headW: 11,
+    headH: 8,
+    headX: 10,
+    legW: 4,
+    leftLegX: 11,
+    rightLegX: 17,
+    armW: 3,
+    armLen: 8,
+    shoulderBias: 0,
+  },
+  half_orc: {
+    band: 'medium',
+    footY: 27,
+    legH: 7,
+    torsoY: 11,
+    torsoH: 10,
+    torsoW: 16,
+    torsoX: 8,
+    headY: 3,
+    headW: 12,
+    headH: 8,
+    headX: 10,
+    legW: 5,
+    leftLegX: 10,
+    rightLegX: 17,
+    armW: 4,
+    armLen: 8,
+    shoulderBias: 0,
+  },
+  dragonborn: {
+    band: 'medium',
+    footY: 27,
+    legH: 7,
+    torsoY: 11,
+    torsoH: 10,
+    torsoW: 16,
+    torsoX: 8,
+    headY: 2,
+    headW: 12,
+    headH: 9,
+    headX: 10,
+    legW: 5,
+    leftLegX: 10,
+    rightLegX: 17,
+    armW: 4,
+    armLen: 8,
+    shoulderBias: 0,
+  },
+  tiefling: {
+    band: 'medium',
+    footY: 27,
+    legH: 7,
+    torsoY: 11,
+    torsoH: 10,
+    torsoW: 14,
+    torsoX: 9,
+    headY: 3,
+    headW: 11,
+    headH: 8,
+    headX: 10,
+    legW: 4,
+    leftLegX: 11,
+    rightLegX: 17,
+    armW: 3,
+    armLen: 8,
+    shoulderBias: 0,
+  },
+  construct: {
+    band: 'medium',
+    footY: 27,
+    legH: 7,
+    torsoY: 11,
+    torsoH: 10,
+    torsoW: 15,
+    torsoX: 8,
+    headY: 3,
+    headW: 12,
+    headH: 8,
+    headX: 10,
+    legW: 5,
+    leftLegX: 10,
+    rightLegX: 17,
+    armW: 4,
+    armLen: 8,
+    shoulderBias: 0,
+  },
+  dwarf: {
+    band: 'short',
+    footY: 27,
+    legH: 5,
+    torsoY: 13,
+    torsoH: 10,
+    torsoW: 17,
+    torsoX: 7,
+    headY: 5,
+    headW: 12,
+    headH: 8,
+    headX: 10,
+    legW: 5,
+    leftLegX: 10,
+    rightLegX: 17,
+    armW: 4,
+    armLen: 7,
+    shoulderBias: 0,
+  },
+  halfling: {
+    band: 'tiny',
+    footY: 27,
+    legH: 5,
+    torsoY: 15,
+    torsoH: 8,
+    torsoW: 12,
+    torsoX: 10,
+    headY: 7,
+    headW: 10,
+    headH: 8,
+    headX: 11,
+    legW: 4,
+    leftLegX: 11,
+    rightLegX: 17,
+    armW: 3,
+    armLen: 6,
+    shoulderBias: 0,
+  },
+  gnome: {
+    band: 'tiny',
+    footY: 27,
+    legH: 5,
+    torsoY: 15,
+    torsoH: 8,
+    torsoW: 12,
+    torsoX: 10,
+    headY: 7,
+    headW: 10,
+    headH: 8,
+    headX: 11,
+    legW: 4,
+    leftLegX: 11,
+    rightLegX: 17,
+    armW: 3,
+    armLen: 6,
+    shoulderBias: 0,
+  },
+};
+
+export function bodyMetrics(race: RaceId, gender: GenderId): BodyMetrics {
+  const base = MALE_BASE[race] ?? MALE_BASE.human;
+  const m: BodyMetrics = { ...base };
+  if (gender === 'female') {
+    // Dwarf female stays stout (only −2, not elf-slender)
+    m.torsoW = Math.max(11, m.torsoW - 2);
+    m.torsoX = Math.floor((32 - m.torsoW) / 2);
+    m.legW = Math.max(3, m.legW - 1);
+    m.leftLegX = m.leftLegX + 1;
+    m.armW = Math.max(2, m.armW - 1);
+    // Recenter head on torso
+    m.headX = Math.floor(m.torsoX + (m.torsoW - m.headW) / 2);
+  }
+  return m;
+}
 
 /** Skin / scale / metal palettes per race. */
 export function bodyPalette(race: RaceId): {
@@ -139,45 +398,35 @@ export function drawBodyBase(
   const p = bodyPalette(body.race);
   const female = body.gender === 'female';
   const race = body.race;
+  const m = bodyMetrics(race, body.gender);
 
-  // Short races: compress vertical mass slightly by drawing higher feet
-  const short =
-    race === 'dwarf' || race === 'halfling' || race === 'gnome';
-  const footY = short ? 26 : 25;
-  const legH = short ? 5 : 6;
-  const torsoY = short ? 12 : 11;
-  const torsoH = short ? 10 : 11;
-
-  // Foot plant for walk
   const leftOff = walk === 1 ? -1 : walk === 2 ? 1 : 0;
   const rightOff = walk === 2 ? -1 : walk === 1 ? 1 : 0;
 
-  // Shadow
-  fill(ctx, 'rgba(0,0,0,0.2)', 8, 29, 16, 2);
+  // Shadow at shared ground plant
+  fill(ctx, 'rgba(0,0,0,0.22)', 8, 30, 16, 2);
 
   // Legs
-  const legW = female ? 4 : 5;
-  const leftLegX = female ? 11 : 10;
-  const rightLegX = female ? 17 : 17;
+  const legTop = m.footY - m.legH + 1;
   shadedBlock(
     ctx,
     '#2a3a5a',
     '#3a5080',
     '#1a2840',
-    leftLegX + leftOff,
-    footY - legH + 1,
-    legW,
-    legH,
+    m.leftLegX + leftOff,
+    legTop,
+    m.legW,
+    m.legH,
   );
   shadedBlock(
     ctx,
     '#2a3a5a',
     '#3a5080',
     '#1a2840',
-    rightLegX + rightOff,
-    footY - legH + 1,
-    legW,
-    legH,
+    m.rightLegX + rightOff,
+    legTop,
+    m.legW,
+    m.legH,
   );
   // Boots
   shadedBlock(
@@ -185,9 +434,9 @@ export function drawBodyBase(
     '#3d2b1f',
     '#5a4030',
     '#1a1008',
-    leftLegX - 1 + leftOff,
-    footY,
-    legW + 1,
+    m.leftLegX - 1 + leftOff,
+    m.footY,
+    m.legW + 1,
     3,
   );
   shadedBlock(
@@ -195,79 +444,66 @@ export function drawBodyBase(
     '#3d2b1f',
     '#5a4030',
     '#1a1008',
-    rightLegX - 1 + rightOff,
-    footY,
-    legW + 1,
+    m.rightLegX - 1 + rightOff,
+    m.footY,
+    m.legW + 1,
     3,
   );
-  // Halfling big feet
+  // Halfling oversized feet
   if (race === 'halfling') {
-    fill(ctx, '#3d2b1f', leftLegX - 2 + leftOff, footY + 1, legW + 3, 2);
-    fill(ctx, '#3d2b1f', rightLegX - 2 + rightOff, footY + 1, legW + 3, 2);
+    fill(ctx, '#3d2b1f', m.leftLegX - 2 + leftOff, m.footY + 1, m.legW + 3, 2);
+    fill(ctx, '#3d2b1f', m.rightLegX - 2 + rightOff, m.footY + 1, m.legW + 3, 2);
   }
 
-  // Torso width by gender + race
-  let torsoW = female ? 14 : 16;
-  let torsoX = female ? 9 : 8;
-  if (race === 'dwarf') {
-    torsoW = female ? 15 : 17;
-    torsoX = female ? 8 : 7;
-  }
-  if (race === 'elf') {
-    torsoW = female ? 13 : 14;
-    torsoX = female ? 9 : 9;
-  }
-  if (race === 'gnome' || race === 'halfling') {
-    torsoW = female ? 12 : 13;
-    torsoX = female ? 10 : 9;
-  }
-
-  // Default tunic (overwritten by breastplate gear when present)
+  // Torso tunic
   const tunic =
     race === 'construct'
       ? { mid: '#6a7888', hi: '#9aabc0', sh: '#3a4558' }
       : race === 'dragonborn'
         ? { mid: p.skin, hi: p.skinHi, sh: p.skinSh }
         : { mid: '#2d6cdf', hi: '#5a9aff', sh: '#1a4aaf' };
-  shadedBlock(ctx, tunic.mid, tunic.hi, tunic.sh, torsoX, torsoY, torsoW, torsoH);
+  shadedBlock(ctx, tunic.mid, tunic.hi, tunic.sh, m.torsoX, m.torsoY, m.torsoW, m.torsoH);
   if (race !== 'dragonborn' && race !== 'construct') {
-    fill(ctx, '#4a8cef', torsoX + 2, torsoY + 2, torsoW - 4, 3);
-    fill(ctx, '#c9a227', torsoX + 3, torsoY + torsoH - 3, torsoW - 6, 2);
+    fill(ctx, '#4a8cef', m.torsoX + 2, m.torsoY + 2, m.torsoW - 4, 3);
+    fill(ctx, '#c9a227', m.torsoX + 3, m.torsoY + m.torsoH - 3, m.torsoW - 6, 2);
   }
   if (race === 'construct') {
-    // plate seams
-    fill(ctx, p.skinSh, torsoX + 2, torsoY + 3, torsoW - 4, 1);
-    fill(ctx, p.skinSh, torsoX + Math.floor(torsoW / 2), torsoY + 1, 1, torsoH - 2);
-    fill(ctx, p.accent, torsoX + Math.floor(torsoW / 2) - 1, torsoY + 5, 3, 2);
+    fill(ctx, p.skinSh, m.torsoX + 2, m.torsoY + 3, m.torsoW - 4, 1);
+    fill(
+      ctx,
+      p.skinSh,
+      m.torsoX + Math.floor(m.torsoW / 2),
+      m.torsoY + 1,
+      1,
+      m.torsoH - 2,
+    );
+    fill(
+      ctx,
+      p.accent,
+      m.torsoX + Math.floor(m.torsoW / 2) - 1,
+      m.torsoY + 5,
+      3,
+      2,
+    );
   }
   if (race === 'dragonborn') {
-    // scale rows
     for (let i = 0; i < 3; i++) {
-      fill(ctx, p.skinSh, torsoX + 2, torsoY + 2 + i * 3, torsoW - 4, 1);
+      fill(ctx, p.skinSh, m.torsoX + 2, m.torsoY + 2 + i * 3, m.torsoW - 4, 1);
     }
   }
 
   // Arms
-  const armW = female ? 3 : 4;
-  shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, torsoX - armW, torsoY + 1, armW, 8);
-  shadedBlock(
-    ctx,
-    p.skin,
-    p.skinHi,
-    p.skinSh,
-    torsoX + torsoW,
-    torsoY + 1,
-    armW,
-    8,
-  );
+  const armX0 = m.torsoX - m.armW + m.shoulderBias;
+  const armX1 = m.torsoX + m.torsoW - m.shoulderBias;
+  shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, armX0, m.torsoY + 1, m.armW, m.armLen);
+  shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, armX1, m.torsoY + 1, m.armW, m.armLen);
 
-  // Head
   if (!bareHead) return;
 
-  const hx = 10;
-  const hy = short ? 3 : 4;
-  const hw = 12;
-  const hh = race === 'dragonborn' ? 10 : 9;
+  const hx = m.headX;
+  const hy = m.headY;
+  const hw = m.headW;
+  const hh = m.headH;
 
   if (race === 'dragonborn') {
     drawDragonbornHead(ctx, body, hx, hy, hw, hh, p);
@@ -278,80 +514,99 @@ export function drawBodyBase(
     return;
   }
 
-  // Standard head mass
+  // Head mass
   shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, hx, hy, hw, hh);
   cartoonFace(ctx, hx, hy, hw, hh, {
-    soft: female || race === 'elf' || race === 'halfling',
+    soft: female || race === 'elf' || race === 'halfling' || race === 'gnome',
   });
-  // Re-tint face area slightly for non-human (cartoonFace uses fixed skin)
+  // Re-tint non-human face (cartoonFace uses fixed peach skin)
   if (race !== 'human') {
     fill(ctx, p.skin, hx + 1, hy + 1, hw - 2, hh - 3);
-    // simple eyes redo
     fill(ctx, '#fff', hx + 2, hy + 3, 3, 3);
     fill(ctx, '#fff', hx + hw - 5, hy + 3, 3, 3);
     fill(ctx, '#222', hx + 3, hy + 4, 2, 2);
     fill(ctx, '#222', hx + hw - 4, hy + 4, 2, 2);
     spark(ctx, hx + 3, hy + 3, '#fff');
+    // Half-orc heavier brow
+    if (race === 'half_orc') {
+      fill(ctx, p.skinSh, hx + 1, hy + 2, hw - 2, 1);
+    }
   }
 
-  // Ears / features
+  // Ears
   if (race === 'elf' || race === 'half_elf') {
-    // pointed ears
+    const tall = race === 'elf';
     fill(ctx, p.skin, hx - 2, hy + 2, 3, 4);
     fill(ctx, p.skinHi, hx - 2, hy + 2, 1, 2);
     fill(ctx, p.skin, hx + hw - 1, hy + 2, 3, 4);
     fill(ctx, p.skinHi, hx + hw + 1, hy + 2, 1, 2);
-    if (race === 'elf') {
-      fill(ctx, p.skin, hx - 3, hy + 1, 2, 2); // taller points
+    if (tall) {
+      fill(ctx, p.skin, hx - 3, hy + 1, 2, 2);
       fill(ctx, p.skin, hx + hw + 1, hy + 1, 2, 2);
+      fill(ctx, p.skinHi, hx - 3, hy, 1, 2);
+      fill(ctx, p.skinHi, hx + hw + 2, hy, 1, 2);
     }
   }
+  // Tusks (half-orc)
   if (race === 'half_orc') {
-    // tusks
     fill(ctx, '#e8e0d0', hx + 3, hy + hh - 2, 2, 3);
     fill(ctx, '#e8e0d0', hx + hw - 5, hy + hh - 2, 2, 3);
     fill(ctx, '#fff', hx + 3, hy + hh - 1, 1, 1);
   }
+  // Horns + tail (tiefling)
   if (race === 'tiefling') {
-    // horns
     fill(ctx, '#2a1a10', hx + 1, hy - 3, 3, 4);
     fill(ctx, '#2a1a10', hx + hw - 4, hy - 3, 3, 4);
     fill(ctx, p.accent, hx + 2, hy - 2, 1, 2);
     fill(ctx, p.accent, hx + hw - 3, hy - 2, 1, 2);
-    // small tail tip at hip
-    fill(ctx, p.skinSh, 4, 18, 3, 2);
-    fill(ctx, p.skin, 3, 19, 2, 3);
-  }
-  if (race === 'dwarf' && !female) {
-    // full beard
-    fill(ctx, p.hair, hx + 1, hy + hh - 2, hw - 2, 5);
-    fill(ctx, p.hairHi, hx + 3, hy + hh, 2, 2);
-    fill(ctx, p.hair, hx + 2, hy + hh + 2, hw - 4, 2);
-  }
-  if (race === 'dwarf' && female) {
-    // braids
-    fill(ctx, p.hair, hx - 1, hy + 4, 3, 8);
-    fill(ctx, p.hair, hx + hw - 2, hy + 4, 3, 8);
-    fill(ctx, p.accent, hx - 1, hy + 10, 3, 1);
-    fill(ctx, p.accent, hx + hw - 2, hy + 10, 3, 1);
+    fill(ctx, p.skinSh, m.torsoX - 2, m.torsoY + m.torsoH - 2, 3, 2);
+    fill(ctx, p.skin, m.torsoX - 3, m.torsoY + m.torsoH - 1, 2, 3);
   }
 
-  // Hair (dragonborn/construct already returned above)
-  if (female && race !== 'dwarf') {
-    hairMass(ctx, hx, hy, hw, { color: p.hair, bangs: true });
-    fill(ctx, p.hair, hx - 1, hy + 4, 3, 9);
-    fill(ctx, p.hair, hx + hw - 2, hy + 4, 3, 9);
-    fill(ctx, p.hairHi, hx, hy + 6, 1, 3);
-  } else if (!female || race === 'elf') {
-    hairMass(ctx, hx, hy, hw, {
-      color: p.hair,
-      bangs: race !== 'dwarf',
-    });
+  // Dwarf male: long beard (non-negotiable silhouette)
+  if (race === 'dwarf' && !female) {
+    const beardTop = hy + hh - 2;
+    fill(ctx, p.hair, hx + 1, beardTop, hw - 2, 5);
+    fill(ctx, p.hairHi, hx + 3, beardTop + 2, 2, 2);
+    fill(ctx, p.hair, hx + 2, beardTop + 4, hw - 4, 3);
+    // forked tip
+    fill(ctx, p.hair, hx + 3, beardTop + 7, 2, 2);
+    fill(ctx, p.hair, hx + hw - 5, beardTop + 7, 2, 2);
+    fill(ctx, p.hairHi, hx + 4, beardTop + 5, 1, 2);
   }
+  // Dwarf female: side braids + gold bands
+  if (race === 'dwarf' && female) {
+    fill(ctx, p.hair, hx - 1, hy + 3, 3, 9);
+    fill(ctx, p.hair, hx + hw - 2, hy + 3, 3, 9);
+    fill(ctx, p.hairHi, hx - 1, hy + 4, 2, 3);
+    fill(ctx, p.hairHi, hx + hw - 1, hy + 4, 2, 3);
+    fill(ctx, p.accent, hx - 1, hy + 11, 3, 1);
+    fill(ctx, p.accent, hx + hw - 2, hy + 11, 3, 1);
+    hairMass(ctx, hx, hy, hw, { color: p.hair, bangs: true });
+  }
+
+  // Hair (non-dwarf-female path; dwarf male beard already drawn)
+  if (race !== 'dwarf' || !female) {
+    if (female) {
+      hairMass(ctx, hx, hy, hw, { color: p.hair, bangs: true });
+      fill(ctx, p.hair, hx - 1, hy + 4, 3, 9);
+      fill(ctx, p.hair, hx + hw - 2, hy + 4, 3, 9);
+      fill(ctx, p.hairHi, hx, hy + 6, 1, 3);
+    } else if (race !== 'dwarf') {
+      hairMass(ctx, hx, hy, hw, {
+        color: p.hair,
+        bangs: true,
+      });
+    } else {
+      // dwarf male: short crown hair above beard
+      hairMass(ctx, hx, hy, hw, { color: p.hair, bangs: false });
+    }
+  }
+  // Gnome tall hair puff
   if (race === 'gnome') {
-    fill(ctx, p.hair, hx + 2, hy - 4, hw - 4, 4);
-    fill(ctx, p.hairHi, hx + 4, hy - 3, 3, 2);
-    spark(ctx, hx + 5, hy - 3, '#fff');
+    fill(ctx, p.hair, hx + 1, hy - 4, hw - 2, 5);
+    fill(ctx, p.hairHi, hx + 3, hy - 3, 4, 2);
+    spark(ctx, hx + 4, hy - 3, '#fff');
   }
 }
 
@@ -364,19 +619,15 @@ function drawDragonbornHead(
   hh: number,
   p: ReturnType<typeof bodyPalette>,
 ): void {
-  // Snout mass
   shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, hx, hy, hw, hh);
   fill(ctx, p.skinSh, hx + 2, hy + 2, hw - 4, 1);
-  // snout forward
   shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, hx + 3, hy + 5, hw - 6, 5);
   fill(ctx, p.skinSh, hx + 4, hy + 8, 2, 1);
   fill(ctx, p.skinSh, hx + hw - 6, hy + 8, 2, 1);
-  // eyes
   fill(ctx, '#ffc857', hx + 3, hy + 3, 3, 2);
   fill(ctx, '#ffc857', hx + hw - 6, hy + 3, 3, 2);
   fill(ctx, '#1a1a10', hx + 4, hy + 3, 1, 2);
   fill(ctx, '#1a1a10', hx + hw - 5, hy + 3, 1, 2);
-  // crest / horns by gender
   if (body.gender === 'male') {
     fill(ctx, p.skinSh, hx + 4, hy - 3, 4, 4);
     fill(ctx, p.skin, hx + 5, hy - 4, 2, 3);
@@ -397,18 +648,15 @@ function drawConstructHead(
   p: ReturnType<typeof bodyPalette>,
 ): void {
   shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, hx, hy, hw, hh);
-  // visor band
   fill(ctx, '#0a1020', hx + 1, hy + 3, hw - 2, 4);
   fill(ctx, p.accent, hx + 3, hy + 4, 3, 2);
   fill(ctx, p.accent, hx + hw - 6, hy + 4, 3, 2);
   spark(ctx, hx + 4, hy + 4, '#fff');
-  // antenna / crest
   if (body.gender === 'male') {
-    fill(ctx, p.skinSh, hx + hw / 2 - 1, hy - 3, 2, 4);
-    fill(ctx, p.accent, hx + hw / 2 - 1, hy - 4, 2, 2);
+    fill(ctx, p.skinSh, hx + Math.floor(hw / 2) - 1, hy - 3, 2, 4);
+    fill(ctx, p.accent, hx + Math.floor(hw / 2) - 1, hy - 4, 2, 2);
   } else {
     fill(ctx, p.skinHi, hx + 2, hy - 1, hw - 4, 2);
   }
-  // jaw plate
   fill(ctx, p.skinSh, hx + 2, hy + hh - 2, hw - 4, 2);
 }

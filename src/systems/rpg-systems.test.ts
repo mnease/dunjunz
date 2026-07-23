@@ -3540,40 +3540,70 @@ describe('body look race × gender', () => {
   });
 });
 
-describe('identity gender + starting race', () => {
-  it('draws distinct male and female preview canvases', async () => {
-    const { drawGenderPreview } = await import('./identity-preview');
-    expect(typeof drawGenderPreview).toBe('function');
+describe('identity race-first + gender', () => {
+  it('draws race×gender previews via shared body path', async () => {
+    const { drawIdentityPreview, identityPreviewDataUrl } = await import(
+      './identity-preview'
+    );
+    expect(typeof drawIdentityPreview).toBe('function');
+    const ops: string[] = [];
+    const ctx = {
+      fillStyle: '',
+      clearRect: () => ops.push('c'),
+      fillRect: () => ops.push('r'),
+    } as unknown as CanvasRenderingContext2D;
+    drawIdentityPreview(ctx, 'half_orc', 'male');
+    expect(ops.length).toBeGreaterThan(0);
+    // data URL needs real canvas in browser; function exists for UI
+    expect(typeof identityPreviewDataUrl).toBe('function');
   });
 
-  it('rolls a race from the full pool and only accepts male/female', async () => {
-    const {
-      RACE_IDS,
-      rollStartingRace,
-      chooseIdentity,
-      needsIdentityPick,
-      migrateIdentity,
-    } = await import('./races');
+  it('bodyMetrics: elf taller crown than human than dwarf than gnome', async () => {
+    const { bodyMetrics } = await import('./body-visuals');
+    const elf = bodyMetrics('elf', 'male');
+    const human = bodyMetrics('human', 'male');
+    const dwarf = bodyMetrics('dwarf', 'male');
+    const gnome = bodyMetrics('gnome', 'male');
+    expect(elf.headY).toBeLessThan(human.headY);
+    expect(human.headY).toBeLessThan(dwarf.headY);
+    expect(dwarf.headY).toBeLessThan(gnome.headY);
+    expect(elf.legH).toBeGreaterThan(dwarf.legH);
+    // Shared ground plant
+    expect(elf.footY).toBe(27);
+    expect(dwarf.footY).toBe(27);
+    expect(dwarf.torsoW).toBeGreaterThan(elf.torsoW);
+  });
+
+  it('half_orc palette is green; chooseIdentity stores player race', async () => {
+    const { RACE_IDS, rollStartingRace, chooseIdentity, needsIdentityPick, migrateIdentity } =
+      await import('./races');
+    const { bodyPalette } = await import('./body-visuals');
     expect(RACE_IDS).toContain('construct');
-    const r = rollStartingRace(42);
-    expect(RACE_IDS).toContain(r);
+    expect(rollStartingRace(42)).toBeTruthy();
+    const orcSkin = bodyPalette('half_orc').skin.toLowerCase();
+    // green-ish mid tone (G channel present in hex #6a9060)
+    expect(orcSkin).toMatch(/^#6a9060$/i);
 
     let save = defaultSave();
     expect(needsIdentityPick(save)).toBe(true);
-    save = chooseIdentity(save, 'female');
+    save = chooseIdentity(save, { race: 'elf', gender: 'female' });
     expect(save.gender).toBe('female');
+    expect(save.race).toBe('elf');
+    expect(save.startingRace).toBe('elf');
     expect(save.identityChosen).toBe(true);
-    expect(save.startingRace).toBe(save.race);
     expect(save.raceChosen).toBe(false);
     expect(needsIdentityPick(save)).toBe(false);
 
-    // Second call does not re-roll race
-    const race = save.race;
-    save = chooseIdentity(save, 'male');
-    expect(save.race).toBe(race);
-    expect(save.gender).toBe('female'); // already chosen keeps gender
+    // Idempotent — no overwrite
+    save = chooseIdentity(save, { race: 'dwarf', gender: 'male' });
+    expect(save.race).toBe('elf');
+    expect(save.gender).toBe('female');
 
-    // Veterans mid-run migrate without prompt
+    // Back-compat string form defaults race human
+    const s2 = chooseIdentity(defaultSave(), 'male');
+    expect(s2.gender).toBe('male');
+    expect(s2.race).toBe('human');
+
     const vet = migrateIdentity({
       ...defaultSave(),
       level: 5,

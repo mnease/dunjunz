@@ -148,8 +148,9 @@ export function raceLabel(save: SaveData): string {
 }
 
 /**
- * Deterministic starting race from run seed (and optional salt).
- * All races including construct are in the pool.
+ * Deterministic race from run seed (and optional salt).
+ * Not used for beach identity — player picks race first there.
+ * Kept for tests / NPC seed / debug.
  */
 export function rollStartingRace(runSeed: number, salt = 0x51aced): RaceId {
   const x = (Math.imul(runSeed ^ salt, 0x9e3779b1) >>> 0) % RACE_IDS.length;
@@ -168,24 +169,34 @@ export function needsIdentityPick(save: SaveData): boolean {
   return true;
 }
 
-/** Apply binary gender + random race. Idempotent if already chosen. */
+/**
+ * Beach identity: player-picked race + binary gender.
+ * Cosmetic only — does NOT set raceChosen (L25 ritual owns stats).
+ * Idempotent if already chosen.
+ */
 export function chooseIdentity(
   save: SaveData,
-  gender: 'male' | 'female',
+  opts: { race: RaceId; gender: 'male' | 'female' } | 'male' | 'female',
 ): SaveData {
+  // Back-compat: chooseIdentity(save, 'female') still works (human + gender)
+  const race: RaceId =
+    typeof opts === 'string' ? 'human' : (opts.race ?? 'human');
+  const gender: 'male' | 'female' =
+    typeof opts === 'string' ? opts : opts.gender;
+
   if (gender !== 'male' && gender !== 'female') {
     return save;
   }
+  if (!RACES[race]) return save;
   if (save.identityChosen || save.flags?.[FLAG_IDENTITY_CHOSEN]) {
     return { ...save, gender: save.gender ?? gender };
   }
-  const race = rollStartingRace(save.runSeed ?? 1);
   return {
     ...save,
     gender,
-    identityChosen: true,
     race,
     startingRace: race,
+    identityChosen: true,
     // Cosmetic until wizard ritual — do not set raceChosen
     flags: { ...save.flags, [FLAG_IDENTITY_CHOSEN]: true },
   };
