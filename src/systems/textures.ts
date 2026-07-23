@@ -44,7 +44,9 @@ import {
   drawSkyRedwoodSprite,
   drawTreeSprite,
   drawWaterTile,
+  drawAssistantHonk,
   drawGlamdolph,
+  drawRoyalGoose,
   drawWoodElfGuard,
   drawWoodElfQueen,
   fill,
@@ -2435,6 +2437,14 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#ff3344', 12, 8, 3, 3);
     fill(ctx, '#ff3344', 18, 8, 3, 3);
     fill(ctx, '#fff', 11, 20, 10, 3);
+  });
+
+  // Sewerz goose bosses (not tinted humans)
+  canvasTex(scene, 'royal_goose', ART_RES, ART_RES, (ctx) => {
+    drawRoyalGoose(ctx);
+  });
+  canvasTex(scene, 'assistant_honk', ART_RES, ART_RES, (ctx) => {
+    drawAssistantHonk(ctx);
   });
 
   canvasTex(scene, 'npc', ART_RES, ART_RES, (ctx) => {

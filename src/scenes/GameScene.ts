@@ -3407,13 +3407,16 @@ export class GameScene extends Phaser.Scene {
             ? 'elf_guard'
             : def.id === 'captain' && this.textures.exists('captain')
               ? 'captain'
-              : def.id === 'royal-goose' && this.textures.exists('boss')
-                ? 'boss'
-                : isSkyRedwood && this.textures.exists('tree_redwood')
-                  ? 'tree_redwood'
-                  : rackTex && this.textures.exists(rackTex)
-                    ? rackTex
-                    : (ENTITY_TEX[def.kind] ?? 'npc');
+              : def.id === 'royal-goose' && this.textures.exists('royal_goose')
+                ? 'royal_goose'
+                : def.id === ASSISTANT_HONK_ID &&
+                    this.textures.exists('assistant_honk')
+                  ? 'assistant_honk'
+                  : isSkyRedwood && this.textures.exists('tree_redwood')
+                    ? 'tree_redwood'
+                    : rackTex && this.textures.exists(rackTex)
+                      ? rackTex
+                      : (ENTITY_TEX[def.kind] ?? 'npc');
     const placed = this.roomExpand
       ? mapEntityTile(def.x, def.y, this.roomExpand)
       : { x: def.x, y: def.y };
@@ -3423,10 +3426,13 @@ export class GameScene extends Phaser.Scene {
     if (isSkyRedwood) {
       sprite.setOrigin(0.5, 0.92);
     }
+    // Royal goose reads a bit larger than junior honk
+    const gooseScale =
+      def.id === 'royal-goose' ? 1.35 : def.id === ASSISTANT_HONK_ID ? 1.15 : 1;
     const displayScale =
       typeof def.scale === 'number' && def.scale > 0
         ? SPRITE_SCALE * def.scale
-        : SPRITE_SCALE;
+        : SPRITE_SCALE * gooseScale;
     sprite.setScale(displayScale);
     // Y-sort depth (updated every frame in updateYSortDepths)
     this.applyYSortDepth(sprite);
@@ -3436,16 +3442,12 @@ export class GameScene extends Phaser.Scene {
       const bud = getBestBud(this.save.bestBudId);
       sprite.setTint(bud?.tint ?? 0x4ad4c8);
     }
-    if (def.id === 'royal-goose') {
-      sprite.setTint(0xffe08a);
-    }
+    // royal-goose / assistant-honk use dedicated goose textures (no tint)
     if (def.id === GUILD_MASTER_ID || def.id === 'old-man') {
       sprite.setTint(0xffe08a); // guild gold — tutorial master
     }
     if (def.id === RULES_LAWYER_ID) {
       sprite.setTint(0xc8c0e8); // binder grey-purple skeleton clerk
-    } else if (def.id === ASSISTANT_HONK_ID) {
-      sprite.setTint(0xffe08a); // junior goose yellow
     } else if (def.id === DEPUTY_HOWL_ID) {
       sprite.setTint(0x9a9ab0); // pack-grey wolf intern
     } else if (def.id === LEASE_WIGHT_ID) {
@@ -3456,8 +3458,11 @@ export class GameScene extends Phaser.Scene {
       sprite.setTint(0xc09050); // sand stalker
     } else if (def.id === BILGE_BRUTE_ID) {
       sprite.setTint(0x4a7060); // bilge green
-    } else if (def.id === 'floor-captain' || def.kind === 'miniboss') {
-      sprite.setTint(0xffb090); // manager warmth; skip depth wash
+    } else if (
+      (def.id === 'floor-captain' || def.kind === 'miniboss') &&
+      def.id !== ASSISTANT_HONK_ID
+    ) {
+      sprite.setTint(0xffb090); // manager warmth; skip depth wash / not geese
     }
 
     const contactHostile = (CONTACT_HOSTILES as readonly string[]).includes(

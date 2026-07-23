@@ -1025,6 +1025,86 @@ export function drawWoodElfGuard(ctx: CanvasRenderingContext2D): void {
 }
 
 /**
+ * Royal Goose — white goose, orange bill, crown, boss presence.
+ * Author 32×32. (Not a tinted humanoid.)
+ */
+export function drawRoyalGoose(ctx: CanvasRenderingContext2D): void {
+  // Shadow
+  fill(ctx, 'rgba(0,0,0,0.25)', 8, 28, 16, 3);
+  // Body (oval mass)
+  shadedBlock(ctx, '#d8dce8', '#f4f6ff', '#98a0b0', 6, 12, 18, 14);
+  fill(ctx, '#e8ecf4', 8, 14, 12, 8);
+  // Wing fold
+  shadedBlock(ctx, '#c0c8d8', '#e0e8f0', '#8890a0', 4, 14, 8, 10);
+  fill(ctx, '#a8b0c0', 5, 16, 2, 6);
+  // Tail tuft
+  fill(ctx, '#c8d0e0', 20, 18, 6, 6);
+  fill(ctx, '#e8ecf4', 22, 19, 3, 3);
+  // Neck
+  shadedBlock(ctx, '#e0e4f0', '#f8faff', '#a8b0c0', 14, 6, 7, 10);
+  // Head
+  shadedBlock(ctx, '#e8ecf4', '#ffffff', '#b0b8c8', 12, 2, 10, 8);
+  // Eye
+  fill(ctx, '#1a1a22', 18, 5, 2, 2);
+  fill(ctx, '#fff', 18, 5, 1, 1);
+  // Orange bill
+  fill(ctx, '#e07020', 20, 6, 6, 3);
+  fill(ctx, '#ff9020', 21, 6, 4, 2);
+  fill(ctx, '#c05010', 24, 7, 2, 2);
+  // Nostril
+  fill(ctx, '#8a3010', 23, 6, 1, 1);
+  // Crown (royal)
+  fill(ctx, '#c9a227', 13, 0, 8, 3);
+  fill(ctx, '#ffc857', 14, 0, 2, 2);
+  fill(ctx, '#ffc857', 17, 0, 2, 3);
+  fill(ctx, '#ffc857', 20, 0, 2, 2);
+  fill(ctx, '#7dffb3', 17, 0, 2, 1); // gem
+  // Orange webbed feet
+  fill(ctx, '#e07020', 9, 25, 5, 3);
+  fill(ctx, '#e07020', 16, 25, 5, 3);
+  fill(ctx, '#c05010', 9, 27, 2, 1);
+  fill(ctx, '#c05010', 12, 27, 2, 1);
+  fill(ctx, '#c05010', 16, 27, 2, 1);
+  fill(ctx, '#c05010', 19, 27, 2, 1);
+  spark(ctx, 16, 1, '#ffffff');
+}
+
+/**
+ * Assistant Honk — junior sewer goose, fluffier / yellower, no crown.
+ * Author 32×32.
+ */
+export function drawAssistantHonk(ctx: CanvasRenderingContext2D): void {
+  fill(ctx, 'rgba(0,0,0,0.22)', 9, 28, 14, 3);
+  // Smaller body — warm white / butter
+  shadedBlock(ctx, '#e8d8a0', '#fff4c8', '#b8a060', 7, 13, 16, 12);
+  fill(ctx, '#fff0b0', 9, 15, 10, 7);
+  // Wing
+  shadedBlock(ctx, '#d0c080', '#f0e0a0', '#a09050', 5, 15, 7, 8);
+  // Tail
+  fill(ctx, '#d8c890', 19, 18, 5, 5);
+  // Neck + head
+  shadedBlock(ctx, '#f0e8b0', '#fff8d0', '#c0a860', 13, 7, 6, 9);
+  shadedBlock(ctx, '#f4ecb8', '#fffce0', '#c8b070', 12, 3, 9, 7);
+  // Big eye (intern energy)
+  fill(ctx, '#1a1a22', 17, 5, 2, 2);
+  fill(ctx, '#fff', 17, 5, 1, 1);
+  // Bill
+  fill(ctx, '#e87820', 19, 6, 5, 3);
+  fill(ctx, '#ff9828', 20, 6, 3, 2);
+  // Tiny intern badge on chest
+  fill(ctx, '#ffc857', 12, 16, 4, 3);
+  fill(ctx, '#8a6820', 13, 17, 2, 1);
+  // Feet
+  fill(ctx, '#e07020', 10, 24, 4, 3);
+  fill(ctx, '#e07020', 16, 24, 4, 3);
+  fill(ctx, '#c05010', 10, 26, 1, 1);
+  fill(ctx, '#c05010', 12, 26, 1, 1);
+  fill(ctx, '#c05010', 16, 26, 1, 1);
+  fill(ctx, '#c05010', 18, 26, 1, 1);
+  spark(ctx, 14, 14, '#fff8c0');
+}
+
+/**
  * Glamdolph — grey wizard, long white beard, staff, ominous news delivery.
  * Author 32×32.
  */
