@@ -4,14 +4,14 @@
 **North star:** Core Keeper–inspired discrete autotile world on clean-slate render path  
 **Style law:** [`graphics-v2-style-bible.md`](./graphics-v2-style-bible.md)  
 **Architecture detail:** [`graphics-system-v2-architecture.md`](./graphics-system-v2-architecture.md) (refined by this doc)  
-**Branch:** `graphics-v2` (preview always on) · **Live `main`:** classic discrete tiles after full graphics revert  
-**Next implement:** Phase C land autotile + structure
+**Branch:** `graphics-v2` = **staging** · **`main`** = production only on promote  
+**Next implement:** Phase C land autotile + structure  
+**Deploy law:** [`STAGING.md`](./STAGING.md)
 
-| URL | Role |
-| --- | --- |
-| https://www.dunjunz.com | Production (`main`) |
-| https://graphics.dunjunz.com | Branch domain `graphics-v2` |
-| https://dunjunz-graphics-v2.vercel.app | Stable alias → latest `graphics-v2` |
+| Environment | Branch | URL |
+| --- | --- | --- |
+| Production | `main` | https://www.dunjunz.com |
+| Staging | `graphics-v2` | https://graphics.dunjunz.com · https://dunjunz-graphics-v2.vercel.app |
 
 ---
 

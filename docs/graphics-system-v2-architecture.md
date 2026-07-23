@@ -14,17 +14,16 @@
 **Archive tag:** `archive/continuous-ground-2026-07-23`  
 **Rebuild branch:** `graphics-v2` — **Phase S complete** (continuous-ground hard-deleted); next is Phase A autotile.
 
-### Permanent preview (always on)
+### Staging vs production (operator law)
 
-| URL | Role |
-| --- | --- |
-| **https://dunjunz-graphics-v2.vercel.app** | Stable alias — points at latest `graphics-v2` deploy |
-| **https://graphics.dunjunz.com** | Branch domain (Vercel `gitBranch=graphics-v2`) — needs DNS CNAME if not resolving yet |
-| **https://www.dunjunz.com** | Production (`main` only) |
+See **[`STAGING.md`](./STAGING.md)** — staging is the only place for WIP; production updates on deliberate promote only.
 
-**Workflow:** push to `graphics-v2` → Vercel Preview rebuilds → stable alias / branch domain update. Do not merge unfinished v2 to `main`.
+| Environment | Branch | URL |
+| --- | --- | --- |
+| **Staging** | `graphics-v2` | https://graphics.dunjunz.com · https://dunjunz-graphics-v2.vercel.app |
+| **Production** | `main` | https://www.dunjunz.com |
 
-**DNS for graphics.dunjunz.com (if blank):** CNAME `graphics` → `cname.vercel-dns.com` on the dunjunz.com registrar (or A records Vercel recommends). Domain already registered on the dunjunz Vercel project.
+**Workflow:** all graphics/gameplay work on `graphics-v2` → playtest staging → `./scripts/promote-staging-to-production.sh` when ready for users.
 
 ---
 
