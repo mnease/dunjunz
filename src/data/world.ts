@@ -54,7 +54,8 @@ export const ROOMS: Record<string, RoomDef> = {
     land: 'surface',
     floor: 0,
     mapX: 0,
-    mapY: 1,
+    // South of meadow (mapY increases north — validator + mapz north-up).
+    mapY: -1,
     north: 'overworld',
     // s = sand, d = packed dirt path to north meadow door, ~ = ocean.
     tiles: [
