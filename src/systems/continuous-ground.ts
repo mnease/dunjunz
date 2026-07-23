@@ -230,19 +230,25 @@ function colorAt(
     b += c[2] * wt;
   }
 
-  // Fine grit (lighter on structure pads so props read)
-  const grit = hash2(Math.floor(wx * 8), Math.floor(wy * 8), seed + 3);
+  // Small-pixel grit (fine dither — not giant tile stamps)
+  // Quantize color slightly so the surface reads as tiny pixels, not soft paint
+  const grit = hash2(Math.floor(wx * 14), Math.floor(wy * 14), seed + 3);
   if (!structure) {
-    if (grit > 0.82) {
-      r = Math.min(255, r + 12);
-      g = Math.min(255, g + 12);
-      b = Math.min(255, b + 10);
-    } else if (grit < 0.12) {
-      r = Math.max(0, r - 10);
-      g = Math.max(0, g - 10);
-      b = Math.max(0, b - 8);
+    if (grit > 0.78) {
+      r = Math.min(255, r + 14);
+      g = Math.min(255, g + 14);
+      b = Math.min(255, b + 12);
+    } else if (grit < 0.14) {
+      r = Math.max(0, r - 12);
+      g = Math.max(0, g - 12);
+      b = Math.max(0, b - 10);
     }
   }
+  // 4-level channel snap → crisp small-pixel look
+  const snap = (v: number) => Math.round(v / 12) * 12;
+  r = Math.min(255, snap(r));
+  g = Math.min(255, snap(g));
+  b = Math.min(255, snap(b));
 
   // Structure base pads under props — dark threshold / threshold frame
   const fxCell = wx - Math.floor(wx);

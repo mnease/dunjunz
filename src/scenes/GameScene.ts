@@ -2067,6 +2067,7 @@ export class GameScene extends Phaser.Scene {
       mapX: room.mapX,
       mapY: room.mapY,
       floor: room.floor ?? 0,
+      // step 2 = small pixels after nearest upscale (not giant cell stamps)
       pixelStep: 2,
     };
     const canvas = paintContinuousGround(groundOpts);
@@ -2127,13 +2128,13 @@ export class GameScene extends Phaser.Scene {
         const tex = structurePropTexture(kind, floor);
         if (!tex || !this.textures.exists(tex)) continue;
         const pos = this.tileToWorld(x, y);
-        // Slightly larger than one cell so arch / door frame reads at scale
+        // Cell-sized props (small pixel art) — avoid oversized "giant tile" props
         const scaleMul =
           kind === 'stairs' || kind === 'entrance' || kind === 'stairs_up'
-            ? 1.35
+            ? 1.08
             : kind === 'door' || kind === 'locked'
-              ? 1.25
-              : 1.1;
+              ? 1.05
+              : 1.0;
         const img = this.add
           .image(pos.x, pos.y, tex)
           .setScale(SPRITE_SCALE * scaleMul)
@@ -2142,7 +2143,7 @@ export class GameScene extends Phaser.Scene {
         img.setData('structureProp', true);
         // Cave mouths: sit a hair lower so the arch feet into the ground
         if (tex === 'tile-cave-mouth') {
-          img.setOrigin(0.5, 0.62);
+          img.setOrigin(0.5, 0.58);
         }
       }
     }
