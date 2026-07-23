@@ -116,6 +116,14 @@ export const CRAFT_RECIPES: CraftRecipe[] = [
     stackResult: true,
     stackCount: 1,
   },
+  {
+    id: 'craft_staff_lightning',
+    name: 'LIGHTNING STAFF',
+    resultTemplateId: 'staff_lightning',
+    cost: { ore_spark: 3, wood_shard: 2, sand_crystal: 1 },
+    coins: 55,
+    blurb: 'Light-blue crystal. FORJE ENHANCE for chain lightning (+1 hop per +).',
+  },
 ];
 
 /** One cell in the forje action grid (left pane). */
@@ -154,7 +162,8 @@ export function listForjingActions(): ForjingAction[] {
       iconId: 'ore_iron',
       cost: { ore_iron: 1, ore_spark: 1 },
       coins: 15,
-      blurb: '+1 weapon enhancement (max +3). Uses equipped weapon.',
+      blurb:
+        '+1 weapon enhancement (max +3). Lightning staff: each + unlocks another chain hop.',
     },
     {
       id: 'imbue_str',
@@ -282,6 +291,33 @@ function payCosts(
   return { ...save, stacks, coins: save.coins - coins };
 }
 
+/**
+ * Lightning staff chain hops from enhancement rank.
+ * +0 = main bolt only; +1/+2/+3 = 1/2/3 chain jumps to nearby foes.
+ */
+export function lightningChainHops(enhancement: number): number {
+  const e = Math.max(0, Math.min(3, Math.floor(enhancement)));
+  return e;
+}
+
+/** Damage multiplier for the nth chain hop (0 = primary path hits full). */
+export function lightningChainDamageMul(hopIndex: number): number {
+  // hop 0 primary = 1; hop 1 = 0.75; hop 2 = 0.6; hop 3 = 0.5
+  if (hopIndex <= 0) return 1;
+  if (hopIndex === 1) return 0.75;
+  if (hopIndex === 2) return 0.6;
+  return 0.5;
+}
+
+/** Max search radius (world px units use TILE*SCALE externally) in tiles. */
+export function lightningChainRangeTiles(enhancement: number): number {
+  return 2.8 + lightningChainHops(enhancement) * 0.35;
+}
+
+export function isLightningStaffTemplate(templateId: string): boolean {
+  return templateId === 'staff_lightning';
+}
+
 /** Strengthen equipped (or bag) weapon: +1 enhancement, max 3. */
 export function forjeEnhanceWeapon(
   save: SaveData,
@@ -298,19 +334,39 @@ export function forjeEnhanceWeapon(
   if (inst.enhancement >= 3) {
     return { ok: false, save, reason: 'ALREADY MAX ENHANCEMENT (+3)' };
   }
-  const cost = { ore_iron: 1, ore_spark: 1 };
-  if (!hasCosts(save, cost, 15)) {
-    return { ok: false, save, reason: 'NEED 1 IRON + 1 SPARK + 15c' };
+  // Lightning staff eats more spark (chain power)
+  const isBolt = isLightningStaffTemplate(inst.templateId);
+  const cost = isBolt
+    ? { ore_iron: 1, ore_spark: 2 }
+    : { ore_iron: 1, ore_spark: 1 };
+  const coins = isBolt ? 20 : 15;
+  if (!hasCosts(save, cost, coins)) {
+    return {
+      ok: false,
+      save,
+      reason: isBolt
+        ? 'NEED 1 IRON + 2 SPARK + 20c (LIGHTNING)'
+        : 'NEED 1 IRON + 1 SPARK + 15c',
+    };
   }
-  let next = payCosts(save, cost, 15);
+  let next = payCosts(save, cost, coins);
+  const newEnh = inst.enhancement + 1;
   const bag = next.bag.map((b) =>
-    b.uid === uid ? { ...b, enhancement: b.enhancement + 1 } : b,
+    b.uid === uid ? { ...b, enhancement: newEnh } : b,
   );
   next = syncDerivedStats({ ...next, bag });
+  let message = `FORJED +1! NOW +${newEnh}`;
+  if (isBolt) {
+    const hops = lightningChainHops(newEnh);
+    message =
+      hops > 0
+        ? `LIGHTNING +${newEnh} — CHAINS ${hops} NEARBY FOE${hops > 1 ? 'S' : ''}`
+        : `LIGHTNING +${newEnh}`;
+  }
   return {
     ok: true,
     save: next,
-    message: `FORJED +1! NOW +${inst.enhancement + 1}`,
+    message,
   };
 }
 

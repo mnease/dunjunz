@@ -74,6 +74,8 @@ import {
   forjeCraft,
   forjeEnhanceWeapon,
   forjeImbueWeapon,
+  lightningChainDamageMul,
+  lightningChainHops,
   listForjingActions,
   listForjingMats,
   runForjingAction,
@@ -1284,7 +1286,39 @@ describe('forjing craft enhance imbue', () => {
     expect(actions.some((a) => a.id === 'enhance')).toBe(true);
     expect(actions.some((a) => a.id === 'imbue_str')).toBe(true);
     expect(actions.some((a) => a.kind === 'craft')).toBe(true);
+    expect(actions.some((a) => a.id === 'craft_staff_lightning')).toBe(true);
     expect(actions.length).toBeGreaterThanOrEqual(9);
+  });
+
+  it('lightning chain hops scale with enhancement 0–3', () => {
+    expect(lightningChainHops(0)).toBe(0);
+    expect(lightningChainHops(1)).toBe(1);
+    expect(lightningChainHops(2)).toBe(2);
+    expect(lightningChainHops(3)).toBe(3);
+    expect(lightningChainHops(9)).toBe(3);
+    expect(lightningChainHops(-1)).toBe(0);
+    expect(lightningChainDamageMul(0)).toBe(1);
+    expect(lightningChainDamageMul(1)).toBeLessThan(1);
+    expect(lightningChainDamageMul(3)).toBeLessThan(lightningChainDamageMul(1));
+  });
+
+  it('enhancing lightning staff spends extra spark and reports chain hops', () => {
+    let save = defaultSave();
+    save.coins = 100;
+    save.stacks = { ore_iron: 3, ore_spark: 6 };
+    const minted = mintItem(save, 'staff_lightning', 'common', 0);
+    save = {
+      ...minted.save,
+      equipped: { ...minted.save.equipped, weapon: minted.instance.uid },
+    };
+    const r = forjeEnhanceWeapon(save);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.message).toMatch(/CHAIN/i);
+    const w = r.save.bag.find((b) => b.uid === r.save.equipped.weapon);
+    expect(w?.enhancement).toBe(1);
+    expect(w?.templateId).toBe('staff_lightning');
+    expect(r.save.stacks.ore_spark ?? 0).toBe(4);
   });
 
   it('listForjingMats always shows core mats', () => {

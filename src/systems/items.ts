@@ -407,7 +407,8 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   staff_lightning: {
     id: 'staff_lightning',
     name: 'LIGHTNING STAFF',
-    blurb: 'Light-blue crystal. Space/Z zaps. [W]',
+    blurb:
+      'Light-blue crystal. Space/Z arc. FORJE ENHANCE: +1 chain hop per rank (max 3). [W]',
     kind: 'gear',
     slot: 'weapon',
     baseAtk: 3,

@@ -114,6 +114,9 @@ import {
 } from '../systems/mapz';
 import {
   FORJING_ACTION_COLS,
+  lightningChainDamageMul,
+  lightningChainHops,
+  lightningChainRangeTiles,
   listForjingActions,
   runForjingAction,
 } from '../systems/forjing';
@@ -6268,8 +6271,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Lightning staff — jagged arc bolt along facing.
-   * Hits creeps/dummies near the polyline; may fork to a second nearby target.
+   * Lightning staff — jagged arc along facing.
+   * Chain hops scale with weapon enhancement (+0 none … +3 three hops).
+   * Upgrade at the FORJE (ENHANCE equipped staff).
    */
   private castLightningArc(
     dir: { x: number; y: number },
@@ -6279,6 +6283,13 @@ export class GameScene extends Phaser.Scene {
     const range = cell * 6.2;
     const x0 = this.player.x + dir.x * 20;
     const y0 = this.player.y + dir.y * 20;
+
+    const wUid = this.save.equipped.weapon;
+    const wInst = wUid ? findInBag(this.save, wUid) : null;
+    const enh = wInst?.enhancement ?? 0;
+    const maxHops = lightningChainHops(enh);
+    const chainR = cell * lightningChainRangeTiles(enh);
+
     // Stop arc at wall if possible
     let endX = x0 + dir.x * range;
     let endY = y0 + dir.y * range;
@@ -6301,69 +6312,75 @@ export class GameScene extends Phaser.Scene {
       color: 0x4ac0ff,
       coreColor: 0xe0f8ff,
       durationMs: 260,
-      forks: true,
+      forks: maxHops > 0,
     });
     sparkBurst(this, x0, y0, 0x4ac0ff, 5);
     sparkBurst(this, endX, endY, 0xc0ecff, 4);
 
     const hitR = cell * 0.85;
-    const hit: typeof this.actors = [];
+    const pathHits: Actor[] = [];
     for (const a of this.actors) {
       if (!a.alive || !a.sprite?.active) continue;
       if (!isPlayerProjectileTarget(a.kind)) continue;
       if (this.isUnprovokedPeaceful(a)) continue;
       const d = distPointToPolyline(a.sprite.x, a.sprite.y, path);
-      if (d <= hitR) hit.push(a);
+      if (d <= hitR) pathHits.push(a);
     }
-    // Prefer nearer targets for damage order
-    hit.sort(
+    pathHits.sort(
       (a, b) =>
         Math.hypot(a.sprite.x - x0, a.sprite.y - y0) -
         Math.hypot(b.sprite.x - x0, b.sprite.y - y0),
     );
 
-    let primary: (typeof this.actors)[0] | null = hit[0] ?? null;
-    for (const a of hit) {
+    const struck = new Set<string>();
+    for (const a of pathHits) {
       this.hitEnemyWithDamage(a, dmg, true);
       sparkBurst(this, a.sprite.x, a.sprite.y, 0x4ac0ff, 4);
+      struck.add(a.id);
     }
 
-    // Chain fork to a nearby second enemy not already on the main path
-    if (primary) {
-      let best: (typeof this.actors)[0] | null = null;
-      let bestD = cell * 3.2;
+    // Chain hops: +1 / +2 / +3 enhancement → 1 / 2 / 3 jumps
+    let anchor = pathHits[0] ?? null;
+    for (let hop = 1; hop <= maxHops; hop++) {
+      if (!anchor?.sprite?.active) break;
+      let best: Actor | null = null;
+      let bestD = chainR;
       for (const a of this.actors) {
-        if (!a.alive || !a.sprite?.active || a === primary) continue;
+        if (!a.alive || !a.sprite?.active) continue;
+        if (struck.has(a.id)) continue;
         if (!isPlayerProjectileTarget(a.kind)) continue;
         if (this.isUnprovokedPeaceful(a)) continue;
-        if (hit.includes(a)) continue;
-        const d = Math.hypot(
-          a.sprite.x - primary.sprite.x,
-          a.sprite.y - primary.sprite.y,
-        );
+        const ax = anchor.sprite.x;
+        const ay = anchor.sprite.y;
+        const d = Math.hypot(a.sprite.x - ax, a.sprite.y - ay);
         if (d < bestD) {
           bestD = d;
           best = a;
         }
       }
-      if (best) {
-        const fork = buildLightningPath(
-          primary.sprite.x,
-          primary.sprite.y,
-          best.sprite.x,
-          best.sprite.y,
-          6,
-          12,
-        );
-        drawLightningArc(this, fork, {
-          color: 0x7dd8ff,
-          coreColor: 0xffffff,
-          durationMs: 200,
-          forks: false,
-        });
-        this.hitEnemyWithDamage(best, Math.max(1, Math.floor(dmg * 0.75)), true);
-        sparkBurst(this, best.sprite.x, best.sprite.y, 0x4ac0ff, 5);
-      }
+      if (!best) break;
+      const fork = buildLightningPath(
+        anchor.sprite.x,
+        anchor.sprite.y,
+        best.sprite.x,
+        best.sprite.y,
+        6,
+        12,
+      );
+      drawLightningArc(this, fork, {
+        color: hop >= 2 ? 0xa0e8ff : 0x7dd8ff,
+        coreColor: 0xffffff,
+        durationMs: 200 - hop * 15,
+        forks: false,
+      });
+      const chainDmg = Math.max(
+        1,
+        Math.floor(dmg * lightningChainDamageMul(hop)),
+      );
+      this.hitEnemyWithDamage(best, chainDmg, true);
+      sparkBurst(this, best.sprite.x, best.sprite.y, 0x4ac0ff, 5);
+      struck.add(best.id);
+      anchor = best;
     }
   }
 
