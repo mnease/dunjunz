@@ -1438,7 +1438,7 @@ describe('boss exit portals', () => {
 
   it('boss exit portals sit on walkable floor and target dungeon mouths', async () => {
     const { bossExitPortalDef, BOSS_ROOM_META } = await import('./portal');
-    const { ROOMS } = await import('../data/world');
+    const { ROOMS, resolveRoomId } = await import('../data/world');
     const blocked = new Set(['#', '~', '=', ' ']);
     for (const roomId of Object.keys(BOSS_ROOM_META)) {
       const land = BOSS_ROOM_META[roomId]!.land;
@@ -1446,10 +1446,12 @@ describe('boss exit portals', () => {
       expect(def, roomId).toBeTruthy();
       expect(def!.portalTarget).toBeTruthy();
       expect(ROOMS[def!.portalTarget!], def!.portalTarget).toBeTruthy();
-      const room = ROOMS[roomId];
-      expect(room, roomId).toBeTruthy();
+      // b2_boss is an alias of b8_boss in live ROOMS
+      const liveId = resolveRoomId(roomId);
+      const room = ROOMS[liveId] ?? ROOMS[roomId];
+      expect(room, liveId).toBeTruthy();
       const ch = room!.tiles[def!.y]?.[def!.x];
-      expect(ch, `${roomId} @${def!.x},${def!.y}`).toBeTruthy();
+      expect(ch, `${roomId}→${liveId} @${def!.x},${def!.y} got ${ch}`).toBeTruthy();
       expect(blocked.has(ch!)).toBe(false);
     }
   });

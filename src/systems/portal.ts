@@ -39,14 +39,13 @@ export const BOSS_ROOMS: ReadonlySet<string> = new Set(
  * Open floor south-west of center is the standard pad.
  */
 const PORTAL_TILE: Record<string, { x: number; y: number }> = {
-  // BOSS_ARENA open floor; west of aisle, north of south door
-  b8_boss: { x: 5, y: 7 },
-  b2_boss: { x: 5, y: 7 },
-  // Woodz clearing: floor between west pillars (forje is SE at 12,7)
-  woodz_deep: { x: 5, y: 7 },
-  // Tower: south open dirt (not on stairs / princess / north door)
-  dezertz_tower: { x: 5, y: 7 },
-  // Goose chamber: west of boss chest at 8,7
+  // B8 hazards eat mid tiles — SE open floor (south door spawn is ~8,9–10)
+  b8_boss: { x: 11, y: 9 },
+  b2_boss: { x: 11, y: 9 },
+  // Woodz / tower clearings: mid open aisle (walls at x=5 on lower rows)
+  woodz_deep: { x: 5, y: 5 },
+  dezertz_tower: { x: 5, y: 5 },
+  // Goose chamber: west of boss chest
   sewerz_boss: { x: 4, y: 7 },
 };
 
