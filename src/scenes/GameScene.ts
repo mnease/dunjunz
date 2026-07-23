@@ -56,6 +56,7 @@ import {
 } from '../systems/shop';
 import {
   appearanceFromSave,
+  bodyLookFromSave,
   budAppearanceFromSave,
   withHiddenWeapon,
   type PlayerWalkFrame,
@@ -3572,7 +3573,8 @@ export class GameScene extends Phaser.Scene {
     if (this.attacking) spec = withHiddenWeapon(spec);
     // reduce-motion: no foot cycle
     const frame: PlayerWalkFrame = motionAllowed() ? walk : 0;
-    const key = ensurePlayerTexture(this, spec, frame);
+    const body = bodyLookFromSave(this.save);
+    const key = ensurePlayerTexture(this, spec, frame, body);
     if (this.player.texture.key !== key) this.player.setTexture(key);
   }
 
@@ -3826,7 +3828,8 @@ export class GameScene extends Phaser.Scene {
   private setPlayerWakePose(pose: PlayerWakePose): void {
     if (!this.player) return;
     const spec = appearanceFromSave(this.save);
-    const key = ensurePlayerWakeTexture(this, spec, pose);
+    const body = bodyLookFromSave(this.save);
+    const key = ensurePlayerWakeTexture(this, spec, pose, body);
     if (this.player.texture.key !== key) this.player.setTexture(key);
   }
 

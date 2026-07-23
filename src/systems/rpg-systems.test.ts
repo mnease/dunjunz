@@ -480,8 +480,9 @@ describe('appearance + key on doll', () => {
     expect(key).toContain('_sword_');
     expect(key.endsWith('_key')).toBe(true);
     const bare = playerTextureKeyFromSave(defaultSave());
+    // gender + race prefix, then gear slots (all none bare)
     expect(bare).toBe(
-      'player_none_none_none_none_none_none_none_none_none_none',
+      'player_male_human_none_none_none_none_none_none_none_none_none_none',
     );
   });
 
@@ -3437,17 +3438,77 @@ describe('tutorial guild hall', () => {
   });
 });
 
+describe('body look race × gender', () => {
+  it('texture keys include gender and race and differ across identities', async () => {
+    const {
+      BARE_APPEARANCE,
+      playerTextureKey,
+      playerWakeTextureKey,
+      bodyLookFromSave,
+    } = await import('./appearance');
+    const { DEFAULT_BODY } = await import('./body-visuals');
+    const maleHuman = playerTextureKey(BARE_APPEARANCE, 0, {
+      gender: 'male',
+      race: 'human',
+    });
+    const femaleElf = playerTextureKey(BARE_APPEARANCE, 0, {
+      gender: 'female',
+      race: 'elf',
+    });
+    const maleDwarf = playerTextureKey(BARE_APPEARANCE, 0, {
+      gender: 'male',
+      race: 'dwarf',
+    });
+    const construct = playerTextureKey(BARE_APPEARANCE, 0, {
+      gender: 'male',
+      race: 'construct',
+    });
+    expect(maleHuman).toContain('_male_human_');
+    expect(femaleElf).toContain('_female_elf_');
+    expect(maleDwarf).toContain('_male_dwarf_');
+    expect(construct).toContain('_construct_');
+    expect(maleHuman).not.toBe(femaleElf);
+    expect(maleHuman).not.toBe(maleDwarf);
+    expect(maleHuman).not.toBe(construct);
+    const wake = playerWakeTextureKey(
+      BARE_APPEARANCE,
+      'lie',
+      { gender: 'female', race: 'dragonborn' },
+    );
+    expect(wake).toMatch(/female_dragonborn/);
+    expect(wake).toMatch(/_wake_lie$/);
+    // bodyLookFromSave defaults male human without identity
+    const bare = bodyLookFromSave(defaultSave());
+    expect(bare.gender).toBe('male');
+    expect(DEFAULT_BODY.race).toBe('human');
+  });
+
+  it('every race×gender has a palette and drawBodyBase is callable', async () => {
+    const { RACE_IDS } = await import('./races');
+    const { bodyPalette, drawBodyBase } = await import('./body-visuals');
+    for (const race of RACE_IDS) {
+      for (const gender of ['male', 'female'] as const) {
+        const p = bodyPalette(race);
+        expect(p.skin).toMatch(/^#/);
+        expect(p.hair).toMatch(/^#/);
+        // Fake minimal canvas context — only need no throw on fillRect path
+        const ops: string[] = [];
+        const ctx = {
+          fillStyle: '',
+          fillRect: () => {
+            ops.push('r');
+          },
+        } as unknown as CanvasRenderingContext2D;
+        drawBodyBase(ctx, { gender, race }, 0, { bareHead: true });
+        expect(ops.length).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
 describe('identity gender + starting race', () => {
   it('draws distinct male and female preview canvases', async () => {
     const { drawGenderPreview } = await import('./identity-preview');
-    // jsdom may lack canvas — skip draw if unavailable
-    const canvas = {
-      width: 32,
-      height: 32,
-      getContext: () => null,
-    };
-    void canvas;
-    // Pure function exists and accepts both genders
     expect(typeof drawGenderPreview).toBe('function');
   });
 

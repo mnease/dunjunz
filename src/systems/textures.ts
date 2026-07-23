@@ -3,9 +3,11 @@ import { ART_RES, COLORS } from '../config';
 import {
   BARE_APPEARANCE,
   buddyTextureKey,
+  DEFAULT_BODY,
   playerTextureKey,
   playerWakeTextureKey,
   type AppearanceSpec,
+  type BodyLook,
   type BuddyPoseName,
   type PlayerWalkFrame,
   type PlayerWakePose,
@@ -15,6 +17,7 @@ import {
   type RingLook,
   type ShoesLook,
 } from './appearance';
+import { drawBodyBase, bodyPalette } from './body-visuals';
 import {
   drawWeaponAvatar,
   drawWeaponIcon,
@@ -459,28 +462,33 @@ function drawBreastplate(
 
 /**
  * Head: cartoon face + hair mass, then helm overlays (EMA 32-bit craft).
+ * When look is 'none', body base already drew the head — this is a no-op.
  */
 function drawHelmet(
   ctx: CanvasRenderingContext2D,
   look: AppearanceSpec['helmet'],
+  body: BodyLook = DEFAULT_BODY,
 ): void {
+  if (look === 'none') return;
   const fx = 10;
   const fy = 5;
   const fw = 12;
   const fh = 9;
+  const p = bodyPalette(body.race);
 
-  // Hair first (under helm / over skull) — bare heads get full mass
-  if (look === 'none') {
-    hairMass(ctx, fx, fy, fw, { bangs: true });
-  } else if (look === 'leather' || look === 'cloth_arcane') {
-    // side locks peek from open helms
-    fill(ctx, '#3d2b1f', fx - 1, fy + 1, 2, 5);
-    fill(ctx, '#3d2b1f', fx + fw - 1, fy + 1, 2, 5);
+  // side locks peek from open helms
+  if (look === 'leather' || look === 'cloth_arcane') {
+    fill(ctx, p.hair, fx - 1, fy + 1, 2, 5);
+    fill(ctx, p.hair, fx + fw - 1, fy + 1, 2, 5);
   }
 
-  cartoonFace(ctx, fx, fy, fw, fh, {
-    soft: look === 'cloth_arcane',
-  });
+  // Face under open helms
+  if (look !== 'plate') {
+    shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, fx, fy, fw, fh);
+    cartoonFace(ctx, fx, fy, fw, fh, {
+      soft: look === 'cloth_arcane' || body.gender === 'female',
+    });
+  }
 
   if (look === 'plate') {
     // closed great-helm dome + horns (face mostly covered)
@@ -541,26 +549,33 @@ function drawHelmet(
 
 /**
  * 32×32 SNES-density hero. Layer order:
- * greaves → shoes → torso → gloves → head/helm → amulet → ring → shield → weapon → key.
+ * body base (race×gender) → greaves/shoes/armor overlays → head gear → accessories → weapon.
  * `walk` 1/2 = alternating foot plant for walk cycle.
  */
 export function drawPlayerLook(
   ctx: CanvasRenderingContext2D,
   spec: AppearanceSpec,
   walk: PlayerWalkFrame = 0,
+  body: BodyLook = DEFAULT_BODY,
 ): void {
-  drawGreaves(ctx, spec.greaves, walk);
-  drawShoes(ctx, spec.shoes, walk);
-  drawBreastplate(ctx, spec.breastplate);
-  drawGloves(ctx, spec.gloves);
-  drawHelmet(ctx, spec.helmet);
+  const bareHead = spec.helmet === 'none';
+  // Body first (legs/torso/arms/head when bare)
+  drawBodyBase(ctx, body, walk, { bareHead });
+  // Gear layers (may paint over body limbs)
+  if (spec.greaves !== 'none') drawGreaves(ctx, spec.greaves, walk);
+  if (spec.shoes !== 'none') drawShoes(ctx, spec.shoes, walk);
+  if (spec.breastplate !== 'none') drawBreastplate(ctx, spec.breastplate);
+  if (spec.gloves !== 'none') drawGloves(ctx, spec.gloves);
+  // Helm always draws when present (covers head features partially)
+  if (spec.helmet !== 'none') {
+    drawHelmet(ctx, spec.helmet, body);
+  }
   drawAmulet(ctx, spec.amulet);
   drawRing(ctx, spec.ring);
   drawShield(ctx, spec.shield);
   drawWeapon(ctx, spec.weapon);
 
   if (spec.key === 'key') {
-    // key on belt left hip
     fill(ctx, '#8a6820', 5, 21, 3, 2);
     block(ctx, '#ffc857', '#8a6820', 5, 22, 5, 5);
     fill(ctx, '#fff3a0', 6, 23, 2, 2);
@@ -571,18 +586,18 @@ export function drawPlayerLook(
 }
 
 /**
- * Ensure a canvas texture exists for this loadout (+ walk frame).
- * Walk frames are generated on demand for the current gear only.
+ * Ensure a canvas texture exists for this loadout (+ body + walk frame).
  */
 export function ensurePlayerTexture(
   scene: Phaser.Scene,
   spec: AppearanceSpec,
   walk: PlayerWalkFrame = 0,
+  body: BodyLook = DEFAULT_BODY,
 ): string {
-  const key = playerTextureKey(spec, walk);
+  const key = playerTextureKey(spec, walk, body);
   if (!scene.textures.exists(key)) {
     canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
-      drawPlayerLook(ctx, spec, walk);
+      drawPlayerLook(ctx, spec, walk, body);
     });
   }
   return key;
@@ -590,32 +605,40 @@ export function ensurePlayerTexture(
 
 /**
  * Beach wake poses: lying on sand → sitting up → standing.
- * Drawn as dedicated 32×32 frames so gear still reads at a glance.
+ * Uses race×gender skin/hair palette.
  */
 export function drawPlayerWakePose(
   ctx: CanvasRenderingContext2D,
   spec: AppearanceSpec,
   pose: Exclude<PlayerWakePose, 'stand'>,
+  body: BodyLook = DEFAULT_BODY,
 ): void {
+  const p = bodyPalette(body.race);
   if (pose === 'lie') {
-    // Horizontal body on the sand (head left, feet right)
-    // shadow under body
     fill(ctx, 'rgba(40,30,20,0.25)', 4, 20, 24, 4);
-    // legs
     shadedBlock(ctx, '#3d2b1f', '#5a4030', '#1a1008', 18, 14, 10, 5);
     shadedBlock(ctx, '#3d2b1f', '#5a4030', '#1a1008', 18, 19, 10, 5);
-    // torso
     shadedBlock(ctx, '#4a6a9a', '#6a8aba', '#2a3a5a', 8, 13, 12, 12);
-    // head
-    shadedBlock(ctx, '#e8c4a0', '#ffe0c8', '#c09070', 2, 14, 8, 8);
-    // closed eyes (asleep)
+    shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, 2, 14, 8, 8);
     fill(ctx, '#3a2a20', 4, 17, 2, 1);
     fill(ctx, '#3a2a20', 7, 17, 2, 1);
-    // hair
-    fill(ctx, '#2a1a10', 2, 13, 8, 2);
-    // arm draped
-    shadedBlock(ctx, '#e8c4a0', '#ffe0c8', '#c09070', 12, 22, 8, 3);
-    // light armor hint if any
+    fill(ctx, p.hair, 2, 13, 8, 2);
+    if (body.gender === 'female') {
+      fill(ctx, p.hair, 2, 18, 3, 4);
+      fill(ctx, p.hair, 8, 18, 2, 3);
+    }
+    if (body.race === 'tiefling') {
+      fill(ctx, '#2a1a10', 3, 12, 2, 3);
+      fill(ctx, '#2a1a10', 7, 12, 2, 3);
+    }
+    if (body.race === 'dragonborn') {
+      fill(ctx, p.skinSh, 1, 16, 4, 3);
+    }
+    if (body.race === 'construct') {
+      fill(ctx, '#0a1020', 3, 16, 6, 2);
+      fill(ctx, p.accent, 4, 16, 2, 2);
+    }
+    shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, 12, 22, 8, 3);
     if (spec.breastplate !== 'none') {
       fill(ctx, '#8a98a8', 9, 15, 10, 2);
     }
@@ -623,38 +646,44 @@ export function drawPlayerWakePose(
     return;
   }
 
-  // sit — upright torso, folded legs
   fill(ctx, 'rgba(40,30,20,0.2)', 8, 26, 16, 3);
-  // folded legs
   shadedBlock(ctx, '#3d2b1f', '#5a4030', '#1a1008', 8, 22, 7, 5);
   shadedBlock(ctx, '#3d2b1f', '#5a4030', '#1a1008', 17, 22, 7, 5);
-  // torso
   shadedBlock(ctx, '#4a6a9a', '#6a8aba', '#2a3a5a', 10, 12, 12, 12);
   if (spec.breastplate !== 'none') {
     fill(ctx, '#8a98a8', 11, 14, 10, 8);
   }
-  // head
-  shadedBlock(ctx, '#e8c4a0', '#ffe0c8', '#c09070', 11, 4, 10, 9);
-  fill(ctx, '#2a1a10', 11, 3, 10, 3);
-  // opening eyes (half)
+  shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, 11, 4, 10, 9);
+  fill(ctx, p.hair, 11, 3, 10, 3);
+  if (body.gender === 'female') {
+    fill(ctx, p.hair, 10, 8, 3, 6);
+    fill(ctx, p.hair, 19, 8, 3, 6);
+  }
+  if (body.race === 'elf' || body.race === 'half_elf') {
+    fill(ctx, p.skin, 9, 6, 2, 3);
+    fill(ctx, p.skin, 21, 6, 2, 3);
+  }
+  if (body.race === 'dwarf' && body.gender === 'male') {
+    fill(ctx, p.hair, 12, 11, 8, 4);
+  }
   fill(ctx, '#222', 13, 8, 2, 1);
   fill(ctx, '#222', 18, 8, 2, 1);
   fill(ctx, '#fff', 13, 7, 1, 1);
-  // arms on knees
-  shadedBlock(ctx, '#e8c4a0', '#ffe0c8', '#c09070', 7, 16, 4, 6);
-  shadedBlock(ctx, '#e8c4a0', '#ffe0c8', '#c09070', 21, 16, 4, 6);
+  shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, 7, 16, 4, 6);
+  shadedBlock(ctx, p.skin, p.skinHi, p.skinSh, 21, 16, 4, 6);
 }
 
 export function ensurePlayerWakeTexture(
   scene: Phaser.Scene,
   spec: AppearanceSpec,
   pose: PlayerWakePose,
+  body: BodyLook = DEFAULT_BODY,
 ): string {
-  if (pose === 'stand') return ensurePlayerTexture(scene, spec, 0);
-  const key = playerWakeTextureKey(spec, pose);
+  if (pose === 'stand') return ensurePlayerTexture(scene, spec, 0, body);
+  const key = playerWakeTextureKey(spec, pose, body);
   if (!scene.textures.exists(key)) {
     canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
-      drawPlayerWakePose(ctx, spec, pose);
+      drawPlayerWakePose(ctx, spec, pose, body);
     });
   }
   return key;

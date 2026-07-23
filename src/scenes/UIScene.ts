@@ -3,6 +3,7 @@ import { COLORS, GAME_W, GAME_H, HUD_H, SPRITE_SCALE } from '../config';
 import { ROOMS } from '../data/world';
 import {
   appearanceFromSave,
+  bodyLookFromSave,
   budAppearanceFromSave,
   itemIconKey,
 } from '../systems/appearance';
@@ -2908,7 +2909,12 @@ export class UIScene extends Phaser.Scene {
         if (bud) this.invAvatar.setTint(bud.tint);
         else this.invAvatar.clearTint();
       } else {
-        const look = ensurePlayerTexture(this, appearanceFromSave(s));
+        const look = ensurePlayerTexture(
+          this,
+          appearanceFromSave(s),
+          0,
+          bodyLookFromSave(s),
+        );
         this.invAvatar.setTexture(look);
         this.invAvatar.clearTint();
       }

@@ -4,8 +4,15 @@
  * armor pieces, amulets, and rings all read uniquely on the avatar.
  */
 
-import type { SaveData } from '../types';
+import type { GenderId, RaceId, SaveData } from '../types';
 import { findInBag, getTemplate } from './items';
+import {
+  DEFAULT_BODY,
+  type BodyLook,
+} from './body-visuals';
+
+export type { BodyLook } from './body-visuals';
+export { DEFAULT_BODY } from './body-visuals';
 
 export type BreastLook =
   | 'none'
@@ -239,13 +246,24 @@ export type PlayerWalkFrame = 0 | 1 | 2;
 /** Beach wake sequence poses (front-view canvas frames). */
 export type PlayerWakePose = 'lie' | 'sit' | 'stand';
 
-/** Stable texture key for a full gear loadout (+ optional walk frame). */
+/** Body identity from save (binary gender + race). */
+export function bodyLookFromSave(save: SaveData): BodyLook {
+  const gender: GenderId =
+    save.gender === 'female' ? 'female' : 'male';
+  const race = (save.race ?? 'human') as RaceId;
+  return { gender, race };
+}
+
+/** Stable texture key for a full gear loadout (+ body + walk frame). */
 export function playerTextureKey(
   spec: AppearanceSpec,
   walk: PlayerWalkFrame = 0,
+  body: BodyLook = DEFAULT_BODY,
 ): string {
   const base = [
     'player',
+    body.gender,
+    body.race,
     spec.breastplate,
     spec.helmet,
     spec.greaves,
@@ -263,16 +281,21 @@ export function playerTextureKey(
 export function playerWakeTextureKey(
   spec: AppearanceSpec,
   pose: PlayerWakePose,
+  body: BodyLook = DEFAULT_BODY,
 ): string {
-  if (pose === 'stand') return playerTextureKey(spec, 0);
-  return `${playerTextureKey(spec, 0)}_wake_${pose}`;
+  if (pose === 'stand') return playerTextureKey(spec, 0, body);
+  return `${playerTextureKey(spec, 0, body)}_wake_${pose}`;
 }
 
 export function playerTextureKeyFromSave(
   save: SaveData,
   walk: PlayerWalkFrame = 0,
 ): string {
-  return playerTextureKey(appearanceFromSave(save), walk);
+  return playerTextureKey(
+    appearanceFromSave(save),
+    walk,
+    bodyLookFromSave(save),
+  );
 }
 
 /** Pose names that share canvas frames with gear overlays. */

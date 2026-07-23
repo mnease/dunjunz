@@ -14,6 +14,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 ### Added
 
 - **Beach identity (M/F)** — before wake, required **Male / Female** pick (binary only) with **side-by-side adventurer portraits** (click image to select). Random starting race rolled from full list including **Construct** (robot/forged). Cosmetic until later wizard ritual.
+- **Race × gender body visuals** — hero sprites (walk + beach wake + inventory doll) use distinct silhouettes/palettes per ancestry and binary gender (elf ears, dwarf beard, dragonborn snout, construct visor, etc.).
 - **Surface dirt paths** — continuous dirt trails on beach→meadow→trope trail→woodz→dezertz approaches so routes and dungeon mouths are easier to follow.
 
 ### Changed
