@@ -386,6 +386,8 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
     floor: 0,
     mapX: 0,
     mapY: 2,
+    /** Survival dark — same carried light / place-torch rules as deep dungeons. */
+    dark: true,
     south: 'dwarvez_road',
     north: 'dwarvez_hall',
     stairsDown: 'dwarvez_b1',
@@ -404,10 +406,6 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
       '########D#######',
     ],
     entities: [
-      { kind: 'torch_wall', id: 'mouth-torch-1', x: 2, y: 2 },
-      { kind: 'torch_wall', id: 'mouth-torch-2', x: 13, y: 2 },
-      { kind: 'torch_wall', id: 'mouth-torch-3', x: 2, y: 8 },
-      { kind: 'torch_wall', id: 'mouth-torch-4', x: 13, y: 8 },
       {
         kind: 'sign',
         id: 'sign-mine-mouth',
@@ -432,6 +430,7 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
     floor: 0,
     mapX: 0,
     mapY: 3,
+    dark: true,
     south: 'dwarvez_mouth',
     east: 'dwarvez_treasury',
     west: 'dwarvez_forje',
@@ -456,8 +455,6 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
       { kind: 'pillar', id: 'hall-p4', x: 11, y: 7 },
       { kind: 'banner', id: 'hall-b1', x: 6, y: 1 },
       { kind: 'banner', id: 'hall-b2', x: 9, y: 1 },
-      { kind: 'torch_wall', id: 'hall-t1', x: 2, y: 2 },
-      { kind: 'torch_wall', id: 'hall-t2', x: 13, y: 2 },
       { kind: 'barrel', id: 'hall-barrel-1', x: 2, y: 8 },
       { kind: 'crate', id: 'hall-crate-1', x: 13, y: 8 },
       { kind: 'ore_vein', id: 'ore-vein-silver-hall', x: 3, y: 4 },
@@ -493,6 +490,7 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
     floor: 0,
     mapX: 1,
     mapY: 3,
+    dark: true,
     west: 'dwarvez_hall',
     tiles: [
       '################',
@@ -536,6 +534,7 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
     floor: 0,
     mapX: -1,
     mapY: 3,
+    dark: true,
     east: 'dwarvez_hall',
     tiles: [
       '################',
@@ -571,7 +570,6 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
           'MITHRIL ROOT IS B2. DO NOT FALL IN.',
         ],
       },
-      { kind: 'torch_wall', id: 'forje-t1', x: 2, y: 1 },
       { kind: 'barrel', id: 'forje-barrel', x: 13, y: 8 },
     ],
   },
@@ -583,6 +581,7 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
     floor: 0,
     mapX: 0,
     mapY: 4,
+    dark: true,
     south: 'dwarvez_hall',
     tiles: [
       '################',
@@ -611,8 +610,6 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
         dialog: ['UNDER-KING BRAMLI: …'],
       },
       { kind: 'chest', id: 'dwarvez-throne-chest', x: 12, y: 7, chestTable: 'boss' },
-      { kind: 'torch_wall', id: 'throne-t1', x: 2, y: 2 },
-      { kind: 'torch_wall', id: 'throne-t2', x: 13, y: 2 },
     ],
   },
 
@@ -623,6 +620,7 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
     floor: -1,
     mapX: 0,
     mapY: 2,
+    dark: true,
     stairsUp: 'dwarvez_mouth',
     east: 'dwarvez_b1_mine',
     west: 'dwarvez_b1_side',
@@ -641,8 +639,6 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
       '################',
     ],
     entities: [
-      { kind: 'torch_wall', id: 'b1-t1', x: 3, y: 2 },
-      { kind: 'torch_wall', id: 'b1-t2', x: 12, y: 2 },
       { kind: 'skeleton', id: 'b1-skel', x: 8, y: 3, hp: 18 },
       {
         kind: 'sign',
@@ -661,6 +657,7 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
     floor: -1,
     mapX: 1,
     mapY: 2,
+    dark: true,
     west: 'dwarvez_b1',
     tiles: [
       '################',
@@ -718,6 +715,7 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
     floor: -1,
     mapX: -1,
     mapY: 2,
+    dark: true,
     east: 'dwarvez_b1',
     tiles: [
       '################',
@@ -755,6 +753,7 @@ export const FELLOWSHIP_ROOMS: Record<string, RoomDef> = {
     floor: -2,
     mapX: 0,
     mapY: 2,
+    dark: true,
     stairsUp: 'dwarvez_b1',
     tiles: [
       '################',

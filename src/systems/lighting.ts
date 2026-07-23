@@ -89,16 +89,31 @@ export function ambientForRoom(room: {
   }
   const f = room.floor ?? 0;
   const land = room.land ?? '';
-  const outdoor =
+  const id = (room.id ?? '').toLowerCase();
+  // Outdoor surface biomes (not cave lands — those use dark:true or basement floors)
+  const outdoorBiome =
     land === 'woodz' ||
     land === 'dezertz' ||
     land === 'surface' ||
     land === 'kingdom' ||
-    f >= 0;
+    land === 'kingdomz' ||
+    land === 'roarhimz';
+  // Dwarvez snow approach (gate / switchback / overlook) stays daylit outdoors
+  const dwarvezOutdoorApproach =
+    land === 'dwarvez' &&
+    (id.includes('gate') || id.includes('road') || id.includes('overlook'));
+  const outdoor = outdoorBiome || dwarvezOutdoorApproach;
   if (outdoor && f >= 0) {
     // Kingdom / village interiors stay slightly softer
-    if (land === 'kingdom' || land === 'village') return AMBIENT_INDOOR_SURFACE;
+    if (land === 'kingdom' || land === 'village' || land === 'kingdomz') {
+      return AMBIENT_INDOOR_SURFACE;
+    }
     return AMBIENT_SURFACE;
+  }
+  // Cave lands at floor 0 without outdoor approach = dungeon gloom
+  // (safety if dark:true omitted; survival dark still from roomIsDark)
+  if ((land === 'dwarvez' || land === 'moredorkz') && f >= 0) {
+    return AMBIENT_LIT_DUNGEON;
   }
   // Basements
   if (f <= -2) return AMBIENT_DARK;

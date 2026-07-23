@@ -75,4 +75,40 @@ describe('dwarvez mountain approach atmosphere', () => {
     if (bad.length) console.error(bad);
     expect(bad).toEqual([]);
   });
+
+  it('dwarvez cave interiors use dungeon dark / light rules', async () => {
+    const { roomIsDark, ambientForRoom, AMBIENT_DARK, roomNeedsCarriedLight } =
+      await import('./lighting');
+    const caves = [
+      'dwarvez_mouth',
+      'dwarvez_hall',
+      'dwarvez_treasury',
+      'dwarvez_forje',
+      'dwarvez_throne',
+      'dwarvez_b1',
+      'dwarvez_b1_mine',
+      'dwarvez_b1_side',
+      'dwarvez_b2',
+    ];
+    for (const id of caves) {
+      const r = ROOMS[id]!;
+      expect(r.dark, id).toBe(true);
+      expect(roomIsDark(r), id).toBe(true);
+      expect(ambientForRoom(r), id).toBe(AMBIENT_DARK);
+    }
+    // Outdoor approach stays daylit (not survival dark)
+    expect(roomIsDark(ROOMS.dwarvez_gate!)).toBe(false);
+    expect(roomIsDark(ROOMS.dwarvez_road!)).toBe(false);
+    expect(ambientForRoom(ROOMS.dwarvez_gate!)).toBeGreaterThan(AMBIENT_DARK);
+    // World law: dark rooms have zero authored torch_wall — carry + place light
+    for (const id of caves) {
+      const walls = (ROOMS[id]!.entities ?? []).filter(
+        (e) => e.kind === 'torch_wall',
+      );
+      expect(walls, `${id} must have no authored wall torches`).toEqual([]);
+    }
+    expect(roomNeedsCarriedLight(ROOMS.dwarvez_hall!, 0)).toBe(true);
+    // Placed/carried path: with any wall torch count, no "need carried" toast
+    expect(roomNeedsCarriedLight(ROOMS.dwarvez_hall!, 2)).toBe(false);
+  });
 });
