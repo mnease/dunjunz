@@ -5249,6 +5249,8 @@ export class GameScene extends Phaser.Scene {
 
   private hitSmashable(actor: Actor): void {
     if (!actor.alive || !isSmashableKind(actor.kind)) return;
+    // Fellowship road gates must never be bashable even if mis-authored
+    if (actor.id?.startsWith('gate-block-')) return;
     if (actor.hurtCooldown > 0) return;
     actor.hurtCooldown = 160;
     const dmg = Math.max(1, computePlayerDamage(this.save) | 0);

@@ -150,6 +150,28 @@ describe('fellowship roads (PR1)', () => {
     );
   });
 
+  it('gate-block barriers are never smashable kinds (cannot bash past closed roads)', async () => {
+    const { isSmashableKind } = await import('./smashables');
+    const smashableKinds = new Set(['barrel', 'crate', 'vase']);
+    const blocks: { id: string; kind: string; room: string }[] = [];
+    for (const room of Object.values(ROOMS)) {
+      for (const e of room.entities ?? []) {
+        if (e.id?.startsWith('gate-block-')) {
+          blocks.push({ id: e.id, kind: e.kind, room: room.id });
+        }
+      }
+    }
+    expect(blocks.length).toBeGreaterThanOrEqual(8);
+    for (const b of blocks) {
+      if (smashableKinds.has(b.kind) || isSmashableKind(b.kind)) {
+        throw new Error(
+          `${b.room}/${b.id} kind=${b.kind} must not be smashable`,
+        );
+      }
+      expect(isSmashableKind(b.kind)).toBe(false);
+    }
+  });
+
   it('surface road rooms link woodz / dezertz anchors', () => {
     expect(ROOMS.woodz_deep?.north).toBe('road_north_1');
     expect(ROOMS.road_north_1?.south).toBe('woodz_deep');
