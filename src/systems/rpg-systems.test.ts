@@ -3437,6 +3437,45 @@ describe('tutorial guild hall', () => {
   });
 });
 
+describe('identity gender + starting race', () => {
+  it('rolls a race from the full pool and only accepts male/female', async () => {
+    const {
+      RACE_IDS,
+      rollStartingRace,
+      chooseIdentity,
+      needsIdentityPick,
+      migrateIdentity,
+    } = await import('./races');
+    expect(RACE_IDS).toContain('construct');
+    const r = rollStartingRace(42);
+    expect(RACE_IDS).toContain(r);
+
+    let save = defaultSave();
+    expect(needsIdentityPick(save)).toBe(true);
+    save = chooseIdentity(save, 'female');
+    expect(save.gender).toBe('female');
+    expect(save.identityChosen).toBe(true);
+    expect(save.startingRace).toBe(save.race);
+    expect(save.raceChosen).toBe(false);
+    expect(needsIdentityPick(save)).toBe(false);
+
+    // Second call does not re-roll race
+    const race = save.race;
+    save = chooseIdentity(save, 'male');
+    expect(save.race).toBe(race);
+    expect(save.gender).toBe('female'); // already chosen keeps gender
+
+    // Veterans mid-run migrate without prompt
+    const vet = migrateIdentity({
+      ...defaultSave(),
+      level: 5,
+      visitedRooms: ['beach_start', 'overworld', 'guild_hall'],
+    });
+    expect(vet.identityChosen).toBe(true);
+    expect(vet.gender).toBe('male');
+  });
+});
+
 describe('lightning arc geometry', () => {
   it('builds a jagged path from start to end and distance hits the polyline', async () => {
     const {

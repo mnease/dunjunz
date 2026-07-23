@@ -13,6 +13,9 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Beach identity (M/F)** — before wake, required **Male / Female** pick (binary only). Random starting race rolled from full list including **Construct** (robot/forged). Cosmetic until later wizard ritual.
+- **Surface dirt paths** — continuous dirt trails on beach→meadow→trope trail→woodz→dezertz approaches so routes and dungeon mouths are easier to follow.
+
 ### Changed
 
 - **Version string consistency** — title menu footer and under-canvas badge both use `formatGameVersion()` from `package.json` (no more hardcoded `V0.7` vs stale `v0.6.0`).

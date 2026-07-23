@@ -288,9 +288,20 @@ export interface SaveData {
   primaryClass?: ClassId | null;
   /** Secondary multiclass (chosen at L15). */
   secondaryClass?: ClassId | null;
-  /** Ancestry (default human; choosable at L25). */
+  /**
+   * Binary gender only — male | female. Never extend this union.
+   * null/undefined = not chosen yet (blocks beach wake).
+   */
+  gender?: 'male' | 'female' | null;
+  /** True after player picked male/female at start. */
+  identityChosen?: boolean;
+  /** Ancestry (random at start for visuals; stats after wizard ritual). */
   race?: RaceId;
-  /** True after the L25 race pick is spent. */
+  /** Frozen random roll from beach identity (lore / journal). */
+  startingRace?: RaceId;
+  /** Target race chosen at L25 (tome) — applied by wizard ritual. */
+  pendingRaceId?: RaceId | null;
+  /** True after wizard ritual (or legacy L25 instant pick). */
   raceChosen?: boolean;
   // ── lighting + temporary buffs ─────────────────────────
   /** Active carried light tier (null = none). */
@@ -337,4 +348,8 @@ export type RaceId =
   | 'half_elf'
   | 'gnome'
   | 'dragonborn'
-  | 'tiefling';
+  | 'tiefling'
+  | 'construct';
+
+/** Binary only — do not add other values. */
+export type GenderId = 'male' | 'female';

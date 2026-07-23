@@ -15,7 +15,8 @@ export type RaceId =
   | 'half_elf'
   | 'gnome'
   | 'dragonborn'
-  | 'tiefling';
+  | 'tiefling'
+  | 'construct';
 
 export interface RaceDef {
   id: RaceId;
@@ -80,6 +81,12 @@ export const RACES: Record<RaceId, RaceDef> = {
     blurb: 'Horns, heat, questionable ancestry.',
     bonuses: { int: 1, lck: 1, vit: 1 },
   },
+  construct: {
+    id: 'construct',
+    name: 'CONSTRUCT',
+    blurb: 'Forged. Beeps optional. Robot energy.',
+    bonuses: { vit: 2, str: 1 },
+  },
 };
 
 export const RACE_IDS: RaceId[] = [
@@ -92,6 +99,7 @@ export const RACE_IDS: RaceId[] = [
   'gnome',
   'dragonborn',
   'tiefling',
+  'construct',
 ];
 
 export function getRace(id: RaceId | null | undefined): RaceDef {
@@ -137,6 +145,71 @@ export function pickRace(
 
 export function raceLabel(save: SaveData): string {
   return getRace(save.race ?? 'human').name;
+}
+
+/**
+ * Deterministic starting race from run seed (and optional salt).
+ * All races including construct are in the pool.
+ */
+export function rollStartingRace(runSeed: number, salt = 0x51aced): RaceId {
+  const x = (Math.imul(runSeed ^ salt, 0x9e3779b1) >>> 0) % RACE_IDS.length;
+  return RACE_IDS[x] ?? 'human';
+}
+
+export const FLAG_IDENTITY_CHOSEN = 'identity_chosen';
+
+export function needsIdentityPick(save: SaveData): boolean {
+  if (save.identityChosen || save.flags?.[FLAG_IDENTITY_CHOSEN]) return false;
+  if (save.gender === 'male' || save.gender === 'female') return false;
+  // Veterans who already left the beach: don't soft-lock mid-run
+  const visited = save.visitedRooms ?? [];
+  if (visited.length > 1) return false;
+  if ((save.level ?? 1) > 1 || (save.xp ?? 0) > 0) return false;
+  return true;
+}
+
+/** Apply binary gender + random race. Idempotent if already chosen. */
+export function chooseIdentity(
+  save: SaveData,
+  gender: 'male' | 'female',
+): SaveData {
+  if (gender !== 'male' && gender !== 'female') {
+    return save;
+  }
+  if (save.identityChosen || save.flags?.[FLAG_IDENTITY_CHOSEN]) {
+    return { ...save, gender: save.gender ?? gender };
+  }
+  const race = rollStartingRace(save.runSeed ?? 1);
+  return {
+    ...save,
+    gender,
+    identityChosen: true,
+    race,
+    startingRace: race,
+    // Cosmetic until wizard ritual — do not set raceChosen
+    flags: { ...save.flags, [FLAG_IDENTITY_CHOSEN]: true },
+  };
+}
+
+/** Migrate old saves: if they progressed without identity, default male human. */
+export function migrateIdentity(save: SaveData): SaveData {
+  if (save.identityChosen || save.flags?.[FLAG_IDENTITY_CHOSEN]) {
+    return {
+      ...save,
+      gender: save.gender === 'female' ? 'female' : 'male',
+      identityChosen: true,
+    };
+  }
+  if (needsIdentityPick(save)) return save;
+  // Progressed without pick — freeze defaults so we never block
+  return {
+    ...save,
+    gender: save.gender === 'female' ? 'female' : 'male',
+    identityChosen: true,
+    race: save.race ?? 'human',
+    startingRace: save.startingRace ?? save.race ?? 'human',
+    flags: { ...save.flags, [FLAG_IDENTITY_CHOSEN]: true },
+  };
 }
 
 /** Sum partial attribute maps. */

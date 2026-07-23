@@ -219,6 +219,11 @@ import {
 } from '../systems/hard-mode';
 import { rewardHardCaptain, rewardHardKing } from '../systems/hard-rewards';
 import { pendingHeroPick } from '../systems/hero-identity';
+import {
+  getRace,
+  migrateIdentity,
+  needsIdentityPick,
+} from '../systems/races';
 import { playMusic, playSfx, type MusicId } from '../systems/audio';
 import { loadSettings } from '../systems/settings';
 import {
@@ -2621,15 +2626,14 @@ export class GameScene extends Phaser.Scene {
     this.syncCompanion();
     this.flushAchievements();
 
-    // Beach wake — lie on sand, sit, stand, voice assigns crawler id
+    // Beach wake — identity (M/F) first, then lie → sit → stand
     if (resolved === BEACH_START_ID && needsBeachWake(this.save)) {
-      // Pose immediately so first painted frame is prone (not standing)
       this.beachWakeActive = true;
       this.setPlayerWakePose('lie');
       if (this.player?.body) {
         (this.player.body as Phaser.Physics.Arcade.Body).enable = false;
       }
-      this.beginBeachWake();
+      this.maybeStartBeachIdentityThenWake();
     }
 
     // Guild: door is locked until graduate; no auto monologue (speak to Master)
@@ -3824,6 +3828,27 @@ export class GameScene extends Phaser.Scene {
     const spec = appearanceFromSave(this.save);
     const key = ensurePlayerWakeTexture(this, spec, pose);
     if (this.player.texture.key !== key) this.player.setTexture(key);
+  }
+
+  /**
+   * Gender pick (M/F only) must complete before the lie→sit→stand wake.
+   * Random race is rolled inside chooseIdentity.
+   */
+  private maybeStartBeachIdentityThenWake(): void {
+    this.save = migrateIdentity(this.save);
+    if (needsIdentityPick(this.save)) {
+      const onChosen = () => {
+        window.removeEventListener('dunjunz-identity-chosen', onChosen);
+        this.save = loadSave();
+        const raceName = getRace(this.save.race).name;
+        this.game.events.emit('toast', `ANCESTRY: ${raceName}`);
+        this.beginBeachWake();
+      };
+      window.addEventListener('dunjunz-identity-chosen', onChosen);
+      window.dispatchEvent(new CustomEvent('dunjunz-identity-open'));
+      return;
+    }
+    this.beginBeachWake();
   }
 
   private beginBeachWake(): void {

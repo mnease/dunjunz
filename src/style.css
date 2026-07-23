@@ -267,6 +267,27 @@ body {
   flex: 0 1 auto;
 }
 
+/* Beach identity pick — two large gender cards */
+.identity-pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.identity-card {
+  text-align: left;
+  cursor: pointer;
+}
+.identity-card:hover,
+.identity-card:focus-visible {
+  outline: 2px solid var(--green, #7dffb3);
+  outline-offset: 2px;
+}
+.identity-pick-note {
+  margin-top: 0.75rem;
+  opacity: 0.85;
+  font-size: 0.85em;
+}
+
 /* Version under the game frame, lower-left of the stage */
 .game-version {
   margin: 0.4rem 0 0 0.2rem;
