@@ -18,6 +18,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Enchanted Woodz + Wood Elf kingdom** — gigantic redwoods across Woodz; west of Edge: Riddle Glade (Root→Trunk→Crown) unlocks Living Arch portal into a Wood Elf pocket realm (gate, healing waters, queen’s court, blight thicket). Queen gives 3 errands → **Legendary Elven Box** (one random mithril weapon/armor/jewelry). Design: `docs/elfwood-kingdom-v1.md`.
 - **Fire staff lights the room** — fireballs emit a bright moving light cookie as they fly, illuminating dark crawl rooms mid-flight (hard-mode DM fireballs too).
 - **Visual detail pass** — richer cobbles/moss/grass blades/flowers, deeper water glints, denser tree canopies, sharper faces, and micro-grit on every upscaled 64-bit texture after draw.
 - **64-bit craft graphics (full)** — world sprites/tiles, **inventory icons**, weapon swings, projectiles, particles, mapz features/links/compass, identity + loot previews all output at **2× density** (64-bit). Author unit remains 32; nearest upscale into ART_RES / canvasTex2x.

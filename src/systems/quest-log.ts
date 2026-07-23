@@ -177,6 +177,48 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
   }
 
   const mapzN = save.discoveredMapz?.length ?? 0;
+
+  // Wood Elf kingdom side content (flags from elfwood.ts)
+  const doorOpen = !!save.flags?.['elf_door_unlocked'];
+  const queenMet = !!save.flags?.['elf_queen_met'];
+  const queenDone = !!save.flags?.['elf_queen_complete'];
+  const qActive =
+    !!save.flags?.['elf_q_wolves'] ||
+    !!save.flags?.['elf_q_shards'] ||
+    !!save.flags?.['elf_q_waters'];
+  const qDoneN = [
+    save.flags?.['elf_q_wolves_done'],
+    save.flags?.['elf_q_shards_done'],
+    save.flags?.['elf_q_waters_done'],
+  ].filter(Boolean).length;
+
+  let doorStatus: QuestStatus = 'available';
+  let doorProgress = 'WOODZ EDGE → WEST';
+  if (doorOpen) {
+    doorStatus = 'done';
+    doorProgress = 'ARCH OPEN';
+  }
+
+  let queenStatus: QuestStatus = doorOpen ? 'available' : 'locked';
+  let queenProgress = 'LIVING ARCH PORTAL';
+  if (queenDone) {
+    queenStatus = 'done';
+    queenProgress = 'BOX GRANTED';
+  } else if (queenMet || qActive) {
+    queenStatus = 'active';
+    queenProgress = `${qDoneN}/3 ERRANDS`;
+  }
+
+  let errandsStatus: QuestStatus = queenMet ? 'available' : 'locked';
+  let errandsProgress = 'TALK TO THE QUEEN';
+  if (queenDone) {
+    errandsStatus = 'done';
+    errandsProgress = 'LEGENDARY BOX';
+  } else if (qActive || qDoneN > 0) {
+    errandsStatus = 'active';
+    errandsProgress = `${qDoneN}/3 DONE`;
+  }
+
   return [
     {
       id: 'side-cube',
@@ -195,6 +237,33 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
       status: mapzN >= 4 ? 'done' : mapzN > 1 ? 'active' : 'available',
       progress: `${mapzN} LANDS`,
       order: 210,
+    },
+    {
+      id: 'side-elf-door',
+      kind: 'side',
+      title: 'LIVING ARCH',
+      blurb: 'West of Woodz Edge. Root → Trunk → Crown.',
+      status: doorStatus,
+      progress: doorProgress,
+      order: 220,
+    },
+    {
+      id: 'side-elf-queen',
+      kind: 'side',
+      title: 'QUEEN OF THE WOOD ELVES',
+      blurb: 'Pocket realm via Living Arch portal.',
+      status: queenStatus,
+      progress: queenProgress,
+      order: 230,
+    },
+    {
+      id: 'side-elf-quests',
+      kind: 'side',
+      title: 'ELVEN ERRANDS',
+      blurb: '3 jobs. Full clear → Legendary Elven Box.',
+      status: errandsStatus,
+      progress: errandsProgress,
+      order: 240,
     },
   ];
 }

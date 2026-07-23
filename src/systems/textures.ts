@@ -1076,7 +1076,8 @@ export function drawItemIcon(
     itemId === 'loot_box_silver' ||
     itemId === 'loot_box_gold' ||
     itemId === 'loot_box_platinum' ||
-    itemId === 'loot_box_diamond'
+    itemId === 'loot_box_diamond' ||
+    itemId === 'legendary_elven_box'
   ) {
     const colors: Record<string, { body: string; lid: string; band: string }> = {
       crawler_starter_box: { body: '#8a5a2a', lid: '#c97b3a', band: '#c9a227' },
@@ -1085,6 +1086,7 @@ export function drawItemIcon(
       loot_box_gold: { body: '#8a6820', lid: '#ffc857', band: '#ffe08a' },
       loot_box_platinum: { body: '#5a7088', lid: '#b0d0e8', band: '#e8f4ff' },
       loot_box_diamond: { body: '#3a6088', lid: '#7dffb3', band: '#c9ffe0' },
+      legendary_elven_box: { body: '#2a6040', lid: '#7dffb3', band: '#c9ffe0' },
     };
     const c = colors[itemId]!;
     // Treasure chest silhouette
@@ -1096,6 +1098,9 @@ export function drawItemIcon(
     spark(ctx, 15, 9, '#ffffff');
     if (itemId === 'crawler_starter_box') {
       fill(ctx, '#7dffb3', 12, 18, 8, 2);
+    }
+    if (itemId === 'legendary_elven_box') {
+      fill(ctx, '#e8ffe8', 10, 17, 12, 2);
     }
     return;
   }
@@ -2065,6 +2070,14 @@ export function generateTextures(scene: Phaser.Scene): void {
     'loot_box_gold',
     'loot_box_platinum',
     'loot_box_diamond',
+    'legendary_elven_box',
+    'mithril_blade',
+    'mithril_bow',
+    'mithril_staff',
+    'mithril_breastplate',
+    'mithril_greaves',
+    'mithril_amulet',
+    'mithril_ring',
     'beam_me_up',
     'leather_armor',
     'reinforced_leather',

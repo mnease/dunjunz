@@ -6,6 +6,7 @@
 import type { Rarity, SaveData } from '../types';
 import { mintItem, getTemplate } from './items';
 import type { AchievementDef } from './achievements';
+import { openLegendaryElvenBox } from './elfwood';
 
 export type LootBoxTier =
   | 'bronze'
@@ -116,6 +117,7 @@ const TIER_RARITY: Record<LootBoxTier, Rarity> = {
 
 export function isLootBoxTemplateId(id: string): boolean {
   if (id === CRAWLER_STARTER_BOX_ID) return true;
+  if (id === 'legendary_elven_box') return true;
   return LOOT_BOX_TIERS.some((t) => lootBoxTemplateId(t) === id);
 }
 
@@ -235,6 +237,11 @@ export function openLootBox(
   }
   if (!isLootBoxTemplateId(templateId)) {
     return { ok: false, save, reason: 'NOT A LOOT BOX' };
+  }
+
+  // Queen of the Wood Elves — one random legendary mithril
+  if (templateId === 'legendary_elven_box') {
+    return openLegendaryElvenBox(save, rng);
   }
 
   const boxName = getTemplate(templateId).name;

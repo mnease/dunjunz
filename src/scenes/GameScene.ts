@@ -205,6 +205,19 @@ import {
   prizellaKingdomTalk,
 } from '../systems/champion-quests';
 import {
+  FLAG_ELFWOOD_ENTERED,
+  HEALING_SPRING_ID,
+  PORTAL_ELFWOOD_IN_ID,
+  QUEEN_ID,
+  archSignDialog,
+  drinkHealingSpring,
+  isElfStatueId,
+  isElfwoodKingdomRoom,
+  shouldSpawnElfwoodPortal,
+  talkQueen,
+  touchElfStatue,
+} from '../systems/elfwood';
+import {
   markLandCleared,
   princessChampionDialog,
   questHint,
@@ -614,6 +627,8 @@ export class GameScene extends Phaser.Scene {
   private lastWeatherToastKey = '';
   private animTime = 0;
   private ambientFrame = 0;
+  /** Healing spring once-per-room-visit (elfwood waters). */
+  private elfHealUsedThisVisit = false;
   /** Enemy + player projectiles (hard mode / ranged weapons). */
   private projectiles: {
     img: Phaser.GameObjects.Image;
@@ -2550,6 +2565,7 @@ export class GameScene extends Phaser.Scene {
     // Invalidate delayed combat callbacks from the previous room
     this.roomEpoch += 1;
     this.budAnimLock = 0;
+    this.elfHealUsedThisVisit = false;
     // Prevent walk-on portals from firing the frame you enter a room
     this.portalCooldown = 700;
 
@@ -3332,6 +3348,14 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    // Living Arch portal only after Root→Trunk→Crown riddle
+    if (
+      def.id === PORTAL_ELFWOOD_IN_ID &&
+      !shouldSpawnElfwoodPortal(this.save)
+    ) {
+      return;
+    }
+
     // One Princess Prizella: tower pre-rescue, throne post-rescue
     if (def.kind === 'princess') {
       const onTower = this.room.id === 'dezertz_tower';
@@ -3761,7 +3785,30 @@ export class GameScene extends Phaser.Scene {
     }
     this.transitionLock = true;
     playSfx('stairs');
-    this.game.events.emit('toast', 'PORTAL WHOOSH — DUNJUN MOUTH!');
+    // Wood Elf kingdom portal flavor
+    if (actor.id === PORTAL_ELFWOOD_IN_ID || isElfwoodKingdomRoom(resolved)) {
+      this.game.events.emit('toast', 'WHOOSH · WOOD ELF KINGDOM');
+      if (
+        isElfwoodKingdomRoom(resolved) &&
+        !this.save.flags?.[FLAG_ELFWOOD_ENTERED]
+      ) {
+        this.save = {
+          ...this.save,
+          flags: { ...this.save.flags, [FLAG_ELFWOOD_ENTERED]: true },
+        };
+        writeSave(this.save);
+        this.time.delayedCall(400, () => {
+          this.game.events.emit(
+            'toast',
+            'THE AIR SMELLS LIKE MOSS AND JUDGMENT.',
+          );
+        });
+      }
+    } else if (actor.id === 'portal-elfwood-out') {
+      this.game.events.emit('toast', 'WHOOSH · BACK TO THE ARCH');
+    } else {
+      this.game.events.emit('toast', 'PORTAL WHOOSH — DUNJUN MOUTH!');
+    }
     // Force UI dialog closed so the panel cannot stick across rooms
     this.game.events.emit('ui-reset');
     this.dialogLocked = false;
@@ -4482,6 +4529,62 @@ export class GameScene extends Phaser.Scene {
       npc.alive = false;
       if (npc.sprite?.active) npc.sprite.destroy();
     }
+  }
+
+  /** Root → Trunk → Crown riddle (woodz glade). */
+  private talkElfStatue(actor: Actor): void {
+    const r = touchElfStatue(this.save, actor.id);
+    this.save = r.save;
+    writeSave(this.save);
+    this.game.events.emit('dialog-show', r.dialog);
+    if (r.toast) this.game.events.emit('toast', r.toast);
+    // If already in arch when unlocking via glade, portal appears on next visit;
+    // if somehow unlocked while in arch (debug), spawn now
+    if (r.unlocked && this.room.id === 'woodz_arch') {
+      this.ensureElfwoodPortal();
+    }
+  }
+
+  private talkElfQueen(): void {
+    const r = talkQueen(this.save);
+    this.save = r.save;
+    writeSave(this.save);
+    this.emitHud();
+    this.game.events.emit('dialog-show', r.dialog);
+    if (r.toast) this.game.events.emit('toast', r.toast);
+  }
+
+  private useHealingSpring(): void {
+    const r = drinkHealingSpring(this.save, this.elfHealUsedThisVisit);
+    this.save = r.save;
+    if (r.healed) {
+      this.elfHealUsedThisVisit = true;
+      playSfx('heal');
+    }
+    writeSave(this.save);
+    this.emitHud();
+    this.game.events.emit('dialog-show', r.dialog);
+    if (r.toast) this.game.events.emit('toast', r.toast);
+  }
+
+  /** Spawn Living Arch portal after riddle (idempotent). */
+  private ensureElfwoodPortal(): void {
+    if (!shouldSpawnElfwoodPortal(this.save)) return;
+    if (this.room?.id !== 'woodz_arch') return;
+    const already = this.actors.some(
+      (a) => a.alive && a.id === PORTAL_ELFWOOD_IN_ID,
+    );
+    if (already) return;
+    this.spawnEntity({
+      kind: 'portal',
+      id: PORTAL_ELFWOOD_IN_ID,
+      x: 8,
+      y: 5,
+      portalTarget: 'elfwood_gate',
+      dialog: ['WHOOSH · WOOD ELF KINGDOM'],
+    });
+    playSfx('success');
+    this.game.events.emit('toast', 'LIVING ARCH OPENS');
   }
 
   /** Talk path: boots of apology (once). Cube stays until killed. */
@@ -5327,6 +5430,24 @@ export class GameScene extends Phaser.Scene {
 
     if (best.kind === 'cube' || best.id === 'gel-cube') {
       this.talkToCube(best);
+      return;
+    }
+
+    // Enchanted Woodz: statue riddle, queen, healing spring, arch sign
+    if (isElfStatueId(best.id)) {
+      this.talkElfStatue(best);
+      return;
+    }
+    if (best.id === QUEEN_ID) {
+      this.talkElfQueen();
+      return;
+    }
+    if (best.id === HEALING_SPRING_ID) {
+      this.useHealingSpring();
+      return;
+    }
+    if (best.id === 'arch-sign') {
+      this.game.events.emit('dialog-show', archSignDialog(this.save));
       return;
     }
 
