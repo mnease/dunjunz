@@ -4,6 +4,7 @@ import { buildAllDeepRooms } from './world-deep';
 /**
  * Tile legend (authored 16×11 rooms, NES Zelda-style):
  *  . floor   # wall   g grass   d dirt   s sand   ~ water
+ *  Water auto-classifies: ocean (beach), pond (closed → koi), river (channels / edge strips).
  *  D open door   L locked door
  *  S stairs DOWN   U stairs UP
  *  = lava    P transporter pad
@@ -308,9 +309,10 @@ export const ROOMS: Record<string, RoomDef> = {
       'ddddddddddddddd.',
       'dddddd.S.dddddd.',
       'ddddddddddddddd.',
-      '#gg.dddddddd.gg#',
-      '#ggg.ddddd~~ggg#',
-      '#ggggddddddgggg#',
+      // SE koi pond (closed water → pond classification)
+      '#gg.dddd~~..ggg#',
+      '#ggg.dd~~~~.ggg#',
+      '#gggg.d~~..gggg#',
       '#######D########',
     ],
     entities: [
@@ -818,17 +820,18 @@ export const ROOMS: Record<string, RoomDef> = {
     mapY: 1,
     south: 'overworld_east',
     north: 'woodz_edge',
+    // Creek runs N–S west of the dirt path (continues into woodz_edge).
     tiles: [
       '########D#######',
-      '#gg..dddddd..gg#',
-      '#g..##dddd##..g#',
-      '#g....dddd....g#',
-      '#g..##dddd##..g#',
-      '#g....dddd....g#',
-      '#g..##dddd##..g#',
-      '#g....dddd....g#',
-      '#g..##dddd##..g#',
-      '#gg..dddddd..gg#',
+      '#g~~.dddddd..gg#',
+      '#g~~##dddd##..g#',
+      '#g~~..dddd....g#',
+      '#g~~##dddd##..g#',
+      '#g~~..dddd....g#',
+      '#g~~##dddd##..g#',
+      '#g~~..dddd....g#',
+      '#g~~##dddd##..g#',
+      '#g~~.dddddd..gg#',
       '########D#######',
     ],
     entities: [
@@ -904,17 +907,18 @@ export const ROOMS: Record<string, RoomDef> = {
     south: 'woodz_path',
     north: 'woodz_deep',
     east: 'woodz_hollow',
+    // Same creek as woodz_path — river strip continues north through the edge.
     tiles: [
       '########D#######',
-      '#gg..dddddd..gg#',
-      '#g..##dddd##..g#',
-      '#g..#dddddd#..g#',
-      '#gg.#dddddd#.gg.',
-      '#gg.dddddddddddd',
-      '#gg.#dddddd#.gg.',
-      '#g..#dddddd#..g#',
-      '#g..##dddd##..g#',
-      '#gg..dddddd..gg#',
+      '#g~~.dddddd..gg#',
+      '#g~~##dddd##..g#',
+      '#g~~#dddddd#..g#',
+      '#g~~#dddddd#.gg.',
+      '#g~~dddddddddddd',
+      '#g~~#dddddd#.gg.',
+      '#g~~#dddddd#..g#',
+      '#g~~##dddd##..g#',
+      '#g~~.dddddd..gg#',
       '########D#######',
     ],
     entities: [
@@ -998,15 +1002,16 @@ export const ROOMS: Record<string, RoomDef> = {
     west: 'woodz_edge',
     // Open den: west mouth + walkable center (old map sealed a pen at 8,5 —
     // continue-save default spawn softlocked you inside).
+    // Central koi pond (closed blob → pond + auto koi).
     tiles: [
       '################',
       '#gg..........gg#',
       '#g..##....##..g#',
-      '#g............g#',
       '#g....~~~~....g#',
-      '...............#',
+      '#g...~~~~~~...g#',
+      '....~~~~~~~~...#',
+      '#g...~~~~~~...g#',
       '#g....~~~~....g#',
-      '#g............g#',
       '#g..##....##..g#',
       '#gg..........gg#',
       '################',
@@ -1050,9 +1055,9 @@ export const ROOMS: Record<string, RoomDef> = {
       {
         kind: 'best_bud',
         id: 'best-bud-den',
-        // Walkable grass/floor north of the pond — not inside walls
+        // Walkable north shore of the koi pond
         x: 8,
-        y: 3,
+        y: 2,
         dialog: [
           '...A WEIRD CREATURE LOOKS UP.',
           '(TALK WITH E.)',
@@ -1062,7 +1067,7 @@ export const ROOMS: Record<string, RoomDef> = {
         kind: 'heart',
         id: 'hollow-heart',
         x: 3,
-        y: 7,
+        y: 8,
       },
     ],
   },

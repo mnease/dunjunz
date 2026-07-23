@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Water body kinds** — standing water auto-classifies as **ocean** (beach foam), **pond** (calm teal + lily pads + swimming **koi**), or **river** (flowing current strips). Meadow SE pond, hollow koi pond, and a creek through woodz path→edge.
 - **Lightning chain upgrades** — lightning staff chain hops scale with **FORJE ENHANCE** (+0 path only, +1/+2/+3 = 1/2/3 hops). Craft lightning staff at the forje; enhance costs extra spark.
 - **Beach identity (M/F)** — before wake, required **Male / Female** pick (binary only) with **side-by-side adventurer portraits** (click image to select). Random starting race rolled from full list including **Construct** (robot/forged). Cosmetic until later wizard ritual.
 - **Race × gender body visuals** — hero sprites (walk + beach wake + inventory doll) use distinct silhouettes/palettes per ancestry and binary gender (elf ears, dwarf beard, dragonborn snout, construct visor, etc.).
@@ -20,6 +21,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Organic world art + depth** — floor/wall/grass/dirt use multi-variant tiles (less square-stamp grid), brick walls gain top-face caps, trees/palms use layered canopies and ground shadows for a more 3D read.
 - **Version string consistency** — title menu footer and under-canvas badge both use `formatGameVersion()` from `package.json` (no more hardcoded `V0.7` vs stale `v0.6.0`).
 
 ### Fixed

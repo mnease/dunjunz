@@ -302,8 +302,8 @@ function cobble(
 }
 
 /**
- * SNES castle brick wall — 3 staggered rows, mortar grit, chips, moss.
- * Designed for ART_RES 32 (also works at other even sizes).
+ * SNES castle brick wall — staggered irregular bricks, top face cap for depth.
+ * `variant` 0–2 shifts brick layout so walls don't read as a square grid.
  */
 export function drawBrickTile(
   ctx: CanvasRenderingContext2D,
@@ -312,34 +312,46 @@ export function drawBrickTile(
   face: string,
   mortar: string,
   hilite: string,
+  variant = 0,
 ): void {
   // mortar bed
   fill(ctx, mortar, 0, 0, s, s);
-  dither(ctx, mortar, base, 0, 0, s, s, 0);
+  dither(ctx, mortar, base, 0, 0, s, s, variant);
+
+  // Top bevel face (pseudo-3D wall crown) — light from NW
+  const capH = 4;
+  vgrad(ctx, [hilite, face, base, mortar], 0, 0, s, capH);
+  fill(ctx, 'rgba(255,255,255,0.2)', 0, 0, s, 1);
+  fill(ctx, 'rgba(0,0,0,0.35)', 0, capH - 1, s, 1);
+  // Soft drop-shadow under cap onto face
+  fill(ctx, 'rgba(0,0,0,0.22)', 0, capH, s, 2);
 
   const rows = 3;
-  const rowH = Math.floor(s / rows);
-  const faceDim = face; // mid
+  const bodyH = s - capH;
+  const rowH = Math.floor(bodyH / rows);
+  const faceDim = face;
   const faceDeep = base;
   const faceLite = hilite;
-  // slight face variants for brick individuality
   const variants: [string, string, string][] = [
     [faceDim, faceLite, faceDeep],
     ['#6a5a88', '#8a7ab0', '#3a3058'],
     ['#54486e', '#7a6a98', '#322848'],
     ['#625478', '#8a7aa0', '#3a3048'],
+    ['#5a4a72', '#7a6a92', '#2e2440'],
   ];
+  const shift = variant % 3;
 
   for (let r = 0; r < rows; r++) {
-    const y = r * rowH;
-    const offset = r % 2 === 1;
-    const brickH = rowH - 1;
+    const y = capH + r * rowH;
+    const offset = (r + shift) % 2 === 1;
+    const brickH = Math.max(3, rowH - 1);
+    // Irregular brick widths (organic seams, not perfect halves)
+    const jitter = ((r + variant) % 3) - 1;
     if (offset) {
-      // half-brick left
-      const half = Math.floor(s / 2) - 1;
-      const v0 = variants[(r + 0) % variants.length]!;
-      cobble(ctx, v0[0], v0[1], v0[2], 1, y + 1, half - 1, brickH - 1, true);
-      const v1 = variants[(r + 1) % variants.length]!;
+      const half = Math.floor(s / 2) - 1 + jitter;
+      const v0 = variants[(r + shift) % variants.length]!;
+      cobble(ctx, v0[0], v0[1], v0[2], 1, y + 1, Math.max(4, half - 1), brickH - 1, true);
+      const v1 = variants[(r + shift + 1) % variants.length]!;
       cobble(
         ctx,
         v1[0],
@@ -352,11 +364,10 @@ export function drawBrickTile(
         r === 1,
       );
     } else {
-      // three bricks across for 32px
-      const bw = Math.floor((s - 4) / 2);
-      const v0 = variants[(r + 2) % variants.length]!;
-      cobble(ctx, v0[0], v0[1], v0[2], 1, y + 1, bw, brickH - 1, r === 0);
-      const v1 = variants[(r + 3) % variants.length]!;
+      const bw = Math.floor((s - 4) / 2) + jitter;
+      const v0 = variants[(r + shift + 2) % variants.length]!;
+      cobble(ctx, v0[0], v0[1], v0[2], 1, y + 1, Math.max(5, bw), brickH - 1, r === 0);
+      const v1 = variants[(r + shift + 3) % variants.length]!;
       cobble(
         ctx,
         v1[0],
@@ -369,27 +380,25 @@ export function drawBrickTile(
         true,
       );
     }
-    // mortar seam line
     fill(ctx, mortar, 0, y + rowH - 1, s, 1);
   }
 
   // moss / lichen in mortar
-  fill(ctx, 'rgba(70,120,80,0.45)', 4, rowH - 1, 3, 1);
-  fill(ctx, 'rgba(70,120,80,0.35)', s - 10, rowH * 2 - 1, 4, 1);
+  fill(ctx, 'rgba(70,120,80,0.45)', 4 + shift, capH + rowH - 1, 3, 1);
+  fill(ctx, 'rgba(70,120,80,0.35)', s - 10 - shift, capH + rowH * 2 - 1, 4, 1);
   fill(ctx, 'rgba(90,140,70,0.3)', 14, s - 2, 5, 1);
 
-  // surface grit
-  grit(ctx, 'rgba(0,0,0,0.18)', 2, 2, s - 4, s - 4, 5, 1);
-  grit(ctx, 'rgba(255,255,255,0.08)', 2, 2, s - 4, s - 4, 7, 3);
+  grit(ctx, 'rgba(0,0,0,0.18)', 2, capH + 1, s - 4, s - capH - 3, 5, 1 + variant);
+  grit(ctx, 'rgba(255,255,255,0.08)', 2, capH + 1, s - 4, s - capH - 3, 7, 3);
 
-  // top cap shadow (reads as wall thickness)
-  fill(ctx, 'rgba(0,0,0,0.25)', 0, 0, s, 1);
-  fill(ctx, 'rgba(255,255,255,0.12)', 0, 1, s, 1);
+  // Bottom ground contact shadow (wall sits on floor)
+  fill(ctx, 'rgba(0,0,0,0.28)', 0, s - 1, s, 1);
+  fill(ctx, 'rgba(0,0,0,0.12)', 1, s - 2, s - 2, 1);
 }
 
 /**
- * Dungeon cobble floor — irregular stones, cracks, moss, grit.
- * Light from top-left for SNES depth.
+ * Dungeon cobble floor — irregular stones, soft depth, non-grid seams.
+ * `variant` 0–2 rotates stone layout so neighbors don't tile as a checker.
  */
 export function drawFloorTile(
   ctx: CanvasRenderingContext2D,
@@ -397,62 +406,89 @@ export function drawFloorTile(
   base: string,
   alt: string,
   grout: string,
+  variant = 0,
 ): void {
   fill(ctx, grout, 0, 0, s, s);
-  dither(ctx, grout, '#120e1c', 0, 0, s, s, 1);
+  dither(ctx, grout, '#120e1c', 0, 0, s, s, variant);
 
   const light = '#5a5078';
   const lightAlt = '#4a4068';
   const dark = '#1a1428';
   const darkAlt = '#221a30';
 
-  // Irregular cobble layout (not a boring 2×2 grid)
-  const stones: [number, number, number, number, string, string, string, boolean][] = [
-    [1, 1, 10, 9, alt, lightAlt, darkAlt, true],
-    [12, 1, 9, 8, base, light, dark, false],
-    [22, 1, 9, 10, alt, lightAlt, darkAlt, true],
-    [1, 11, 8, 10, base, light, dark, false],
-    [10, 10, 12, 9, alt, lightAlt, darkAlt, true],
-    [23, 12, 8, 9, base, light, dark, true],
-    [1, 22, 11, 9, alt, lightAlt, darkAlt, false],
-    [13, 20, 10, 11, base, light, dark, true],
-    [24, 22, 7, 9, alt, lightAlt, darkAlt, false],
+  // Offset layouts so adjacent tiles break the square grid read
+  const layouts: [number, number, number, number, string, string, string, boolean][][] = [
+    [
+      [1, 1, 11, 8, alt, lightAlt, darkAlt, true],
+      [13, 2, 10, 9, base, light, dark, false],
+      [24, 1, 7, 11, alt, lightAlt, darkAlt, true],
+      [2, 10, 9, 11, base, light, dark, false],
+      [12, 12, 11, 8, alt, lightAlt, darkAlt, true],
+      [24, 13, 7, 8, base, light, dark, true],
+      [1, 22, 12, 9, alt, lightAlt, darkAlt, false],
+      [14, 21, 9, 10, base, light, dark, true],
+      [24, 22, 7, 9, alt, lightAlt, darkAlt, false],
+    ],
+    [
+      [2, 2, 8, 10, base, light, dark, false],
+      [11, 1, 12, 8, alt, lightAlt, darkAlt, true],
+      [24, 2, 7, 9, base, light, dark, true],
+      [1, 13, 11, 8, alt, lightAlt, darkAlt, false],
+      [13, 10, 9, 12, base, light, dark, true],
+      [23, 12, 8, 10, alt, lightAlt, darkAlt, false],
+      [2, 22, 9, 9, base, light, dark, true],
+      [12, 23, 11, 8, alt, lightAlt, darkAlt, false],
+      [24, 23, 7, 8, base, light, dark, true],
+    ],
+    [
+      [1, 2, 10, 9, alt, lightAlt, darkAlt, true],
+      [12, 1, 8, 11, base, light, dark, false],
+      [21, 2, 10, 8, alt, lightAlt, darkAlt, true],
+      [1, 12, 7, 10, base, light, dark, true],
+      [9, 13, 13, 8, alt, lightAlt, darkAlt, false],
+      [23, 11, 8, 11, base, light, dark, false],
+      [2, 23, 10, 8, alt, lightAlt, darkAlt, true],
+      [13, 22, 10, 9, base, light, dark, false],
+      [24, 23, 7, 8, alt, lightAlt, darkAlt, true],
+    ],
   ];
+  const stones = layouts[variant % layouts.length]!;
 
   for (const [x, y, w, h, mid, li, da, chip] of stones) {
     if (x + w > s || y + h > s) continue;
     cobble(ctx, mid, li, da, x, y, w, h, chip);
   }
 
-  // cracks (grout channels)
-  fill(ctx, grout, 11, 1, 1, 9);
-  fill(ctx, grout, 21, 1, 1, 10);
-  fill(ctx, grout, 1, 10, 30, 1);
-  fill(ctx, grout, 9, 11, 1, 10);
-  fill(ctx, grout, 22, 12, 1, 9);
-  fill(ctx, grout, 1, 21, 30, 1);
-  fill(ctx, grout, 12, 20, 1, 11);
+  // Soft ambient occlusion in crooks (depth, not flat grout grid)
+  fill(ctx, 'rgba(0,0,0,0.18)', 11, 9, 2, 2);
+  fill(ctx, 'rgba(0,0,0,0.14)', 22, 11, 2, 2);
+  fill(ctx, 'rgba(0,0,0,0.12)', 8, 21, 3, 1);
 
-  // hairline fractures
-  fill(ctx, dark, 6, 4, 1, 3);
-  fill(ctx, dark, 17, 14, 3, 1);
-  fill(ctx, dark, 26, 6, 1, 4);
+  // hairline fractures (diagonal-ish, not full cross grid)
+  fill(ctx, dark, 6 + variant, 4, 1, 3);
+  fill(ctx, dark, 17, 14 + (variant % 2), 3, 1);
+  fill(ctx, dark, 26 - variant, 6, 1, 4);
+  fill(ctx, dark, 9, 18, 1, 2);
+  fill(ctx, dark, 19, 7, 2, 1);
 
   // moss flecks
-  fill(ctx, 'rgba(70,130,90,0.4)', 4, 6, 2, 1);
-  fill(ctx, 'rgba(70,130,90,0.35)', 15, 25, 3, 1);
+  fill(ctx, 'rgba(70,130,90,0.4)', 4 + variant, 6, 2, 1);
+  fill(ctx, 'rgba(70,130,90,0.35)', 15, 25 - variant, 3, 1);
   fill(ctx, 'rgba(90,150,100,0.3)', 27, 18, 2, 2);
   fill(ctx, 'rgba(60,110,80,0.3)', 8, 28, 2, 1);
 
-  // pebble / grit
-  grit(ctx, 'rgba(0,0,0,0.2)', 1, 1, s - 2, s - 2, 6, 2);
-  spark(ctx, 5, 3, 'rgba(200,190,230,0.35)');
+  grit(ctx, 'rgba(0,0,0,0.2)', 1, 1, s - 2, s - 2, 6, 2 + variant);
+  spark(ctx, 5 + variant, 3, 'rgba(200,190,230,0.35)');
   spark(ctx, 18, 12, 'rgba(200,190,230,0.25)');
-  spark(ctx, 28, 24, 'rgba(200,190,230,0.3)');
+  spark(ctx, 28 - variant, 24, 'rgba(200,190,230,0.3)');
+
+  // Subtle ground plane shadow along south edge
+  fill(ctx, 'rgba(0,0,0,0.1)', 0, s - 1, s, 1);
 }
 
 /**
- * Lush meadow grass — multi-tone soil, many blades, flowers, dirt nubs.
+ * Lush meadow grass — multi-tone soil, clumpy turf, blades, flowers.
+ * `variant` shifts clumps/blades so the meadow is not a square carpet.
  */
 export function drawGrassTile(
   ctx: CanvasRenderingContext2D,
@@ -460,44 +496,60 @@ export function drawGrassTile(
   base: string,
   blade: string,
   tip: string,
+  variant = 0,
 ): void {
-  // soil undergrowth
+  // Soft undulating soil (not flat green square)
   vgrad(ctx, ['#3a7d52', blade, base, '#245a38', '#1a4028'], 0, 0, s, s);
-  dither(ctx, base, '#2a6040', 0, Math.floor(s * 0.55), s, Math.ceil(s * 0.45), 0);
-  grit(ctx, 'rgba(40,30,20,0.2)', 0, Math.floor(s * 0.6), s, Math.floor(s * 0.4), 4, 1);
+  dither(ctx, base, '#2a6040', 0, Math.floor(s * 0.55), s, Math.ceil(s * 0.45), variant);
 
-  // dirt nubs / bare patches
-  fill(ctx, 'rgba(90,70,45,0.4)', 8, 26, 5, 3);
-  fill(ctx, 'rgba(70,55,35,0.35)', 20, 4, 4, 2);
+  // Organic turf mounds (overlap edges so tiles blend)
+  const mounds: [number, number, number, number][] = [
+    [2 + variant, 4, 14, 10],
+    [12, 2 + (variant % 2), 16, 12],
+    [0, 14, 18, 10],
+    [16 - variant, 16, 14, 12],
+    [6, 20, 12, 10],
+  ];
+  for (const [mx, my, mw, mh] of mounds) {
+    fill(ctx, 'rgba(50,120,70,0.35)', mx, my, mw, mh);
+    fill(ctx, 'rgba(90,180,110,0.18)', mx + 2, my + 1, Math.max(2, mw - 4), 2);
+    fill(ctx, 'rgba(20,50,30,0.2)', mx + 1, my + mh - 2, mw - 2, 2);
+  }
+
+  grit(ctx, 'rgba(40,30,20,0.2)', 0, Math.floor(s * 0.6), s, Math.floor(s * 0.4), 4, 1 + variant);
+
+  // dirt nubs / bare patches (offset per variant)
+  fill(ctx, 'rgba(90,70,45,0.4)', 8 + variant * 2, 26, 5, 3);
+  fill(ctx, 'rgba(70,55,35,0.35)', 20 - variant, 4 + variant, 4, 2);
   fill(ctx, 'rgba(100,80,50,0.3)', 2, 18, 3, 2);
 
-  // blades: [x, yBase, height, lean 0|1]
-  const blades: [number, number, number, number][] = [
-    [2, 10, 8, 0],
-    [4, 6, 11, 1],
-    [6, 14, 6, 0],
-    [8, 4, 12, 1],
-    [10, 11, 7, 0],
-    [12, 7, 10, 1],
-    [14, 15, 5, 0],
-    [16, 5, 11, 0],
-    [18, 12, 8, 1],
-    [20, 3, 13, 0],
-    [22, 9, 9, 1],
-    [24, 14, 6, 0],
-    [26, 6, 10, 1],
-    [28, 11, 7, 0],
-    [3, 20, 7, 1],
-    [7, 22, 5, 0],
-    [11, 18, 8, 1],
-    [15, 21, 6, 0],
-    [19, 19, 9, 1],
-    [23, 23, 5, 0],
-    [27, 20, 7, 1],
-    [5, 16, 6, 0],
-    [13, 24, 4, 1],
-    [25, 16, 8, 0],
+  const bladeSets: [number, number, number, number][][] = [
+    [
+      [2, 10, 8, 0], [4, 6, 11, 1], [6, 14, 6, 0], [8, 4, 12, 1],
+      [10, 11, 7, 0], [12, 7, 10, 1], [14, 15, 5, 0], [16, 5, 11, 0],
+      [18, 12, 8, 1], [20, 3, 13, 0], [22, 9, 9, 1], [24, 14, 6, 0],
+      [26, 6, 10, 1], [28, 11, 7, 0], [3, 20, 7, 1], [7, 22, 5, 0],
+      [11, 18, 8, 1], [15, 21, 6, 0], [19, 19, 9, 1], [23, 23, 5, 0],
+      [27, 20, 7, 1], [5, 16, 6, 0], [13, 24, 4, 1], [25, 16, 8, 0],
+    ],
+    [
+      [1, 8, 9, 1], [3, 12, 7, 0], [5, 5, 12, 1], [7, 14, 6, 0],
+      [9, 3, 11, 0], [11, 9, 8, 1], [13, 6, 10, 0], [15, 13, 7, 1],
+      [17, 4, 12, 0], [19, 10, 8, 1], [21, 7, 9, 0], [23, 15, 5, 1],
+      [25, 5, 11, 0], [27, 12, 6, 1], [2, 18, 8, 0], [6, 21, 6, 1],
+      [10, 19, 7, 0], [14, 23, 5, 1], [18, 17, 9, 0], [22, 22, 6, 1],
+      [26, 19, 7, 0], [4, 24, 5, 1], [12, 15, 6, 0], [28, 21, 5, 1],
+    ],
+    [
+      [3, 5, 10, 0], [5, 11, 8, 1], [7, 7, 11, 0], [9, 14, 6, 1],
+      [11, 4, 12, 0], [13, 10, 7, 1], [15, 2, 13, 0], [17, 9, 9, 1],
+      [19, 6, 10, 0], [21, 13, 6, 1], [23, 3, 12, 0], [25, 11, 8, 1],
+      [27, 8, 9, 0], [1, 15, 7, 1], [4, 19, 8, 0], [8, 23, 5, 1],
+      [12, 20, 7, 0], [16, 18, 8, 1], [20, 22, 6, 0], [24, 17, 9, 1],
+      [28, 20, 6, 0], [6, 16, 5, 1], [14, 25, 4, 0], [22, 24, 5, 1],
+    ],
   ];
+  const blades = bladeSets[variant % bladeSets.length]!;
 
   for (const [x, y0, h, lean] of blades) {
     if (x >= s) continue;
@@ -506,54 +558,61 @@ export function drawGrassTile(
       if (yy >= s) break;
       const xx = x + (lean ? (i > h / 2 ? 1 : 0) : i % 3 === 2 ? 1 : 0);
       if (xx >= s) continue;
-      // tip lighter, base darker
       ctx.fillStyle = i < 2 ? tip : i > h - 3 ? '#1e5030' : blade;
       ctx.fillRect(xx, yy, 1, 1);
     }
-    // bright tip pixel
     fill(ctx, '#8ef0a8', x, y0, 1, 1);
   }
 
-  // tiny flowers
-  fill(ctx, '#ffc857', 9, 17, 2, 2);
-  fill(ctx, '#fff3a0', 9, 17, 1, 1);
-  fill(ctx, '#ff6b9d', 21, 13, 2, 2);
-  fill(ctx, '#ffb0c8', 21, 13, 1, 1);
-  fill(ctx, '#c9a0ff', 15, 27, 2, 1);
+  // tiny flowers (moved per variant)
+  const fx = 9 + variant * 3;
+  const fy = 17 - variant;
+  fill(ctx, '#ffc857', fx % 28, fy, 2, 2);
+  fill(ctx, '#fff3a0', fx % 28, fy, 1, 1);
+  fill(ctx, '#ff6b9d', (21 + variant) % 28, 13, 2, 2);
+  fill(ctx, '#ffb0c8', (21 + variant) % 28, 13, 1, 1);
+  fill(ctx, '#c9a0ff', 15, 27 - (variant % 2), 2, 1);
 
-  // shadow edge (reads as turf depth)
-  fill(ctx, 'rgba(0,0,0,0.12)', 0, s - 1, s, 1);
+  // turf depth rim
+  fill(ctx, 'rgba(0,0,0,0.14)', 0, s - 1, s, 1);
+  fill(ctx, 'rgba(255,255,255,0.06)', 0, 0, s, 1);
 }
 
 /**
  * Packed trail dirt — ruts, pebbles, packed earth clumps.
+ * `variant` offsets clumps so paths don't read as a square stamp.
  */
 export function drawDirtTile(
   ctx: CanvasRenderingContext2D,
   s: number,
   mid: string,
+  variant = 0,
 ): void {
   vgrad(ctx, ['#8a7564', mid, '#5a4538', '#4a3830'], 0, 0, s, s);
-  dither(ctx, mid, '#5a4538', 0, 0, s, s, 1);
+  dither(ctx, mid, '#5a4538', 0, 0, s, s, variant);
 
-  // packed clumps
-  cobble(ctx, '#7a6554', '#9a8574', '#4a3830', 2, 3, 9, 7, true);
-  cobble(ctx, '#6b5344', '#8a7564', '#3a2820', 13, 2, 8, 8, false);
-  cobble(ctx, '#7a6554', '#9a8574', '#4a3830', 22, 4, 8, 6, true);
+  const o = variant % 3;
+  cobble(ctx, '#7a6554', '#9a8574', '#4a3830', 2 + o, 3, 9, 7, true);
+  cobble(ctx, '#6b5344', '#8a7564', '#3a2820', 13 - o, 2 + (o % 2), 8, 8, false);
+  cobble(ctx, '#7a6554', '#9a8574', '#4a3830', 22, 4 + o, 8, 6, true);
   cobble(ctx, '#5a4538', '#7a6554', '#3a2820', 4, 14, 10, 8, false);
-  cobble(ctx, '#6b5344', '#8a7564', '#3a2820', 16, 13, 12, 7, true);
-  cobble(ctx, '#7a6554', '#9a8574', '#4a3830', 3, 23, 11, 7, true);
-  cobble(ctx, '#5a4538', '#7a6554', '#3a2820', 17, 22, 12, 8, false);
+  cobble(ctx, '#6b5344', '#8a7564', '#3a2820', 16 - o, 13, 12, 7, true);
+  cobble(ctx, '#7a6554', '#9a8574', '#4a3830', 3 + o, 23, 11, 7, true);
+  cobble(ctx, '#5a4538', '#7a6554', '#3a2820', 17, 22 - (o % 2), 12, 8, false);
 
-  // wagon / foot ruts
-  fill(ctx, 'rgba(40,28,20,0.45)', 0, 11, s, 1);
-  fill(ctx, 'rgba(40,28,20,0.35)', 0, 20, s, 1);
-  fill(ctx, 'rgba(100,85,70,0.25)', 0, 12, s, 1);
+  // Soft depth between clumps
+  fill(ctx, 'rgba(0,0,0,0.12)', 10, 10, 3, 2);
+  fill(ctx, 'rgba(0,0,0,0.1)', 20, 18, 2, 2);
 
-  // pebbles
-  fill(ctx, '#9a9080', 7, 8, 2, 2);
-  fill(ctx, '#6a6050', 7, 9, 2, 1);
-  fill(ctx, '#b0a898', 24, 16, 2, 2);
+  // wagon / foot ruts (slightly wavy via offset)
+  fill(ctx, 'rgba(40,28,20,0.45)', 0, 11 + (o % 2), s, 1);
+  fill(ctx, 'rgba(40,28,20,0.35)', 0, 20 - (o % 2), s, 1);
+  fill(ctx, 'rgba(100,85,70,0.25)', 0, 12 + (o % 2), s, 1);
+
+  fill(ctx, '#9a9080', 7 + o, 8, 2, 2);
+  fill(ctx, '#6a6050', 7 + o, 9, 2, 1);
+  fill(ctx, '#b0a898', 24 - o, 16, 2, 2);
+  fill(ctx, 'rgba(0,0,0,0.12)', 0, s - 1, s, 1);
 }
 
 /** Soft beach sand — warm grains, no brick/cobble ruts. */
@@ -599,16 +658,29 @@ export function drawSandWallTile(
   spark(ctx, 8, 8, 'rgba(220,210,190,0.4)');
 }
 
+export type WaterDrawStyle = 'ocean' | 'pond' | 'river';
+
 /**
- * Water tile — depth bands, foam, ripples. `phase` 0|1 for animation frames.
+ * Water tile — ocean foam, calm pond (lilies), or flowing river.
+ * `phase` animates ripples / foam.
  */
 export function drawWaterTile(
   ctx: CanvasRenderingContext2D,
   s: number,
   mid: string,
   phase = 0,
+  style: WaterDrawStyle = 'ocean',
 ): void {
-  const deep = '#1a4068';
+  if (style === 'pond') {
+    drawPondWater(ctx, s, mid, phase);
+    return;
+  }
+  if (style === 'river') {
+    drawRiverWater(ctx, s, mid, phase);
+    return;
+  }
+  // Ocean — deep bands + shorebound foam (legacy beach look)
+  const deep = '#0e3058';
   const shallow = phase === 0 ? '#3d7eb0' : phase === 1 ? '#4a8ec0' : '#3580b0';
   const foam =
     phase === 0
@@ -616,12 +688,9 @@ export function drawWaterTile(
       : phase === 1
         ? 'rgba(220,240,255,0.5)'
         : 'rgba(230,245,255,0.6)';
-  vgrad(ctx, [shallow, mid, '#245a88', deep], 0, 0, s, s);
-
-  // depth mottling
+  vgrad(ctx, [shallow, mid, '#1a4a78', deep], 0, 0, s, s);
   dither(ctx, mid, deep, 0, Math.floor(s * 0.4), s, Math.ceil(s * 0.6), phase);
 
-  // Foam bands travel NORTH (toward shore) as phase increases (oy decreases)
   const oy = phase * 5;
   const ox = (phase % 2) * 3;
   fill(ctx, foam, 2 + ox, 20 - oy, 14, 2);
@@ -631,18 +700,164 @@ export function drawWaterTile(
   fill(ctx, 'rgba(255,255,255,0.3)', 2 + ox, 13 - oy, 8, 1);
   fill(ctx, foam, 16 - ox, 8 - oy, 10, 1);
 
-  // dark troughs (also shift north)
   fill(ctx, deep, 2, 16 - Math.floor(oy / 2), 8, 1);
   fill(ctx, deep, 18, 24 - Math.floor(oy / 2), 10, 1);
   fill(ctx, deep, 10, 4, 6, 1);
 
-  // edge foam
   fill(ctx, 'rgba(180,220,255,0.25)', 0, 0, s, 1);
-  fill(ctx, 'rgba(0,0,0,0.15)', 0, s - 1, s, 1);
+  fill(ctx, 'rgba(0,0,0,0.2)', 0, s - 1, s, 1);
 
   spark(ctx, 10 + ox, 8, '#e8f8ff');
   spark(ctx, 22 - ox, 16, '#ffffff');
   spark(ctx, 8 + ox, 24, 'rgba(255,255,255,0.7)');
+}
+
+/** Calm green-blue pond with soft ripples + lily pads. */
+function drawPondWater(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  mid: string,
+  phase: number,
+): void {
+  const deep = '#1a4858';
+  const teal = phase % 2 === 0 ? '#2a7a88' : '#348a98';
+  const shallow = phase % 2 === 0 ? '#4aa8a0' : '#58b8b0';
+  vgrad(ctx, [shallow, teal, mid, deep], 0, 0, s, s);
+  dither(ctx, teal, deep, 0, Math.floor(s * 0.35), s, Math.ceil(s * 0.65), phase);
+
+  // Soft concentric ripples
+  const ry = 10 + (phase % 2) * 2;
+  fill(ctx, 'rgba(180,230,220,0.25)', 6, ry, 20, 1);
+  fill(ctx, 'rgba(180,230,220,0.18)', 10, ry + 4, 12, 1);
+  fill(ctx, 'rgba(20,60,70,0.25)', 4, ry + 8, 10, 1);
+  fill(ctx, 'rgba(20,60,70,0.2)', 18, ry + 6, 8, 1);
+
+  // Lily pads (organic ovals, not squares)
+  const lx = phase % 2 === 0 ? 4 : 18;
+  const ly = phase % 2 === 0 ? 6 : 18;
+  fill(ctx, '#2a6a38', lx, ly + 1, 8, 5);
+  fill(ctx, '#3a8a48', lx + 1, ly, 6, 5);
+  fill(ctx, '#4aaa58', lx + 2, ly + 1, 3, 2);
+  fill(ctx, '#1a4028', lx + 6, ly + 2, 2, 2);
+  // second pad
+  fill(ctx, '#2a6a38', 20 - lx / 2, 20, 7, 4);
+  fill(ctx, '#3a8a48', 21 - lx / 2, 19, 5, 4);
+  // tiny flower on pad
+  fill(ctx, '#f0e8ff', lx + 3, ly + 1, 2, 2);
+  fill(ctx, '#ffc857', lx + 3, ly + 1, 1, 1);
+
+  // Depth rim
+  fill(ctx, 'rgba(0,0,0,0.18)', 0, s - 1, s, 1);
+  fill(ctx, 'rgba(120,200,190,0.15)', 0, 0, s, 1);
+  spark(ctx, 14, 12 + phase, 'rgba(220,255,250,0.7)');
+}
+
+/** Flowing river — current streaks along X, darker banks. */
+function drawRiverWater(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  mid: string,
+  phase: number,
+): void {
+  const deep = '#1a4060';
+  const flow = phase % 2 === 0 ? '#3a80a8' : '#4a90b8';
+  const bright = phase % 2 === 0 ? '#5ab0d0' : '#68c0e0';
+  vgrad(ctx, [flow, mid, deep, '#0e2848'], 0, 0, s, s);
+  dither(ctx, mid, deep, 0, 0, s, s, phase);
+
+  // Current streaks travel right with phase
+  const ox = (phase % 2) * 4;
+  fill(ctx, 'rgba(180,220,240,0.35)', 2 + ox, 6, 12, 1);
+  fill(ctx, 'rgba(180,220,240,0.28)', 10 - ox, 12, 14, 1);
+  fill(ctx, 'rgba(180,220,240,0.3)', 4 + ox, 18, 16, 1);
+  fill(ctx, 'rgba(180,220,240,0.25)', 8 - ox, 24, 12, 1);
+  fill(ctx, bright, 6 + ox, 8, 6, 1);
+  fill(ctx, bright, 14 - ox, 16, 5, 1);
+
+  // Dark troughs
+  fill(ctx, deep, 0, 10, s, 1);
+  fill(ctx, deep, 0, 22, s, 1);
+  // Bank foam (top/bottom edges of channel)
+  fill(ctx, 'rgba(200,230,250,0.2)', 0, 0, s, 1);
+  fill(ctx, 'rgba(200,230,250,0.15)', 0, 1, s, 1);
+  fill(ctx, 'rgba(0,0,0,0.2)', 0, s - 1, s, 1);
+
+  spark(ctx, 8 + ox, 7, '#e8f8ff');
+  spark(ctx, 20 - ox, 15, '#ffffff');
+  spark(ctx, 12 + ox, 25, 'rgba(255,255,255,0.6)');
+}
+
+/**
+ * Layered oak tree — trunk bark + multi-lobe canopy with depth (not a green square).
+ */
+export function drawTreeSprite(ctx: CanvasRenderingContext2D, _s: number): void {
+  // Ground shadow under trunk (depth cue)
+  fill(ctx, 'rgba(0,0,0,0.25)', 10, 28, 12, 3);
+  fill(ctx, 'rgba(0,0,0,0.15)', 8, 29, 16, 2);
+
+  // Trunk with bark bands + bevel
+  shadedBlock(ctx, '#5a3a22', '#7a5a38', '#3a2410', 13, 16, 6, 14);
+  fill(ctx, '#4a3018', 13, 20, 6, 1);
+  fill(ctx, '#4a3018', 13, 25, 6, 1);
+  fill(ctx, '#6b4423', 14, 17, 1, 12);
+  fill(ctx, '#2a1808', 18, 18, 1, 10);
+  // Root flare
+  fill(ctx, '#4a3018', 11, 28, 4, 2);
+  fill(ctx, '#4a3018', 17, 28, 4, 2);
+
+  // Canopy lobes (back → front for depth)
+  const lobes: [number, number, number, number, string, string, string][] = [
+    [2, 4, 14, 12, '#1a4a28', '#2a6a38', '#0e3018'], // back left
+    [16, 3, 14, 13, '#1e5030', '#2f6b45', '#123820'], // back right
+    [6, 1, 18, 14, '#2a6a40', '#3a8f5a', '#1a4030'], // mid
+    [4, 8, 12, 11, '#246838', '#3a9050', '#164028'], // front left
+    [14, 9, 13, 10, '#286c3c', '#42a058', '#184828'], // front right
+    [10, 5, 10, 9, '#3a9050', '#5ad47a', '#246838'], // crown highlight
+  ];
+  for (const [x, y, w, h, mid, li, da] of lobes) {
+    // Soft oval mass via inset corners (not rectangle)
+    shadedBlock(ctx, mid, li, da, x, y, w, h);
+    fill(ctx, da, x, y, 2, 2);
+    fill(ctx, da, x + w - 2, y, 2, 2);
+    fill(ctx, da, x, y + h - 2, 2, 2);
+    fill(ctx, da, x + w - 2, y + h - 2, 2, 2);
+    fill(ctx, li, x + 2, y + 1, Math.max(2, w - 6), 2);
+  }
+  // Leaf speckles + depth holes
+  fill(ctx, '#1a4028', 8, 10, 2, 2);
+  fill(ctx, '#1a4028', 20, 8, 2, 2);
+  fill(ctx, '#1a4028', 14, 14, 2, 1);
+  spark(ctx, 12, 6, '#7dffb3');
+  spark(ctx, 18, 5, '#6ad48a');
+  spark(ctx, 9, 12, '#5ad47a');
+  // Canopy drop-shadow on trunk
+  fill(ctx, 'rgba(0,0,0,0.2)', 12, 16, 8, 2);
+}
+
+/**
+ * Koi fish — orange/white/black pattern, non-combat pond swimmer.
+ */
+export function drawKoiSprite(ctx: CanvasRenderingContext2D, _s: number): void {
+  // body
+  fill(ctx, '#e87840', 6, 12, 18, 8);
+  fill(ctx, '#f0a060', 7, 13, 14, 5);
+  fill(ctx, '#fff0e0', 10, 14, 6, 3);
+  fill(ctx, '#1a1010', 16, 13, 4, 3);
+  fill(ctx, '#e04030', 8, 15, 3, 2);
+  // head / nose
+  fill(ctx, '#f09050', 22, 13, 5, 5);
+  fill(ctx, '#1a1010', 25, 14, 2, 2);
+  spark(ctx, 25, 14, '#ffffff');
+  // tail
+  fill(ctx, '#e87840', 2, 11, 5, 4);
+  fill(ctx, '#e87840', 2, 16, 5, 4);
+  fill(ctx, '#f0a060', 3, 12, 3, 2);
+  fill(ctx, '#f0a060', 3, 17, 3, 2);
+  // fins
+  fill(ctx, '#f0a060', 12, 10, 4, 2);
+  fill(ctx, '#f0a060', 12, 19, 4, 2);
+  // soft under-glow (in water)
+  fill(ctx, 'rgba(255,200,150,0.25)', 8, 20, 12, 2);
 }
 
 /**

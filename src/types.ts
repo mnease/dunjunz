@@ -63,7 +63,9 @@ export type EntityKind =
   /** Beach seaweed clumps — solid low prop. */
   | 'seaweed'
   /** Beach crab — non-combatant crawl NPC. */
-  | 'crab';
+  | 'crab'
+  /** Pond koi — non-combatant swimmer (ponds only). */
+  | 'koi';
 
 /** Non-human best friend companion (randomized per playthrough). */
 export type BestBudId =

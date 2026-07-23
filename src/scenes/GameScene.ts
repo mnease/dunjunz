@@ -25,6 +25,13 @@ import {
   type ExpandedRoom,
 } from '../systems/room-expand';
 import {
+  autoKoiEntities,
+  classifyRoomWater,
+  terrainVariant,
+  waterTextureKeySafe,
+  type WaterBodyKind,
+} from '../systems/water-bodies';
+import {
   clearAllTouch,
   consumeTouchAction,
   drainTouchActions,
@@ -440,6 +447,7 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   palm: 'palm',
   seaweed: 'seaweed',
   crab: 'crab',
+  koi: 'koi',
 };
 
 const MOBILE_HOSTILES = [
@@ -578,7 +586,11 @@ export class GameScene extends Phaser.Scene {
     kind: 'water' | 'lava';
     /** Authored tile row (for shoreward wave phase bias). */
     ty?: number;
+    /** Water body style when kind is water. */
+    waterBody?: WaterBodyKind;
   }[] = [];
+  /** Live water body kinds for this room (key "x,y"). */
+  private waterBodies = new Map<string, WaterBodyKind>();
   private animTime = 0;
   private ambientFrame = 0;
   /** Enemy + player projectiles (hard mode / ranged weapons). */
@@ -2480,6 +2492,7 @@ export class GameScene extends Phaser.Scene {
     this.tileGrid = this.applyPersistentDoorUnlocks(this.parseTiles(room));
     this.ambientTiles = [];
     this.ambientFrame = 0;
+    this.waterBodies = classifyRoomWater(room.id, this.tileGrid);
 
     // Depth personality: darker tiles + void as you go down basements
     const land = room.land ?? 'surface';
@@ -2494,14 +2507,32 @@ export class GameScene extends Phaser.Scene {
         const kind = this.tileGrid[y][x];
         const pos = this.tileToWorld(x, y);
         const onBeach = room.id === BEACH_START_ID;
-        const texKey =
+        const waterBody = kind === 'water' ? this.waterBodies.get(`${x},${y}`) ?? 'pond' : undefined;
+        let texKey =
           kind === 'stairs' && (room.floor ?? 0) >= 0
             ? 'tile-cave-mouth'
             : kind === 'wall' && onBeach && this.textures.exists('tile-sand-wall')
               ? 'tile-sand-wall'
               : kind === 'floor' && onBeach && this.textures.exists('tile-sand')
                 ? 'tile-sand'
-                : TEX[kind];
+                : kind === 'water' && waterBody
+                  ? waterTextureKeySafe(waterBody, 0, (k) => this.textures.exists(k))
+                  : TEX[kind];
+        // Organic terrain variants — break the square stamp look
+        if (
+          (kind === 'floor' ||
+            kind === 'wall' ||
+            kind === 'grass' ||
+            kind === 'dirt') &&
+          !(onBeach && (kind === 'wall' || kind === 'floor'))
+        ) {
+          const v = terrainVariant(x, y, 3);
+          if (v > 0) {
+            // v=1 → -b, v=2 → -c
+            const keyed = `${TEX[kind]}-${v === 1 ? 'b' : 'c'}`;
+            if (this.textures.exists(keyed)) texKey = keyed;
+          }
+        }
         const img = this.add
           .image(pos.x, pos.y, texKey)
           .setScale(SPRITE_SCALE)
@@ -2518,7 +2549,12 @@ export class GameScene extends Phaser.Scene {
           if (tint !== 0xffffff && kind !== 'stairs') img.setTint(tint);
         }
         if (kind === 'water' || kind === 'lava') {
-          this.ambientTiles.push({ img, kind, ty: y });
+          this.ambientTiles.push({
+            img,
+            kind,
+            ty: y,
+            waterBody: kind === 'water' ? waterBody : undefined,
+          });
         }
 
         if (SOLID.includes(kind)) {
@@ -2565,6 +2601,11 @@ export class GameScene extends Phaser.Scene {
         continue;
       }
       this.spawnEntity(def);
+    }
+
+    // Pond koi (auto when room has pond water and no authored koi)
+    for (const koi of autoKoiEntities(room.id, room.tiles, room.entities ?? [])) {
+      this.spawnEntity(koi);
     }
 
     // Ensure boss chest appears after victory if not collected
@@ -3231,6 +3272,7 @@ export class GameScene extends Phaser.Scene {
     const isTumbleweed = def.kind === 'tumbleweed';
     const isCactusPlant = def.kind === 'cactus';
     const isCrab = def.kind === 'crab';
+    const isKoi = def.kind === 'koi';
     const interactive = [
       'npc',
       'merchant',
@@ -3349,19 +3391,31 @@ export class GameScene extends Phaser.Scene {
       body.setSize(12, 14);
       body.setOffset(2, 1);
       // overlap for spines handled below with contact hostiles
-    } else if (isTumbleweed || isCrab) {
+    } else if (isTumbleweed || isCrab || isKoi) {
       sprite.setImmovable(false);
       sprite.setCollideWorldBounds(true);
       const body = sprite.body as Phaser.Physics.Arcade.Body;
-      body.setSize(isCrab ? 10 : 12, isCrab ? 8 : 12);
-      body.setOffset(isCrab ? 3 : 2, isCrab ? 4 : 2);
-      body.setBounce(isCrab ? 0.4 : 1, isCrab ? 0.4 : 1);
-      body.setMaxVelocity(isCrab ? 36 : 60, isCrab ? 28 : 60);
-      body.enable = true;
-      this.physics.add.collider(sprite, this.walls);
-      // Crabs are peaceful — walk through them, no player push-block needed
-      if (isCrab) {
+      if (isKoi) {
+        // Swim above water; no wall collider (water tiles are solid)
+        body.setSize(10, 6);
+        body.setOffset(3, 5);
+        body.setBounce(0, 0);
+        body.setMaxVelocity(28, 22);
+        body.enable = true;
         body.moves = true;
+        sprite.setDepth(1);
+        sprite.setAlpha(0.95);
+      } else {
+        body.setSize(isCrab ? 10 : 12, isCrab ? 8 : 12);
+        body.setOffset(isCrab ? 3 : 2, isCrab ? 4 : 2);
+        body.setBounce(isCrab ? 0.4 : 1, isCrab ? 0.4 : 1);
+        body.setMaxVelocity(isCrab ? 36 : 60, isCrab ? 28 : 60);
+        body.enable = true;
+        this.physics.add.collider(sprite, this.walls);
+        // Crabs are peaceful — walk through them, no player push-block needed
+        if (isCrab) {
+          body.moves = true;
+        }
       }
     } else {
       sprite.setImmovable(true);
@@ -3392,6 +3446,7 @@ export class GameScene extends Phaser.Scene {
       isTree ||
       isTumbleweed ||
       isCrab ||
+      isKoi ||
       def.kind === 'dummy' ||
       def.kind === 'rack' ||
       def.kind === 'bookshelf' ||
@@ -5531,6 +5586,41 @@ export class GameScene extends Phaser.Scene {
         continue;
       }
 
+      // Pond koi — gentle swim, stay on water tiles
+      if (a.kind === 'koi') {
+        if (a.aiTimer <= 0) {
+          a.aiTimer = Phaser.Math.Between(700, 1600);
+          const body = a.sprite.body as Phaser.Physics.Arcade.Body;
+          if (body) {
+            body.setVelocity(
+              Phaser.Math.Between(-24, 24),
+              Phaser.Math.Between(-16, 16),
+            );
+          }
+          a.sprite.setFlipX(Math.random() > 0.5);
+        }
+        // Soft clamp to nearest water if they drift onto land
+        const tt = this.worldToTile(a.sprite.x, a.sprite.y);
+        const cell = this.tileGrid[tt.ty]?.[tt.tx];
+        if (cell !== 'water') {
+          // Nudge toward nearest pond water in 3×3
+          let found = false;
+          for (let dy = -2; dy <= 2 && !found; dy++) {
+            for (let dx = -2; dx <= 2 && !found; dx++) {
+              if (this.tileGrid[tt.ty + dy]?.[tt.tx + dx] === 'water') {
+                const p = this.tileToWorld(tt.tx + dx, tt.ty + dy);
+                a.sprite.setPosition(p.x, p.y);
+                found = true;
+              }
+            }
+          }
+          if (a.sprite.body) {
+            (a.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+          }
+        }
+        continue;
+      }
+
       // Stationary cactus / trees / palms / seaweed: no chase
       if (
         a.kind === 'cactus' ||
@@ -6052,7 +6142,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Ambient water / lava — beach waves push foam north toward shore
+    // Ambient water / lava — ocean foam north, river current, pond shimmer
     if (motionAllowed() && this.ambientTiles.length) {
       const onBeach = this.room?.id === BEACH_START_ID;
       const period = onBeach ? 260 : 420;
@@ -6060,20 +6150,16 @@ export class GameScene extends Phaser.Scene {
       const next = Math.floor(this.animTime / period) % frames;
       if (next !== this.ambientFrame) {
         this.ambientFrame = next;
-        for (const { img, kind, ty } of this.ambientTiles) {
+        for (const { img, kind, ty, waterBody } of this.ambientTiles) {
           if (!img.active) continue;
           if (kind === 'water') {
-            // Deeper ocean (higher ty) lags so crests roll north to shore
-            const lag = onBeach ? Math.floor((ty ?? 0) / 2) : 0;
-            const phase = (next + lag) % frames;
-            const k =
-              phase === 0
-                ? 'tile-water'
-                : phase === 1
-                  ? 'tile-water-b'
-                  : this.textures.exists('tile-water-c')
-                    ? 'tile-water-c'
-                    : 'tile-water-b';
+            const body = waterBody ?? (onBeach ? 'ocean' : 'pond');
+            const lag =
+              body === 'ocean' ? Math.floor((ty ?? 0) / 2) : 0;
+            const phase = (next + lag) % (body === 'ocean' ? 3 : 2);
+            const k = waterTextureKeySafe(body, phase, (key) =>
+              this.textures.exists(key),
+            );
             if (this.textures.exists(k)) img.setTexture(k);
           } else if (kind === 'lava') {
             const k = next % 2 === 0 ? 'tile-lava' : 'tile-lava-b';
@@ -6081,15 +6167,26 @@ export class GameScene extends Phaser.Scene {
           }
         }
       }
-      // Beach: continuous northward bob (waves wash toward shore)
-      if (onBeach) {
-        for (const { img, kind, ty } of this.ambientTiles) {
-          if (!img.active || kind !== 'water') continue;
-          if (img.getData('baseY') == null) img.setData('baseY', img.y);
-          const base = img.getData('baseY') as number;
-          // Negative Y = toward top of screen = north / shore
+      // Ocean: continuous northward bob (waves wash toward shore)
+      // River: slight horizontal shimmer
+      for (const { img, kind, ty, waterBody } of this.ambientTiles) {
+        if (!img.active || kind !== 'water') continue;
+        const body = waterBody ?? (onBeach ? 'ocean' : 'pond');
+        if (img.getData('baseY') == null) img.setData('baseY', img.y);
+        if (img.getData('baseX') == null) img.setData('baseX', img.x);
+        const baseY = img.getData('baseY') as number;
+        const baseX = img.getData('baseX') as number;
+        if (body === 'ocean') {
           img.setY(
-            base - Math.sin(this.animTime / 380 + (ty ?? 0) * 0.55) * 1.6,
+            baseY - Math.sin(this.animTime / 380 + (ty ?? 0) * 0.55) * 1.6,
+          );
+        } else if (body === 'river') {
+          img.setX(
+            baseX + Math.sin(this.animTime / 320 + (ty ?? 0) * 0.4) * 0.9,
+          );
+        } else if (body === 'pond') {
+          img.setY(
+            baseY + Math.sin(this.animTime / 520 + (ty ?? 0) * 0.3) * 0.5,
           );
         }
       }

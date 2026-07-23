@@ -33,9 +33,11 @@ import {
   drawDirtTile,
   drawFloorTile,
   drawGrassTile,
+  drawKoiSprite,
   drawLavaTile,
   drawSandTile,
   drawSandWallTile,
+  drawTreeSprite,
   drawWaterTile,
   fill,
   grit,
@@ -1607,29 +1609,44 @@ export function ensureGuildRackTexture(
 }
 
 export function generateTextures(scene: Phaser.Scene): void {
-  // —— Map tiles @ ART_RES (16-bit density, match avatar/weapon detail) ——
-  canvasTex(scene, 'tile-floor', ART_RES, ART_RES, (ctx) => {
-    drawFloorTile(ctx, ART_RES, hex(COLORS.floor), hex(COLORS.floorAlt), '#1a1528');
-  });
-
-  canvasTex(scene, 'tile-wall', ART_RES, ART_RES, (ctx) => {
-    drawBrickTile(
-      ctx,
-      ART_RES,
-      hex(COLORS.wallDark),
-      hex(COLORS.wall),
-      '#2a2438',
-      '#7a6a9a',
-    );
-  });
-
-  canvasTex(scene, 'tile-grass', ART_RES, ART_RES, (ctx) => {
-    drawGrassTile(ctx, ART_RES, hex(COLORS.grass), hex(COLORS.grassAlt), '#6ad48a');
-  });
-
-  canvasTex(scene, 'tile-dirt', ART_RES, ART_RES, (ctx) => {
-    drawDirtTile(ctx, ART_RES, hex(COLORS.dirt));
-  });
+  // —— Map tiles @ ART_RES (organic variants break square-grid read) ——
+  for (let v = 0; v < 3; v++) {
+    const suf = v === 0 ? '' : `-${String.fromCharCode(97 + v)}`; // '', '-b', '-c'
+    canvasTex(scene, `tile-floor${suf}`, ART_RES, ART_RES, (ctx) => {
+      drawFloorTile(
+        ctx,
+        ART_RES,
+        hex(COLORS.floor),
+        hex(COLORS.floorAlt),
+        '#1a1528',
+        v,
+      );
+    });
+    canvasTex(scene, `tile-wall${suf}`, ART_RES, ART_RES, (ctx) => {
+      drawBrickTile(
+        ctx,
+        ART_RES,
+        hex(COLORS.wallDark),
+        hex(COLORS.wall),
+        '#2a2438',
+        '#7a6a9a',
+        v,
+      );
+    });
+    canvasTex(scene, `tile-grass${suf}`, ART_RES, ART_RES, (ctx) => {
+      drawGrassTile(
+        ctx,
+        ART_RES,
+        hex(COLORS.grass),
+        hex(COLORS.grassAlt),
+        '#6ad48a',
+        v,
+      );
+    });
+    canvasTex(scene, `tile-dirt${suf}`, ART_RES, ART_RES, (ctx) => {
+      drawDirtTile(ctx, ART_RES, hex(COLORS.dirt), v);
+    });
+  }
 
   canvasTex(scene, 'tile-sand', ART_RES, ART_RES, (ctx) => {
     drawSandTile(ctx, ART_RES, hex(COLORS.sand), hex(COLORS.sandDark));
@@ -1639,17 +1656,34 @@ export function generateTextures(scene: Phaser.Scene): void {
     drawSandWallTile(ctx, ART_RES);
   });
 
+  // Legacy water keys = ocean (beach)
   canvasTex(scene, 'tile-water', ART_RES, ART_RES, (ctx) => {
-    drawWaterTile(ctx, ART_RES, hex(COLORS.water), 0);
+    drawWaterTile(ctx, ART_RES, hex(COLORS.water), 0, 'ocean');
   });
-
   canvasTex(scene, 'tile-water-b', ART_RES, ART_RES, (ctx) => {
-    drawWaterTile(ctx, ART_RES, hex(COLORS.water), 1);
+    drawWaterTile(ctx, ART_RES, hex(COLORS.water), 1, 'ocean');
   });
-
   canvasTex(scene, 'tile-water-c', ART_RES, ART_RES, (ctx) => {
-    drawWaterTile(ctx, ART_RES, hex(COLORS.water), 2);
+    drawWaterTile(ctx, ART_RES, hex(COLORS.water), 2, 'ocean');
   });
+  // Explicit ocean / pond / river sets
+  for (const [style, prefix] of [
+    ['ocean', 'tile-water-ocean'],
+    ['pond', 'tile-water-pond'],
+    ['river', 'tile-water-river'],
+  ] as const) {
+    canvasTex(scene, prefix, ART_RES, ART_RES, (ctx) => {
+      drawWaterTile(ctx, ART_RES, hex(COLORS.water), 0, style);
+    });
+    canvasTex(scene, `${prefix}-b`, ART_RES, ART_RES, (ctx) => {
+      drawWaterTile(ctx, ART_RES, hex(COLORS.water), 1, style);
+    });
+    if (style === 'ocean') {
+      canvasTex(scene, `${prefix}-c`, ART_RES, ART_RES, (ctx) => {
+        drawWaterTile(ctx, ART_RES, hex(COLORS.water), 2, style);
+      });
+    }
+  }
 
   canvasTex(scene, 'tile-lava', ART_RES, ART_RES, (ctx) => {
     drawLavaTile(ctx, ART_RES, hex(COLORS.lava), 0);
@@ -1796,27 +1830,40 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#4a3018', 18, 16, 4, 2);
   });
 
-  // Coconut palm
+  // Coconut palm — curved trunk + layered fronds (less blocky)
   canvasTex(scene, 'palm', ART_RES, ART_RES, (ctx) => {
-    // trunk
-    fill(ctx, '#5a3d1a', 14, 12, 4, 18);
+    // ground shadow
+    fill(ctx, 'rgba(0,0,0,0.2)', 10, 29, 12, 2);
+    // trunk lean + bark rings
+    fill(ctx, '#3a2410', 15, 12, 4, 18);
+    fill(ctx, '#5a3d1a', 14, 13, 4, 16);
     fill(ctx, '#8b5a2b', 15, 12, 2, 17);
-    fill(ctx, '#3a2410', 14, 18, 4, 1);
-    fill(ctx, '#3a2410', 14, 24, 4, 1);
-    // fronds
-    fill(ctx, '#1a5a28', 4, 8, 10, 3);
-    fill(ctx, '#2a8a40', 5, 7, 8, 2);
-    fill(ctx, '#1a5a28', 18, 8, 10, 3);
-    fill(ctx, '#2a8a40', 19, 7, 8, 2);
-    fill(ctx, '#1a5a28', 10, 2, 12, 4);
-    fill(ctx, '#3aaa50', 12, 1, 8, 3);
-    fill(ctx, '#1a5a28', 6, 4, 6, 3);
-    fill(ctx, '#1a5a28', 20, 4, 6, 3);
-    // coconuts
-    fill(ctx, '#6b4423', 12, 10, 3, 3);
-    fill(ctx, '#6b4423', 17, 10, 3, 3);
-    fill(ctx, '#8b5a2b', 13, 11, 1, 1);
-    spark(ctx, 14, 3, '#7dffb3');
+    fill(ctx, '#3a2410', 13, 19, 5, 1);
+    fill(ctx, '#3a2410', 14, 24, 5, 1);
+    fill(ctx, '#6b4423', 16, 14, 1, 14);
+    // frond layers (back)
+    fill(ctx, '#0e4020', 2, 9, 12, 3);
+    fill(ctx, '#0e4020', 18, 9, 12, 3);
+    fill(ctx, '#0e4020', 8, 2, 16, 4);
+    // mid fronds
+    fill(ctx, '#1a5a28', 3, 7, 11, 3);
+    fill(ctx, '#2a8a40', 4, 6, 9, 2);
+    fill(ctx, '#1a5a28', 18, 7, 11, 3);
+    fill(ctx, '#2a8a40', 19, 6, 9, 2);
+    fill(ctx, '#1a5a28', 9, 1, 14, 4);
+    fill(ctx, '#3aaa50', 11, 0, 10, 3);
+    // front fronds
+    fill(ctx, '#2a7a38', 5, 4, 7, 3);
+    fill(ctx, '#2a7a38', 20, 4, 7, 3);
+    fill(ctx, '#4aba60', 12, 2, 6, 2);
+    // coconuts under crown
+    fill(ctx, '#4a3018', 12, 10, 3, 3);
+    fill(ctx, '#6b4423', 13, 11, 2, 2);
+    fill(ctx, '#4a3018', 17, 10, 3, 3);
+    fill(ctx, '#6b4423', 18, 11, 2, 2);
+    fill(ctx, '#8b5a2b', 14, 11, 1, 1);
+    spark(ctx, 14, 2, '#7dffb3');
+    spark(ctx, 18, 3, '#5ad47a');
   });
 
   // Seaweed clump
@@ -2538,12 +2585,11 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   canvasTex(scene, 'tree', ART_RES, ART_RES, (ctx) => {
-    fill(ctx, '#5a3a22', 13, 18, 6, 12);
-    fill(ctx, '#2f6b45', 4, 6, 24, 16);
-    fill(ctx, '#3a8f5a', 8, 4, 10, 10);
-    fill(ctx, '#1e4a30', 10, 16, 2, 2);
-    fill(ctx, '#1e4a30', 20, 10, 2, 2);
-    spark(ctx, 12, 8, '#6ad48a');
+    drawTreeSprite(ctx, ART_RES);
+  });
+
+  canvasTex(scene, 'koi', ART_RES, ART_RES, (ctx) => {
+    drawKoiSprite(ctx, ART_RES);
   });
 
   canvasTex(scene, 'tumbleweed', ART_RES, ART_RES, (ctx) => {
