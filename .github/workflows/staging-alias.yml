@@ -1,0 +1,58 @@
+# Keep the short staging URL on the latest graphics-v2 deployment.
+# Production (www.dunjunz.com) is unaffected — only aliases a Preview deploy.
+#
+# Required repo secret: VERCEL_TOKEN (Vercel → Settings → Tokens)
+# Optional: VERCEL_ORG_ID / VERCEL_PROJECT_ID (defaults match neasemedia/dunjunz)
+
+name: Staging alias (graphics-v2)
+
+on:
+  push:
+    branches: [graphics-v2]
+  workflow_dispatch:
+
+jobs:
+  alias-staging:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/graphics-v2'
+    steps:
+      - name: Wait for Vercel deployment
+        run: sleep 45
+
+      - name: Point dunjunz-graphics-v2.vercel.app at latest graphics-v2 deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID || 'team_B8spPdBxmjp8VUu0Akh9tHDX' }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID || 'prj_R2ivbaXEMNliIA6elnp0sXmEERxM' }}
+          STAGING_BRANCH: graphics-v2
+          STAGING_ALIAS: dunjunz-graphics-v2.vercel.app
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "VERCEL_TOKEN secret not set — skip alias (use graphics.dunjunz.com / git branch URL)."
+            exit 0
+          fi
+          DEPLOY_HOST=$(curl -sS -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v6/deployments?teamId=${VERCEL_TEAM_ID}&projectId=${VERCEL_PROJECT_ID}&limit=25" \
+            | node -e "
+              let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{
+                const j=JSON.parse(d);
+                const hit=(j.deployments||[]).find(x =>
+                  x.state==='READY' && x.meta && x.meta.githubCommitRef==='${STAGING_BRANCH}'
+                );
+                if (!hit) { console.error('No READY deployment for ${STAGING_BRANCH}'); process.exit(1); }
+                console.log(hit.url);
+              });
+            ")
+          echo "Aliasing ${STAGING_ALIAS} → https://${DEPLOY_HOST}"
+          curl -sS -X POST -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.vercel.com/v2/deployments/${DEPLOY_HOST}/aliases?teamId=${VERCEL_TEAM_ID}" \
+            -d "{\"alias\":\"${STAGING_ALIAS}\"}" | node -e "
+              let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{
+                console.log(d.slice(0,500));
+                const j=JSON.parse(d);
+                if (j.error) process.exit(1);
+              });
+            "
+          echo "Staging short URL: https://${STAGING_ALIAS}/play/"

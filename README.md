@@ -213,3 +213,7 @@ All references are **parody / homage**, not licensed IP. Names and beats are twi
 ## License
 
 Private / all rights reserved unless otherwise noted by NeaseMedia.
+
+## Staging vs production
+
+See [docs/STAGING.md](docs/STAGING.md). Work on `graphics-v2`; promote to `main` on release schedule only.
