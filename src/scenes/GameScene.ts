@@ -32,8 +32,10 @@ import {
   continuousGroundKey,
   continuousWaterKey,
   gridHasFluidSurface,
+  isStructureKind,
   paintContinuousGround,
   paintContinuousWaterOverlay,
+  structurePropTexture,
 } from '../systems/continuous-ground';
 import {
   clearAllTouch,
@@ -2106,6 +2108,43 @@ export class GameScene extends Phaser.Scene {
       this.continuousWater = wimg;
       this.continuousWaterBaseY = top;
       this.ambientFrame = 0;
+    }
+
+    // Crisp door / cave-mouth / stair props (readable structure on fluid ground)
+    this.placeStructureProps(room);
+  }
+
+  /**
+   * Place structured entrance props at logical door/stairs cells.
+   * Continuous ground stays fluid; these read as architecture, not tiles.
+   */
+  private placeStructureProps(room: RoomDef): void {
+    const floor = room.floor ?? 0;
+    for (let y = 0; y < VIEW_TILES_H; y++) {
+      for (let x = 0; x < VIEW_TILES_W; x++) {
+        const kind = this.tileGrid[y]![x]!;
+        if (!isStructureKind(kind)) continue;
+        const tex = structurePropTexture(kind, floor);
+        if (!tex || !this.textures.exists(tex)) continue;
+        const pos = this.tileToWorld(x, y);
+        // Slightly larger than one cell so arch / door frame reads at scale
+        const scaleMul =
+          kind === 'stairs' || kind === 'entrance' || kind === 'stairs_up'
+            ? 1.35
+            : kind === 'door' || kind === 'locked'
+              ? 1.25
+              : 1.1;
+        const img = this.add
+          .image(pos.x, pos.y, tex)
+          .setScale(SPRITE_SCALE * scaleMul)
+          .setDepth(0.35);
+        img.setData('mapTile', true);
+        img.setData('structureProp', true);
+        // Cave mouths: sit a hair lower so the arch feet into the ground
+        if (tex === 'tile-cave-mouth') {
+          img.setOrigin(0.5, 0.62);
+        }
+      }
     }
   }
 

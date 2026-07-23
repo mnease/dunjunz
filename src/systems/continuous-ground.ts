@@ -163,9 +163,21 @@ function sampleKind(
   return grid[y]![x] ?? 'void';
 }
 
+/** Kinds that need sharp structure (not fluid blur). */
+export function isStructureKind(k: TileKind): boolean {
+  return (
+    k === 'door' ||
+    k === 'locked' ||
+    k === 'stairs' ||
+    k === 'stairs_up' ||
+    k === 'entrance' ||
+    k === 'pad'
+  );
+}
+
 /**
  * Soft-blend biome colors at warped float coords.
- * Warp breaks square cell boundaries into fluid edges.
+ * Structure cells (doors / cave mouths / stairs) skip warp so props stay crisp.
  */
 function colorAt(
   grid: TileKind[][],
@@ -175,21 +187,23 @@ function colorAt(
   beach: boolean,
   seed: number,
 ): RGB {
-  // Domain warp — the secret to "no tiles"
-  const warpAmp = 0.42;
+  const localKind = sampleKind(grid, tx, ty);
+  const structure = isStructureKind(localKind);
+
+  // Domain warp for terrain only — keep doors/stairs geometrically sharp
+  const warpAmp = structure ? 0.06 : 0.42;
   const w1 = valueNoise2(tx * 0.55, ty * 0.55, seed) * warpAmp;
   const w2 = valueNoise2(tx * 0.55 + 40, ty * 0.55 - 12, seed + 1) * warpAmp;
   const wx = tx + w1;
   const wy = ty + w2;
 
-  // Bilinear-ish blend of 4 corner cells
+  // Bilinear-ish blend of 4 corner cells (structures: mostly local cell)
   const x0 = Math.floor(wx);
   const y0 = Math.floor(wy);
   const fx = wx - x0;
   const fy = wy - y0;
-  // Smoothstep for softer seams
-  const sx = fx * fx * (3 - 2 * fx);
-  const sy = fy * fy * (3 - 2 * fy);
+  const sx = structure ? 0 : fx * fx * (3 - 2 * fx);
+  const sy = structure ? 0 : fy * fy * (3 - 2 * fy);
 
   const corners: [number, number][] = [
     [x0, y0],
@@ -197,58 +211,138 @@ function colorAt(
     [x0, y0 + 1],
     [x0 + 1, y0 + 1],
   ];
-  const weights = [(1 - sx) * (1 - sy), sx * (1 - sy), (1 - sx) * sy, sx * sy];
+  const weights = structure
+    ? [1, 0, 0, 0]
+    : [(1 - sx) * (1 - sy), sx * (1 - sy), (1 - sx) * sy, sx * sy];
   let r = 0;
   let g = 0;
   let b = 0;
   for (let i = 0; i < 4; i++) {
+    const wt = weights[i]!;
+    if (wt <= 0) continue;
     const [cx, cy] = corners[i]!;
-    const kind = sampleKind(grid, cx, cy);
+    const kind = structure ? localKind : sampleKind(grid, cx, cy);
     const pal = kindPalette(kind, land, beach);
-    // Micro variation within biome
     const n = fbm01(wx * 0.9 + i, wy * 0.9, seed + 9 + i, 3);
     const c = lerpRgb(pal.dark, lerpRgb(pal.mid, pal.light, n), 0.35 + n * 0.45);
-    const wt = weights[i]!;
     r += c[0] * wt;
     g += c[1] * wt;
     b += c[2] * wt;
   }
 
-  // Fine grit
+  // Fine grit (lighter on structure pads so props read)
   const grit = hash2(Math.floor(wx * 8), Math.floor(wy * 8), seed + 3);
-  if (grit > 0.82) {
-    r = Math.min(255, r + 12);
-    g = Math.min(255, g + 12);
-    b = Math.min(255, b + 10);
-  } else if (grit < 0.12) {
-    r = Math.max(0, r - 10);
-    g = Math.max(0, g - 10);
-    b = Math.max(0, b - 8);
-  }
-
-  // Special functional marks (still continuous, not tile stamps)
-  const cellKind = sampleKind(grid, wx, wy);
-  if (cellKind === 'stairs' || cellKind === 'stairs_up' || cellKind === 'entrance') {
-    // hatch steps
-    const band = Math.floor(wy * 4) % 2;
-    if (band === 0) {
-      r = Math.min(255, r + 25);
-      g = Math.min(255, g + 22);
-      b = Math.min(255, b + 30);
+  if (!structure) {
+    if (grit > 0.82) {
+      r = Math.min(255, r + 12);
+      g = Math.min(255, g + 12);
+      b = Math.min(255, b + 10);
+    } else if (grit < 0.12) {
+      r = Math.max(0, r - 10);
+      g = Math.max(0, g - 10);
+      b = Math.max(0, b - 8);
     }
   }
-  if (cellKind === 'door') {
-    const glow = fbm01(wx * 2, wy * 2, seed + 50, 2);
-    r = Math.min(255, r + glow * 40);
-    g = Math.min(255, g + glow * 30);
+
+  // Structure base pads under props — dark threshold / threshold frame
+  const fxCell = wx - Math.floor(wx);
+  const fyCell = wy - Math.floor(wy);
+  if (localKind === 'stairs' || localKind === 'stairs_up' || localKind === 'entrance') {
+    // Dark maw center + lighter stone rim
+    const dx = fxCell - 0.5;
+    const dy = fyCell - 0.5;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 0.28) {
+      // black cave hole
+      r = 8;
+      g = 6;
+      b = 12;
+    } else if (dist < 0.42) {
+      // arch lip
+      r = Math.min(255, 90 + grit * 40);
+      g = Math.min(255, 82 + grit * 30);
+      b = Math.min(255, 70 + grit * 20);
+    } else {
+      // stepped threshold bands
+      const band = Math.floor(fyCell * 5);
+      if (band % 2 === 0) {
+        r = Math.min(255, r + 35);
+        g = Math.min(255, g + 30);
+        b = Math.min(255, b + 40);
+      } else {
+        r = Math.max(0, r - 20);
+        g = Math.max(0, g - 18);
+        b = Math.max(0, b - 15);
+      }
+    }
   }
-  if (cellKind === 'pad') {
-    const pulse = fbm01(wx * 3, wy * 3, seed + 60, 2);
-    b = Math.min(255, b + 40 + pulse * 40);
-    g = Math.min(255, g + 20);
+  if (localKind === 'door' || localKind === 'locked') {
+    // Stone frame on edges of the cell
+    const frame =
+      fxCell < 0.14 || fxCell > 0.86 || fyCell < 0.12 || fyCell > 0.9;
+    if (frame) {
+      r = 90;
+      g = 78;
+      b = 52;
+    } else {
+      // wood / iron slab
+      if (localKind === 'locked') {
+        r = 70;
+        g = 52;
+        b = 28;
+      } else {
+        r = 110;
+        g = 85;
+        b = 35;
+      }
+      // vertical grain
+      if (Math.floor(fxCell * 12) % 3 === 0) {
+        r = Math.max(0, r - 18);
+        g = Math.max(0, g - 14);
+        b = Math.max(0, b - 10);
+      }
+    }
+  }
+  if (localKind === 'pad') {
+    const dx = fxCell - 0.5;
+    const dy = fyCell - 0.5;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 0.35) {
+      r = 70;
+      g = 140;
+      b = 200;
+    } else if (dist < 0.42) {
+      r = 40;
+      g = 80;
+      b = 120;
+    }
   }
 
   return [Math.round(r), Math.round(g), Math.round(b)];
+}
+
+/** Texture key for a structure prop sprite (doors, cave mouths, stairs). */
+export function structurePropTexture(
+  kind: TileKind,
+  floor = 0,
+): string | null {
+  switch (kind) {
+    case 'door':
+      return 'tile-door';
+    case 'locked':
+      return 'tile-locked';
+    case 'stairs':
+      // Surface dungeon entrance = cave mouth; basements = stair shaft
+      return floor >= 0 ? 'tile-cave-mouth' : 'tile-stairs';
+    case 'stairs_up':
+      return 'tile-stairs-up';
+    case 'entrance':
+      return 'tile-cave-mouth';
+    case 'pad':
+      return 'tile-pad';
+    default:
+      return null;
+  }
 }
 
 export type ContinuousGroundOpts = {

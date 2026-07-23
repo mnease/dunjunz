@@ -4,6 +4,8 @@ import {
   continuousGroundKey,
   continuousWaterKey,
   gridHasFluidSurface,
+  isStructureKind,
+  structurePropTexture,
 } from './continuous-ground';
 import type { TileKind } from '../types';
 
@@ -42,5 +44,17 @@ describe('continuous ground', () => {
     const sample: TileKind[] = ['grass', 'dirt', 'wall', 'water', 'snow'];
     expect(sample).toContain('grass');
     expect(sample).toContain('wall');
+  });
+
+  it('structure props map doors and cave mouths to clear textures', () => {
+    expect(isStructureKind('door')).toBe(true);
+    expect(isStructureKind('stairs')).toBe(true);
+    expect(isStructureKind('grass')).toBe(false);
+    expect(structurePropTexture('door')).toBe('tile-door');
+    expect(structurePropTexture('locked')).toBe('tile-locked');
+    expect(structurePropTexture('stairs', 0)).toBe('tile-cave-mouth');
+    expect(structurePropTexture('stairs', -1)).toBe('tile-stairs');
+    expect(structurePropTexture('stairs_up')).toBe('tile-stairs-up');
+    expect(structurePropTexture('entrance')).toBe('tile-cave-mouth');
   });
 });
