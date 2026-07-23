@@ -44,6 +44,10 @@ import {
 } from '../systems/autotile';
 import { resolveShoreTextureKey } from '../systems/shore';
 import {
+  blocksProjectile,
+  blocksWalk,
+} from '../systems/tile-solidity';
+import {
   clearAllTouch,
   consumeTouchAction,
   drainTouchActions,
@@ -467,6 +471,11 @@ function mulTint(a: number, b: number): number {
   return (r << 16) | (g << 8) | bl;
 }
 
+/**
+ * Walk / wall-collider solids. Water stays walk-blocking (ponds).
+ * Projectiles use {@link blocksProjectile} — water never stops ranged fire.
+ * @see src/systems/tile-solidity.ts
+ */
 const SOLID: TileKind[] = ['wall', 'water', 'void', 'locked'];
 const CHAR_TO_TILE: Record<string, TileKind> = {
   '#': 'wall',
@@ -5851,8 +5860,7 @@ export class GameScene extends Phaser.Scene {
     if (!h || !w) return null;
     const cx = Math.floor(w / 2);
     const cy = Math.floor(h / 2);
-    const blocked = new Set(['wall', 'water', 'void', 'locked', 'lava']);
-    // Spiral search from center
+    // Spiral search from center (universal walk blocks via blocksWalk)
     for (let r = 0; r < Math.max(w, h); r++) {
       for (let dy = -r; dy <= r; dy++) {
         for (let dx = -r; dx <= r; dx++) {
@@ -5860,7 +5868,7 @@ export class GameScene extends Phaser.Scene {
           const tx = cx + dx;
           const ty = cy + dy;
           const k = this.tileGrid[ty]?.[tx];
-          if (!k || blocked.has(k)) continue;
+          if (!k || blocksWalk(k)) continue;
           // Prefer empty of solid actors
           const pos = this.tileToWorld(tx, ty);
           const occupied = this.actors.some(
@@ -6906,11 +6914,23 @@ export class GameScene extends Phaser.Scene {
     return { vx: outX, vy: outY };
   }
 
+  /** Walk / AI solid (water blocks feet, not arrows). */
   private isSolidTile(tx: number, ty: number): boolean {
     if (ty < 0 || ty >= VIEW_TILES_H || tx < 0 || tx >= VIEW_TILES_W) {
       return true;
     }
-    return SOLID.includes(this.tileGrid[ty][tx]);
+    return blocksWalk(this.tileGrid[ty]![tx]);
+  }
+
+  /**
+   * Projectile / ranged LOS solid.
+   * Universal: water never blocks — shoot over ponds and through doorways over water.
+   */
+  private isProjectileSolidTile(tx: number, ty: number): boolean {
+    if (ty < 0 || ty >= VIEW_TILES_H || tx < 0 || tx >= VIEW_TILES_W) {
+      return true;
+    }
+    return blocksProjectile(this.tileGrid[ty]![tx]);
   }
 
   private unstickFromWall(a: Actor): void {
@@ -7527,7 +7547,7 @@ export class GameScene extends Phaser.Scene {
       const py = y0 + dir.y * range * t;
       const tx = Math.floor((px - this.roomOriginX) / cell);
       const ty = Math.floor((py - this.roomOriginY) / cell);
-      if (this.isSolidTile(tx, ty)) {
+      if (this.isProjectileSolidTile(tx, ty)) {
         endX = x0 + dir.x * range * Math.max(0.12, (i - 1) / steps);
         endY = y0 + dir.y * range * Math.max(0.12, (i - 1) / steps);
         break;
@@ -7745,7 +7765,8 @@ export class GameScene extends Phaser.Scene {
 
         const tx = Math.floor((p.img.x - this.roomOriginX) / (TILE * SCALE));
         const ty = Math.floor((p.img.y - this.roomOriginY) / (TILE * SCALE));
-        if (this.isSolidTile(tx, ty)) dead = true;
+        // Water never stops projectiles (universal rule — shoot over water)
+        if (this.isProjectileSolidTile(tx, ty)) dead = true;
       }
 
       if (dead) p.img.destroy();

@@ -8,6 +8,7 @@
  */
 
 import { VIEW_TILES_H, VIEW_TILES_W } from '../config';
+import { blocksWalk } from './tile-solidity';
 
 export type EntryFrom =
   | 'north'
@@ -18,13 +19,12 @@ export type EntryFrom =
   | 'stairsUp'
   | string;
 
-export type WalkGrid = string[][]; // TileKind strings; 'wall'|'void'|'water'|'locked' = blocked
+export type WalkGrid = string[][]; // TileKind strings; walk via blocksWalk (door always open)
 
-const BLOCKED = new Set(['wall', 'void', 'water', 'locked', 'lava']);
-// sand / dirt / grass / floor / carpet are walkable
+// sand / dirt / grass / floor / carpet are walkable; door never blocked
 
 function isWalkable(kind: string | undefined): boolean {
-  return !!kind && !BLOCKED.has(kind);
+  return !!kind && !blocksWalk(kind);
 }
 
 /**
