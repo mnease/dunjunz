@@ -2348,33 +2348,53 @@ export class GameScene extends Phaser.Scene {
     const rate =
       sw.precip === 'rain' ? 0.085 : sw.precip === 'snow' ? 0.045 : 0.06;
     this.weatherSpawnAcc += delta * rate;
-    const tex = this.textures.exists('particle') ? 'particle' : 'particle-hit';
+    // Terraria-style hard pixel precip (not soft particle blobs)
+    const texRain = this.textures.exists('precip_rain')
+      ? 'precip_rain'
+      : this.textures.exists('particle')
+        ? 'particle'
+        : 'particle-hit';
+    const texSnow = this.textures.exists('precip_snow')
+      ? 'precip_snow'
+      : texRain;
+    const texSleet = this.textures.exists('precip_sleet')
+      ? 'precip_sleet'
+      : texRain;
     while (this.weatherSpawnAcc >= 1 && this.weatherParticles.length < 90) {
       this.weatherSpawnAcc -= 1;
       const x = Phaser.Math.Between(8, GAME_W - 8);
       const y = HUD_H - Phaser.Math.Between(0, 40);
-      const img = this.add.image(x, y, tex).setScrollFactor(0).setDepth(85);
       if (sw.precip === 'rain') {
-        img.setTint(0x88b0d8);
-        img.setAlpha(0.55);
-        img.setScale(0.35, 1.1);
+        const img = this.add
+          .image(x, y, texRain)
+          .setScrollFactor(0)
+          .setDepth(85)
+          .setScale(SCALE * 0.55);
+        img.setAlpha(0.85);
         img.setData('vx', Phaser.Math.FloatBetween(-20, -8));
         img.setData('vy', Phaser.Math.FloatBetween(280, 420));
+        this.weatherParticles.push(img);
       } else if (sw.precip === 'snow') {
-        img.setTint(0xffffff);
-        img.setAlpha(0.75);
-        img.setScale(Phaser.Math.FloatBetween(0.45, 0.85));
+        const img = this.add
+          .image(x, y, texSnow)
+          .setScrollFactor(0)
+          .setDepth(85)
+          .setScale(SCALE * Phaser.Math.FloatBetween(0.4, 0.7));
+        img.setAlpha(0.9);
         img.setData('vx', Phaser.Math.FloatBetween(-30, 30));
         img.setData('vy', Phaser.Math.FloatBetween(35, 70));
+        this.weatherParticles.push(img);
       } else {
-        // sleet / icy mix
-        img.setTint(0xc8e0f0);
-        img.setAlpha(0.65);
-        img.setScale(0.4, 0.85);
+        const img = this.add
+          .image(x, y, texSleet)
+          .setScrollFactor(0)
+          .setDepth(85)
+          .setScale(SCALE * 0.5);
+        img.setAlpha(0.85);
         img.setData('vx', Phaser.Math.FloatBetween(-40, -10));
         img.setData('vy', Phaser.Math.FloatBetween(160, 260));
+        this.weatherParticles.push(img);
       }
-      this.weatherParticles.push(img);
     }
 
     const dt = delta / 1000;

@@ -394,6 +394,31 @@ export function terrariaPixelColor(
     ];
   }
 
+  // Jagged material borders — darken where neighbor kind differs (Terraria cliff/seam)
+  if (!structure) {
+    const nR = sampleKind(grid, tx + 0.08, ty);
+    const nL = sampleKind(grid, tx - 0.08, ty);
+    const nU = sampleKind(grid, tx, ty - 0.08);
+    const nD = sampleKind(grid, tx, ty + 0.08);
+    const border =
+      nR !== kind || nL !== kind || nU !== kind || nD !== kind;
+    if (border) {
+      // Pixel rim + occasional nibble gap for jagged edge
+      const nibble = hash2(mx, my, seed + 19);
+      if (nibble < 0.12) {
+        // show neighbor speck (jag)
+        const nk = nR !== kind ? nR : nL !== kind ? nL : nU !== kind ? nU : nD;
+        c = pick(materialPalette(nk, land, beach), hash2(mx, my, seed + 21));
+      } else {
+        c = [
+          Math.max(0, c[0] - 28),
+          Math.max(0, c[1] - 26),
+          Math.max(0, c[2] - 24),
+        ];
+      }
+    }
+  }
+
   return c;
 }
 
