@@ -259,8 +259,8 @@ export function applyRulesLawyerForgive(save: SaveData): MinibossForgiveResult {
       toast: 'ERRATA ALREADY FILED',
       dialog: [
         'RULES LAWYER: WE ALREADY SETTLED THIS.',
-        'SEE SECTION 12B: "DO NOT BOTHER ME AGAIN."',
-        'WEST BACK TO THE HALL. STAIRS STILL WORK.',
+        'SECTION 12B: DO NOT BOTHER ME AGAIN.',
+        'WEST TO THE HALL. STAIRS STILL WORK.',
       ],
       heal: 0,
       matStackId: RULES_LAWYER_FORGIVE_MAT,
@@ -293,9 +293,9 @@ export function applyRulesLawyerForgive(save: SaveData): MinibossForgiveResult {
     toast: 'FORGIVEN — +HP · BONE ERRATA',
     dialog: [
       'RULES LAWYER: FINE. PROCEDURAL CLEMENCY.',
-      'TAKE THIS BONE. IT IS CITED AS "JOKE MAT."',
+      'TAKE THIS BONE — CITED AS JOKE MAT.',
       `HEALED +${heal} HP. BINDER CLOSED.`,
-      'I WILL NOT BE HERE IF YOU RETURN. STAIRS? FREE.',
+      'I WON\'T BE HERE IF YOU RETURN. STAIRS ARE FREE.',
       'NO PORTAL. NO LAND CLEAR. THAT WOULD BE A VIOLATION.',
     ],
     heal,

@@ -139,7 +139,8 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 8,
         y: 5,
         dialog: [
-          'TALK TO ME, CRAWLER. I AM THE TUTORIAL GUILD MASTER.',
+          'GUILD MASTER: TALK TO ME, CRAWLER.',
+          'I RUN THE TRAINING HALL.',
         ],
       },
       { kind: 'dummy', id: 'dummy-nw', x: 4, y: 3 },
@@ -156,9 +157,9 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 13,
         y: 5,
         dialog: [
-          'SPEAK WITH THE TUTORIAL GUILD MASTER',
-          'HE STANDS IN THE CENTER OF THE HALL.',
-          'THE EAST DOOR STAYS LOCKED UNTIL YOU GRADUATE.',
+          'SPEAK WITH THE GUILD MASTER.',
+          'HE STANDS IN THE CENTER.',
+          'EAST DOOR STAYS LOCKED UNTIL YOU GRADUATE.',
         ],
       },
       {
@@ -168,10 +169,10 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 8,
         dialog: [
           'TRAINING GUILD RULES',
-          '1. RACK (E) = EQUIP WEAPON',
-          '2. DUMMY = DEAL 100% HP PER WEAPON',
-          'SWORD → AXE → BOW → STAFF',
-          '3. TALK TO GUILD MASTER TO GRADUATE',
+          '1. RACK (E) — EQUIP A WEAPON',
+          '2. DUMMY — DEAL FULL HP PER WEAPON',
+          '   SWORD → AXE → BOW → STAFF',
+          '3. TALK TO THE GUILD MASTER TO GRADUATE',
           '4. EAST DOOR OPENS AFTER GRADUATION',
         ],
       },
@@ -278,9 +279,9 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 8,
         dialog: [
           'MIRROR OF CHANGING',
-          'LOOK DEEP. CHOOSE HOW BATTLES FEEL.',
+          'CHOOSE HOW BATTLES FEEL:',
           'LIVE ACTION OR TURN-BASED.',
-          'PRESS E TO OPEN THE MIRROR.',
+          'PRESS E TO OPEN.',
         ],
       },
     ],
@@ -324,8 +325,8 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 5,
         dialog: [
           'TUTORIAL GUILD — WEST',
-          'NEW CRAWLERS: WALK WEST.',
-          'THE DOOR LOCKS BEHIND YOU UNTIL YOU GRADUATE.',
+          'NEW CRAWLERS: WALK WEST INTO THE HALL.',
+          'DOOR LOCKS UNTIL YOU GRADUATE.',
         ],
       },
       {
@@ -346,13 +347,13 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 11,
         y: 2,
         dialog: [
-          'OFFICIAL QUEST SIGN (VERY OFFICIAL)',
-          'SAVE PRINCESS PRIZELLA. SHE RULES. LITERALLY.',
-          'CAVE MOUTH = DUNJUNZ B1 (AFTER GUILD).',
-          'WEST = TUTORIAL GUILD.',
-          'SOUTH BRIDGE = BEACH.',
-          'EAST = TRAIL. NORTH WOODZ / SOUTH DEZERTZ.',
-          'M = MAPZ (ONCE YOU FIND SOME)',
+          'OFFICIAL QUEST SIGN',
+          'SAVE PRINCESS PRIZELLA.',
+          'CAVE MOUTH = DUNJUNZ (AFTER GUILD).',
+          'WEST = TRAINING GUILD.',
+          'SOUTH = BEACH. EAST = TRAIL.',
+          'TRAIL: NORTH → WOODZ · SOUTH → DEZERTZ.',
+          'M = MAPZ (ONCE YOU FIND SOME).',
         ],
       },
       {
@@ -362,8 +363,7 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 4,
         mapzId: 'surface',
         dialog: [
-          'WHOA — SURFACE MAPZ!',
-          'IT SMELLS LIKE ADVENTURE AND DIRT.',
+          'SURFACE MAPZ!',
           'PRESS M TO UNFURL IT.',
         ],
       },
@@ -413,12 +413,12 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 8,
         dialog: [
           '♪ PRINCESS PRIZELLA LOST, THE BALLAD OF DUST ♪',
-          '...sorry, still workshopping the chorus.',
-          'NORTH: WOODZ PATH (TREES. HOWLS.).',
-          'SOUTH: DEZERTZ DUNES (CACTI. BUGS.).',
-          'WEST: MEADOW + THOSE SPOOKY STAIRS.',
-          'EAST: HER KINGDOM. AFTER YOU SAVE HER.',
-          'MAPZ HELP. IF YOU, Y\'KNOW, FIND THEM.',
+          '…still workshopping the chorus.',
+          'NORTH: WOODZ (TREES. HOWLS.).',
+          'SOUTH: DEZERTZ (CACTI. BUGS.).',
+          'WEST: MEADOW + THE DUNJUN STAIRS.',
+          'EAST: HER KINGDOM — AFTER YOU SAVE HER.',
+          'MAPZ HELP. IF YOU FIND THEM.',
         ],
       },
       {
@@ -441,9 +441,8 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 7,
         shopId: 'tinkerer',
         dialog: [
-          'TINKERER: RARE WARES! FAIR-ISH PRICES!',
-          'I DON\'T JUDGE YOUR FASHION. MUCH.',
-          'E OPENS THE SHOP GRID. BUY LEFT, SELL RIGHT.',
+          'TINKERER: RARE WARES. FAIR PRICES.',
+          'E OPENS THE SHOP — BUY LEFT, SELL RIGHT.',
           'BRING COINZ. OR BONES. I BUY BONES.',
         ],
       },
@@ -494,10 +493,10 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 3,
         y: 9,
         dialog: [
-          'B1 ENTRANCE — WELCOME TO THE UNDERGROUND',
-          'U = BACK TO GRASS AND SUNLIGHT',
-          'N = DEEPER HALLS (BAD IDEAS LIVE THERE)',
-          'E = THE SORRY CUBE. BE NICE... OR DON\'T.',
+          'B1 ENTRANCE — UNDERGROUND.',
+          'U = BACK TO THE SURFACE.',
+          'N = DEEPER HALLS.',
+          'E = THE SORRY CUBE. TALK OR FIGHT.',
         ],
       },
       {
@@ -566,9 +565,8 @@ export const ROOMS: Record<string, RoomDef> = {
         dialog: [
           'LOCAL LEGEND: THE SORRY CUBE',
           'E = TALK. KINDNESS HAS LOOT.',
-          'SWORD = DIFFERENT LOOT. RUDE LOOT.',
+          'HIT IT = DIFFERENT LOOT.',
           'IT ONLY FIGHTS IF YOU START IT.',
-          'CHOOSE YOUR VIBE.',
         ],
       },
       {
@@ -1143,8 +1141,8 @@ export const ROOMS: Record<string, RoomDef> = {
         dialog: [
           'WOLF LORD: THIS IS MY FOREST!',
           'THE PRINCESS? NEVER MET HER.',
-          'BUT MY SHARDZ? ALL MINE.',
-          'COME GET SOME. IF YOU DARE. AWOO.',
+          'MY SHARDZ? ALL MINE.',
+          'COME GET SOME. AWOO.',
         ],
       },
       {
@@ -1154,8 +1152,8 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 3,
         mapzId: 'woodz',
         dialog: [
-          'WOODZ MAPZ! MOSTLY TREES. HONESTLY.',
-          'PRESS M. TRY NOT TO GET BIT.',
+          'WOODZ MAPZ — MOSTLY TREES.',
+          'PRESS M.',
         ],
       },
       {
@@ -1165,8 +1163,8 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 7,
         dialog: [
           'A CRUDE FORJE. IT\'S TRYING ITS BEST.',
-          'E OR F: OPEN THE FORJE GRID.',
-          'FEED IT OREZ AND SHARDZ. MAKE MAGIC.',
+          'E OR F: OPEN THE FORJE.',
+          'FEED IT OREZ AND SHARDZ.',
         ],
       },
     ],
@@ -1687,9 +1685,9 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 2,
         dialog: [
           'DEZERTZ DUNES — TUMBLEWEEDS HAVE RIGHT OF WAY.',
-          'CACTI DO NOT MOVE. YOU MOVE INTO THEM. OUCH.',
-          'SOUTH: DEEPER SAND. SCORPIONS. REGRET.',
-          'NORTH: THE TRAIL (SHADE. RELATIVELY).',
+          'CACTI DO NOT MOVE. YOU DO. OUCH.',
+          'SOUTH: DEEPER SAND. SCORPIONS.',
+          'NORTH: THE TRAIL (SHADE, SORT OF).',
         ],
       },
     ],
@@ -1791,9 +1789,9 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 2,
         dialog: [
           'DEZERTZ — HOT. SANDY. DRAMATIC.',
-          'SOUTH: SAND TOWER. VERY TOWER.',
-          'NORTH: DUNES (MORE BUGS. FEWER FRIENDS).',
-          'PRINCESS PRIZELLA\'S PROBABLY IN THE TOWER. BRING WATER.',
+          'SOUTH: SAND TOWER.',
+          'NORTH: DUNES (MORE BUGS).',
+          'PRINCESS PRIZELLA IS IN THE TOWER.',
         ],
       },
       {
@@ -1803,8 +1801,8 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 8,
         mapzId: 'dezertz',
         dialog: [
-          'DEZERTZ MAPZ! MOSTLY SAND. SOME MORE SAND.',
-          'PRESS M. STAY HYDRATED. MENTALLY.',
+          'DEZERTZ MAPZ — MOSTLY SAND.',
+          'PRESS M.',
         ],
       },
       {
@@ -1813,8 +1811,8 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 12,
         y: 8,
         dialog: [
-          'A SAND FORJE GLOWS HOT. COOL HOT.',
-          'E OR F: OPEN THE FORJE GRID.',
+          'A SAND FORJE GLOWS HOT.',
+          'E OR F: OPEN THE FORJE.',
           'MAKE SOMETHING THAT HISSES.',
         ],
       },
@@ -1877,9 +1875,8 @@ export const ROOMS: Record<string, RoomDef> = {
         hp: 56,
         dialog: [
           'SAND WRAITH: THE PRINCESS IS MINE!',
-          'OR AT LEAST... RENTED. MONTHLY.',
-          'FACE THE DUNES, LITTLE HERO!',
-          'I AM VERY SANDY AND VERY SERIOUS.',
+          'OR AT LEAST… RENTED. MONTHLY.',
+          'FACE THE DUNES.',
         ],
       },
       {
@@ -1888,11 +1885,9 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 10,
         y: 5,
         dialog: [
-          'PRINCESS PRIZELLA: YOU CAME! MATHEMATICAL!',
-          'I WAS THIS CLOSE TO ESCAPING WITH A',
-          'GRAPH SPREADSHEET AND A BAD ATTITUDE.',
+          'PRINCESS PRIZELLA: YOU CAME!',
+          'I WAS THIS CLOSE TO ESCAPING WITH A SPREADSHEET.',
           'BONK THE WRAITH FIRST. THEN WE TALK.',
-          'I\'VE GOT KINGDOM STUFF TO SORT OUT.',
         ],
       },
       {
@@ -1910,7 +1905,7 @@ export const ROOMS: Record<string, RoomDef> = {
         dialog: [
           'AFTER THE RESCUE SHE WENT HOME.',
           'CASTLE: EAST OF THE TROPE TRAIL.',
-          'THRONE ROOM. QUESTS. WEIRD TAXES.',
+          'THRONE ROOM. QUESTS.',
         ],
       },
     ],
@@ -1947,10 +1942,10 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 8,
         y: 2,
         dialog: [
-          'PRINCESS PRIZELLA\'S KINGDOMZ — KEEP RIGHT.',
-          'WEST: BACK TO THE TRAIL. (WIDE PATH.)',
-          'EAST: COURTYARD. NORTH OF THAT: THRONE.',
-          'CREEPS HERE HIT HARDER. ROYAL SECURITY.',
+          'PRINCESS PRIZELLA\'S KINGDOMZ.',
+          'WEST: BACK TO THE TRAIL.',
+          'EAST: COURTYARD. NORTH: THRONE.',
+          'CREEPS HIT HARDER HERE.',
         ],
       },
       {
@@ -1972,7 +1967,7 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 8,
         mapzId: 'kingdomz',
         dialog: [
-          'KINGDOMZ MAPZ! PURPLE AND JUDGY.',
+          'KINGDOMZ MAPZ.',
           'PRESS M. FIND THE THRONE.',
         ],
       },
@@ -2009,10 +2004,10 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 5,
         y: 3,
         dialog: [
-          'GUARD: WELCOME TO NOT DYING. PROBABLY.',
-          'THRONE: NORTH. PRINCESS PRIZELLA ASSIGNS JOBS.',
-          'EAST: SEWERZ. GROSS. CHAMPION STUFF.',
-          'DON\'T TRACK MUD ON THE RUGS. PLEASE.',
+          'GUARD: WELCOME. TRY NOT TO DIE.',
+          'THRONE: NORTH — PRINCESS PRIZELLA ASSIGNS JOBS.',
+          'EAST: SEWERZ (CHAMPION WORK).',
+          'WIPE YOUR FEET.',
         ],
       },
       {
@@ -2022,7 +2017,7 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 7,
         shopId: 'tinkerer',
         dialog: [
-          'TINKERER: ROYAL MARKUP. STILL FAIR-ISH.',
+          'TINKERER: ROYAL MARKUP. STILL FAIR.',
           'E FOR SHOP. SEWER CREEPS DROP GOOD JUNK.',
         ],
       },
@@ -2033,7 +2028,7 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 7,
         dialog: [
           'A FANCY FORJE. IT HAS A TINY CROWN.',
-          'E OR F: OPEN THE FORJE GRID.',
+          'E OR F: OPEN THE FORJE.',
         ],
       },
       {
@@ -2074,7 +2069,7 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 3,
         dialog: [
           'PRINCESS PRIZELLA: WELCOME TO MY OFFICE.',
-          'IT HAS A THRONE. THAT\'S THE WHOLE LOOK.',
+          'IT HAS A THRONE. THAT\'S THE LOOK.',
         ],
       },
       {
@@ -2083,8 +2078,8 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 4,
         y: 5,
         dialog: [
-          'CHAMPION BOARD (ORAL TRADITION).',
-          'TALK TO PRINCESS PRIZELLA. GET A JOB. DON\'T DIE.',
+          'CHAMPION BOARD.',
+          'TALK TO PRINCESS PRIZELLA. GET A JOB.',
         ],
       },
     ],
@@ -2120,7 +2115,7 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 8,
         y: 2,
         dialog: [
-          'ROYAL SEWERZ — AUTHORIZED CHAMPIONS ONLY.',
+          'ROYAL SEWERZ — CHAMPIONS ONLY.',
           'MEANER CREEPS. HONKING AHEAD.',
           'EAST INTO THE PIPES.',
         ],
@@ -2132,8 +2127,8 @@ export const ROOMS: Record<string, RoomDef> = {
         y: 8,
         mapzId: 'sewerz',
         dialog: [
-          'SEWERZ MAPZ. MOSTLY PIPES. SOME GOOSE.',
-          'PRESS M. TRY NOT TO SLIP.',
+          'SEWERZ MAPZ — PIPES. SOME GOOSE.',
+          'PRESS M.',
         ],
       },
       {

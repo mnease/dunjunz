@@ -2920,13 +2920,13 @@ export class GameScene extends Phaser.Scene {
       this.save = unlockKingdomOnRescue(this.save);
       writeSave(this.save);
       this.game.events.emit('dialog-show', [
-        'PRINCESS PRIZELLA: YOU DID IT! MATHEMATICAL!',
+        'PRINCESS PRIZELLA: YOU DID IT!',
         'I AM FREE. MOSTLY. THERE\'S STILL SAND.',
         '',
         ...princessChampionDialog(),
         '',
         'I\'M HEADING HOME — CASTLE EAST OF THE TRAIL.',
-        'CYAN PORTAL / NORTH DOOR OUT. BEST BUD NEXT.',
+        'CYAN PORTAL OR NORTH DOOR OUT.',
       ]);
       this.ensureBossExitPortal(true);
       return;

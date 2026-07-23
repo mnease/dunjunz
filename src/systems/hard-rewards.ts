@@ -32,10 +32,9 @@ export function rewardHardCaptain(save: SaveData): {
       'THE CAPTAIN GOES DOWN WITH THE PLOT HOLE.',
       '"TELL STARFLEET… THE GOLD SHIRT… LOST…"',
       '',
-      'YOU LOOT: PHASER (RANGED WEAPON)',
-      'AND BEAM ME UP ×3 — [U] TO ENERGIZE',
-      'TELEPORTS YOU TO THE DUNJUN MOUTH.',
-      'HARD MODE STILL ON. STAY SHARP.',
+      'YOU LOOT: PHASER (RANGED).',
+      'BEAM ME UP ×3 — [U] TO TELEPORT TO THE DUNJUN MOUTH.',
+      'HARD MODE STILL ON.',
     ],
   };
 }
@@ -66,12 +65,12 @@ export function rewardHardKing(save: SaveData): {
   return {
     save: next,
     dialog: [
-      'THE DUNJUN MASTER — THE KING OF THIS HOLE —',
-      'DROPS HIS DICE. FOREVER. (HARD MODE.)',
+      'THE DUNJUN MASTER DROPS HIS DICE. FOREVER.',
+      '(HARD MODE.)',
       '',
       'YOU LOOT: SHORT BOW + ARROWS ×24',
-      'AND AN EMERALD STAFF (MAGIC BOLTS)',
-      'HARD DUNJUNZ: CLEARED. YOU MONSTER.',
+      'AND AN EMERALD STAFF.',
+      'HARD DUNJUNZ: CLEARED.',
     ],
   };
 }

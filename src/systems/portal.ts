@@ -116,9 +116,8 @@ export function bossExitPortalDef(
     y: pos.y,
     portalTarget: target,
     dialog: [
-      'A SHIMMERING EXIT PORTAL HUMS.',
-      'STEP ON IT TO ZIP BACK TO THE',
-      'START OF THIS DUNJUN. NEAT.',
+      'EXIT PORTAL — CYAN AND HUMMING.',
+      'STEP ON IT TO RETURN TO THIS DUNJUN\'S MOUTH.',
     ],
   };
 }

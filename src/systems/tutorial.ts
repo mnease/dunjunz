@@ -758,7 +758,7 @@ export function guildMasterIntroDialog(): string[] {
     'EQUIP ANOTHER OR RETURN (E ON EMPTY) TO PUT IT BACK.',
     'DUMMIES (SPACE / Z) TAKE THE HITS.',
     'WHEN ALL FOUR ARE DONE, TALK TO ME.',
-    'THEN: EAST DOOR → MEADOW. MATHEMATICAL!',
+    'THEN: EAST DOOR → MEADOW.',
   ];
 }
 
@@ -769,7 +769,7 @@ export function guildMasterDialog(save: SaveData): string[] {
       'EAST = MEADOW. CAVE MOUTH = DUNJUNZ.',
       'TRAIL LEADS TO WOODZ AND DEZERTZ.',
       'MOVE: WASD. ATTACK: SPACE/Z. BAG: I. TALK: E.',
-      'GO RESCUE PRINCESS PRIZELLA. MATHEMATICAL!',
+      'GO RESCUE PRINCESS PRIZELLA.',
     ];
   }
 

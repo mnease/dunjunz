@@ -33,29 +33,25 @@ export const CHAMPION_QUESTS: readonly ChampionQuestDef[] = [
     bossId: 'royal-goose',
     bossRoomId: 'sewerz_boss',
     assignDialog: [
-      'PRINCESS PRIZELLA: CHAMPION JOB #2. GROSS ONE.',
-      'THE ROYAL SEWERZ ARE... OCCUPIED.',
-      'SOMETHING HONKS. SOMETHING BITES.',
-      'A GOOSE. PROBABLY MAGICAL. DEFINITELY RUDE.',
+      'PRINCESS PRIZELLA: CHAMPION JOB #2. THE GROSS ONE.',
+      'THE ROYAL SEWERZ ARE OCCUPIED.',
+      'SOMETHING HONKS. A GOOSE — MAGICAL AND RUDE.',
       '',
-      'EAST OF THE COURTYARD — SEWER MOUTH.',
-      'CLEAR IT. BRING BACK THE TAX SCROLLS',
-      'IT PROBABLY ATE. OR HONKED AT.',
-      'CREEPS DOWN THERE HIT HARDER. PACK SNACKS.',
+      'COURTYARD → EAST → SEWER MOUTH.',
+      'CLEAR IT. BRING BACK THE TAX SCROLLS.',
+      'CREEPS HIT HARDER DOWN THERE. PACK SNACKS.',
     ],
     reminderDialog: [
-      'PRINCESS PRIZELLA: STILL HONKING DOWN THERE?',
+      'PRINCESS PRIZELLA: STILL HONKING?',
       'COURTYARD → EAST → SEWERZ MOUTH.',
-      'GOOSE. SCROLLS. DON\'T BECOME A PUDDLE.',
+      'GOOSE. SCROLLS. DON\'T DIE IN A PIPE.',
     ],
     completeDialog: [
-      'PRINCESS PRIZELLA: YOU BEAT THE ROYAL GOOSE?!',
-      'MATHEMATICAL. THE PLUMBERS WILL WRITE SONGS.',
-      'BAD SONGS. BUT SONGS.',
+      'PRINCESS PRIZELLA: YOU BEAT THE ROYAL GOOSE.',
+      'THE PLUMBERS WILL WRITE BAD SONGS ABOUT YOU.',
       '',
-      'YOU GOT: HONK BLADE (EPIC) + KINGDOM COINZ.',
-      'SEWERZ: OFFICIALLY LESS HONKY.',
-      'MORE JOBS LATER. GO FORJE. STAY COOL.',
+      'YOU GOT: HONK BLADE (EPIC) + COINZ.',
+      'SEWERZ: LESS HONKY. FORJE UP. MORE JOBS LATER.',
     ],
   },
 ];
@@ -88,12 +84,12 @@ export function assignQuest(
 ): { save: SaveData; dialog: string[] } {
   const q = getQuest(questId);
   if (!q) {
-    return { save, dialog: ['PRINCESS PRIZELLA: UH. QUEST MISSING. AWKWARD.'] };
+    return { save, dialog: ['PRINCESS PRIZELLA: THAT JOB ISN\'T ON THE BOARD.'] };
   }
   if (isQuestCompleted(save, questId)) {
     return {
       save,
-      dialog: ['PRINCESS PRIZELLA: YOU ALREADY DID THAT ONE. CHILL.'],
+      dialog: ['PRINCESS PRIZELLA: YOU ALREADY FINISHED THAT ONE.'],
     };
   }
   let next: SaveData = {
@@ -119,7 +115,7 @@ export function completeActiveQuest(save: SaveData): {
 } {
   const q = getQuest(save.activeQuestId);
   if (!q) {
-    return { save, dialog: ['PRINCESS PRIZELLA: NO ACTIVE QUEST. WEIRD.'] };
+    return { save, dialog: ['PRINCESS PRIZELLA: YOU DON\'T HAVE AN ACTIVE JOB.'] };
   }
   if (!save.killed.includes(q.bossId)) {
     return { save, dialog: q.reminderDialog };
@@ -127,7 +123,7 @@ export function completeActiveQuest(save: SaveData): {
   if (isQuestCompleted(save, q.id)) {
     return {
       save,
-      dialog: ['PRINCESS PRIZELLA: ALREADY TURNED IN. DOUBLE DIPPING? RUDE.'],
+      dialog: ['PRINCESS PRIZELLA: ALREADY TURNED IN.'],
     };
   }
 
@@ -160,7 +156,7 @@ export function prizellaKingdomTalk(save: SaveData): {
   if (!save.princessSaved) {
     return {
       save,
-      dialog: ['PRINCESS PRIZELLA: SAVE ME FIRST. THEN CASTLE STUFF.'],
+      dialog: ['PRINCESS PRIZELLA: SAVE ME FIRST. THEN WE TALK CASTLE JOBS.'],
     };
   }
 
@@ -181,10 +177,9 @@ export function prizellaKingdomTalk(save: SaveData): {
   return {
     save,
     dialog: [
-      'PRINCESS PRIZELLA: NO MORE JOBS ON THE BOARD. YET.',
-      'THE KINGDOM IS... RELATIVELY FINE.',
-      'FORJE STUFF. PET YOUR BUD. PAY WEIRD TAXES.',
-      'I\'LL HONK IF I NEED YOU. METAPHORICALLY.',
+      'PRINCESS PRIZELLA: BOARD\'S EMPTY FOR NOW.',
+      'FORJE. PET YOUR BUD. DON\'T START ANY WARS.',
+      'I\'LL CALL IF I NEED YOU.',
     ],
   };
 }

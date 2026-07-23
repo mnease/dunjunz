@@ -116,9 +116,9 @@ export function hardGatePortalDef(land: LandId): EntityDef | null {
     y: meta.y,
     portalTarget: `${HARD_PORTAL_PREFIX}${land}`,
     dialog: [
-      'HARD MODE GATE — GLOWS MENACINGLY.',
+      'HARD MODE GATE.',
       'CREEPS SHOOT. CREEPS HIT HARDER.',
-      'STEP ON TO COMMIT. NO REFUNDS.',
+      'STEP ON TO START. NO REFUNDS.',
     ],
   };
 }
@@ -137,7 +137,7 @@ export function hardExitPortalDef(
     portalTarget: HARD_EXIT_TARGET,
     dialog: [
       'SOFT EXIT — LEAVE HARD MODE.',
-      'CREEPS GO BACK TO NORMAL POLITENESS.',
+      'CREEPS RETURN TO NORMAL DIFFICULTY.',
     ],
   };
 }

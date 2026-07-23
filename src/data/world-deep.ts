@@ -864,11 +864,10 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
           hp: 40,
           dialog: [
             'FLOOR CAPTAIN: BADGE CHECK.',
-            'I MANAGE FLOORS THREE THROUGH FIVE.',
-            'THE DUNGEON MASTER IS ON B8. BUSY.',
-            'FIGHT ME OR BRIBE THE CHEST. YOUR CALL.',
-            'STAIRS? THOSE ARE FOR PEOPLE WITH BADGES.',
-            '(THE STAIRS DO NOT CARE ABOUT BADGES.)',
+            'I RUN FLOORS THREE THROUGH FIVE.',
+            'THE DUNGEON MASTER IS ON B8.',
+            'FIGHT ME OR LOOT THE CHEST. YOUR CALL.',
+            'THE STAIRS DO NOT CARE ABOUT BADGES.',
           ],
         },
         chest('b4-captain-chest', 11, 3, 'dungeon'),
@@ -910,9 +909,9 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
           dialog: [
             'RULES LAWYER: HOLD. SECTION 4A.',
             'DID YOU READ THE BINDER? OF COURSE NOT.',
-            'TALK: I MAY GRANT PROCEDURAL CLEMENCY.',
-            'HIT ME OR OPEN THE CHEST: WE LITIGATE.',
-            'STAIRS REMAIN A SEPARATE STATUTE. GO AROUND.',
+            'TALK: I MAY GRANT CLEMENCY.',
+            'HIT ME OR OPEN THE CHEST — WE LITIGATE.',
+            'STAIRS ARE A SEPARATE STATUTE. GO AROUND.',
           ],
         },
         chest('b6-lawyer-chest', 11, 3, 'dungeon'),
@@ -1055,11 +1054,11 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
         dialog: [
           'I AM THE DUNGEON MASTER!',
           'EIGHT FLOORS. YOU STILL CAME.',
-          'PRINCESS PRIZELLA? YEAH I SHIPPED HER',
-          'TO THE DEZERTZ. HA. HA. ...HA.',
+          'PRINCESS PRIZELLA? I SHIPPED HER TO THE DEZERTZ.',
+          'HA. HA. …HA.',
           'ROLL FOR INITIATIVE—',
-          'NAT 1. AWKWARD.',
-          'OKAY FINE. FIGHT!',
+          'NAT 1.',
+          'FINE. FIGHT!',
         ],
       },
       {
@@ -1069,9 +1068,9 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
         y: 5,
         chestTable: 'boss',
         dialog: [
-          'LEGENDARY DUNJUN LOOT. SHINY.',
-          'MAPZ OF THE WIDE WEIRD WORLD...',
-          "PRINCESS PRIZELLA'S IN THE DEZERTZ. GO GET HER.",
+          'LEGENDARY DUNJUN LOOT.',
+          'MAPZ OF THE WIDE WEIRD WORLD.',
+          'PRINCESS PRIZELLA IS IN THE DEZERTZ. GO GET HER.',
         ],
       },
       {
@@ -1081,8 +1080,8 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
         y: 3,
         mapzId: 'dunjunz',
         dialog: [
-          "DUNJUNZ MAPZ! IT'S ALL HALLWAYS.",
-          'EIGHT FLOORS. PRESS M. GET LOST ON PURPOSE.',
+          'DUNJUNZ MAPZ — MOSTLY HALLWAYS.',
+          'EIGHT FLOORS. PRESS M.',
         ],
       },
       {
@@ -1092,10 +1091,10 @@ export function buildDunjunzDeep(): Record<string, RoomDef> {
         y: 8,
         shopId: 'tinkerer',
         dialog: [
-          "TINKERER: YEAH SHE WAS NEVER HERE.",
+          'TINKERER: SHE WAS NEVER HERE.',
           'I FOLLOWED YOU DOWN EIGHT FLOORS.',
           'TRY THE DEZERTZ TOWER. HOT. SANDY.',
-          'E FOR THE SHOP. BUY STUFF. LIVE A LITTLE.',
+          'E OPENS THE SHOP.',
         ],
       },
     ],
@@ -1176,7 +1175,7 @@ export function buildWoodzDeep(): Record<string, RoomDef> {
           hp: 38,
           dialog: [
             'ROOT ALPHA: *LOW GROWL*',
-            'THE PACK OBEYS STRENGTH. NOT BADGES.',
+            'THE PACK OBEYS STRENGTH.',
             'THE WOLF LORD RULES ABOVE. I RULE THE ROOTS.',
           ],
         },
@@ -1210,10 +1209,10 @@ export function buildWoodzDeep(): Record<string, RoomDef> {
           y: 5,
           hp: 32,
           dialog: [
-            'DEPUTY HOWL: NAME TAG SAYS "DEPUTY."',
+            'DEPUTY HOWL: NAME TAG SAYS DEPUTY.',
             'I FETCH STICKS FOR THE WOLF LORD.',
-            'BENEFITS? EXPERIENCE. AND HOWLING.',
-            'FIGHT ME OR SNEAK PAST. HALL IS WEST.',
+            'BENEFITS: EXPERIENCE. AND HOWLING.',
+            'FIGHT OR SNEAK PAST. HALL IS WEST.',
           ],
         },
         // Atmosphere pack — walkable floor only (post-hazard side layout)
@@ -1403,7 +1402,7 @@ export function buildDezertzDeep(): Record<string, RoomDef> {
           dialog: [
             'DUNE STALKER: *SAND HISSES*',
             'I HUNT BETWEEN LEASES.',
-            'THE WRAITH OWNS THE TOWER. I OWN THE SHADOW.',
+            'THE WRAITH OWNS THE TOWER. I OWN THE SHADE.',
           ],
         },
         {
@@ -1438,8 +1437,8 @@ export function buildDezertzDeep(): Record<string, RoomDef> {
           dialog: [
             'LEASE WIGHT: WHERE IS THE DEPOSIT?',
             'SAND IN THE CARPETS COUNTS AS DAMAGE.',
-            'PRINCESS PRIZELLA WAS A MODEL TENANT. YOU ARE NOT.',
-            'FIGHT OR LEAVE. HALL WEST. NO HARD GATE.',
+            'PRINCESS PRIZELLA WAS A MODEL TENANT.',
+            'YOU ARE NOT. FIGHT OR LEAVE — HALL WEST.',
           ],
         },
         {
@@ -1519,10 +1518,10 @@ export function buildSewerzDeep(): Record<string, RoomDef> {
           y: 5,
           hp: 50,
           dialog: [
-            'ASSISTANT HONK: HONK? HONK.',
+            'ASSISTANT HONK: HONK?',
             'I SHADOW THE ROYAL GOOSE. UNPAID.',
-            'TAX SCROLLS? ABOVE MY PAY GRADE. HONK.',
-            'FIGHT ME OR WADDLE PAST. PIPES STILL WORK.',
+            'TAX SCROLLS? ABOVE MY PAY GRADE.',
+            'FIGHT OR WADDLE PAST. PIPES STILL WORK.',
           ],
         },
         chest('sewerz-honk-chest', 11, 3, 'dungeon'),
@@ -1664,7 +1663,7 @@ export function buildSewerzDeep(): Record<string, RoomDef> {
           'FOUR FLOORS OF PIPE. HONK HONK.',
           '(THAT WAS A THREAT.)',
           'THE TAX SCROLLS ARE MINE.',
-          'FACE THE BILL. LITERALLY.',
+          'FACE THE BILL.',
         ],
       },
       {

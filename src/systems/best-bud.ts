@@ -196,14 +196,11 @@ export function offerBestBudQuest(save: SaveData): {
   return {
     save: next,
     dialog: [
-      'PRINCESS PRIZELLA: CHAMPION JOB #1. REAL ONE.',
-      'THE KINGDOM\'S FINE. YOU? LONELY AS A FORJE.',
+      'PRINCESS PRIZELLA: CHAMPION JOB #1.',
       'EVERY HERO NEEDS A BEST BUD.',
-      'NOT A SIDEKICK. NOT A SERVANT. A BUD.',
-      'NON-HUMAN. WEIRD. LOYAL. POSSIBLY STICKY.',
-      'I HEARD ONE HANGS IN A WOODZ HOLLOW',
-      'EAST OF THE WOODZ EDGE.',
-      'GO MAKE A FRIEND. FOR SCIENCE.',
+      'NOT A SIDEKICK. A BUD — WEIRD, LOYAL, POSSIBLY STICKY.',
+      'ONE HANGS IN A WOODZ HOLLOW, EAST OF WOODZ EDGE.',
+      'GO MAKE A FRIEND.',
     ],
   };
 }
@@ -228,12 +225,12 @@ export function acceptBestBudQuest(save: SaveData): {
   return {
     save: next,
     dialog: [
-      'PRINCESS PRIZELLA: OKAY YOU\'RE IN. MATHEMATICAL.',
+      'PRINCESS PRIZELLA: YOU\'RE IN.',
       'WOODZ EDGE → EAST → THE HOLLOW.',
       bud
-        ? `SOMETHING ${bud.species.toUpperCase()}-ISH IS WAITING.`
-        : 'SOMETHING WEIRD AND LOYAL IS WAITING.',
-      'DON\'T MAKE IT A WEDDING. IT\'S A BUD.',
+        ? `LOOK FOR SOMETHING ${bud.species.toUpperCase()}-ISH.`
+        : 'LOOK FOR SOMETHING WEIRD AND LOYAL.',
+      'TALK WITH E. IT\'S A BUD — NOT A WEDDING.',
     ],
   };
 }
@@ -257,10 +254,10 @@ export function meetBestBud(save: SaveData): {
     return {
       save: next,
       dialog: [
-        '...A WEIRD CREATURE NAPS IN THE HOLLOW.',
-        'IT OPENS ONE EYE. "SAVE SOMEONE COOL FIRST."',
-        'PROBABLY THE PRINCESS. YEAH.',
-        'THEN COME BACK. OR TALK TO HER ABOUT CHAMPION JOBS.',
+        '...A WEIRD CREATURE NAPS HERE.',
+        'ONE EYE OPENS: "SAVE SOMEONE COOL FIRST."',
+        'PROBABLY PRINCESS PRIZELLA.',
+        'THEN COME BACK.',
       ],
     };
   }
@@ -306,12 +303,11 @@ export function meetBestBud(save: SaveData): {
       ...(bud?.meetDialog ?? ['A WEIRD CREATURE NODS. BEST BUDS.']),
       '',
       `${bud?.name ?? 'BUD'} JOINS YOU!`,
-      'THEY\'LL FOLLOW, FIGHT, AND LEVEL UP WITH YOU.',
+      'FOLLOWS YOU. FIGHTS. LEVELS UP.',
       bud
         ? `ABILITY: ${bud.abilityStub.toUpperCase()}.`
-        : 'ABILITY: BEING COOL IN COMBAT.',
-      'INVENTORY [I] → Y = BUDDY GEAR. SHARE YOUR LOOT.',
-      'TALK ANYTIME. DON\'T BE RUDE WITH YOUR SWORD.',
+        : 'ABILITY: BEING USEFUL IN A FIGHT.',
+      'BAG [I] → Y = BUDDY GEAR.',
     ],
   };
 }
@@ -358,10 +354,9 @@ export function completeBestBudQuest(save: SaveData): {
     save: next,
     dialog: [
       'PRINCESS PRIZELLA: OFFICIAL — YOU HAVE A BEST BUD.',
-      bud ? `${bud.name}. SOLID PICK. (THE UNIVERSE PICKED. WHATEVER.)` : '',
-      'CHAMPION QUEST #1: DONE. MATHEMATICAL.',
-      'DON\'T MAKE IT WEIRD. IT\'S NOT A WEDDING.',
-      'KINGDOM CARE PACKAGE: +20c, SPARK, WOOD SHARDZ.',
+      bud ? `${bud.name}. SOLID.` : '',
+      'CHAMPION QUEST #1: DONE.',
+      'CARE PACKAGE: +20c, SPARK, WOOD SHARDZ.',
       'FIND ME ON THE THRONE FOR JOB #2.',
       'CASTLE: EAST OF THE TROPE TRAIL.',
     ].filter(Boolean),
@@ -391,14 +386,13 @@ export function prizellaChampionTalk(save: SaveData): {
     const pitch =
       stage === 'none'
         ? [
-            'PRINCESS PRIZELLA: CHAMPION JOB #1. REAL ONE.',
-            'EVERY HERO NEEDS A BEST BUD.',
-            'NOT A SIDEKICK. A BUD. WEIRD. LOYAL.',
-            'ONE HANGS IN A WOODZ HOLLOW — EAST OF EDGE.',
+            'PRINCESS PRIZELLA: CHAMPION JOB #1.',
+            'EVERY HERO NEEDS A BEST BUD — WEIRD, LOYAL.',
+            'WOODZ HOLLOW, EAST OF THE EDGE.',
             '',
           ]
         : [
-            'PRINCESS PRIZELLA: STILL HERE? COOL. LET\'S LOCK IT IN.',
+            'PRINCESS PRIZELLA: STILL HERE? LET\'S LOCK IT IN.',
             '',
           ];
     const accepted = acceptBestBudQuest(next);
@@ -411,9 +405,8 @@ export function prizellaChampionTalk(save: SaveData): {
     return {
       save: next,
       dialog: [
-        'PRINCESS PRIZELLA: STILL NO BUD? WOODZ. EAST OF EDGE.',
-        'HOLLOW. COZY. SMELLS LIKE SNACKS AND DESTINY.',
-        'THE BUD IS WAITING THERE. GO BE COOL.',
+        'PRINCESS PRIZELLA: STILL NO BUD?',
+        'WOODZ EDGE → EAST → HOLLOW. TALK WITH E.',
       ],
     };
   }

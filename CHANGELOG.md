@@ -43,6 +43,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Dialogue pass (non-elf)** — tighter lines across victory rewards, Princess Prizella, guild, signs, land bosses, mid-wardens, portals, and shops. Less filler / YEETED / MATHEMATICAL spam; clearer GO directions. Wood Elf + Glamdolph scenes left alone. Charter: `docs/dialogue-pass-v1.md`.
 - **Organic world art + depth** — floor/wall/grass/dirt use multi-variant tiles (less square-stamp grid), brick walls gain top-face caps, trees/palms use layered canopies and ground shadows for a more 3D read.
 - **Version string consistency** — title menu footer and under-canvas badge both use `formatGameVersion()` from `package.json` (no more hardcoded `V0.7` vs stale `v0.6.0`).
 
