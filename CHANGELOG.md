@@ -17,6 +17,8 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Fixed
 
+- **Fellowship road gates bashable** — closed-road `gate-block-*` props used smashable crates; smashing them permanently cleared the barrier and skipped flag locks. Barriers are solid pillars only; smash path also ignores `gate-block-` ids.
+
 - **Sewerz goose bosses look like geese** — Royal Goose (crowned white goose) and Assistant Honk (junior butter-goose) use dedicated sprites instead of tinted humanoid boss art.
 - **Blight wolves never counted for the queen** — pack used normal soft-respawn wolf rules, so kills never entered `killed[]` and the queen forever said “SOUTH THICKET.” Blight IDs are permanent kills + kill flags; status shows `N/2`.
 - **Wood Elf pathways readable again** — sky redwoods pulled into corner groves only (no mid-side trunks), with dirt path tiles for doors/portal/shore so routes stay visible under the canopy.
