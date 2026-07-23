@@ -13,7 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
-- **Beach identity (M/F)** — before wake, required **Male / Female** pick (binary only). Random starting race rolled from full list including **Construct** (robot/forged). Cosmetic until later wizard ritual.
+- **Beach identity (M/F)** — before wake, required **Male / Female** pick (binary only) with **side-by-side adventurer portraits** (click image to select). Random starting race rolled from full list including **Construct** (robot/forged). Cosmetic until later wizard ritual.
 - **Surface dirt paths** — continuous dirt trails on beach→meadow→trope trail→woodz→dezertz approaches so routes and dungeon mouths are easier to follow.
 
 ### Changed

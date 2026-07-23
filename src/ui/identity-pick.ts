@@ -1,6 +1,6 @@
 /**
  * Beach identity gate — Male / Female only (binary covenant).
- * Required before wake; rolls random race on confirm.
+ * Side-by-side adventurer portraits; click image to select.
  */
 
 import { loadSave, writeSave } from '../systems/save';
@@ -10,6 +10,7 @@ import {
   needsIdentityPick,
   type RaceId,
 } from '../systems/races';
+import { genderPreviewDataUrl } from '../systems/identity-preview';
 import { playSfx } from '../systems/audio';
 
 export function initIdentityPickUi(): void {
@@ -31,30 +32,29 @@ function ensureModal(): void {
   el.setAttribute('aria-labelledby', 'identity-pick-title');
   el.setAttribute('aria-hidden', 'true');
   el.innerHTML = `
-    <div class="feedback-panel journal-panel">
+    <div class="feedback-panel journal-panel identity-pick-panel">
       <header class="feedback-header">
         <h2 id="identity-pick-title">Who wakes on the beach?</h2>
       </header>
       <p class="feedback-blurb">
-        A random ancestry already clings to your bones. Pick the shape of the story —
+        Click an adventurer. A random ancestry will cling to your bones either way —
         <strong>Male</strong> or <strong>Female</strong> only.
       </p>
-      <div id="identity-pick-body" class="journal-body identity-pick-list" role="listbox">
-        <button type="button" class="journal-row identity-card" data-gender="male" role="option">
-          <strong>MALE</strong>
-          <span class="journal-row-meta">Traditional hero. Boots optional but recommended.</span>
+      <div id="identity-pick-body" class="identity-pick-gallery" role="listbox" aria-label="Choose male or female">
+        <button type="button" class="identity-portrait-card" data-gender="male" role="option" aria-label="Select male adventurer">
+          <img class="identity-portrait" data-portrait="male" alt="Male adventurer" width="192" height="192" />
+          <strong class="identity-portrait-label">MALE</strong>
         </button>
-        <button type="button" class="journal-row identity-card" data-gender="female" role="option">
-          <strong>FEMALE</strong>
-          <span class="journal-row-meta">Traditional heroine. Same boots policy.</span>
+        <button type="button" class="identity-portrait-card" data-gender="female" role="option" aria-label="Select female adventurer">
+          <img class="identity-portrait" data-portrait="female" alt="Female adventurer" width="192" height="192" />
+          <strong class="identity-portrait-label">FEMALE</strong>
         </button>
       </div>
-      <p class="feedback-blurb identity-pick-note">No other options. No later. Destiny is binary here.</p>
+      <p class="feedback-blurb identity-pick-note">Click a portrait to choose. No other options.</p>
     </div>
   `;
   document.body.appendChild(el);
 
-  // No close / no dismiss — must pick
   el.querySelectorAll('[data-gender]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const g = (btn as HTMLElement).dataset.gender;
@@ -63,13 +63,30 @@ function ensureModal(): void {
   });
 }
 
+function paintPortraits(): void {
+  const maleUrl = genderPreviewDataUrl('male', 6);
+  const femaleUrl = genderPreviewDataUrl('female', 6);
+  const maleImg = document.querySelector<HTMLImageElement>(
+    '#identity-pick-modal img[data-portrait="male"]',
+  );
+  const femaleImg = document.querySelector<HTMLImageElement>(
+    '#identity-pick-modal img[data-portrait="female"]',
+  );
+  if (maleImg && maleUrl) maleImg.src = maleUrl;
+  if (femaleImg && femaleUrl) femaleImg.src = femaleUrl;
+}
+
 function setOpen(open: boolean): void {
   const modal = document.getElementById('identity-pick-modal');
   if (!modal) return;
   modal.classList.toggle('is-open', open);
   modal.setAttribute('aria-hidden', open ? 'false' : 'true');
-  if (open) playSfx('ui_open');
-  else playSfx('ui_close');
+  if (open) {
+    paintPortraits();
+    playSfx('ui_open');
+  } else {
+    playSfx('ui_close');
+  }
 }
 
 export function openIdentityPick(): void {
