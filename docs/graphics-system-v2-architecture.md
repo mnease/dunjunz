@@ -1,10 +1,11 @@
 # Dunjunz Graphics System v2 — Architecture Plan
 
-**Status:** Council research + proposal (EMA + Scout/Hexis/Waggle/Mason/Pollen/Forager), 2026-07-23  
+**Status:** Council plan LOCKED + **P0 live restore shipped** (2026-07-23).  
 **Trigger:** Continuous ground + Terraria post-process still fails Core Keeper quality; blotchy water, no clean tan shores.  
 **North star:** Discrete autotile truth (Terraria / Core Keeper), not noise-skinned continuous paint.  
-**Repo baseline today:** `main` @ continuous-ground era (`paintRoomGround` → `continuous-ground.ts`).  
-**Last discrete tile render:** parent of `f6ef00c` = **`7a714bd`** (still one Phaser Image per logic cell + variant keys).
+**Live `main`:** discrete per-cell tiles restored (`placeRoomTiles`); soft entity outlines kept.  
+**Archive tag:** `archive/continuous-ground-2026-07-23`  
+**Rebuild branch:** `graphics-v2` (autotile + land-aware shore rings next).
 
 ---
 
