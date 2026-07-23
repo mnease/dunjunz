@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import {
+  ART_RES,
   COLORS,
   GAME_H,
   GAME_W,
@@ -3602,6 +3603,22 @@ export class GameScene extends Phaser.Scene {
           body.moves = true;
         }
       }
+    } else if (def.kind === 'portal') {
+      // Walk-on ring: fixed body in texture px (ART_RES), scale = SPRITE_SCALE.
+      // Old setSize(14,14) was for 16px sprites → tiny hitbox on 64-bit art.
+      sprite.setImmovable(true);
+      sprite.setScale(SPRITE_SCALE);
+      const body = sprite.body as Phaser.Physics.Arcade.Body;
+      body.moves = false;
+      body.enable = true;
+      const fw = sprite.frame.width || ART_RES;
+      const fh = sprite.frame.height || ART_RES;
+      // ~¾ of a tile world footprint when scaled
+      const bw = Math.max(28, Math.floor(fw * 0.72));
+      const bh = Math.max(28, Math.floor(fh * 0.72));
+      body.setSize(bw, bh);
+      body.setOffset((fw - bw) / 2, (fh - bh) / 2);
+      sprite.setDepth(6);
     } else {
       sprite.setImmovable(true);
       if (
@@ -3617,7 +3634,6 @@ export class GameScene extends Phaser.Scene {
           'forje',
           'princess',
           'best_bud',
-          'portal',
         ].includes(def.kind)
       ) {
         sprite.setSize(14, 14);
@@ -3758,6 +3774,7 @@ export class GameScene extends Phaser.Scene {
     const hard = parseHardPortalTarget(target);
     if (hard) {
       this.transitionLock = true;
+      this.portalCooldown = 900;
       playSfx('stairs');
       this.game.events.emit('ui-reset');
       this.dialogLocked = false;
@@ -3780,10 +3797,13 @@ export class GameScene extends Phaser.Scene {
 
     const resolved = resolveRoomId(target ?? '');
     if (!target || !ROOMS[resolved]) {
+      // Brief cooldown so a dead target does not spam toasts every frame
+      this.portalCooldown = 400;
       this.game.events.emit('toast', 'PORTAL FLICKERS… NO SIGNAL');
       return;
     }
     this.transitionLock = true;
+    this.portalCooldown = 900;
     playSfx('stairs');
     // Wood Elf kingdom portal flavor
     if (actor.id === PORTAL_ELFWOOD_IN_ID || isElfwoodKingdomRoom(resolved)) {
@@ -3806,8 +3826,15 @@ export class GameScene extends Phaser.Scene {
       }
     } else if (actor.id === 'portal-elfwood-out') {
       this.game.events.emit('toast', 'WHOOSH · BACK TO THE ARCH');
+    } else if (actor.id?.startsWith('exit-portal-')) {
+      // Boss clear exit → dungeon mouth for this land
+      const destTitle = ROOMS[resolved]?.title ?? resolved;
+      this.game.events.emit(
+        'toast',
+        `EXIT PORTAL → ${destTitle.toUpperCase()}`,
+      );
     } else {
-      this.game.events.emit('toast', 'PORTAL WHOOSH — DUNJUN MOUTH!');
+      this.game.events.emit('toast', 'PORTAL WHOOSH');
     }
     // Force UI dialog closed so the panel cannot stick across rooms
     this.game.events.emit('ui-reset');
@@ -6566,19 +6593,28 @@ export class GameScene extends Phaser.Scene {
     this.updateYSortDepths();
   }
 
-  /** Soft alpha/scale loop for portal rings and forje glow. */
+  /**
+   * Soft alpha loop for portal rings and forje glow.
+   * Portals must NOT tween `scale` to SCALE (3) — after 64-bit textures
+   * correct world size is SPRITE_SCALE (~0.75). Old pulse grew rings ~4× and
+   * desynced the tiny step-on body → huge visual, rarely works.
+   */
   private pulseAmbientProp(
     sprite: Phaser.GameObjects.Sprite | Phaser.GameObjects.Image,
     kind: 'portal' | 'forje',
   ): void {
-    if (!motionAllowed() || !sprite.active) return;
+    if (!sprite.active) return;
     this.tweens.killTweensOf(sprite);
+    // Always lock portal display size (even with reduce-motion)
+    if (kind === 'portal') {
+      sprite.setScale(SPRITE_SCALE);
+    }
     sprite.setAlpha(1);
+    if (!motionAllowed()) return;
     if (kind === 'portal') {
       this.tweens.add({
         targets: sprite,
-        alpha: 0.62,
-        scale: SCALE * 1.1,
+        alpha: 0.55,
         duration: 520,
         yoyo: true,
         repeat: -1,

@@ -32,18 +32,22 @@ export const BOSS_ROOMS: ReadonlySet<string> = new Set(
 );
 
 /**
- * Tile coords for the portal in each boss room.
- * Keep clear of south/north door spawn tiles so re-entry does not
- * immediately overlap and whoosh the player out.
+ * Authored tile coords for the boss-exit portal in each arena.
+ * Keep clear of:
+ * - south door spawn (~8,9) so re-entry does not auto-whoosh
+ * - boss / chest / merchant footprints
+ * Open floor south-west of center is the standard pad.
  */
 const PORTAL_TILE: Record<string, { x: number; y: number }> = {
-  // West of center aisle — south door spawns at ~ (8,9)
-  b8_boss: { x: 3, y: 7 },
-  b2_boss: { x: 3, y: 7 },
-  woodz_deep: { x: 3, y: 7 },
-  // Near north door out to Dezertz Edge (entry is often south)
-  dezertz_tower: { x: 4, y: 3 },
-  sewerz_boss: { x: 3, y: 7 },
+  // BOSS_ARENA open floor; west of aisle, north of south door
+  b8_boss: { x: 5, y: 7 },
+  b2_boss: { x: 5, y: 7 },
+  // Woodz clearing: floor between west pillars (forje is SE at 12,7)
+  woodz_deep: { x: 5, y: 7 },
+  // Tower: south open dirt (not on stairs / princess / north door)
+  dezertz_tower: { x: 5, y: 7 },
+  // Goose chamber: west of boss chest at 8,7
+  sewerz_boss: { x: 4, y: 7 },
 };
 
 export function isBossRoom(roomId: string): boolean {

@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Fixed
 
+- **Boss exit portals** — pulse tween used world `SCALE` (3) instead of `SPRITE_SCALE` after 64-bit textures, so rings grew huge and the step-on hitbox was a tiny legacy 14px pad. Portals now stay tile-sized (alpha pulse only), use a solid walk-on body, sit on clear floor south of the boss, and toast the dungeon-mouth destination.
 - **Woodz Edge west water dead-end** — opening the glade mouth left the creek blocking the dirt path (west = water trap). Mid rows now have a dirt bridge so west/east/north/south stay walkable.
 - **Best Bud unrecruitable after princess rescue** — hollow sign and den critter shared one tile; solid sign always stole **E**. Sign moved off the bud, den critter is solid + always tinted, and interact prefers buddies/NPCs over signs.
 - **Equip slot frames after 64-bit textures** — inventory equip boxes used pre-upgrade `setScale(1.15/1.5)` on 2× textures, so frames/icons were ~double size and stacked over the doll. Scales now use `ART_BASE/ART_RES` (same pattern as bag icons).

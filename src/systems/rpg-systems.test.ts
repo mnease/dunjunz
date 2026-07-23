@@ -1435,6 +1435,24 @@ describe('boss exit portals', () => {
     expect(tower?.tiles[0]?.includes('D')).toBe(true);
     expect(tower?.tiles[tower.tiles.length - 1]?.includes('D')).toBe(false);
   });
+
+  it('boss exit portals sit on walkable floor and target dungeon mouths', async () => {
+    const { bossExitPortalDef, BOSS_ROOM_META } = await import('./portal');
+    const { ROOMS } = await import('../data/world');
+    const blocked = new Set(['#', '~', '=', ' ']);
+    for (const roomId of Object.keys(BOSS_ROOM_META)) {
+      const land = BOSS_ROOM_META[roomId]!.land;
+      const def = bossExitPortalDef(roomId, land);
+      expect(def, roomId).toBeTruthy();
+      expect(def!.portalTarget).toBeTruthy();
+      expect(ROOMS[def!.portalTarget!], def!.portalTarget).toBeTruthy();
+      const room = ROOMS[roomId];
+      expect(room, roomId).toBeTruthy();
+      const ch = room!.tiles[def!.y]?.[def!.x];
+      expect(ch, `${roomId} @${def!.x},${def!.y}`).toBeTruthy();
+      expect(blocked.has(ch!)).toBe(false);
+    }
+  });
 });
 
 describe('princess quest land clears', () => {
