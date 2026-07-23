@@ -1,9 +1,9 @@
 /**
- * Continuous room ground paint — Terraria-like small pixels.
+ * Continuous room ground paint — Core Keeper / Terraria density.
  *
- * Logic grid still drives kinds / collision. Visuals use a fine pixel grid
- * (not one giant stamp per cell): domain-warped material edges (organic shores,
- * not axis-aligned cell cages), 3–5 color palettes, speckles like Terraria.
+ * Logic grid still drives kinds / collision. Visuals use fine micro-pixels
+ * with domain-warped land edges and **SDF + noise fluid shores** so water/lava
+ * read as natural ponds/pools, not axis-aligned rectangles.
  */
 
 import type { TileKind } from '../types';
@@ -19,17 +19,25 @@ const CELL = TILE * SCALE; // 48 world px per logical cell
 
 /**
  * World pixels per painted texel.
- * 2 → 24×24 micro-pixels per logic cell (higher-res Terraria feel).
- * Was 3 (16×16); that still read as big tile blocks at SCALE=3.
+ * 2 → 24×24 micro-pixels per logic cell (Core Keeper / Terraria density).
  */
 export const TERRARIA_PIXEL = 2;
 
 /**
- * Domain-warp amplitude in tile-space units.
- * Warps material sampling so shorelines / cliffs are organic, not 48px squares.
+ * Domain-warp amplitude for land materials (dirt/grass/floor).
  * Collision still uses the unwarped logic grid.
  */
-export const MATERIAL_WARP = 0.32;
+export const MATERIAL_WARP = 0.38;
+
+/**
+ * Fluid shore morph strength (tile-space).
+ * SDF + fBm threshold — large enough to break single-cell lava squares
+ * into organic blobs (Core Keeper pools).
+ */
+export const FLUID_SHORE_AMP = 0.48;
+
+/** How far fluid can spill into adjacent non-fluid (tile units). */
+export const FLUID_SPILL = 0.42;
 
 /** RGB 0–255 */
 type RGB = [number, number, number];
@@ -203,6 +211,10 @@ function sampleKind(grid: TileKind[][], tx: number, ty: number): TileKind {
   return grid[y]![x] ?? 'void';
 }
 
+export function isFluidKind(k: TileKind): boolean {
+  return k === 'water' || k === 'lava';
+}
+
 /**
  * Domain-warped sample — material edges follow noise, not the logic-cell lattice.
  * Keeps hard nearest-cell materials (no soft blend) but breaks rectangular cages.
@@ -224,6 +236,145 @@ export function sampleKindWarped(
   return sampleKind(grid, tx + wx, ty + wy);
 }
 
+/**
+ * Signed distance to fluid body (tile-space). Positive inside, negative outside.
+ * Union of chebyshev box SDFs for fluid cells in a local neighborhood —
+ * single-cell lava becomes a roundable disc once noise thresholds the field.
+ */
+export function fluidSignedDistance(
+  grid: TileKind[][],
+  tx: number,
+  ty: number,
+  fluid: 'water' | 'lava',
+): number {
+  const gh = grid.length;
+  const gw = grid[0]?.length ?? 0;
+  if (gw === 0 || gh === 0) return -2;
+  const cx0 = Math.floor(tx);
+  const cy0 = Math.floor(ty);
+  // Box SDF: max(|dx|,|dy|)-0.5 → negative inside cell square
+  let boxSdf = 99;
+  let found = false;
+  for (let dy = -2; dy <= 2; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      const ix = cx0 + dx;
+      const iy = cy0 + dy;
+      if (ix < 0 || iy < 0 || ix >= gw || iy >= gh) continue;
+      if (grid[iy]![ix] !== fluid) continue;
+      found = true;
+      const d =
+        Math.max(Math.abs(tx - (ix + 0.5)), Math.abs(ty - (iy + 0.5))) - 0.5;
+      if (d < boxSdf) boxSdf = d;
+    }
+  }
+  if (!found) return -2;
+  // Positive inside fluid mass
+  return -boxSdf;
+}
+
+/**
+ * Resolve visual material kind for a micro-pixel.
+ * Fluids use SDF + multi-octave noise threshold (organic shores).
+ * Land uses domain warp. Structures stay lattice-aligned for readability.
+ */
+export function resolveVisualKind(
+  grid: TileKind[][],
+  tx: number,
+  ty: number,
+  seed: number,
+): TileKind {
+  const raw = sampleKind(grid, tx, ty);
+
+  // Architecture stays readable (doors, stairs, pads)
+  if (isStructureKind(raw)) return raw;
+
+  // Walls: light warp only (cliffs can breathe, still solid)
+  if (raw === 'wall' || raw === 'locked') {
+    return sampleKindWarped(grid, tx, ty, seed, MATERIAL_WARP * 0.55);
+  }
+
+  // Organic fluid field — both water and lava (Core Keeper pools)
+  const n1 = fbm01(tx * 2.1, ty * 2.1, seed + 60, 4);
+  const n2 = fbm01(tx * 5.3 + 8, ty * 5.3 - 3, seed + 61, 2);
+  const shoreNoise = (n1 * 0.72 + n2 * 0.28) * 2 - 1; // [-1, 1]
+
+  // Prefer authored fluid when competing
+  const fluids: Array<'water' | 'lava'> =
+    raw === 'lava'
+      ? ['lava', 'water']
+      : raw === 'water'
+        ? ['water', 'lava']
+        : ['water', 'lava'];
+
+  for (const fluid of fluids) {
+    const sdf = fluidSignedDistance(grid, tx, ty, fluid);
+    // Inside fluid if SDF exceeds noise bite; spill when near shore outside
+    const threshold = shoreNoise * FLUID_SHORE_AMP;
+    if (sdf > threshold) {
+      return fluid;
+    }
+    // Thin river / 1-cell channel guard: keep authored fluid near cell core
+    // so noise does not erase narrow streams into dashed puddles
+    if (raw === fluid && sdf > 0.12) {
+      return fluid;
+    }
+    // Controlled spill into walkable/void near fluid (natural beach/pool rim)
+    if (
+      sdf > -FLUID_SPILL &&
+      sdf + shoreNoise * FLUID_SHORE_AMP * 0.85 > 0 &&
+      (raw === 'void' ||
+        raw === 'floor' ||
+        raw === 'dirt' ||
+        raw === 'sand' ||
+        raw === 'grass' ||
+        raw === 'snow')
+    ) {
+      return fluid;
+    }
+  }
+
+  // If we eroded fluid away (corners), fill with nearest land (not ghost fluid)
+  if (isFluidKind(raw)) {
+    return nearestLandKind(grid, tx, ty, seed) ?? 'void';
+  }
+
+  // Land materials: domain warp for organic dirt/grass transitions
+  return sampleKindWarped(grid, tx, ty, seed, MATERIAL_WARP);
+}
+
+/** Nearest non-fluid, non-structure kind for eroded fluid pixels. */
+function nearestLandKind(
+  grid: TileKind[][],
+  tx: number,
+  ty: number,
+  seed: number,
+): TileKind | null {
+  const cx = Math.floor(tx);
+  const cy = Math.floor(ty);
+  const gh = grid.length;
+  const gw = grid[0]?.length ?? 0;
+  let best: TileKind | null = null;
+  let bestD = 99;
+  for (let dy = -2; dy <= 2; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      const ix = cx + dx;
+      const iy = cy + dy;
+      if (ix < 0 || iy < 0 || ix >= gw || iy >= gh) continue;
+      const k = grid[iy]![ix]!;
+      if (isFluidKind(k) || isStructureKind(k)) continue;
+      const d = Math.hypot(tx - (ix + 0.5), ty - (iy + 0.5));
+      if (d < bestD) {
+        bestD = d;
+        best = k;
+      }
+    }
+  }
+  if (best) return best;
+  // Fallback: warped sample of surroundings
+  const w = sampleKindWarped(grid, tx, ty, seed + 9, 0.6);
+  return isFluidKind(w) ? 'void' : w;
+}
+
 /** Micro-cells per logical cell (for subX/subY fringe math). */
 function microPerCell(): number {
   return Math.max(8, Math.round(CELL / TERRARIA_PIXEL));
@@ -241,9 +392,8 @@ export function isStructureKind(k: TileKind): boolean {
 }
 
 /**
- * Terraria-like pixel color for one micro-pixel.
- * Domain-warped hard material edges (organic, not cell-cage). Intra-material
- * speckles + grass blades via world-space hash/fBm.
+ * Core Keeper / Terraria pixel color for one micro-pixel.
+ * Organic fluid shores (SDF+noise), domain-warped land, world-space speckles.
  */
 export function terrariaPixelColor(
   grid: TileKind[][],
@@ -257,12 +407,12 @@ export function terrariaPixelColor(
   beach: boolean,
   seed: number,
 ): RGB {
-  // Warped hard edges — materials stay discrete but shores meander
-  const kind = sampleKindWarped(grid, tx, ty, seed);
+  // Organic material resolve (fluids SDF-morph, land domain-warp)
+  const kind = resolveVisualKind(grid, tx, ty, seed);
   const pal = materialPalette(kind, land, beach);
   const structure = isStructureKind(kind);
 
-  // Local coords after warp for structure shapes still feel centered on cell
+  // Local coords for structure shapes still feel centered on cell
   const fx = tx - Math.floor(tx);
   const fy = ty - Math.floor(ty);
   const mpc = microPerCell();
@@ -274,11 +424,17 @@ export function terrariaPixelColor(
   const clump = fbm01(mx * 0.11, my * 0.11, seed + 7, 3);
   const flow = fbm01(mx * 0.07 + 3.1, my * 0.07 - 1.4, seed + 13, 4);
 
+  // Fluid shore proximity (for crust / foam rims — Core Keeper pool edges)
+  const fluidShore =
+    kind === 'water' || kind === 'lava'
+      ? fluidSignedDistance(grid, tx, ty, kind)
+      : -1;
+
   let c: RGB;
 
   if (kind === 'grass') {
     // Terraria grass: dirt-ish body, green top fringe when open above
-    const above = sampleKindWarped(grid, tx, ty - 0.55, seed);
+    const above = resolveVisualKind(grid, tx, ty - 0.55, seed);
     const openAbove =
       above === 'grass' ||
       above === 'void' ||
@@ -361,7 +517,20 @@ export function terrariaPixelColor(
     // Continuous depth bands via fBm — no per-cell rectangular shade blocks
     const depth = fbm01(tx * 1.8, ty * 1.8, seed + 40, 4);
     const spark = hash2(mx, my, seed + 5);
-    if (depth < 0.28) {
+    // Near shore (low SDF): lighter foam / shallow tint (Core Keeper shallows)
+    const shallow = fluidShore < 0.22;
+    if (shallow) {
+      c = pick(
+        [
+          [90, 160, 200],
+          [110, 180, 215],
+          [70, 140, 185],
+          [130, 195, 220],
+        ],
+        h * 0.5 + clump * 0.5,
+      );
+      if (spark > 0.85) c = [180, 230, 255];
+    } else if (depth < 0.28) {
       c = pick(
         [
           [55, 120, 170],
@@ -398,13 +567,43 @@ export function terrariaPixelColor(
         h,
       );
     }
-    // highlight sparkle pixel (Terraria water glints)
-    if (spark > 0.93) c = [140, 195, 230];
-    else if (spark > 0.88) c = [100, 170, 210];
+    // highlight sparkle pixel (Terraria / Core Keeper water glints)
+    if (!shallow && spark > 0.93) c = [140, 195, 230];
+    else if (!shallow && spark > 0.88) c = [100, 170, 210];
   } else if (kind === 'lava') {
     const heat = fbm01(tx * 2.2, ty * 2.2, seed + 55, 3);
-    c = pick(pal, h * 0.4 + heat * 0.6);
-    if (h > 0.9 || heat > 0.85) c = [255, 200, 80];
+    const spark = hash2(mx, my, seed + 6);
+    // Crust rim near organic shore — dark rock edge (not rectangular outline)
+    if (fluidShore < 0.18) {
+      c = pick(
+        [
+          [70, 28, 18],
+          [55, 22, 14],
+          [90, 40, 22],
+          [40, 16, 10],
+          [100, 50, 28],
+        ],
+        h * 0.4 + clump * 0.6,
+      );
+      // occasional hot crack through crust
+      if (spark > 0.9) c = [220, 90, 30];
+    } else if (fluidShore < 0.32) {
+      // transition: cooling magma
+      c = pick(
+        [
+          [160, 55, 25],
+          [190, 70, 30],
+          [120, 40, 18],
+          [200, 90, 40],
+        ],
+        h * 0.45 + heat * 0.55,
+      );
+    } else {
+      // hot interior
+      c = pick(pal, h * 0.35 + heat * 0.65);
+      if (h > 0.88 || heat > 0.82) c = [255, 200, 80];
+      else if (spark > 0.94) c = [255, 230, 120];
+    }
   } else if (kind === 'stairs' || kind === 'stairs_up' || kind === 'entrance') {
     // Dark maw + stone rim (Terraria-like cave hole)
     const dx = fx - 0.5;
@@ -488,29 +687,45 @@ export function terrariaPixelColor(
     ];
   }
 
-  // Jagged material borders using warped neighbor samples (organic cliff/seam)
-  if (!structure) {
-    const step = 0.06;
-    const nR = sampleKindWarped(grid, tx + step, ty, seed);
-    const nL = sampleKindWarped(grid, tx - step, ty, seed);
-    const nU = sampleKindWarped(grid, tx, ty - step, seed);
-    const nD = sampleKindWarped(grid, tx, ty + step, seed);
+  // Jagged material borders using visual-kind neighbors (organic cliff/seam)
+  // Skip heavy dark rim on fluids — they already have foam/crust rims
+  if (!structure && !isFluidKind(kind)) {
+    const step = 0.05;
+    const nR = resolveVisualKind(grid, tx + step, ty, seed);
+    const nL = resolveVisualKind(grid, tx - step, ty, seed);
+    const nU = resolveVisualKind(grid, tx, ty - step, seed);
+    const nD = resolveVisualKind(grid, tx, ty + step, seed);
     const border =
       nR !== kind || nL !== kind || nU !== kind || nD !== kind;
     if (border) {
-      // Pixel rim + occasional nibble gap for jagged edge
       const nibble = hash2(mx, my, seed + 19);
-      if (nibble < 0.18) {
-        // show neighbor speck (jag) — more often = more organic shoreline
+      if (nibble < 0.2) {
         const nk = nR !== kind ? nR : nL !== kind ? nL : nU !== kind ? nU : nD;
         c = pick(materialPalette(nk, land, beach), hash2(mx, my, seed + 21));
-      } else if (nibble < 0.55) {
+      } else if (nibble < 0.5) {
         c = [
-          Math.max(0, c[0] - 32),
-          Math.max(0, c[1] - 28),
-          Math.max(0, c[2] - 26),
+          Math.max(0, c[0] - 28),
+          Math.max(0, c[1] - 24),
+          Math.max(0, c[2] - 22),
         ];
       }
+    }
+  }
+
+  // Core Keeper dirt/floor grit — fine pebbles & flecks at micro scale
+  if (kind === 'dirt' || kind === 'floor' || kind === 'sand') {
+    if (hash2(mx, my, seed + 33) > 0.96) {
+      c = [
+        Math.min(255, c[0] + 22),
+        Math.min(255, c[1] + 18),
+        Math.min(255, c[2] + 12),
+      ];
+    } else if (hash2(mx + 3, my, seed + 34) > 0.975) {
+      c = [
+        Math.max(0, c[0] - 18),
+        Math.max(0, c[1] - 16),
+        Math.max(0, c[2] - 14),
+      ];
     }
   }
 
@@ -669,8 +884,8 @@ export function paintContinuousWaterOverlay(
       const worldY = py * step + step * 0.5;
       const tx = Math.max(0, Math.min(gw - 0.001, worldX / CELL));
       const ty = Math.max(0, Math.min(gh - 0.001, worldY / CELL));
-      // Same domain warp as ground so shimmer mask matches organic shores
-      const kind = sampleKindWarped(grid, tx, ty, seed);
+      // Same visual resolve as ground so shimmer hugs organic fluid shores
+      const kind = resolveVisualKind(grid, tx, ty, seed);
       const i = (py * paintW + px) * 4;
       if (kind !== 'water' && kind !== 'lava') {
         data[i] = 0;

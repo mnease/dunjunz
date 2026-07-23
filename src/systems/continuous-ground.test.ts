@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FLUID_SHORE_AMP,
   MATERIAL_WARP,
   TERRARIA_PIXEL,
   WATER_SHIMMER_PHASES,
   continuousGroundKey,
   continuousWaterKey,
+  fluidSignedDistance,
   gridHasFluidSurface,
   isStructureKind,
+  resolveVisualKind,
   sampleKindWarped,
   structurePropTexture,
   terrariaPixelColor,
@@ -94,5 +97,54 @@ describe('continuous ground', () => {
     // Near a material boundary, warp may yield either kind — both valid materials
     const near = sampleKindWarped(grid, 1.95, 0.5, 99);
     expect(['water', 'dirt']).toContain(near);
+  });
+
+  it('fluid SDF is positive inside lava/water and negative outside', () => {
+    expect(FLUID_SHORE_AMP).toBeGreaterThan(0.3);
+    const grid: TileKind[][] = [
+      ['void', 'void', 'void', 'void'],
+      ['void', 'lava', 'lava', 'void'],
+      ['void', 'void', 'void', 'void'],
+    ];
+    // Center of lava cell
+    expect(fluidSignedDistance(grid, 1.5, 1.5, 'lava')).toBeGreaterThan(0.2);
+    // Far void
+    expect(fluidSignedDistance(grid, 0.2, 0.2, 'lava')).toBeLessThan(0);
+    // Water absent
+    expect(fluidSignedDistance(grid, 1.5, 1.5, 'water')).toBeLessThan(0);
+  });
+
+  it('resolveVisualKind morphs rectangular lava into organic shores', () => {
+    // Single-cell lava island — classic "perfect square" bug case
+    const grid: TileKind[][] = [
+      ['void', 'void', 'void'],
+      ['void', 'lava', 'void'],
+      ['void', 'void', 'void'],
+    ];
+    // Deep center stays lava
+    expect(resolveVisualKind(grid, 1.5, 1.5, 7)).toBe('lava');
+    // Sample a ring of edge/corner points — organic morph should not be
+    // 100% lava on the square boundary (some eroded or spilled)
+    let lava = 0;
+    let other = 0;
+    for (let i = 0; i < 48; i++) {
+      const ang = (i / 48) * Math.PI * 2;
+      // ring near cell edge (radius ~0.48 from center)
+      const tx = 1.5 + Math.cos(ang) * 0.48;
+      const ty = 1.5 + Math.sin(ang) * 0.48;
+      const k = resolveVisualKind(grid, tx, ty, 11 + i);
+      if (k === 'lava') lava++;
+      else other++;
+    }
+    expect(lava).toBeGreaterThan(8);
+    expect(other).toBeGreaterThan(4); // not a perfect square ring
+  });
+
+  it('structures stay lattice-aligned under visual resolve', () => {
+    const grid: TileKind[][] = [
+      ['floor', 'door', 'floor'],
+      ['floor', 'floor', 'floor'],
+    ];
+    expect(resolveVisualKind(grid, 1.2, 0.4, 3)).toBe('door');
   });
 });

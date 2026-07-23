@@ -19,7 +19,7 @@
 ## Style law (all surfaces)
 
 1. **Small pixels only** — no giant cell-sized texture stamps as the main ground look.
-2. **Hard material edges** — domain-warped nearest-cell biomes (organic shores, not axis-aligned cell cages); no soft blur between dirt/grass.
+2. **Hard material edges** — domain-warped land biomes; **fluids use SDF + noise shores** (Core Keeper pools, not rectangle lava/water). No soft blur.
 3. **Jagged organic edges** — 1px nibble on dense silhouettes (trees, characters). Soft ambient (koi/crab/sign) skips jagged grow — it created tile-shaped black cages.
 4. **1px dark outline** on characters/props (Terraria entity read).
 5. **Drop shadow** — 1–2px offset dark under entities/foliage (not soft blob only; skip underwater ambient).
@@ -32,7 +32,8 @@
 
 | Surface | Implementation |
 | --- | --- |
-| Ground / snow / cliffs | `continuous-ground.ts` fine micro-pixels + domain-warp material sample + edge darken |
+| Ground / snow / cliffs | `continuous-ground.ts` fine micro-pixels + domain-warp + grit flecks |
+| Water / lava shores | `fluidSignedDistance` + `FLUID_SHORE_AMP` noise threshold; crust/foam rims |
 | Characters / enemies / NPCs | `canvasTex` post: outline + jagged + drop shadow (`terrariaEntityPassOpts`) |
 | Soft ambient (koi/crab/sign) | Outline + color snap only — no jagged grow / shadow |
 | Trees / palms / foliage | Full entity post + canopy lobe nibble |
