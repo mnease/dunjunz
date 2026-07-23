@@ -329,3 +329,122 @@ export function paintContinuousGround(
 export function continuousGroundKey(roomId: string, gen = 0): string {
   return `cground_${roomId}_${gen}`;
 }
+
+export const WATER_SHIMMER_PHASES = 3;
+
+export function continuousWaterKey(
+  roomId: string,
+  gen = 0,
+  phase = 0,
+): string {
+  return `cwater_${roomId}_${gen}_${phase}`;
+}
+
+/** True if the logical grid has water or lava that should shimmer. */
+export function gridHasFluidSurface(grid: TileKind[][]): boolean {
+  for (const row of grid) {
+    for (const k of row) {
+      if (k === 'water' || k === 'lava') return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Continuous water/lava shimmer overlay — only fluid pixels are opaque.
+ * `phase` 0..WATER_SHIMMER_PHASES-1 shifts the fractal for animation.
+ */
+export function paintContinuousWaterOverlay(
+  opts: ContinuousGroundOpts & { phase?: number },
+): HTMLCanvasElement {
+  const {
+    grid,
+    roomId,
+    land = 'surface',
+    mapX = 0,
+    mapY = 0,
+    floor = 0,
+    pixelStep = 2,
+    phase = 0,
+  } = opts;
+  const step = Math.max(1, pixelStep | 0);
+  const outW = MAP_PIXEL_W;
+  const outH = MAP_PIXEL_H;
+  const paintW = Math.ceil(outW / step);
+  const paintH = Math.ceil(outH / step);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext('2d')!;
+  const buf = document.createElement('canvas');
+  buf.width = paintW;
+  buf.height = paintH;
+  const bctx = buf.getContext('2d')!;
+  const img = bctx.createImageData(paintW, paintH);
+  const data = img.data;
+
+  const seed =
+    seedFromString(roomId) ^
+    ((mapX * 73856093) ^ (mapY * 19349663) ^ (floor * 83492791));
+  const roomSeed = (seed ^ (mapX * 131 + mapY * 917)) + phase * 9973;
+  const beach = roomId === 'beach_start';
+  const gh = grid.length;
+  const gw = grid[0]?.length ?? 1;
+  const ph = phase | 0;
+
+  for (let py = 0; py < paintH; py++) {
+    for (let px = 0; px < paintW; px++) {
+      const worldX = px * step + step * 0.5;
+      const worldY = py * step + step * 0.5;
+      const tx = Math.max(0, Math.min(gw - 0.001, worldX / CELL));
+      const ty = Math.max(0, Math.min(gh - 0.001, worldY / CELL));
+      // Soft warped sample — only emit where fluid is strong
+      const warpAmp = 0.38;
+      const w1 = valueNoise2(tx * 0.55 + ph * 0.2, ty * 0.55, roomSeed) * warpAmp;
+      const w2 =
+        valueNoise2(tx * 0.55 + 40, ty * 0.55 + ph * 0.15, roomSeed + 1) *
+        warpAmp;
+      const wx = tx + w1;
+      const wy = ty + w2;
+      const kind = sampleKind(grid, wx, wy);
+      const i = (py * paintW + px) * 4;
+      if (kind !== 'water' && kind !== 'lava') {
+        data[i] = 0;
+        data[i + 1] = 0;
+        data[i + 2] = 0;
+        data[i + 3] = 0;
+        continue;
+      }
+      const pal = kindPalette(kind, land, beach);
+      // Animated foam / heat: phase scrolls the noise field
+      const n = fbm01(wx * 1.1 + ph * 0.55, wy * 1.1 - ph * 0.35, roomSeed + 4, 3);
+      const n2 = fbm01(wx * 2.2 - ph * 0.4, wy * 2.2 + ph * 0.3, roomSeed + 8, 2);
+      let c = lerpRgb(pal.dark, lerpRgb(pal.mid, pal.light, n), 0.4 + n * 0.5);
+      // Highlight ridges (foam / lava glow)
+      if (n2 > 0.62) {
+        if (kind === 'water') {
+          c = lerpRgb(c, [210, 235, 255], (n2 - 0.62) * 2.2);
+        } else {
+          c = lerpRgb(c, [255, 220, 120], (n2 - 0.62) * 2.4);
+        }
+      }
+      // Soft alpha so land shows through at edges
+      const edgeKind = sampleKind(grid, tx, ty);
+      let a = edgeKind === kind || kind === 'water' || kind === 'lava' ? 210 : 120;
+      // Ocean: brighter north-ish foam pulse
+      if (kind === 'water' && beach) {
+        a = Math.min(255, a + Math.floor(n * 30));
+      }
+      data[i] = c[0];
+      data[i + 1] = c[1];
+      data[i + 2] = c[2];
+      data[i + 3] = a;
+    }
+  }
+  bctx.putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, outW, outH);
+  ctx.drawImage(buf, 0, 0, outW, outH);
+  return canvas;
+}
