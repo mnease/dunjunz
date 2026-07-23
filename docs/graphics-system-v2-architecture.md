@@ -1,11 +1,18 @@
 # Dunjunz Graphics System v2 — Architecture Plan
 
-**Status:** Council plan LOCKED + **P0 live restore shipped** (2026-07-23).  
+**Status:** SUPERSEDED for *style law + execution backlog* by the 2026-07-23 full Core Keeper design council.  
+**Canonical now:**
+- **Style Bible (non-negotiable law):** [`graphics-v2-style-bible.md`](./graphics-v2-style-bible.md)
+- **Rebuild plan (strip / systems / PR phases / CK reference table):** [`graphics-v2-rebuild-plan.md`](./graphics-v2-rebuild-plan.md)
+
+**This file** remains the detailed technical architecture + historical root-cause analysis. Prefer Style Bible for “is this legal?” and Rebuild Plan for “what ships next?” When they conflict, Style Bible + Rebuild Plan win.
+
+**Prior status retained for history:** Council plan LOCKED + **P0 live restore shipped** (2026-07-23).  
 **Trigger:** Continuous ground + Terraria post-process still fails Core Keeper quality; blotchy water, no clean tan shores.  
 **North star:** Discrete autotile truth (Terraria / Core Keeper), not noise-skinned continuous paint.  
 **Live `main`:** full graphics revert — discrete tiles + pre-terraria sprites/light (no entity outline pass, soft radial light cookie).  
 **Archive tag:** `archive/continuous-ground-2026-07-23`  
-**Rebuild branch:** `graphics-v2` (autotile + land-aware shore rings next).
+**Rebuild branch:** `graphics-v2` (autotile + land-aware shore rings next; **implement only when operator says implement**).
 
 ### Permanent preview (always on)
 

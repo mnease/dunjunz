@@ -1,7 +1,11 @@
 # Terraria visual system — LOCKED design v1
 
-**Status:** LOCKED (EMA Council 2026-07-23).  
-**Goal:** Entire crawl reads like **Terraria-style small pixels**: hard edges, limited palettes, jagged organic silhouettes, stepped light/shadow — **not** soft gradients or giant stamped tiles.
+**Status:** **SUPERSEDED for future work** (2026-07-23 Graphics-v2 Core Keeper council).  
+Historical archive of the failed continuous-ground / “skin smaller pixels” experiment.  
+**Do not implement new work from this doc.** Canonical law: [`graphics-v2-style-bible.md`](./graphics-v2-style-bible.md) · plan: [`graphics-v2-rebuild-plan.md`](./graphics-v2-rebuild-plan.md).
+
+**Prior status:** LOCKED (EMA Council 2026-07-23) — retained below for provenance only.  
+**Goal (historical):** Entire crawl reads like **Terraria-style small pixels**: hard edges, limited palettes, jagged organic silhouettes, stepped light/shadow — **not** soft gradients or giant stamped tiles.
 
 ## Council seal
 
