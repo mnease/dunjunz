@@ -41,11 +41,8 @@ export function isOutdoorSurface(room: {
   const land = room.land ?? '';
   // Kingdom interiors stay soft indoor ambient (no cloud parade).
   if (land === 'kingdom' || land === 'village') return false;
-  // Dwarvez outdoor approach (snow gate/road) — not dark caves
-  if (
-    land === 'dwarvez' &&
-    room.dark !== true
-  ) {
+  // Dwarvez outdoor approach (snow gate/road) — dark already rejected above
+  if (land === 'dwarvez') {
     return true;
   }
   return (

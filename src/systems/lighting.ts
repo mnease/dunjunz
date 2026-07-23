@@ -104,8 +104,8 @@ export function ambientForRoom(room: {
     (id.includes('gate') || id.includes('road') || id.includes('overlook'));
   const outdoor = outdoorBiome || dwarvezOutdoorApproach;
   if (outdoor && f >= 0) {
-    // Kingdom / village interiors stay slightly softer
-    if (land === 'kingdom' || land === 'village' || land === 'kingdomz') {
+    // Kingdom interiors stay slightly softer
+    if (land === 'kingdom' || land === 'kingdomz') {
       return AMBIENT_INDOOR_SURFACE;
     }
     return AMBIENT_SURFACE;

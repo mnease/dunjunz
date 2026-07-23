@@ -28,10 +28,16 @@ import {
 import {
   autoKoiEntities,
   classifyRoomWater,
-  terrainVariant,
   waterTextureKeySafe,
   type WaterBodyKind,
 } from '../systems/water-bodies';
+import {
+  TERRAIN_VARIANT_COUNT,
+  fractalTerrainTint,
+  fractalTerrainVariant,
+  seedFromString,
+  worldCell,
+} from '../systems/fractal-noise';
 import {
   clearAllTouch,
   consumeTouchAction,
@@ -438,6 +444,22 @@ interface Actor {
   displayScale?: number;
   /** Loot crate stack template id when kind is loot_crate. */
   lootBoxId?: string;
+}
+
+/** Multiply two 0xRRGGBB tints (approx component multiply). */
+function mulTint(a: number, b: number): number {
+  if (a === 0xffffff) return b;
+  if (b === 0xffffff) return a;
+  const ar = (a >> 16) & 0xff;
+  const ag = (a >> 8) & 0xff;
+  const ab = a & 0xff;
+  const br = (b >> 16) & 0xff;
+  const bg = (b >> 8) & 0xff;
+  const bb = b & 0xff;
+  const r = Math.min(255, Math.round((ar * br) / 255));
+  const g = Math.min(255, Math.round((ag * bg) / 255));
+  const bl = Math.min(255, Math.round((ab * bb) / 255));
+  return (r << 16) | (g << 8) | bl;
 }
 
 const SOLID: TileKind[] = ['wall', 'water', 'void', 'locked'];
@@ -2739,27 +2761,39 @@ export class GameScene extends Phaser.Scene {
                 : kind === 'water' && waterBody
                   ? waterTextureKeySafe(waterBody, 0, (k) => this.textures.exists(k))
                   : TEX[kind];
-        // Organic terrain variants — break the square stamp look
+        // Fractal terrain variants — fluid non-repeating patterns (same kinds/places)
+        const fluidKinds =
+          kind === 'floor' ||
+          kind === 'wall' ||
+          kind === 'grass' ||
+          kind === 'dirt' ||
+          kind === 'snow';
+        const { wx, wy } = worldCell(
+          x,
+          y,
+          room.mapX,
+          room.mapY,
+          room.floor ?? 0,
+        );
+        const roomSeed = seedFromString(room.id);
         if (
-          (kind === 'floor' ||
-            kind === 'wall' ||
-            kind === 'grass' ||
-            kind === 'dirt' ||
-            kind === 'snow') &&
+          fluidKinds &&
           !(onBeach && (kind === 'wall' || kind === 'floor'))
         ) {
-          const v = terrainVariant(x, y, 3);
-          if (v > 0) {
-            // v=1 → -b, v=2 → -c
-            const baseKey =
-              kind === 'wall' && isMountainApproach
-                ? 'tile-dwarf-wall'
-                : kind === 'floor' && land === 'dwarvez'
-                  ? 'tile-dwarf-floor'
-                  : TEX[kind];
-            const keyed = `${baseKey}-${v === 1 ? 'b' : 'c'}`;
-            if (this.textures.exists(keyed)) texKey = keyed;
-          }
+          const v = fractalTerrainVariant(
+            wx,
+            wy,
+            TERRAIN_VARIANT_COUNT,
+            roomSeed,
+          );
+          const baseKey =
+            kind === 'wall' && isMountainApproach
+              ? 'tile-dwarf-wall'
+              : kind === 'floor' && land === 'dwarvez'
+                ? 'tile-dwarf-floor'
+                : TEX[kind];
+          const keyed = v === 0 ? baseKey : `${baseKey}-${v}`;
+          if (this.textures.exists(keyed)) texKey = keyed;
         }
         const img = this.add
           .image(pos.x, pos.y, texKey)
@@ -2767,6 +2801,11 @@ export class GameScene extends Phaser.Scene {
           .setDepth(0);
         img.setData('mapTile', true);
         img.setData('tileY', y);
+        // Continuous fractal color drift (subtle) so neighbors don't match
+        const fluidTint =
+          fluidKinds || kind === 'sand'
+            ? fractalTerrainTint(wx, wy, roomSeed + 9)
+            : 0xffffff;
         // Outdoor weather rooms: season ground tint; dungeons: depth crush
         if (weatherHere) {
           if (
@@ -2778,7 +2817,11 @@ export class GameScene extends Phaser.Scene {
           ) {
             const gt = this.seasonWeather.groundTint;
             // Snow already white — skip warm seasonal dirt tints
-            if (kind !== 'snow' && gt !== 0xffffff) img.setTint(gt);
+            if (kind !== 'snow' && gt !== 0xffffff) {
+              img.setTint(mulTint(gt, fluidTint));
+            } else if (fluidTint !== 0xffffff) {
+              img.setTint(fluidTint);
+            }
           }
           // Icy / snowy: cool sheen on water
           if (kind === 'water' && this.seasonWeather.weather === 'icy') {
@@ -2792,7 +2835,16 @@ export class GameScene extends Phaser.Scene {
             kind,
             land === 'surface' ? 'dunjunz' : land,
           );
-          if (tint !== 0xffffff && kind !== 'stairs') img.setTint(tint);
+          if (kind !== 'stairs') {
+            const base = tint !== 0xffffff ? tint : 0xffffff;
+            const combined =
+              fluidKinds && fluidTint !== 0xffffff
+                ? mulTint(base, fluidTint)
+                : base;
+            if (combined !== 0xffffff) img.setTint(combined);
+          }
+        } else if (fluidTint !== 0xffffff && fluidKinds) {
+          img.setTint(fluidTint);
         }
         if (kind === 'water' || kind === 'lava') {
           this.ambientTiles.push({

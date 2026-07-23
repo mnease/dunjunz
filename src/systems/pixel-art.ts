@@ -1,10 +1,60 @@
 /**
  * Pixel craft helpers (author unit ART_BASE=32, textures ART_RES=64).
  * EMA council: silhouette first, ≤3 values per form + 1 specular, no muddy face dither.
+ * Terrain tiles use fractal seeds so variants feel fluid, not stamped squares.
  */
+
+import { fbm01, hash2 } from './fractal-noise';
 
 export function hex(n: number): string {
   return `#${n.toString(16).padStart(6, '0')}`;
+}
+
+/** Fractal grit — density varies smoothly across the tile (not a fixed checker). */
+export function fractalGrit(
+  ctx: CanvasRenderingContext2D,
+  color: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  seed: number,
+  baseDensity = 0.12,
+): void {
+  ctx.fillStyle = color;
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      const n = fbm01((x + i) * 0.35, (y + j) * 0.35, seed, 3);
+      const dens = baseDensity * (0.45 + n * 1.1);
+      if (hash2(x + i, y + j, seed + 3) < dens) {
+        ctx.fillRect(x + i, y + j, 1, 1);
+      }
+    }
+  }
+}
+
+/** Soft irregular soft-edge patch (blob) from fractal threshold. */
+export function fractalBlob(
+  ctx: CanvasRenderingContext2D,
+  color: string,
+  cx: number,
+  cy: number,
+  radius: number,
+  seed: number,
+): void {
+  const r2 = radius * radius;
+  for (let j = -radius; j <= radius; j++) {
+    for (let i = -radius; i <= radius; i++) {
+      const d = i * i + j * j;
+      if (d > r2) continue;
+      const fall = 1 - d / r2;
+      const n = fbm01((cx + i) * 0.4, (cy + j) * 0.4, seed, 2);
+      if (n * fall > 0.28) {
+        ctx.fillStyle = color;
+        ctx.fillRect(cx + i, cy + j, 1, 1);
+      }
+    }
+  }
 }
 
 export function fill(
@@ -330,9 +380,10 @@ export function drawBrickTile(
   hilite: string,
   variant = 0,
 ): void {
-  // mortar bed
+  const seed = (variant | 0) * 3331 + 19;
+  // mortar bed — fractal grit instead of flat checker
   fill(ctx, mortar, 0, 0, s, s);
-  dither(ctx, mortar, base, 0, 0, s, s, variant);
+  fractalGrit(ctx, base, 0, 0, s, s, seed, 0.2);
 
   // Top bevel face (pseudo-3D wall crown) — light from NW
   const capH = 4;
@@ -420,8 +471,8 @@ export function drawBrickTile(
 }
 
 /**
- * Dungeon cobble floor — irregular stones, soft depth, non-grid seams.
- * `variant` 0–2 rotates stone layout so neighbors don't tile as a checker.
+ * Dungeon cobble floor — irregular stones via fractal scatter.
+ * `variant` is a fractal seed so floors don't stamp the same square.
  */
 export function drawFloorTile(
   ctx: CanvasRenderingContext2D,
@@ -431,101 +482,53 @@ export function drawFloorTile(
   grout: string,
   variant = 0,
 ): void {
+  const seed = (variant | 0) * 6151 + 7;
   fill(ctx, grout, 0, 0, s, s);
-  dither(ctx, grout, '#120e1c', 0, 0, s, s, variant);
+  fractalGrit(ctx, '#120e1c', 0, 0, s, s, seed, 0.22);
 
   const light = '#5a5078';
   const lightAlt = '#4a4068';
   const dark = '#1a1428';
   const darkAlt = '#221a30';
 
-  // Offset layouts so adjacent tiles break the square grid read
-  const layouts: [number, number, number, number, string, string, string, boolean][][] = [
-    [
-      [1, 1, 11, 8, alt, lightAlt, darkAlt, true],
-      [13, 2, 10, 9, base, light, dark, false],
-      [24, 1, 7, 11, alt, lightAlt, darkAlt, true],
-      [2, 10, 9, 11, base, light, dark, false],
-      [12, 12, 11, 8, alt, lightAlt, darkAlt, true],
-      [24, 13, 7, 8, base, light, dark, true],
-      [1, 22, 12, 9, alt, lightAlt, darkAlt, false],
-      [14, 21, 9, 10, base, light, dark, true],
-      [24, 22, 7, 9, alt, lightAlt, darkAlt, false],
-    ],
-    [
-      [2, 2, 8, 10, base, light, dark, false],
-      [11, 1, 12, 8, alt, lightAlt, darkAlt, true],
-      [24, 2, 7, 9, base, light, dark, true],
-      [1, 13, 11, 8, alt, lightAlt, darkAlt, false],
-      [13, 10, 9, 12, base, light, dark, true],
-      [23, 12, 8, 10, alt, lightAlt, darkAlt, false],
-      [2, 22, 9, 9, base, light, dark, true],
-      [12, 23, 11, 8, alt, lightAlt, darkAlt, false],
-      [24, 23, 7, 8, base, light, dark, true],
-    ],
-    [
-      [1, 2, 10, 9, alt, lightAlt, darkAlt, true],
-      [12, 1, 8, 11, base, light, dark, false],
-      [21, 2, 10, 8, alt, lightAlt, darkAlt, true],
-      [1, 12, 7, 10, base, light, dark, true],
-      [9, 13, 13, 8, alt, lightAlt, darkAlt, false],
-      [23, 11, 8, 11, base, light, dark, false],
-      [2, 23, 10, 8, alt, lightAlt, darkAlt, true],
-      [13, 22, 10, 9, base, light, dark, false],
-      [24, 23, 7, 8, alt, lightAlt, darkAlt, true],
-    ],
-  ];
-  const stones = layouts[variant % layouts.length]!;
-
-  for (const [x, y, w, h, mid, li, da, chip] of stones) {
-    if (x + w > s || y + h > s) continue;
-    cobble(ctx, mid, li, da, x, y, w, h, chip);
+  // Fractal cobble scatter
+  const stones = 9 + (seed % 5);
+  for (let i = 0; i < stones; i++) {
+    const x = 1 + Math.floor(hash2(i, seed, 1) * (s - 10));
+    const y = 1 + Math.floor(hash2(i, seed, 2) * (s - 10));
+    const w = 5 + Math.floor(hash2(i, seed, 3) * 8);
+    const h = 5 + Math.floor(hash2(i, seed, 4) * 7);
+    const useAlt = hash2(i, seed, 5) > 0.5;
+    cobble(
+      ctx,
+      useAlt ? alt : base,
+      useAlt ? lightAlt : light,
+      useAlt ? darkAlt : dark,
+      x,
+      y,
+      Math.min(w, s - x - 1),
+      Math.min(h, s - y - 1),
+      hash2(i, seed, 6) > 0.55,
+    );
   }
 
-  // Soft ambient occlusion in crooks (depth, not flat grout grid)
-  fill(ctx, 'rgba(0,0,0,0.18)', 11, 9, 2, 2);
-  fill(ctx, 'rgba(0,0,0,0.14)', 22, 11, 2, 2);
-  fill(ctx, 'rgba(0,0,0,0.12)', 8, 21, 3, 1);
-  fill(ctx, 'rgba(0,0,0,0.1)', 16, 16, 2, 2);
-  fill(ctx, 'rgba(0,0,0,0.1)', 25, 20, 2, 1);
-
-  // hairline fractures (diagonal-ish, not full cross grid)
-  fill(ctx, dark, 6 + variant, 4, 1, 3);
-  fill(ctx, dark, 17, 14 + (variant % 2), 3, 1);
-  fill(ctx, dark, 26 - variant, 6, 1, 4);
-  fill(ctx, dark, 9, 18, 1, 2);
-  fill(ctx, dark, 19, 7, 2, 1);
-  fill(ctx, dark, 14, 22, 1, 3);
-  fill(ctx, dark, 3, 15, 2, 1);
-
-  // moss flecks + wet glints
-  fill(ctx, 'rgba(70,130,90,0.4)', 4 + variant, 6, 2, 1);
-  fill(ctx, 'rgba(70,130,90,0.35)', 15, 25 - variant, 3, 1);
-  fill(ctx, 'rgba(90,150,100,0.3)', 27, 18, 2, 2);
-  fill(ctx, 'rgba(60,110,80,0.3)', 8, 28, 2, 1);
-  fill(ctx, 'rgba(90,150,100,0.25)', 22, 4, 2, 1);
-  fill(ctx, 'rgba(70,130,90,0.3)', 12, 12, 1, 2);
-
-  // pebble litter
-  fill(ctx, light, 7, 8, 2, 1);
-  fill(ctx, dark, 7, 9, 2, 1);
-  fill(ctx, lightAlt, 20, 26, 2, 1);
-
-  grit(ctx, 'rgba(0,0,0,0.2)', 1, 1, s - 2, s - 2, 5, 2 + variant);
-  grit(ctx, 'rgba(255,255,255,0.06)', 2, 2, s - 4, s - 4, 7, 1 + variant);
-  spark(ctx, 5 + variant, 3, 'rgba(200,190,230,0.35)');
+  fractalGrit(ctx, 'rgba(0,0,0,0.2)', 1, 1, s - 2, s - 2, seed + 3, 0.16);
+  fractalGrit(ctx, 'rgba(255,255,255,0.06)', 2, 2, s - 4, s - 4, seed + 5, 0.08);
+  // Fractal moss flecks
+  for (let m = 0; m < 5; m++) {
+    if (hash2(m, seed, 8) < 0.4) continue;
+    const mx = Math.floor(hash2(m, seed, 9) * s);
+    const my = Math.floor(hash2(m, seed, 10) * s);
+    fill(ctx, 'rgba(70,130,90,0.4)', mx, my, 2, 1);
+  }
+  spark(ctx, 5 + (seed % 7), 3, 'rgba(200,190,230,0.35)');
   spark(ctx, 18, 12, 'rgba(200,190,230,0.25)');
-  spark(ctx, 28 - variant, 24, 'rgba(200,190,230,0.3)');
-  spark(ctx, 11, 19, 'rgba(180,170,220,0.3)');
-
-  // Subtle ground plane shadow along south edge
   fill(ctx, 'rgba(0,0,0,0.12)', 0, s - 1, s, 1);
-  fill(ctx, 'rgba(0,0,0,0.06)', 0, s - 2, s, 1);
 }
 
 /**
- * Lush meadow grass — multi-tone soil, clumpy turf, blades, flowers.
- * `variant` shifts clumps/blades so the meadow is not a square carpet.
+ * Lush meadow grass — multi-tone soil, fractal clumps, blades, flowers.
+ * `variant` is a fractal seed (0–15+) so patches feel fluid, not square stamps.
  */
 export function drawGrassTile(
   ctx: CanvasRenderingContext2D,
@@ -535,100 +538,67 @@ export function drawGrassTile(
   tip: string,
   variant = 0,
 ): void {
+  const seed = (variant | 0) * 9973 + 11;
   // Soft undulating soil (not flat green square)
   vgrad(ctx, ['#3a7d52', blade, base, '#245a38', '#1a4028'], 0, 0, s, s);
-  dither(ctx, base, '#2a6040', 0, Math.floor(s * 0.55), s, Math.ceil(s * 0.45), variant);
+  // Fractal soil mottling instead of fixed checker dither
+  fractalGrit(ctx, 'rgba(30,70,40,0.35)', 0, 0, s, s, seed, 0.18);
+  fractalGrit(ctx, 'rgba(100,190,120,0.12)', 0, 0, s, Math.floor(s * 0.55), seed + 2, 0.14);
 
-  // Organic turf mounds (overlap edges so tiles blend)
-  const mounds: [number, number, number, number][] = [
-    [2 + variant, 4, 14, 10],
-    [12, 2 + (variant % 2), 16, 12],
-    [0, 14, 18, 10],
-    [16 - variant, 16, 14, 12],
-    [6, 20, 12, 10],
-  ];
-  for (const [mx, my, mw, mh] of mounds) {
-    fill(ctx, 'rgba(50,120,70,0.35)', mx, my, mw, mh);
-    fill(ctx, 'rgba(90,180,110,0.18)', mx + 2, my + 1, Math.max(2, mw - 4), 2);
-    fill(ctx, 'rgba(20,50,30,0.2)', mx + 1, my + mh - 2, mw - 2, 2);
+  // Fractal turf mounds — positions/radii from noise (overlap edges for blend)
+  for (let m = 0; m < 7; m++) {
+    const cx = Math.floor(hash2(m, seed, 1) * s);
+    const cy = Math.floor(hash2(m, seed, 2) * s);
+    const rad = 4 + Math.floor(hash2(m, seed, 3) * 7);
+    fractalBlob(ctx, 'rgba(50,120,70,0.4)', cx, cy, rad, seed + m * 13);
+    fractalBlob(ctx, 'rgba(90,180,110,0.15)', cx - 1, cy - 1, Math.max(2, rad - 2), seed + m * 17);
   }
 
-  grit(ctx, 'rgba(40,30,20,0.2)', 0, Math.floor(s * 0.6), s, Math.floor(s * 0.4), 4, 1 + variant);
-  grit(ctx, 'rgba(90,180,100,0.12)', 0, 0, s, Math.floor(s * 0.5), 5, 2 + variant);
+  // Bare dirt pockets (fractal threshold)
+  for (let m = 0; m < 4; m++) {
+    const cx = Math.floor(hash2(m + 20, seed, 4) * s);
+    const cy = Math.floor(s * 0.45 + hash2(m + 20, seed, 5) * s * 0.5);
+    const rad = 2 + Math.floor(hash2(m, seed, 6) * 4);
+    fractalBlob(ctx, 'rgba(90,70,45,0.45)', cx, cy, rad, seed + 40 + m);
+  }
 
-  // dirt nubs / bare patches (offset per variant)
-  fill(ctx, 'rgba(90,70,45,0.4)', 8 + variant * 2, 26, 5, 3);
-  fill(ctx, 'rgba(70,55,35,0.35)', 20 - variant, 4 + variant, 4, 2);
-  fill(ctx, 'rgba(100,80,50,0.3)', 2, 18, 3, 2);
-  fill(ctx, 'rgba(80,60,40,0.3)', 14, 8, 3, 2);
-  // pebbles
-  fill(ctx, '#9a9080', 11, 22, 2, 1);
-  fill(ctx, '#6a6050', 11, 23, 2, 1);
-  fill(ctx, '#a09888', 24, 14, 2, 1);
-
-  const bladeSets: [number, number, number, number][][] = [
-    [
-      [2, 10, 8, 0], [4, 6, 11, 1], [6, 14, 6, 0], [8, 4, 12, 1],
-      [10, 11, 7, 0], [12, 7, 10, 1], [14, 15, 5, 0], [16, 5, 11, 0],
-      [18, 12, 8, 1], [20, 3, 13, 0], [22, 9, 9, 1], [24, 14, 6, 0],
-      [26, 6, 10, 1], [28, 11, 7, 0], [3, 20, 7, 1], [7, 22, 5, 0],
-      [11, 18, 8, 1], [15, 21, 6, 0], [19, 19, 9, 1], [23, 23, 5, 0],
-      [27, 20, 7, 1], [5, 16, 6, 0], [13, 24, 4, 1], [25, 16, 8, 0],
-    ],
-    [
-      [1, 8, 9, 1], [3, 12, 7, 0], [5, 5, 12, 1], [7, 14, 6, 0],
-      [9, 3, 11, 0], [11, 9, 8, 1], [13, 6, 10, 0], [15, 13, 7, 1],
-      [17, 4, 12, 0], [19, 10, 8, 1], [21, 7, 9, 0], [23, 15, 5, 1],
-      [25, 5, 11, 0], [27, 12, 6, 1], [2, 18, 8, 0], [6, 21, 6, 1],
-      [10, 19, 7, 0], [14, 23, 5, 1], [18, 17, 9, 0], [22, 22, 6, 1],
-      [26, 19, 7, 0], [4, 24, 5, 1], [12, 15, 6, 0], [28, 21, 5, 1],
-    ],
-    [
-      [3, 5, 10, 0], [5, 11, 8, 1], [7, 7, 11, 0], [9, 14, 6, 1],
-      [11, 4, 12, 0], [13, 10, 7, 1], [15, 2, 13, 0], [17, 9, 9, 1],
-      [19, 6, 10, 0], [21, 13, 6, 1], [23, 3, 12, 0], [25, 11, 8, 1],
-      [27, 8, 9, 0], [1, 15, 7, 1], [4, 19, 8, 0], [8, 23, 5, 1],
-      [12, 20, 7, 0], [16, 18, 8, 1], [20, 22, 6, 0], [24, 17, 9, 1],
-      [28, 20, 6, 0], [6, 16, 5, 1], [14, 25, 4, 0], [22, 24, 5, 1],
-    ],
-  ];
-  const blades = bladeSets[variant % bladeSets.length]!;
-
-  for (const [x, y0, h, lean] of blades) {
-    if (x >= s) continue;
+  // Blades from fractal sample points
+  const bladeCount = 26 + (seed % 8);
+  for (let b = 0; b < bladeCount; b++) {
+    const x = Math.floor(hash2(b, seed, 7) * s);
+    const y0 = Math.floor(hash2(b, seed, 8) * s * 0.75);
+    const h = 4 + Math.floor(hash2(b, seed, 9) * 10);
+    const lean = hash2(b, seed, 10) > 0.5 ? 1 : 0;
     for (let i = 0; i < h; i++) {
       const yy = y0 + i;
-      if (yy >= s) break;
+      if (yy >= s || yy < 0) continue;
       const xx = x + (lean ? (i > h / 2 ? 1 : 0) : i % 3 === 2 ? 1 : 0);
-      if (xx >= s) continue;
+      if (xx >= s || xx < 0) continue;
       ctx.fillStyle = i < 2 ? tip : i > h - 3 ? '#1e5030' : blade;
       ctx.fillRect(xx, yy, 1, 1);
     }
-    fill(ctx, '#8ef0a8', x, y0, 1, 1);
+    if (y0 >= 0 && y0 < s && x >= 0 && x < s) fill(ctx, '#8ef0a8', x, y0, 1, 1);
   }
 
-  // tiny flowers (moved per variant) — denser meadow
-  const fx = 9 + variant * 3;
-  const fy = 17 - variant;
-  fill(ctx, '#ffc857', fx % 28, fy, 2, 2);
-  fill(ctx, '#fff3a0', fx % 28, fy, 1, 1);
-  fill(ctx, '#ff6b9d', (21 + variant) % 28, 13, 2, 2);
-  fill(ctx, '#ffb0c8', (21 + variant) % 28, 13, 1, 1);
-  fill(ctx, '#c9a0ff', 15, 27 - (variant % 2), 2, 1);
-  fill(ctx, '#7dffb3', (5 + variant * 2) % 28, 9, 1, 1);
-  fill(ctx, '#fff3a0', (18 + variant) % 28, 22, 2, 1);
-  fill(ctx, '#ffb0c8', 26, 6 + (variant % 2), 1, 1);
+  // Flowers — sparse fractal scatter
+  const flowerColors = ['#ffc857', '#ff6b9d', '#c9a0ff', '#fff3a0', '#7dffb3'];
+  for (let f = 0; f < 6; f++) {
+    if (hash2(f, seed, 11) < 0.35) continue;
+    const fx = Math.floor(hash2(f, seed, 12) * (s - 2));
+    const fy = Math.floor(hash2(f, seed, 13) * (s - 2));
+    const col = flowerColors[f % flowerColors.length]!;
+    fill(ctx, col, fx, fy, 2, 2);
+    fill(ctx, '#fff3a0', fx, fy, 1, 1);
+  }
 
-  // turf depth rim + soft top light
-  fill(ctx, 'rgba(0,0,0,0.14)', 0, s - 1, s, 1);
-  fill(ctx, 'rgba(0,0,0,0.06)', 0, s - 2, s, 1);
-  fill(ctx, 'rgba(255,255,255,0.06)', 0, 0, s, 1);
-  fill(ctx, 'rgba(180,255,200,0.08)', 4, 2, s - 8, 1);
+  // Soft edge noise — break the perfect square silhouette
+  fractalGrit(ctx, 'rgba(0,0,0,0.12)', 0, s - 2, s, 2, seed + 99, 0.35);
+  fractalGrit(ctx, 'rgba(180,255,200,0.1)', 0, 0, s, 2, seed + 101, 0.25);
 }
 
 /**
  * Packed trail dirt — ruts, pebbles, packed earth clumps.
- * `variant` offsets clumps so paths don't read as a square stamp.
+ * `variant` is a fractal seed so path tiles don't stamp the same square.
  */
 export function drawDirtTile(
   ctx: CanvasRenderingContext2D,
@@ -636,36 +606,29 @@ export function drawDirtTile(
   mid: string,
   variant = 0,
 ): void {
+  const seed = (variant | 0) * 7919 + 3;
   vgrad(ctx, ['#8a7564', mid, '#5a4538', '#4a3830'], 0, 0, s, s);
-  dither(ctx, mid, '#5a4538', 0, 0, s, s, variant);
-
-  const o = variant % 3;
-  cobble(ctx, '#7a6554', '#9a8574', '#4a3830', 2 + o, 3, 9, 7, true);
-  cobble(ctx, '#6b5344', '#8a7564', '#3a2820', 13 - o, 2 + (o % 2), 8, 8, false);
-  cobble(ctx, '#7a6554', '#9a8574', '#4a3830', 22, 4 + o, 8, 6, true);
-  cobble(ctx, '#5a4538', '#7a6554', '#3a2820', 4, 14, 10, 8, false);
-  cobble(ctx, '#6b5344', '#8a7564', '#3a2820', 16 - o, 13, 12, 7, true);
-  cobble(ctx, '#7a6554', '#9a8574', '#4a3830', 3 + o, 23, 11, 7, true);
-  cobble(ctx, '#5a4538', '#7a6554', '#3a2820', 17, 22 - (o % 2), 12, 8, false);
-
-  // Soft depth between clumps
-  fill(ctx, 'rgba(0,0,0,0.12)', 10, 10, 3, 2);
-  fill(ctx, 'rgba(0,0,0,0.1)', 20, 18, 2, 2);
-  fill(ctx, 'rgba(0,0,0,0.08)', 6, 20, 2, 2);
-
-  // wagon / foot ruts (slightly wavy via offset)
-  fill(ctx, 'rgba(40,28,20,0.45)', 0, 11 + (o % 2), s, 1);
-  fill(ctx, 'rgba(40,28,20,0.35)', 0, 20 - (o % 2), s, 1);
-  fill(ctx, 'rgba(100,85,70,0.25)', 0, 12 + (o % 2), s, 1);
-  fill(ctx, 'rgba(40,28,20,0.2)', 0, 15, s, 1);
-
-  fill(ctx, '#9a9080', 7 + o, 8, 2, 2);
-  fill(ctx, '#6a6050', 7 + o, 9, 2, 1);
-  fill(ctx, '#b0a898', 24 - o, 16, 2, 2);
-  fill(ctx, '#8a8070', 14, 24, 2, 1);
-  fill(ctx, '#c0b8a8', 3, 16, 1, 1);
-  grit(ctx, 'rgba(0,0,0,0.12)', 1, 1, s - 2, s - 2, 5, o);
-  fill(ctx, 'rgba(0,0,0,0.12)', 0, s - 1, s, 1);
+  fractalGrit(ctx, 'rgba(40,30,22,0.28)', 0, 0, s, s, seed, 0.2);
+  fractalGrit(ctx, 'rgba(160,140,120,0.12)', 0, 0, s, s, seed + 2, 0.1);
+  // Packed clumps
+  for (let m = 0; m < 6; m++) {
+    const cx = Math.floor(hash2(m, seed, 1) * s);
+    const cy = Math.floor(hash2(m, seed, 2) * s);
+    const rad = 3 + Math.floor(hash2(m, seed, 3) * 5);
+    fractalBlob(ctx, 'rgba(70,55,42,0.4)', cx, cy, rad, seed + m * 9);
+  }
+  // Ruts — soft horizontal noise bands
+  for (let r = 0; r < 3; r++) {
+    const yy = Math.floor(s * (0.25 + r * 0.22 + hash2(r, seed, 4) * 0.08));
+    fractalGrit(ctx, 'rgba(30,22,16,0.35)', 0, yy, s, 2, seed + 50 + r, 0.45);
+  }
+  // Pebbles
+  for (let p = 0; p < 5; p++) {
+    const px = Math.floor(hash2(p, seed, 5) * (s - 2));
+    const py = Math.floor(hash2(p, seed, 6) * (s - 2));
+    fill(ctx, hash2(p, seed, 7) > 0.5 ? '#9a9080' : '#6a6050', px, py, 2, 1);
+  }
+  fractalGrit(ctx, 'rgba(0,0,0,0.15)', 0, s - 2, s, 2, seed + 77, 0.3);
 }
 
 /** Soft beach sand — warm grains, no brick/cobble ruts. */
@@ -729,36 +692,37 @@ export function drawJaggedStoneWall(
   s: number,
   variant = 0,
 ): void {
-  // near-black basalt bed
+  const seed = (variant | 0) * 4517 + 5;
   vgrad(ctx, ['#2a2830', '#1a181f', '#121018', '#0a0a10'], 0, 0, s, s);
-  dither(ctx, '#1a181f', '#0c0c12', 0, 0, s, s, variant);
-  // jagged top silhouette (cliff teeth)
-  const teeth = [
-    [0, 0, 6, 5],
-    [5, 0, 5, 8],
-    [9, 0, 7, 4],
-    [15, 0, 5, 9],
-    [19, 0, 6, 5],
-    [24, 0, 8, 7],
-  ] as const;
-  for (const [x, y, w, h] of teeth) {
-    const ox = (x + variant * 3) % (s - 4);
-    fill(ctx, '#3a3845', ox, y, w, h);
-    fill(ctx, '#101018', ox, y + h - 1, w, 1);
+  fractalGrit(ctx, '#0c0c12', 0, 0, s, s, seed, 0.25);
+  // jagged top silhouette from fractal heights
+  for (let x = 0; x < s; x++) {
+    const h = 3 + Math.floor(fbm01(x * 0.28, variant * 0.7, seed, 3) * 8);
+    fill(ctx, '#3a3845', x, 0, 1, h);
+    fill(ctx, '#101018', x, h - 1, 1, 1);
   }
-  // deep cracks
-  fill(ctx, '#050508', 4 + variant, 10, 2, 14);
-  fill(ctx, '#050508', 18, 8, 2, 18);
-  fill(ctx, '#050508', 26 - variant, 12, 2, 12);
-  // faceted rock nubs (no mortar rows)
-  cobble(ctx, '#2e2c38', '#4a4858', '#121018', 2, 12, 10, 8, true);
-  cobble(ctx, '#282630', '#3a3848', '#0e0e14', 14, 16, 12, 9, false);
-  cobble(ctx, '#323040', '#4e4c5c', '#14141c', 8, 22, 11, 7, true);
-  cobble(ctx, '#24222c', '#3c3a48', '#0c0c12', 20, 6, 9, 8, false);
-  // cold rim light
+  // cracks + rock nubs
+  for (let c = 0; c < 4; c++) {
+    const cx = Math.floor(hash2(c, seed, 1) * s);
+    fill(ctx, '#050508', cx, 8, 2, 10 + Math.floor(hash2(c, seed, 2) * 10));
+  }
+  for (let m = 0; m < 5; m++) {
+    const x = Math.floor(hash2(m, seed, 3) * (s - 10));
+    const y = 6 + Math.floor(hash2(m, seed, 4) * (s - 14));
+    cobble(
+      ctx,
+      '#2e2c38',
+      '#4a4858',
+      '#121018',
+      x,
+      y,
+      7 + Math.floor(hash2(m, seed, 5) * 6),
+      6 + Math.floor(hash2(m, seed, 6) * 5),
+      hash2(m, seed, 7) > 0.5,
+    );
+  }
   fill(ctx, 'rgba(120,140,180,0.12)', 0, 0, s, 2);
-  grit(ctx, 'rgba(0,0,0,0.35)', 1, 1, s - 2, s - 2, 4, 0);
-  spark(ctx, 10, 14, 'rgba(90,100,130,0.35)');
+  fractalGrit(ctx, 'rgba(0,0,0,0.35)', 1, 1, s - 2, s - 2, seed + 3, 0.2);
 }
 
 /** Rough cave floor — dark stone dust, not polished brick. */
@@ -767,35 +731,45 @@ export function drawJaggedStoneFloor(
   s: number,
   variant = 0,
 ): void {
+  const seed = (variant | 0) * 5107 + 2;
   vgrad(ctx, ['#2a2832', '#1e1c26', '#16141c', '#121018'], 0, 0, s, s);
-  dither(ctx, '#1e1c26', '#121018', 0, 0, s, s, variant);
-  cobble(ctx, '#24222c', '#363440', '#101018', 3, 4, 9, 6, true);
-  cobble(ctx, '#202028', '#323038', '#0e0e14', 16, 10, 11, 7, false);
-  cobble(ctx, '#262430', '#3a3844', '#12121a', 6, 18, 10, 8, true);
+  fractalGrit(ctx, '#121018', 0, 0, s, s, seed, 0.22);
+  for (let m = 0; m < 6; m++) {
+    const x = Math.floor(hash2(m, seed, 1) * (s - 10));
+    const y = Math.floor(hash2(m, seed, 2) * (s - 10));
+    cobble(
+      ctx,
+      '#24222c',
+      '#363440',
+      '#101018',
+      x,
+      y,
+      6 + Math.floor(hash2(m, seed, 3) * 7),
+      5 + Math.floor(hash2(m, seed, 4) * 6),
+      true,
+    );
+  }
   fill(ctx, 'rgba(0,0,0,0.25)', 0, s - 2, s, 2);
-  grit(ctx, 'rgba(80,90,110,0.15)', 0, 0, s, s, 5, 1);
+  fractalGrit(ctx, 'rgba(80,90,110,0.15)', 0, 0, s, s, seed + 4, 0.12);
 }
 
-/** Mountain snow pack — cold white with blue shadow. */
+/** Mountain snow pack — cold white with fractal drifts. */
 export function drawSnowTile(
   ctx: CanvasRenderingContext2D,
   s: number,
   variant = 0,
 ): void {
+  const seed = (variant | 0) * 2741 + 8;
   vgrad(ctx, ['#f8fcff', '#e8f0f8', '#d0dce8', '#b8c8d8'], 0, 0, s, s);
-  dither(ctx, '#e8f0f8', '#c8d4e0', 0, 0, s, s, variant);
-  // soft drifts
-  fill(ctx, 'rgba(255,255,255,0.45)', 0, 6 + variant, s, 2);
-  fill(ctx, 'rgba(160,180,200,0.25)', 0, 16, s, 2);
-  fill(ctx, 'rgba(255,255,255,0.3)', 0, 22, s, 1);
-  // sparkle flecks
-  fill(ctx, '#ffffff', 5 + variant, 8, 2, 1);
-  fill(ctx, '#ffffff', 14, 14, 1, 1);
-  fill(ctx, '#d8e8f8', 22, 10, 2, 1);
-  fill(ctx, '#ffffff', 9, 20, 1, 1);
-  fill(ctx, '#c0d0e0', 26, 24, 2, 1);
-  grit(ctx, 'rgba(255,255,255,0.4)', 0, 0, s, s, 4, 1);
-  fill(ctx, 'rgba(100,120,150,0.12)', 0, s - 1, s, 1);
+  fractalGrit(ctx, '#c8d4e0', 0, 0, s, s, seed, 0.15);
+  for (let m = 0; m < 5; m++) {
+    const cx = Math.floor(hash2(m, seed, 1) * s);
+    const cy = Math.floor(hash2(m, seed, 2) * s);
+    const rad = 3 + Math.floor(hash2(m, seed, 3) * 6);
+    fractalBlob(ctx, 'rgba(255,255,255,0.45)', cx, cy, rad, seed + m);
+  }
+  fractalGrit(ctx, 'rgba(255,255,255,0.4)', 0, 0, s, s, seed + 5, 0.12);
+  fractalGrit(ctx, 'rgba(100,120,150,0.12)', 0, s - 2, s, 2, seed + 6, 0.3);
 }
 
 /** Mineral vein prop — colored crystal/nugget in dark rock. */

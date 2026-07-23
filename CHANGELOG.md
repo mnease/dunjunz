@@ -17,6 +17,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Fluid fractal terrain** — grass, dirt, stone, snow, and cave floors no longer stamp 3 square tiles forever. 16 fractal-seeded variants + fBm world placement + soft color drift keep paths/kinds in place while patterns feel continuous.
 - **Dwarvez approach atmosphere** — North Road is outdoor foothills → high pass with cliffs, river, and rising snow; Dwarvez caves use dark jagged stone walls (not grey bricks); harvestable ore veins (bronze, gold, silver, diamond, ruby, emerald, mithril) chip with **E**.
 - **Dwarvez cave lighting** — interiors use the same survival-dark rules as deep dungeons (`dark: true`: low ambient, carried torch fuel, **T** place wall torch, dark toast). Snow approach (gate/road/overlook) stays outdoor-lit.
 

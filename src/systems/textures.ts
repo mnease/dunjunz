@@ -1662,9 +1662,11 @@ export function ensureGuildRackTexture(
 }
 
 export function generateTextures(scene: Phaser.Scene): void {
-  // —— Map tiles @ ART_BASE (organic variants break square-grid read) ——
-  for (let v = 0; v < 3; v++) {
-    const suf = v === 0 ? '' : `-${String.fromCharCode(97 + v)}`; // '', '-b', '-c'
+  // —— Map tiles: 16 fractal-seeded variants each (fluid, non-repeating) ——
+  // Keys: tile-grass, tile-grass-1 … tile-grass-15 (+ legacy -b/-c = 1/2)
+  const nVar = 16;
+  for (let v = 0; v < nVar; v++) {
+    const suf = v === 0 ? '' : `-${v}`;
     canvasTex(scene, `tile-floor${suf}`, ART_RES, ART_RES, (ctx) => {
       drawFloorTile(
         ctx,
@@ -1700,6 +1702,51 @@ export function generateTextures(scene: Phaser.Scene): void {
       drawDirtTile(ctx, ART_BASE, hex(COLORS.dirt), v);
     });
   }
+  // Legacy letter suffixes used by older calls
+  if (scene.textures.exists('tile-grass-1')) {
+    // Phaser doesn't alias easily — regenerate letter keys as copies of 1/2
+    for (const [letter, idx] of [
+      ['b', 1],
+      ['c', 2],
+    ] as const) {
+      for (const base of ['tile-floor', 'tile-wall', 'tile-grass', 'tile-dirt']) {
+        canvasTex(scene, `${base}-${letter}`, ART_RES, ART_RES, (ctx) => {
+          // redraw same seed as numeric index
+          if (base === 'tile-floor') {
+            drawFloorTile(
+              ctx,
+              ART_BASE,
+              hex(COLORS.floor),
+              hex(COLORS.floorAlt),
+              '#1a1528',
+              idx,
+            );
+          } else if (base === 'tile-wall') {
+            drawBrickTile(
+              ctx,
+              ART_BASE,
+              hex(COLORS.wallDark),
+              hex(COLORS.wall),
+              '#2a2438',
+              '#7a6a9a',
+              idx,
+            );
+          } else if (base === 'tile-grass') {
+            drawGrassTile(
+              ctx,
+              ART_BASE,
+              hex(COLORS.grass),
+              hex(COLORS.grassAlt),
+              '#6ad48a',
+              idx,
+            );
+          } else {
+            drawDirtTile(ctx, ART_BASE, hex(COLORS.dirt), idx);
+          }
+        });
+      }
+    }
+  }
 
   canvasTex(scene, 'tile-carpet', ART_RES, ART_RES, (ctx) => {
     drawCarpetTile(ctx, ART_BASE);
@@ -1713,9 +1760,9 @@ export function generateTextures(scene: Phaser.Scene): void {
     drawSandWallTile(ctx, ART_BASE);
   });
 
-  // Mountain snow + Dwarvez jagged stone (not brick)
-  for (let v = 0; v < 3; v++) {
-    const suf = v === 0 ? '' : `-${String.fromCharCode(97 + v)}`;
+  // Mountain snow + Dwarvez jagged stone (fractal variants)
+  for (let v = 0; v < nVar; v++) {
+    const suf = v === 0 ? '' : `-${v}`;
     canvasTex(scene, `tile-snow${suf}`, ART_RES, ART_RES, (ctx) => {
       drawSnowTile(ctx, ART_BASE, v);
     });
@@ -1724,6 +1771,20 @@ export function generateTextures(scene: Phaser.Scene): void {
     });
     canvasTex(scene, `tile-dwarf-floor${suf}`, ART_RES, ART_RES, (ctx) => {
       drawJaggedStoneFloor(ctx, ART_BASE, v);
+    });
+  }
+  for (const [letter, idx] of [
+    ['b', 1],
+    ['c', 2],
+  ] as const) {
+    canvasTex(scene, `tile-snow-${letter}`, ART_RES, ART_RES, (ctx) => {
+      drawSnowTile(ctx, ART_BASE, idx);
+    });
+    canvasTex(scene, `tile-dwarf-wall-${letter}`, ART_RES, ART_RES, (ctx) => {
+      drawJaggedStoneWall(ctx, ART_BASE, idx);
+    });
+    canvasTex(scene, `tile-dwarf-floor-${letter}`, ART_RES, ART_RES, (ctx) => {
+      drawJaggedStoneFloor(ctx, ART_BASE, idx);
     });
   }
 

@@ -4,6 +4,7 @@
  */
 
 import type { EntityDef, TileKind } from '../types';
+import { fractalTerrainVariant } from './fractal-noise';
 
 export type WaterBodyKind = 'ocean' | 'pond' | 'river';
 
@@ -221,6 +222,10 @@ export function autoKoiEntities(
 /**
  * Terrain texture variant index from tile coords (breaks square grid look).
  */
-export function terrainVariant(tx: number, ty: number, variants = 3): number {
-  return Math.abs((tx * 17 + ty * 31 + tx * ty) % variants);
+/**
+ * Pick a terrain texture variant for cell (tx,ty).
+ * Fractal fBm so patches feel fluid rather than a 3-tile checker stamp.
+ */
+export function terrainVariant(tx: number, ty: number, variants = 16): number {
+  return fractalTerrainVariant(tx, ty, variants, 1337);
 }
