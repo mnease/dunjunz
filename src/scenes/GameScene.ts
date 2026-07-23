@@ -4417,10 +4417,34 @@ export class GameScene extends Phaser.Scene {
     const isMid = shouldApplyMinibossReward(actor.kind, actor.id);
     // Soft-respawn creeps: XP now, return on a clock (not permanent kill list)
     // Mid wardens: permanent via applyMinibossKill (never land ceremony)
+    // Quest wolves (elf-blight-*) are permanent — isPermanentKill → recordKill
     if (canSoftRespawn(actor.kind, actor.id)) {
       this.scheduleCreepRespawn(actor);
     } else if (!isMid) {
       this.save = recordKill(this.save, actor.id, this.room.land);
+    }
+    // Belt-and-suspenders: always stamp kill flags for Wood Elf blight pack
+    // so queen turn-in works even if an older soft-respawn path skipped killed[]
+    if (actor.id.startsWith('elf-blight-wolf')) {
+      this.save = recordKill(this.save, actor.id, this.room.land);
+      this.save = {
+        ...this.save,
+        flags: { ...this.save.flags, [`killed_${actor.id}`]: true },
+      };
+      const n = [
+        'elf-blight-wolf-1',
+        'elf-blight-wolf-2',
+      ].filter(
+        (id) =>
+          this.save.killed.includes(id) ||
+          !!this.save.flags?.[`killed_${id}`],
+      ).length;
+      this.time.delayedCall(80, () => {
+        this.game.events.emit(
+          'toast',
+          n >= 2 ? 'BLIGHT PACK DOWN — SEE THE QUEEN' : `BLIGHT WOLF ${n}/2`,
+        );
+      });
     }
 
     // XP + level from pure progression module (threat-scaled)

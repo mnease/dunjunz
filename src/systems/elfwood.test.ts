@@ -229,3 +229,50 @@ describe('elfwood world graph', () => {
     expect(gate.some((e) => e.id === 'elf-sentry')).toBe(true);
   });
 });
+
+describe('blight wolf quest kill tracking', () => {
+  it('blight wolves are permanent kills (not soft-respawn)', async () => {
+    const { isPermanentKill, canSoftRespawn } = await import('./respawn');
+    for (const id of BLIGHT_WOLF_IDS) {
+      expect(isPermanentKill('wolf', id)).toBe(true);
+      expect(canSoftRespawn('wolf', id)).toBe(false);
+    }
+    // Normal woodz wolves still soft-respawn
+    expect(canSoftRespawn('wolf', 'woodz-wolf-1')).toBe(true);
+  });
+
+  it('wolvesKilled reads killed[] and killed_* flags', async () => {
+    const { wolvesKilled } = await import('./elfwood');
+    expect(wolvesKilled(defaultSave())).toBe(false);
+    const viaKilled = {
+      ...defaultSave(),
+      killed: [...BLIGHT_WOLF_IDS],
+    };
+    expect(wolvesKilled(viaKilled)).toBe(true);
+    const viaFlags = {
+      ...defaultSave(),
+      flags: {
+        'killed_elf-blight-wolf-1': true,
+        'killed_elf-blight-wolf-2': true,
+      },
+    };
+    expect(wolvesKilled(viaFlags)).toBe(true);
+  });
+
+  it('turn-in completes when wolves are on killed list', () => {
+    let s = {
+      ...defaultSave(),
+      flags: {
+        elf_queen_met: true,
+        elf_q_wolves: true,
+      },
+      killed: [...BLIGHT_WOLF_IDS],
+      coins: 0,
+      stacks: {},
+    };
+    const r = talkQueen(s);
+    expect(r.save.flags.elf_q_wolves_done).toBe(true);
+    expect(r.save.coins).toBe(25);
+    expect(r.dialog.join(' ')).toMatch(/BLIGHT BITE|POTIONS/i);
+  });
+});

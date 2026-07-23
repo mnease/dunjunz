@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Fixed
 
+- **Blight wolves never counted for the queen** — pack used normal soft-respawn wolf rules, so kills never entered `killed[]` and the queen forever said “SOUTH THICKET.” Blight IDs are permanent kills + kill flags; status shows `N/2`.
 - **Wood Elf pathways readable again** — sky redwoods pulled into corner groves only (no mid-side trunks), with dirt path tiles for doors/portal/shore so routes stay visible under the canopy.
 - **Boss exit portals** — pulse tween used world `SCALE` (3) instead of `SPRITE_SCALE` after 64-bit textures, so rings grew huge and the step-on hitbox was a tiny legacy 14px pad. Portals now stay tile-sized (alpha pulse only), use a solid walk-on body, sit on clear floor south of the boss, and toast the dungeon-mouth destination.
 - **Woodz Edge west water dead-end** — opening the glade mouth left the creek blocking the dirt path (west = water trap). Mid rows now have a dirt bridge so west/east/north/south stay walkable.

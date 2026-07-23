@@ -259,8 +259,28 @@ export type QueenTalkResult = {
   triggerFellowshipCutscene?: boolean;
 };
 
-function wolvesKilled(save: SaveData): boolean {
-  return BLIGHT_WOLF_IDS.every((id) => save.killed.includes(id));
+/**
+ * Both blight wolves defeated permanently.
+ * Soft-respawn used to skip `killed[]` for kind=wolf — those IDs are now
+ * permanent kills; also honor hardKilled + explicit flags for safety.
+ */
+export function wolvesKilled(save: SaveData): boolean {
+  const lists = [save.killed ?? [], save.hardKilled ?? []];
+  return BLIGHT_WOLF_IDS.every((id) => {
+    if (lists.some((list) => list.includes(id))) return true;
+    if (save.flags?.[`killed_${id}`]) return true;
+    return false;
+  });
+}
+
+/** How many of the two blight wolves are recorded dead (0–2). */
+export function blightWolvesKillCount(save: SaveData): number {
+  return BLIGHT_WOLF_IDS.filter((id) => {
+    if ((save.killed ?? []).includes(id)) return true;
+    if ((save.hardKilled ?? []).includes(id)) return true;
+    if (save.flags?.[`killed_${id}`]) return true;
+    return false;
+  }).length;
 }
 
 function grantStack(
@@ -306,6 +326,15 @@ export function talkQueen(save: SaveData): QueenTalkResult {
   }
 
   // 2. Turn-ins (check before new accepts so one talk can complete)
+  // Auto-accept blight job if they already wiped the pack (pre-accept kill)
+  if (
+    !flag(next, FLAG_Q_WOLVES) &&
+    !flag(next, FLAG_Q_WOLVES_DONE) &&
+    wolvesKilled(next)
+  ) {
+    next = setFlags(next, { [FLAG_Q_WOLVES]: true });
+  }
+
   if (flag(next, FLAG_Q_WOLVES) && !flag(next, FLAG_Q_WOLVES_DONE)) {
     if (wolvesKilled(next)) {
       next = grantStack(next, 'potion', 3);
@@ -457,12 +486,15 @@ export function talkQueen(save: SaveData): QueenTalkResult {
   }
 
   // Active but incomplete — status board
+  const wolfN = blightWolvesKillCount(next);
   return {
     save: next,
     dialog: [
       'QUEEN: STILL ON THE LIST:',
       !flag(next, FLAG_Q_WOLVES_DONE)
-        ? `· BLIGHT WOLVES (${wolvesKilled(next) ? 'DONE — TALK AGAIN' : 'SOUTH THICKET'})`
+        ? wolfN >= 2
+          ? '· BLIGHT WOLVES (DONE — TALK AGAIN)'
+          : `· BLIGHT WOLVES (${wolfN}/2 · SOUTH THICKET)`
         : '',
       !flag(next, FLAG_Q_SHARDS_DONE)
         ? `· WOOD SHARDS (${(next.stacks.wood_shard ?? 0)}/3)`

@@ -49,6 +49,8 @@ export function isPermanentKill(kind: string, id: string): boolean {
     return true;
   }
   if (id === 'royal-goose') return true;
+  // Wood Elf queen quest — blight pack must stay dead for turn-in
+  if (id.startsWith('elf-blight-wolf')) return true;
   // Props / non-combat
   if (
     kind === 'tree' ||
