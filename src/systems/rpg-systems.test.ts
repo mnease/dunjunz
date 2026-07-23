@@ -3646,6 +3646,10 @@ describe('loot boxes', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.save.stacks[CRAWLER_STARTER_BOX_ID] ?? 0).toBe(0);
+    expect(r.grantedItems.length).toBe(STARTER_BOX_CONTENTS.length);
+    expect(r.grantedItems.map((g) => g.templateId).sort()).toEqual(
+      [...STARTER_BOX_CONTENTS].sort(),
+    );
     for (const tid of STARTER_BOX_CONTENTS) {
       expect(r.save.bag.some((b) => b.templateId === tid)).toBe(true);
     }

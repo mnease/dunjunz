@@ -272,7 +272,13 @@ import {
   type RackPickerPayload,
   type TutorialWeapon,
 } from '../systems/tutorial';
-import { grantLootBoxesForAchievements } from '../systems/loot-boxes';
+import {
+  CRAWLER_STARTER_BOX_ID,
+  grantLootBoxesForAchievements,
+  isLootBoxTemplateId,
+  lootBoxTemplateId,
+  openLootBox,
+} from '../systems/loot-boxes';
 import {
   ensureGuildRackTexture,
   ensurePlayerTexture,
@@ -374,6 +380,8 @@ interface Actor {
   shadowStalker?: boolean;
   /** Display scale mult (trees). */
   displayScale?: number;
+  /** Loot crate stack template id when kind is loot_crate. */
+  lootBoxId?: string;
 }
 
 const SOLID: TileKind[] = ['wall', 'water', 'void', 'locked'];
@@ -448,6 +456,7 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   seaweed: 'seaweed',
   crab: 'crab',
   koi: 'koi',
+  loot_crate: 'loot_crate',
 };
 
 const MOBILE_HOSTILES = [
@@ -1133,6 +1142,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private panelOpen(): boolean {
+    if (document.getElementById('loot-reveal-modal')?.classList.contains('is-open')) {
+      return true;
+    }
     return (
       this.inventoryOpen ||
       this.mapzOpen ||
@@ -1626,6 +1638,8 @@ export class GameScene extends Phaser.Scene {
           'toast',
           `LOOT BOX: ${b.tier.toUpperCase()} (FROM ${b.title})`,
         );
+        // Materialize each brag box mid-room with a flash of light
+        this.spawnLootCrateDrop(lootBoxTemplateId(b.tier));
       });
     });
   }
@@ -1678,7 +1692,16 @@ export class GameScene extends Phaser.Scene {
           : 'pickup',
       );
       this.game.events.emit('inventory-refresh', this.save);
-      this.game.events.emit('toast', result.message);
+      if (result.lootReveal) {
+        // Close bag so the big reveal window is the star
+        if (this.inventoryOpen) {
+          this.game.events.emit('inventory-toggle', this.save);
+        }
+        this.removeLootCratesForTemplate(result.lootReveal.boxTemplateId);
+        this.showLootReveal(result.lootReveal);
+      } else {
+        this.game.events.emit('toast', result.message);
+      }
       return;
     }
     if (payload.uid && payload.slot) {
@@ -4851,14 +4874,19 @@ export class GameScene extends Phaser.Scene {
         ...guildMasterDialog(this.save),
         '',
         'RACK WEAPONS STAY IN THE HALL. LOANERS ONLY.',
-        'CRAWLER STARTER BOX — OPEN IT IN YOUR BAG [I].',
+        'A STARTER CRATE APPEARS IN A FLASH OF LIGHT!',
+        'WALK TO IT AND PRESS E — OR OPEN FROM BAG [I].',
         'SWORD, LEATHER SET, WOOD SHIELD. YOU EARNED IT.',
       ]);
       this.game.events.emit(
         'toast',
-        'GRADUATED — STARTER BOX ONLY · EAST DOOR OPEN',
+        'GRADUATED — STARTER CRATE · EAST DOOR OPEN',
       );
       playSfx('success');
+      // Materialize the crate mid-hall after the fanfare
+      this.time.delayedCall(280, () => {
+        this.spawnLootCrateDrop(CRAWLER_STARTER_BOX_ID);
+      });
       return;
     }
 
@@ -4870,6 +4898,191 @@ export class GameScene extends Phaser.Scene {
         `NEXT DRILL: ${need.toUpperCase()}`,
       );
     }
+  }
+
+  /**
+   * Drop a loot crate at the room's walkable center with a bright flash of light.
+   * Box must already be in save.stacks (grant first, then spawn).
+   */
+  private spawnLootCrateDrop(templateId: string): void {
+    if (!isLootBoxTemplateId(templateId)) return;
+    if ((this.save.stacks[templateId] ?? 0) <= 0) return;
+    // Avoid stacking duplicate world props for the same template
+    if (
+      this.actors.some(
+        (a) => a.alive && a.kind === 'loot_crate' && a.lootBoxId === templateId,
+      )
+    ) {
+      return;
+    }
+    const cell = this.findWalkableNearCenter();
+    if (!cell) return;
+    const pos = this.tileToWorld(cell.tx, cell.ty);
+
+    // Flash of light
+    playSfx('success');
+    sparkBurst(this, pos.x, pos.y, 0xfff8e0, 14);
+    sparkBurst(this, pos.x, pos.y, 0x7dffb3, 8);
+    if (motionAllowed()) {
+      const flash = this.add
+        .circle(pos.x, pos.y, 8, 0xffffff, 0.95)
+        .setDepth(40);
+      this.tweens.add({
+        targets: flash,
+        scale: 6,
+        alpha: 0,
+        duration: 420,
+        ease: 'Cubic.easeOut',
+        onComplete: () => flash.destroy(),
+      });
+      const ring = this.add
+        .circle(pos.x, pos.y, 12, 0xffc857, 0)
+        .setStrokeStyle(3, 0xffc857, 0.9)
+        .setDepth(39);
+      this.tweens.add({
+        targets: ring,
+        scale: 4.5,
+        alpha: 0,
+        duration: 520,
+        ease: 'Quad.easeOut',
+        onComplete: () => ring.destroy(),
+      });
+    }
+
+    const tex = this.textures.exists('loot_crate')
+      ? 'loot_crate'
+      : this.textures.exists('chest')
+        ? 'chest'
+        : 'icon_empty';
+    const sprite = this.physics.add.sprite(pos.x, pos.y, tex);
+    sprite.setScale(SPRITE_SCALE * 1.25);
+    sprite.setDepth(8);
+    sprite.setImmovable(true);
+    const body = sprite.body as Phaser.Physics.Arcade.Body;
+    body.moves = false;
+    body.enable = true;
+    body.setSize(14, 12);
+    body.setOffset(9, 14);
+    this.physics.add.collider(this.player, sprite);
+
+    // Pop-in from flash
+    sprite.setAlpha(0);
+    sprite.setScale(SPRITE_SCALE * 0.2);
+    this.tweens.add({
+      targets: sprite,
+      alpha: 1,
+      scale: SPRITE_SCALE * 1.25,
+      duration: 280,
+      ease: 'Back.easeOut',
+    });
+
+    const actor: Actor = {
+      sprite,
+      kind: 'loot_crate',
+      id: `loot-crate-${templateId}-${Date.now()}`,
+      hp: 99,
+      maxHp: 99,
+      hurtCooldown: 0,
+      aiTimer: 0,
+      alive: true,
+      interactive: true,
+      lootBoxId: templateId,
+      displayScale: 1.25,
+    };
+    this.actors.push(actor);
+    this.game.events.emit('toast', 'A LOOT CRATE MATERIALIZES!');
+  }
+
+  private findWalkableNearCenter(): { tx: number; ty: number } | null {
+    const h = this.tileGrid.length;
+    const w = this.tileGrid[0]?.length ?? 0;
+    if (!h || !w) return null;
+    const cx = Math.floor(w / 2);
+    const cy = Math.floor(h / 2);
+    const blocked = new Set(['wall', 'water', 'void', 'locked', 'lava']);
+    // Spiral search from center
+    for (let r = 0; r < Math.max(w, h); r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+          const tx = cx + dx;
+          const ty = cy + dy;
+          const k = this.tileGrid[ty]?.[tx];
+          if (!k || blocked.has(k)) continue;
+          // Prefer empty of solid actors
+          const pos = this.tileToWorld(tx, ty);
+          const occupied = this.actors.some(
+            (a) =>
+              a.alive &&
+              a.sprite?.active &&
+              Phaser.Math.Distance.Between(a.sprite.x, a.sprite.y, pos.x, pos.y) <
+                TILE * SCALE * 0.45,
+          );
+          if (!occupied) return { tx, ty };
+        }
+      }
+    }
+    return { tx: cx, ty: cy };
+  }
+
+  private openWorldLootCrate(actor: Actor): void {
+    const templateId = actor.lootBoxId;
+    if (!templateId || !isLootBoxTemplateId(templateId)) {
+      this.game.events.emit('toast', 'EMPTY CRATE');
+      this.destroyActor(actor);
+      return;
+    }
+    if ((this.save.stacks[templateId] ?? 0) <= 0) {
+      this.game.events.emit('toast', 'ALREADY OPENED');
+      this.destroyActor(actor);
+      return;
+    }
+    const r = openLootBox(this.save, templateId);
+    if (!r.ok) {
+      playSfx('error');
+      this.game.events.emit('toast', r.reason);
+      return;
+    }
+    this.save = syncDerivedStats(r.save);
+    writeSave(this.save);
+    this.emitHud();
+    // Flash on open
+    const sx = actor.sprite.x;
+    const sy = actor.sprite.y;
+    sparkBurst(this, sx, sy, 0xffc857, 12);
+    sparkBurst(this, sx, sy, 0xffffff, 6);
+    this.destroyActor(actor);
+    this.showLootReveal({
+      boxName: r.boxName,
+      boxTemplateId: r.boxTemplateId,
+      items: r.grantedItems,
+    });
+  }
+
+  private showLootReveal(payload: {
+    boxName: string;
+    boxTemplateId: string;
+    items: { templateId: string; name: string; qty?: number }[];
+  }): void {
+    window.dispatchEvent(
+      new CustomEvent('dunjunz-loot-reveal', { detail: payload }),
+    );
+  }
+
+  private removeLootCratesForTemplate(templateId: string): void {
+    for (const a of [...this.actors]) {
+      if (a.alive && a.kind === 'loot_crate' && a.lootBoxId === templateId) {
+        this.destroyActor(a);
+      }
+    }
+  }
+
+  private destroyActor(actor: Actor): void {
+    actor.alive = false;
+    if (actor.sprite?.active) {
+      actor.sprite.destroy();
+    }
+    this.actors = this.actors.filter((a) => a !== actor);
   }
 
   /** After tutorial unlocks L→door, refresh wall colliders for the east mouth. */
@@ -4918,6 +5131,11 @@ export class GameScene extends Phaser.Scene {
 
     if (best.kind === 'chest') {
       this.openTreasureChest(best);
+      return;
+    }
+
+    if (best.kind === 'loot_crate') {
+      this.openWorldLootCrate(best);
       return;
     }
 

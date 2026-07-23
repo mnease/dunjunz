@@ -65,7 +65,9 @@ export type EntityKind =
   /** Beach crab — non-combatant crawl NPC. */
   | 'crab'
   /** Pond koi — non-combatant swimmer (ponds only). */
-  | 'koi';
+  | 'koi'
+  /** Loot crate drop — mid-room gift; E to open big reveal. */
+  | 'loot_crate';
 
 /** Non-human best friend companion (randomized per playthrough). */
 export type BestBudId =
@@ -166,6 +168,8 @@ export interface EntityDef {
    * Big meadow trees use ~2.2–2.8.
    */
   scale?: number;
+  /** Loot crate stack template id (crawler_starter_box / loot_box_*). */
+  lootBoxId?: string;
 }
 
 /** Side chamber content role (P0 world grammar). */

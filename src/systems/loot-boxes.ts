@@ -200,13 +200,23 @@ function pickFromPool(
   return out;
 }
 
+export interface LootRevealItem {
+  templateId: string;
+  name: string;
+  qty?: number;
+}
+
 export type OpenLootBoxResult =
   | {
       ok: true;
       save: SaveData;
       message: string;
+      /** Display names (with qty suffix). */
       granted: string[];
+      /** Parallel template ids for big-icon reveal UI. */
+      grantedItems: LootRevealItem[];
       boxName: string;
+      boxTemplateId: string;
     }
   | { ok: false; save: SaveData; reason: string };
 
@@ -248,13 +258,16 @@ export function openLootBox(
   }
 
   const grantedNames: string[] = [];
+  const grantedItems: LootRevealItem[] = [];
   for (const tid of grants) {
     const t = getTemplate(tid);
     if (t.stackable || t.kind === 'consumable') {
+      const qty = tid === 'potion' ? 2 : 1;
       const st = { ...next.stacks };
-      st[tid] = (st[tid] ?? 0) + (tid === 'potion' ? 2 : 1);
+      st[tid] = (st[tid] ?? 0) + qty;
       next = { ...next, stacks: st };
-      grantedNames.push(t.name + (tid === 'potion' ? ' x2' : ''));
+      grantedNames.push(t.name + (qty > 1 ? ` x${qty}` : ''));
+      grantedItems.push({ templateId: tid, name: t.name, qty });
     } else {
       const minted = mintItem(next, tid, rarity, 0);
       // Permanent loot — never strip as guild rack loaners
@@ -264,6 +277,7 @@ export function openLootBox(
         bag: minted.save.bag.map((b) => (b.uid === keep.uid ? keep : b)),
       };
       grantedNames.push(t.name);
+      grantedItems.push({ templateId: tid, name: t.name });
     }
   }
 
@@ -271,7 +285,9 @@ export function openLootBox(
     ok: true,
     save: next,
     boxName,
+    boxTemplateId: templateId,
     granted: grantedNames,
+    grantedItems,
     message: `OPENED ${boxName} — ${grantedNames.join(', ')}`,
   };
 }

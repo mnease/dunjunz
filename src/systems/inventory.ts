@@ -21,7 +21,11 @@ import { canHeroEquipGear, effectiveGearDef } from './class-gear';
 // class-gear registers compare-hook on load
 import { igniteLight, isLightItemId } from './lighting';
 import { isScrollOrTomeId, useScrollOrTome } from './scrolls';
-import { isLootBoxTemplateId, openLootBox } from './loot-boxes';
+import {
+  isLootBoxTemplateId,
+  openLootBox,
+  type LootRevealItem,
+} from './loot-boxes';
 
 export {
   computePlayerDamage,
@@ -241,7 +245,17 @@ export function listInventory(
 }
 
 export type UseItemResult =
-  | { ok: true; save: SaveData; message: string }
+  | {
+      ok: true;
+      save: SaveData;
+      message: string;
+      /** Present when a loot box was opened — drives big reveal UI. */
+      lootReveal?: {
+        boxName: string;
+        boxTemplateId: string;
+        items: LootRevealItem[];
+      };
+    }
   | { ok: false; save: SaveData; reason: string };
 
 export type EquipResult =
@@ -270,6 +284,11 @@ export function useInventoryItem(
       ok: true,
       save: syncDerivedStats(r.save),
       message: r.message,
+      lootReveal: {
+        boxName: r.boxName,
+        boxTemplateId: r.boxTemplateId,
+        items: r.grantedItems,
+      },
     };
   }
   if (templateId === 'potion') {

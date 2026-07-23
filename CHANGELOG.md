@@ -13,6 +13,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Loot crate flash + big reveal** — tutorial graduate and brag boxes materialize mid-room in a **flash of light**. Open with **E** on the crate (or bag **U**) to a **large window** with big item icons of everything inside.
 - **Race-first beach identity** — pick ancestry (all 10 races) then **Male / Female** portraits of that race. Shared `drawBodyBase` previews (no more generic stump). Height bands: tall elf, medium human/orc, short dwarf (long beard), tiny gnome/halfling; half-orc green skin, etc. Cosmetic until L25 ritual.
 - **Water body kinds** — standing water auto-classifies as **ocean** (beach foam), **pond** (calm teal + lily pads + swimming **koi**), or **river** (flowing current strips). Meadow SE pond, hollow koi pond, and a creek through woodz path→edge.
 - **Lightning chain upgrades** — lightning staff chain hops scale with **FORJE ENHANCE** (+0 path only, +1/+2/+3 = 1/2/3 hops). Craft lightning staff at the forje; enhance costs extra spark.

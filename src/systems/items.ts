@@ -348,7 +348,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   crawler_starter_box: {
     id: 'crawler_starter_box',
     name: 'CRAWLER STARTER BOX',
-    blurb: 'Bronze kit. Sword, leather set, wood shield. [U] open.',
+    blurb: 'Bronze kit. Sword, leather set, wood shield. E on crate or bag [U].',
     kind: 'consumable',
     usable: true,
     stackable: true,
@@ -356,7 +356,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   loot_box_bronze: {
     id: 'loot_box_bronze',
     name: 'BRONZE LOOT BOX',
-    blurb: 'Common haul. Basic gear. [U] open.',
+    blurb: 'Common haul. Basic gear. E on crate or bag [U].',
     kind: 'consumable',
     usable: true,
     stackable: true,
@@ -364,7 +364,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   loot_box_silver: {
     id: 'loot_box_silver',
     name: 'SILVER LOOT BOX',
-    blurb: 'Uncommon haul. Solid gear. [U] open.',
+    blurb: 'Uncommon haul. Solid gear. E on crate or bag [U].',
     kind: 'consumable',
     usable: true,
     stackable: true,
@@ -372,7 +372,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   loot_box_gold: {
     id: 'loot_box_gold',
     name: 'GOLD LOOT BOX',
-    blurb: 'Rare haul. Fancy gear. [U] open.',
+    blurb: 'Rare haul. Fancy gear. E on crate or bag [U].',
     kind: 'consumable',
     usable: true,
     stackable: true,
@@ -380,7 +380,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   loot_box_platinum: {
     id: 'loot_box_platinum',
     name: 'PLATINUM LOOT BOX',
-    blurb: 'Epic haul. Serious gear. [U] open.',
+    blurb: 'Epic haul. Serious gear. E on crate or bag [U].',
     kind: 'consumable',
     usable: true,
     stackable: true,
@@ -388,7 +388,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   loot_box_diamond: {
     id: 'loot_box_diamond',
     name: 'DIAMOND LOOT BOX',
-    blurb: 'Legendary haul. Ridiculous gear. [U] open.',
+    blurb: 'Legendary haul. Ridiculous gear. E on crate or bag [U].',
     kind: 'consumable',
     usable: true,
     stackable: true,

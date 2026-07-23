@@ -947,7 +947,8 @@ export function ensureBuddyTexture(
   return key;
 }
 
-function drawItemIcon(
+/** Item icon art @ 32×32 — also used by loot-reveal HTML modal (scaled up). */
+export function drawItemIcon(
   ctx: CanvasRenderingContext2D,
   itemId: string,
 ): void {
@@ -2370,6 +2371,18 @@ export function generateTextures(scene: Phaser.Scene): void {
     shadedBlock(ctx, '#a06830', '#c9a227', '#6b4423', 4, 8, 24, 8);
     block(ctx, '#ffc857', '#8a6820', 14, 14, 4, 6);
     spark(ctx, 15, 15);
+  });
+
+  // Mid-room loot crate drop (flash spawn) — bigger lid + glow band
+  canvasTex(scene, 'loot_crate', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, 'rgba(255,200,87,0.2)', 4, 26, 24, 4);
+    shadedBlock(ctx, '#8a5a2a', '#c97b3a', '#4a3010', 5, 12, 22, 14);
+    shadedBlock(ctx, '#c97b3a', '#e8a050', '#6b4423', 4, 7, 24, 9);
+    fill(ctx, '#c9a227', 5, 14, 22, 3);
+    block(ctx, '#ffc857', '#8a6820', 13, 15, 6, 5);
+    fill(ctx, '#7dffb3', 10, 20, 12, 2);
+    spark(ctx, 15, 9, '#ffffff');
+    spark(ctx, 12, 11, '#fff3a0');
   });
 
   canvasTex(scene, 'mapz', ART_RES, ART_RES, (ctx) => {
