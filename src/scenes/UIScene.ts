@@ -222,11 +222,17 @@ export class UIScene extends Phaser.Scene {
   private static readonly BAG_CELL = 68;
   private static readonly BAG_GAP = 12;
   /**
-   * Icon display scales — calibrated for 32-author craft; keep on-screen size
-   * stable when textures are 64-bit (ART_RES).
+   * All craft textures are authored at ART_BASE then upscaled to ART_RES (2×).
+   * Multiply legacy setScale values by TEX_DENSITY so on-screen size stays stable.
+   * Never hardcode setScale(1.15/1.5/2) on icons/frames without this factor —
+   * that is what broke equip slots after the 64-bit pass.
    */
+  private static readonly TEX_DENSITY = ART_BASE / ART_RES; // 0.5 at 64-bit
   private static readonly BAG_ICON_SCALE = 2.05 * (ART_BASE / ART_RES);
   private static readonly UI_ICON_SCALE = 1.35 * (ART_BASE / ART_RES);
+  private static readonly EQUIP_FRAME_SCALE = 1.15 * (ART_BASE / ART_RES);
+  private static readonly EQUIP_ICON_SCALE = 1.5 * (ART_BASE / ART_RES);
+  private static readonly RACK_ICON_SCALE = 2.0 * (ART_BASE / ART_RES);
 
   /**
    * Inventory layout (Comb + Pollen pass-2).
@@ -1244,12 +1250,12 @@ export class UIScene extends Phaser.Scene {
       const y = startY + row * rowH;
       this.invSlotFrames[slot] = this.add
         .image(x, y, 'slot_frame')
-        .setScale(1.15)
+        .setScale(UIScene.EQUIP_FRAME_SCALE)
         .setScrollFactor(0)
         .setDepth(d + 2);
       this.invSlotIcons[slot] = this.add
         .image(x, y, 'icon_empty')
-        .setScale(1.5)
+        .setScale(UIScene.EQUIP_ICON_SCALE)
         .setScrollFactor(0)
         .setDepth(d + 3);
       this.invSlotLabels[slot] = this.add
@@ -2424,7 +2430,7 @@ export class UIScene extends Phaser.Scene {
       const tex = this.textures.exists(iconKey) ? iconKey : 'icon_empty';
       const icon = this.add
         .image(x, y - 4, tex)
-        .setScale(2.0)
+        .setScale(UIScene.RACK_ICON_SCALE)
         .setScrollFactor(0);
       this.rackLayer!.add(icon);
       this.rackPieces.push(icon);

@@ -11,6 +11,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ## [Unreleased]
 
+### Fixed
+
+- **Equip slot frames after 64-bit textures** — inventory equip boxes used pre-upgrade `setScale(1.15/1.5)` on 2× textures, so frames/icons were ~double size and stacked over the doll. Scales now use `ART_BASE/ART_RES` (same pattern as bag icons).
+
 ### Added
 
 - **Visual detail pass** — richer cobbles/moss/grass blades/flowers, deeper water glints, denser tree canopies, sharper faces, and micro-grit on every upscaled 64-bit texture after draw.
