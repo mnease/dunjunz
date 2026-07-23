@@ -13,6 +13,8 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **64-bit craft graphics** — world sprites/tiles render at **64×64** (was 32); denser sampling on screen while world footprint stays the same.
+- **Four seasons + weather** — calendar season (spring/summer/autumn/winter) with rotating outdoor weather: **sunny, rainy, overcast**, and in winter **snowy & icy**. Sky tint, ground tint, cloud/sun shadows, and rain/snow/sleet particles on surface lands.
 - **Inventory shows race** — character details plate lists **RACE** (and class) with coins/HP/def.
 - **Mapz major upgrade** — rooms scale up (72–148px, was fixed 56), parchment backdrop, compass, land terrain overlays, feature icons (beach/guild/cave/boss/chest/shop/forje/water/stairs…), thicker corridors, room list panel, longer labels.
 - **Loot crate flash + big reveal** — tutorial graduate and brag boxes materialize mid-room in a **flash of light**. Open with **E** on the crate (or bag **U**) to a **large window** with big item icons of everything inside.

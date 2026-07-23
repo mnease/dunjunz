@@ -18,12 +18,15 @@ export function formatGameVersion(version: string = GAME_VERSION): string {
 }
 /**
  * Logical tile step in the room grid (world units before display scale).
- * Textures render at ART_RES (32) for 32-bit craft density; sprites use
- * SPRITE_SCALE so they still occupy TILE×SCALE world pixels.
+ * Textures render at ART_RES (64-bit craft density); authoring unit is ART_BASE
+ * (legacy 32px drawings are scaled 2× into ART_RES for denser on-screen sampling).
+ * SPRITE_SCALE keeps sprites at TILE×SCALE world pixels.
  */
 export const TILE = 16;
-/** Canvas resolution for map tiles, avatar, enemies (dense 32×32 craft). */
-export const ART_RES = 32;
+/** Authoring unit for procedural pixel draws (historical 32-bit craft). */
+export const ART_BASE = 32;
+/** Canvas resolution for map tiles, avatar, enemies (64-bit density). */
+export const ART_RES = 64;
 export const SCALE = 3;
 /** Phaser scale so an ART_RES×ART_RES texture covers TILE×SCALE world pixels. */
 export const SPRITE_SCALE = (TILE * SCALE) / ART_RES;

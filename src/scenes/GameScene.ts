@@ -166,6 +166,11 @@ import {
   makeCloudField,
   type CloudBlob,
 } from '../systems/surface-sun';
+import {
+  isWeatherRoom,
+  resolveSeasonWeather,
+  type SeasonWeatherState,
+} from '../systems/seasons-weather';
 import { tickCombatBuffs } from '../systems/scrolls';
 import {
   bestBudBanter,
@@ -600,6 +605,11 @@ export class GameScene extends Phaser.Scene {
   }[] = [];
   /** Live water body kinds for this room (key "x,y"). */
   private waterBodies = new Map<string, WaterBodyKind>();
+  /** Calendar season + rotating weather (outdoor surface). */
+  private seasonWeather: SeasonWeatherState = resolveSeasonWeather();
+  private weatherParticles: Phaser.GameObjects.Image[] = [];
+  private weatherSpawnAcc = 0;
+  private lastWeatherToastKey = '';
   private animTime = 0;
   private ambientFrame = 0;
   /** Enemy + player projectiles (hard mode / ranged weapons). */
@@ -2101,9 +2111,86 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private clearWeatherParticles(): void {
+    for (const p of this.weatherParticles) {
+      if (p?.active) p.destroy();
+    }
+    this.weatherParticles = [];
+    this.weatherSpawnAcc = 0;
+  }
+
+  /**
+   * Rain / snow / sleet particles for outdoor season weather.
+   */
+  private updateWeatherFx(delta: number): void {
+    if (!this.room || !isWeatherRoom(this.room)) {
+      if (this.weatherParticles.length) this.clearWeatherParticles();
+      return;
+    }
+    if (this.panelOpen() || this.paused) return;
+    const sw = this.seasonWeather;
+    if (sw.precip === 'none') {
+      if (this.weatherParticles.length) this.clearWeatherParticles();
+      return;
+    }
+    if (loadSettings().reduceMotion) return;
+
+    const rate =
+      sw.precip === 'rain' ? 0.085 : sw.precip === 'snow' ? 0.045 : 0.06;
+    this.weatherSpawnAcc += delta * rate;
+    const tex = this.textures.exists('particle') ? 'particle' : 'particle-hit';
+    while (this.weatherSpawnAcc >= 1 && this.weatherParticles.length < 90) {
+      this.weatherSpawnAcc -= 1;
+      const x = Phaser.Math.Between(8, GAME_W - 8);
+      const y = HUD_H - Phaser.Math.Between(0, 40);
+      const img = this.add.image(x, y, tex).setScrollFactor(0).setDepth(85);
+      if (sw.precip === 'rain') {
+        img.setTint(0x88b0d8);
+        img.setAlpha(0.55);
+        img.setScale(0.35, 1.1);
+        img.setData('vx', Phaser.Math.FloatBetween(-20, -8));
+        img.setData('vy', Phaser.Math.FloatBetween(280, 420));
+      } else if (sw.precip === 'snow') {
+        img.setTint(0xffffff);
+        img.setAlpha(0.75);
+        img.setScale(Phaser.Math.FloatBetween(0.45, 0.85));
+        img.setData('vx', Phaser.Math.FloatBetween(-30, 30));
+        img.setData('vy', Phaser.Math.FloatBetween(35, 70));
+      } else {
+        // sleet / icy mix
+        img.setTint(0xc8e0f0);
+        img.setAlpha(0.65);
+        img.setScale(0.4, 0.85);
+        img.setData('vx', Phaser.Math.FloatBetween(-40, -10));
+        img.setData('vy', Phaser.Math.FloatBetween(160, 260));
+      }
+      this.weatherParticles.push(img);
+    }
+
+    const dt = delta / 1000;
+    for (let i = this.weatherParticles.length - 1; i >= 0; i--) {
+      const p = this.weatherParticles[i]!;
+      if (!p.active) {
+        this.weatherParticles.splice(i, 1);
+        continue;
+      }
+      const vx = (p.getData('vx') as number) ?? 0;
+      const vy = (p.getData('vy') as number) ?? 100;
+      p.x += vx * dt;
+      p.y += vy * dt;
+      if (sw.precip === 'snow') {
+        p.x += Math.sin(this.animTime / 400 + p.y * 0.02) * 0.4;
+      }
+      if (p.y > GAME_H + 20 || p.x < -20 || p.x > GAME_W + 20) {
+        p.destroy();
+        this.weatherParticles.splice(i, 1);
+      }
+    }
+  }
+
   /**
    * Bright outdoor: soft dark cookies for sun-cast tree shadows + drifting clouds.
-   * Clouds are never drawn — only their shade.
+   * Clouds are never drawn — only their shade. Strength follows season weather.
    */
   private refreshSurfaceShadows(delta: number): void {
     if (!this.sys.isActive() || this.leavingToTitle) return;
@@ -2162,10 +2249,11 @@ export class GameScene extends Phaser.Scene {
         GAME_W,
         GAME_H - HUD_H,
       );
+      const cloudMul = this.seasonWeather.cloudMul;
       for (const c of clouds) {
         const diam = c.radius * 2;
         cookie.setTint(0x0a1420);
-        cookie.setAlpha(c.alpha);
+        cookie.setAlpha(Math.min(0.55, c.alpha * cloudMul));
         cookie.setScale(diam / 256, (diam * 0.55) / 256);
         // Offset Y by HUD so shade sits on playfield
         rt.draw(cookie, c.x, c.y + HUD_H);
@@ -2185,7 +2273,9 @@ export class GameScene extends Phaser.Scene {
         const sx = sh.x - cam.scrollX;
         const sy = sh.y - cam.scrollY;
         cookie.setTint(0x0a1420);
-        cookie.setAlpha(sh.alpha);
+        cookie.setAlpha(
+          Math.min(0.5, sh.alpha * this.seasonWeather.sunShadowMul),
+        );
         cookie.setScale((sh.rx * 2) / 256, (sh.ry * 2) / 256);
         rt.draw(cookie, sx, sy);
       }
@@ -2517,13 +2607,25 @@ export class GameScene extends Phaser.Scene {
     this.ambientFrame = 0;
     this.waterBodies = classifyRoomWater(room.id, this.tileGrid);
 
-    // Depth personality: darker tiles + void as you go down basements
+    // Depth personality / outdoor season sky
     const land = room.land ?? 'surface';
-    this.cameras.main.setBackgroundColor(
-      room.id === BEACH_START_ID
-        ? 0x87b8d8 // soft coastal sky
-        : depthBackdropColor(depth, land === 'surface' ? 'dunjunz' : land),
-    );
+    const weatherHere = isWeatherRoom(room);
+    this.seasonWeather = resolveSeasonWeather();
+    this.clearWeatherParticles();
+    if (weatherHere) {
+      this.cameras.main.setBackgroundColor(this.seasonWeather.skyColor);
+      const toastKey = this.seasonWeather.label;
+      if (toastKey !== this.lastWeatherToastKey) {
+        this.lastWeatherToastKey = toastKey;
+        this.time.delayedCall(350, () => {
+          this.game.events.emit('toast', toastKey);
+        });
+      }
+    } else {
+      this.cameras.main.setBackgroundColor(
+        depthBackdropColor(depth, land === 'surface' ? 'dunjunz' : land),
+      );
+    }
 
     for (let y = 0; y < VIEW_TILES_H; y++) {
       for (let x = 0; x < VIEW_TILES_W; x++) {
@@ -2562,8 +2664,24 @@ export class GameScene extends Phaser.Scene {
           .setDepth(0);
         img.setData('mapTile', true);
         img.setData('tileY', y);
-        // Beach stays bright sand — skip dungeon depth crush
-        if (!onBeach) {
+        // Outdoor weather rooms: season ground tint; dungeons: depth crush
+        if (weatherHere) {
+          if (
+            kind === 'grass' ||
+            kind === 'dirt' ||
+            kind === 'sand' ||
+            (kind === 'floor' && onBeach)
+          ) {
+            const gt = this.seasonWeather.groundTint;
+            if (gt !== 0xffffff) img.setTint(gt);
+          }
+          // Icy / snowy: cool sheen on water
+          if (kind === 'water' && this.seasonWeather.weather === 'icy') {
+            img.setTint(0xa8d0f0);
+          } else if (kind === 'water' && this.seasonWeather.weather === 'snowy') {
+            img.setTint(0xc0d8e8);
+          }
+        } else if (!onBeach) {
           const tint = depthTileTint(
             depth,
             kind,
@@ -6039,6 +6157,7 @@ export class GameScene extends Phaser.Scene {
       this.updateShadowAmbush(delta);
       this.refreshLighting();
       this.refreshSurfaceShadows(delta);
+      this.updateWeatherFx(delta);
     } else if (!this.leavingToTitle) {
       // Still refresh veil when paused panels so lights don't freeze wrong
       this.refreshLighting();

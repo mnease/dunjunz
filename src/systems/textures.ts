@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { ART_RES, COLORS } from '../config';
+import { ART_BASE, ART_RES, COLORS } from '../config';
 import {
   BARE_APPEARANCE,
   buddyTextureKey,
@@ -67,6 +67,11 @@ function canvasTex(
   if (!ctx) return;
   // Crisp pixels — no smoothing when we later scale
   ctx.imageSmoothingEnabled = false;
+  // 64-bit craft: art authored in ART_BASE (32) space is scaled into ART_RES
+  const artScale = ART_RES / ART_BASE;
+  if (w === ART_RES && h === ART_RES && artScale !== 1) {
+    ctx.scale(artScale, artScale);
+  }
   draw(ctx);
   scene.textures.addCanvas(key, canvas);
 }
@@ -1559,13 +1564,13 @@ export function ensureGuildRackTexture(
 }
 
 export function generateTextures(scene: Phaser.Scene): void {
-  // —— Map tiles @ ART_RES (organic variants break square-grid read) ——
+  // —— Map tiles @ ART_BASE (organic variants break square-grid read) ——
   for (let v = 0; v < 3; v++) {
     const suf = v === 0 ? '' : `-${String.fromCharCode(97 + v)}`; // '', '-b', '-c'
     canvasTex(scene, `tile-floor${suf}`, ART_RES, ART_RES, (ctx) => {
       drawFloorTile(
         ctx,
-        ART_RES,
+        ART_BASE,
         hex(COLORS.floor),
         hex(COLORS.floorAlt),
         '#1a1528',
@@ -1575,7 +1580,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     canvasTex(scene, `tile-wall${suf}`, ART_RES, ART_RES, (ctx) => {
       drawBrickTile(
         ctx,
-        ART_RES,
+        ART_BASE,
         hex(COLORS.wallDark),
         hex(COLORS.wall),
         '#2a2438',
@@ -1586,7 +1591,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     canvasTex(scene, `tile-grass${suf}`, ART_RES, ART_RES, (ctx) => {
       drawGrassTile(
         ctx,
-        ART_RES,
+        ART_BASE,
         hex(COLORS.grass),
         hex(COLORS.grassAlt),
         '#6ad48a',
@@ -1594,27 +1599,27 @@ export function generateTextures(scene: Phaser.Scene): void {
       );
     });
     canvasTex(scene, `tile-dirt${suf}`, ART_RES, ART_RES, (ctx) => {
-      drawDirtTile(ctx, ART_RES, hex(COLORS.dirt), v);
+      drawDirtTile(ctx, ART_BASE, hex(COLORS.dirt), v);
     });
   }
 
   canvasTex(scene, 'tile-sand', ART_RES, ART_RES, (ctx) => {
-    drawSandTile(ctx, ART_RES, hex(COLORS.sand), hex(COLORS.sandDark));
+    drawSandTile(ctx, ART_BASE, hex(COLORS.sand), hex(COLORS.sandDark));
   });
 
   canvasTex(scene, 'tile-sand-wall', ART_RES, ART_RES, (ctx) => {
-    drawSandWallTile(ctx, ART_RES);
+    drawSandWallTile(ctx, ART_BASE);
   });
 
   // Legacy water keys = ocean (beach)
   canvasTex(scene, 'tile-water', ART_RES, ART_RES, (ctx) => {
-    drawWaterTile(ctx, ART_RES, hex(COLORS.water), 0, 'ocean');
+    drawWaterTile(ctx, ART_BASE, hex(COLORS.water), 0, 'ocean');
   });
   canvasTex(scene, 'tile-water-b', ART_RES, ART_RES, (ctx) => {
-    drawWaterTile(ctx, ART_RES, hex(COLORS.water), 1, 'ocean');
+    drawWaterTile(ctx, ART_BASE, hex(COLORS.water), 1, 'ocean');
   });
   canvasTex(scene, 'tile-water-c', ART_RES, ART_RES, (ctx) => {
-    drawWaterTile(ctx, ART_RES, hex(COLORS.water), 2, 'ocean');
+    drawWaterTile(ctx, ART_BASE, hex(COLORS.water), 2, 'ocean');
   });
   // Explicit ocean / pond / river sets
   for (const [style, prefix] of [
@@ -1623,34 +1628,34 @@ export function generateTextures(scene: Phaser.Scene): void {
     ['river', 'tile-water-river'],
   ] as const) {
     canvasTex(scene, prefix, ART_RES, ART_RES, (ctx) => {
-      drawWaterTile(ctx, ART_RES, hex(COLORS.water), 0, style);
+      drawWaterTile(ctx, ART_BASE, hex(COLORS.water), 0, style);
     });
     canvasTex(scene, `${prefix}-b`, ART_RES, ART_RES, (ctx) => {
-      drawWaterTile(ctx, ART_RES, hex(COLORS.water), 1, style);
+      drawWaterTile(ctx, ART_BASE, hex(COLORS.water), 1, style);
     });
     if (style === 'ocean') {
       canvasTex(scene, `${prefix}-c`, ART_RES, ART_RES, (ctx) => {
-        drawWaterTile(ctx, ART_RES, hex(COLORS.water), 2, style);
+        drawWaterTile(ctx, ART_BASE, hex(COLORS.water), 2, style);
       });
     }
   }
 
   canvasTex(scene, 'tile-lava', ART_RES, ART_RES, (ctx) => {
-    drawLavaTile(ctx, ART_RES, hex(COLORS.lava), 0);
+    drawLavaTile(ctx, ART_BASE, hex(COLORS.lava), 0);
   });
 
   canvasTex(scene, 'tile-lava-b', ART_RES, ART_RES, (ctx) => {
-    drawLavaTile(ctx, ART_RES, hex(COLORS.lava), 1);
+    drawLavaTile(ctx, ART_BASE, hex(COLORS.lava), 1);
   });
 
   canvasTex(scene, 'tile-door', ART_RES, ART_RES, (ctx) => {
     // floor behind so open sides read as passage
-    drawFloorTile(ctx, ART_RES, hex(COLORS.floor), hex(COLORS.floorAlt), '#1a1528');
+    drawFloorTile(ctx, ART_BASE, hex(COLORS.floor), hex(COLORS.floorAlt), '#1a1528');
     // stone arch frame
-    shadedBlock(ctx, '#6a5a40', '#9a8a60', '#3a3018', 0, 0, ART_RES, 5);
-    shadedBlock(ctx, '#6a5a40', '#9a8a60', '#3a3018', 0, 0, 5, ART_RES);
-    shadedBlock(ctx, '#6a5a40', '#9a8a60', '#3a3018', ART_RES - 5, 0, 5, ART_RES);
-    grit(ctx, 'rgba(0,0,0,0.2)', 0, 0, ART_RES, 5, 4, 0);
+    shadedBlock(ctx, '#6a5a40', '#9a8a60', '#3a3018', 0, 0, ART_BASE, 5);
+    shadedBlock(ctx, '#6a5a40', '#9a8a60', '#3a3018', 0, 0, 5, ART_BASE);
+    shadedBlock(ctx, '#6a5a40', '#9a8a60', '#3a3018', ART_BASE - 5, 0, 5, ART_BASE);
+    grit(ctx, 'rgba(0,0,0,0.2)', 0, 0, ART_BASE, 5, 4, 0);
     // wood leaves with grain
     shadedBlock(ctx, '#8b6914', '#d4b040', '#4a3010', 5, 5, 10, 25);
     shadedBlock(ctx, '#8b6914', '#d4b040', '#4a3010', 17, 5, 10, 25);
@@ -1678,10 +1683,10 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   canvasTex(scene, 'tile-locked', ART_RES, ART_RES, (ctx) => {
-    drawFloorTile(ctx, ART_RES, hex(COLORS.floor), hex(COLORS.floorAlt), '#1a1528');
-    shadedBlock(ctx, '#4a3820', '#7a5a30', '#2a1c10', 0, 0, ART_RES, 5);
-    shadedBlock(ctx, '#4a3820', '#7a5a30', '#2a1c10', 0, 0, 5, ART_RES);
-    shadedBlock(ctx, '#4a3820', '#7a5a30', '#2a1c10', ART_RES - 5, 0, 5, ART_RES);
+    drawFloorTile(ctx, ART_BASE, hex(COLORS.floor), hex(COLORS.floorAlt), '#1a1528');
+    shadedBlock(ctx, '#4a3820', '#7a5a30', '#2a1c10', 0, 0, ART_BASE, 5);
+    shadedBlock(ctx, '#4a3820', '#7a5a30', '#2a1c10', 0, 0, 5, ART_BASE);
+    shadedBlock(ctx, '#4a3820', '#7a5a30', '#2a1c10', ART_BASE - 5, 0, 5, ART_BASE);
     // heavy door slab
     shadedBlock(ctx, '#5a3d1a', '#8a6230', '#3a2810', 5, 5, 22, 25);
     dither(ctx, '#5a3d1a', '#4a3014', 6, 6, 20, 23, 1);
@@ -1702,10 +1707,10 @@ export function generateTextures(scene: Phaser.Scene): void {
 
   canvasTex(scene, 'tile-stairs', ART_RES, ART_RES, (ctx) => {
     // Dungeon stair shaft (purple stone)
-    fill(ctx, '#1a1020', 0, 0, ART_RES, ART_RES);
-    dither(ctx, '#1a1020', '#0a0810', 0, 0, ART_RES, ART_RES, 0);
-    shadedBlock(ctx, '#3a3050', '#5a4a70', '#1a1428', 0, 0, 3, ART_RES);
-    shadedBlock(ctx, '#3a3050', '#5a4a70', '#1a1428', ART_RES - 3, 0, 3, ART_RES);
+    fill(ctx, '#1a1020', 0, 0, ART_BASE, ART_BASE);
+    dither(ctx, '#1a1020', '#0a0810', 0, 0, ART_BASE, ART_BASE, 0);
+    shadedBlock(ctx, '#3a3050', '#5a4a70', '#1a1428', 0, 0, 3, ART_BASE);
+    shadedBlock(ctx, '#3a3050', '#5a4a70', '#1a1428', ART_BASE - 3, 0, 3, ART_BASE);
     for (let i = 0; i < 7; i++) {
       const y = 1 + i * 4;
       const inset = Math.floor(i * 0.7);
@@ -1717,11 +1722,11 @@ export function generateTextures(scene: Phaser.Scene): void {
         '#2a2038',
         3 + inset,
         y,
-        ART_RES - 6 - inset * 2,
+        ART_BASE - 6 - inset * 2,
         3,
       );
-      fill(ctx, '#4a3a60', 3 + inset, y + 3, ART_RES - 6 - inset * 2, 1);
-      grit(ctx, 'rgba(0,0,0,0.2)', 4 + inset, y, ART_RES - 8 - inset * 2, 2, 4, i);
+      fill(ctx, '#4a3a60', 3 + inset, y + 3, ART_BASE - 6 - inset * 2, 1);
+      grit(ctx, 'rgba(0,0,0,0.2)', 4 + inset, y, ART_BASE - 8 - inset * 2, 2, 4, i);
     }
     fill(ctx, '#ff6b9d', 11, 1, 10, 3);
     fill(ctx, '#ffb0c8', 13, 2, 6, 1);
@@ -1730,8 +1735,8 @@ export function generateTextures(scene: Phaser.Scene): void {
 
   // Surface cave mouth (meadow dungeon entrance) — rock arch + dark maw
   canvasTex(scene, 'tile-cave-mouth', ART_RES, ART_RES, (ctx) => {
-    fill(ctx, '#2f6b45', 0, 0, ART_RES, ART_RES); // grass around
-    dither(ctx, '#2f6b45', '#1e4a30', 0, 0, ART_RES, ART_RES, 0);
+    fill(ctx, '#2f6b45', 0, 0, ART_BASE, ART_BASE); // grass around
+    dither(ctx, '#2f6b45', '#1e4a30', 0, 0, ART_BASE, ART_BASE, 0);
     // rock mass
     shadedBlock(ctx, '#5a5048', '#8a8070', '#2a2420', 2, 4, 28, 26);
     fill(ctx, '#6a6058', 4, 6, 24, 8);
@@ -1883,10 +1888,10 @@ export function generateTextures(scene: Phaser.Scene): void {
   }
 
   canvasTex(scene, 'tile-stairs-up', ART_RES, ART_RES, (ctx) => {
-    fill(ctx, '#2a3048', 0, 0, ART_RES, ART_RES);
-    dither(ctx, '#2a3048', '#1a2030', 0, 0, ART_RES, ART_RES, 1);
-    shadedBlock(ctx, '#4a5870', '#7a90a8', '#2a3040', 0, 0, 3, ART_RES);
-    shadedBlock(ctx, '#4a5870', '#7a90a8', '#2a3040', ART_RES - 3, 0, 3, ART_RES);
+    fill(ctx, '#2a3048', 0, 0, ART_BASE, ART_BASE);
+    dither(ctx, '#2a3048', '#1a2030', 0, 0, ART_BASE, ART_BASE, 1);
+    shadedBlock(ctx, '#4a5870', '#7a90a8', '#2a3040', 0, 0, 3, ART_BASE);
+    shadedBlock(ctx, '#4a5870', '#7a90a8', '#2a3040', ART_BASE - 3, 0, 3, ART_BASE);
     for (let i = 0; i < 7; i++) {
       const y = 28 - i * 4;
       const inset = Math.max(0, 5 - i);
@@ -1898,11 +1903,11 @@ export function generateTextures(scene: Phaser.Scene): void {
         '#405068',
         3 + inset,
         y,
-        ART_RES - 6 - inset * 2,
+        ART_BASE - 6 - inset * 2,
         3,
       );
-      fill(ctx, '#7088a8', 3 + inset, y + 3, ART_RES - 6 - inset * 2, 1);
-      grit(ctx, 'rgba(255,255,255,0.12)', 4 + inset, y, ART_RES - 8 - inset * 2, 2, 5, i);
+      fill(ctx, '#7088a8', 3 + inset, y + 3, ART_BASE - 6 - inset * 2, 1);
+      grit(ctx, 'rgba(255,255,255,0.12)', 4 + inset, y, ART_BASE - 8 - inset * 2, 2, 5, i);
     }
     // ascent marker
     fill(ctx, '#7dffb3', 11, 1, 10, 3);
@@ -1911,8 +1916,8 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   canvasTex(scene, 'tile-pad', ART_RES, ART_RES, (ctx) => {
-    fill(ctx, '#0e1a28', 0, 0, ART_RES, ART_RES);
-    dither(ctx, '#0e1a28', '#1a2a40', 0, 0, ART_RES, ART_RES, 0);
+    fill(ctx, '#0e1a28', 0, 0, ART_BASE, ART_BASE);
+    dither(ctx, '#0e1a28', '#1a2a40', 0, 0, ART_BASE, ART_BASE, 0);
     // outer ring
     shadedBlock(ctx, '#1a3048', '#4ecdc4', '#0a1828', 2, 2, 28, 28);
     shadedBlock(ctx, '#243850', '#3a6078', '#102030', 5, 5, 22, 22);
@@ -2855,11 +2860,11 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   canvasTex(scene, 'tree', ART_RES, ART_RES, (ctx) => {
-    drawTreeSprite(ctx, ART_RES);
+    drawTreeSprite(ctx, ART_BASE);
   });
 
   canvasTex(scene, 'koi', ART_RES, ART_RES, (ctx) => {
-    drawKoiSprite(ctx, ART_RES);
+    drawKoiSprite(ctx, ART_BASE);
   });
 
   canvasTex(scene, 'tumbleweed', ART_RES, ART_RES, (ctx) => {
@@ -2944,7 +2949,7 @@ export function generateTextures(scene: Phaser.Scene): void {
 
   // Boss exit portal — cyan ring + gem (step-on warp)
   canvasTex(scene, 'portal', ART_RES, ART_RES, (ctx) => {
-    fill(ctx, '#0a1220', 0, 0, ART_RES, ART_RES);
+    fill(ctx, '#0a1220', 0, 0, ART_BASE, ART_BASE);
     ctx.strokeStyle = '#4ecdc4';
     ctx.lineWidth = 3;
     ctx.beginPath();
