@@ -12,7 +12,7 @@
 **North star:** Discrete autotile truth (Terraria / Core Keeper), not noise-skinned continuous paint.  
 **Live `main`:** full graphics revert — discrete tiles + pre-terraria sprites/light (no entity outline pass, soft radial light cookie).  
 **Archive tag:** `archive/continuous-ground-2026-07-23`  
-**Rebuild branch:** `graphics-v2` (autotile + land-aware shore rings next; **implement only when operator says implement**).
+**Rebuild branch:** `graphics-v2` — **Phase S complete** (continuous-ground hard-deleted); next is Phase A autotile.
 
 ### Permanent preview (always on)
 

@@ -1,6 +1,7 @@
 # Terraria visual system — LOCKED design v1
 
-**Status:** **SUPERSEDED for future work** (2026-07-23 Graphics-v2 Core Keeper council).  
+**Status:** **SUPERSEDED** (2026-07-23 Graphics-v2 Core Keeper council).  
+**Phase S:** `src/systems/continuous-ground.ts` hard-deleted on `graphics-v2` — continuous paint cannot re-enter the live bundle.  
 Historical archive of the failed continuous-ground / “skin smaller pixels” experiment.  
 **Do not implement new work from this doc.** Canonical law: [`graphics-v2-style-bible.md`](./graphics-v2-style-bible.md) · plan: [`graphics-v2-rebuild-plan.md`](./graphics-v2-rebuild-plan.md).
 

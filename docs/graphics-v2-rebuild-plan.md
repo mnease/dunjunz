@@ -1,10 +1,11 @@
 # Dunjunz Graphics-v2 Rebuild Plan
 
-**Status:** Design LOCK (EMA full council 2026-07-23) — **plan only, no implement until operator says implement**  
+**Status:** Design LOCK + **Phase S shipped** (continuous-ground hard-deleted on `graphics-v2`).  
 **North star:** Core Keeper–inspired discrete autotile world on clean-slate render path  
 **Style law:** [`graphics-v2-style-bible.md`](./graphics-v2-style-bible.md)  
 **Architecture detail:** [`graphics-system-v2-architecture.md`](./graphics-system-v2-architecture.md) (refined by this doc)  
-**Branch:** `graphics-v2` (preview always on) · **Live `main`:** classic discrete tiles after full graphics revert
+**Branch:** `graphics-v2` (preview always on) · **Live `main`:** classic discrete tiles after full graphics revert  
+**Next implement:** Phase A autotile core
 
 | URL | Role |
 | --- | --- |
@@ -235,13 +236,13 @@ Goal: **clean-slate render path** — no half-dead continuous path that can be r
 
 **Rule:** each phase ships to `graphics-v2` only; production stays classic until Phase M (merge).
 
-### Phase S — Strip clean (0.5 day)
+### Phase S — Strip clean (0.5 day) — **DONE on graphics-v2**
 
 | Field | Content |
 | --- | --- |
 | Goal | Zero continuous-ground in active tree; docs supersede terraria continuous law |
-| Work | K0–K9 strip; changelog note on branch |
-| Acceptance | `rg paintContinuous src` empty (except maybe changelog); `npm test` green; play beach + B1 loads |
+| Work | Hard-delete `continuous-ground.ts` + tests; hygiene vitest `graphics-v2-phase-s.test.ts` |
+| Acceptance | `rg paintContinuous src` empty; `npm test` green; `placeRoomTiles` only terrain path |
 | Playtest rooms | beach_start, first dunjunz room |
 | Risks | Accidental delete of shared pixel helpers — review diff carefully |
 | Rollback | Revert strip commit on branch |
