@@ -4,7 +4,6 @@
  */
 
 import {
-  block,
   cartoonFace,
   fill,
   hairMass,
