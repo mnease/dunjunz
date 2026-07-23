@@ -12,6 +12,10 @@ export const FORJING_MATERIALS = [
   'ore_spark',
   'wood_shard',
   'sand_crystal',
+  'ore_gold',
+  'ore_mithril',
+  'gem_rough',
+  'horse_hair',
 ] as const;
 
 export type ForjingMaterial = (typeof FORJING_MATERIALS)[number];
@@ -123,6 +127,41 @@ export const CRAFT_RECIPES: CraftRecipe[] = [
     cost: { ore_spark: 3, wood_shard: 2, sand_crystal: 1 },
     coins: 55,
     blurb: 'Light-blue crystal. FORJE ENHANCE for chain lightning (+1 hop per +).',
+  },
+  // ── Dwarvez deep forje ─────────────────────────────────
+  {
+    id: 'craft_dwarf_axe',
+    name: 'DWARF AXE',
+    resultTemplateId: 'dwarf_axe',
+    cost: { ore_iron: 3, ore_gold: 1 },
+    coins: 40,
+    blurb: 'Beard-approved chopper. Deep forje only in spirit.',
+  },
+  {
+    id: 'craft_gem_ring',
+    name: 'GEM RING',
+    resultTemplateId: 'gem_ring',
+    cost: { gem_rough: 2, ore_gold: 1 },
+    coins: 35,
+    blurb: 'Vault sparkle for your finger. +DEF.',
+  },
+  {
+    id: 'craft_mithril_blade',
+    name: 'MITHRIL BLADE',
+    resultTemplateId: 'mithril_blade',
+    cost: { ore_mithril: 2, ore_iron: 1 },
+    coins: 100,
+    blurb: 'Mine-root steel. Elven polish optional.',
+  },
+  {
+    id: 'craft_mithril_plate_shard',
+    name: 'MITHRIL SPARK',
+    resultTemplateId: 'ore_spark',
+    cost: { ore_mithril: 1, ore_spark: 2 },
+    coins: 60,
+    blurb: 'Refine mithril into forje spark (×3).',
+    stackResult: true,
+    stackCount: 3,
   },
 ];
 

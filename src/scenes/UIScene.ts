@@ -44,6 +44,7 @@ import type { AttrId } from '../types';
 import { isTouchUiPreferred } from '../systems/touch-input';
 import { getBestBud, isCompanionActive } from '../systems/best-bud';
 import { primaryQuestTracker } from '../systems/quest-log';
+import { fellowshipPartyHudLine } from '../systems/fellowship';
 import {
   budArmorDef,
   budGearSummary,
@@ -3752,7 +3753,10 @@ export class UIScene extends Phaser.Scene {
       this.shopOpen ||
       this.dialogOpen;
     if (track && !hideTrack && this.questTrackText && this.questTrackBg) {
-      const line = `▶ ${track.title}  ·  ${track.hint}`;
+      const party = fellowshipPartyHudLine(save);
+      const line = party
+        ? `▶ ${track.title}  ·  ${track.hint}  ·  ${party}`
+        : `▶ ${track.title}  ·  ${track.hint}`;
       this.questTrackText.setText(line);
       this.questTrackText.setVisible(true);
       this.questTrackBg.setVisible(true);

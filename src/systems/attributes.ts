@@ -130,19 +130,21 @@ export function computePlayerDamage(save: SaveData): number {
   }
   const eff = effectiveAttrs(save);
   const buff = Math.max(0, save.buffAtk ?? 0);
+  // Inline flag read (avoid circular import with fellowship.ts)
+  const fellowAtk = save.flags?.['fellowship_dwarves'] ? 1 : 0;
   if (style === 'ranged') {
     const dex = eff.dex + imbueDex;
     const bonus = Math.floor(Math.max(0, dex - 1) / 2);
-    return Math.max(1, 1 + weaponAtk + bonus + buff);
+    return Math.max(1, 1 + weaponAtk + bonus + buff + fellowAtk);
   }
   if (style === 'magic') {
     const intel = eff.int + imbueInt;
     const bonus = Math.floor(Math.max(0, intel - 1) / 2);
-    return Math.max(1, 1 + weaponAtk + bonus + buff);
+    return Math.max(1, 1 + weaponAtk + bonus + buff + fellowAtk);
   }
   const totalStr = eff.str + imbueStr;
   const strBonus = Math.floor(Math.max(0, totalStr - 1) / 2);
-  return Math.max(1, 1 + weaponAtk + strBonus + buff);
+  return Math.max(1, 1 + weaponAtk + strBonus + buff + fellowAtk);
 }
 
 /** Potion heal including amulet bonus + INT (class/race aware). */

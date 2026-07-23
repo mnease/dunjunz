@@ -1432,8 +1432,10 @@ describe('boss exit portals', () => {
     const { ROOMS } = await import('../data/world');
     const tower = ROOMS.dezertz_tower;
     expect(tower?.north).toBe('dezertz_edge');
+    expect(tower?.south).toBe('road_south_ash_1');
     expect(tower?.tiles[0]?.includes('D')).toBe(true);
-    expect(tower?.tiles[tower.tiles.length - 1]?.includes('D')).toBe(false);
+    // South edge opens to Fellowship ash road (post–elf warrior)
+    expect(tower?.tiles[tower.tiles.length - 1]?.includes('D')).toBe(true);
   });
 
   it('boss exit portals sit on walkable floor and target dungeon mouths', async () => {

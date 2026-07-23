@@ -19,6 +19,8 @@ export const ENEMY_BASE_HP: Record<string, number> = {
   cube: 30, // gelatinous tank
   miniboss: 36, // mid-warden default (between cube and land boss)
   boss: 48, // default land-boss floor if room omits hp
+  goblin: 16, // Moredorkz pack
+  orc: 30, // Moredorkz heavy
 };
 
 /** Contact damage before armor reduction (min 1 heart after armor). */
@@ -34,6 +36,8 @@ export const ENEMY_CONTACT_DAMAGE: Record<string, number> = {
   cube: 3,
   miniboss: 3, // elite tier — not full boss 4
   boss: 4,
+  goblin: 2,
+  orc: 3,
 };
 
 /**
@@ -86,6 +90,10 @@ export function enemyTierLabel(kind: string): string {
       return 'WARDEN';
     case 'boss':
       return 'BOSS';
+    case 'goblin':
+      return 'GOBLIN';
+    case 'orc':
+      return 'ORC';
     default:
       return kind.toUpperCase();
   }

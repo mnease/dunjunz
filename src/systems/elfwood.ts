@@ -8,6 +8,8 @@ import type { SaveData } from '../types';
 import { mintItem, getTemplate } from './items';
 import { syncDerivedStats } from './inventory';
 import {
+  canGrantElfWarrior,
+  grantElfWarrior,
   queenFellowshipIdleDialog,
   shouldTriggerFellowshipCutscene,
 } from './fellowship';
@@ -430,6 +432,10 @@ export function talkQueen(save: SaveData): QueenTalkResult {
         toast: 'SOMETHING APPROACHES…',
         triggerFellowshipCutscene: true,
       };
+    }
+    // Fellowship: grant Lirael when Dwarvez + Roarhimz recruited
+    if (canGrantElfWarrior(next)) {
+      return grantElfWarrior(next);
     }
     return {
       save: next,

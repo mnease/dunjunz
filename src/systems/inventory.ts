@@ -51,6 +51,9 @@ export function computeArmor(save: SaveData): number {
   const dex = effectiveAttrs(save).dex + weaponAttrBonus(save, 'dex');
   def += Math.floor(Math.max(0, dex - 1) / 4);
   def += Math.max(0, save.buffDef ?? 0);
+  // Fellowship passives (flags only — avoid circular import)
+  if (save.flags?.['fellowship_roarhimz']) def += 1;
+  if (save.flags?.['fellowship_elf_warrior']) def += 1;
   return def;
 }
 

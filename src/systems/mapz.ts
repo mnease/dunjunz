@@ -64,6 +64,30 @@ export const LANDS: Record<LandId, LandInfo> = {
     fog: 0x152018,
     border: 0x7dffb3,
   },
+  dwarvez: {
+    id: 'dwarvez',
+    name: 'DWARVEZ MAPZ',
+    blurb: 'Deep hallz. Louder beards.',
+    color: 0x6a5a3a,
+    fog: 0x2a2010,
+    border: 0xffc857,
+  },
+  roarhimz: {
+    id: 'roarhimz',
+    name: 'ROARHIMZ MAPZ',
+    blurb: 'Plainz. Horsez. Mead.',
+    color: 0x4a8a40,
+    fog: 0x1a3018,
+    border: 0xffe08a,
+  },
+  moredorkz: {
+    id: 'moredorkz',
+    name: 'MOREDORKZ MAPZ',
+    blurb: 'Ash. Orcs. Bad sword energy.',
+    color: 0x3a2020,
+    fog: 0x120808,
+    border: 0xc44b2b,
+  },
 };
 
 export function discoverMapz(save: SaveData, land: LandId): SaveData {

@@ -11,6 +11,9 @@ export const DUNGEON_ENTRANCE: Partial<Record<LandId, string>> = {
   woodz: 'woodz_edge',
   dezertz: 'dezertz_edge',
   sewerz: 'sewerz_mouth',
+  dwarvez: 'dwarvez_gate',
+  roarhimz: 'roarhimz_gate',
+  moredorkz: 'moredorkz_gate',
 };
 
 /** Boss arena room → land + kill id (for portal eligibility). */
@@ -24,6 +27,7 @@ export const BOSS_ROOM_META: Record<
   woodz_deep: { land: 'woodz', killId: 'wolf-lord' },
   dezertz_tower: { land: 'dezertz', killId: 'sand-wraith' },
   sewerz_boss: { land: 'sewerz', killId: 'royal-goose' },
+  moredorkz_throne: { land: 'moredorkz', killId: 'zoron' },
 };
 
 /** Boss arena room ids. */
@@ -47,6 +51,8 @@ const PORTAL_TILE: Record<string, { x: number; y: number }> = {
   dezertz_tower: { x: 5, y: 5 },
   // Goose chamber: west of boss chest
   sewerz_boss: { x: 4, y: 7 },
+  // Zoron throne: clear floor SE of center
+  moredorkz_throne: { x: 11, y: 8 },
 };
 
 export function isBossRoom(roomId: string): boolean {

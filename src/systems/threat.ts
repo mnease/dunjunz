@@ -15,6 +15,9 @@ export const LAND_THREAT: Record<LandId, number> = {
   dezertz: 3,
   kingdomz: 4,
   sewerz: 5,
+  dwarvez: 4,
+  roarhimz: 4,
+  moredorkz: 7,
 };
 
 /** World progress adds threat on top of land tier. */

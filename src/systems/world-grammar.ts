@@ -32,6 +32,22 @@ export const LAND_LENGTH_DOCTRINE = {
   },
   surface: { role: 'hub' as const },
   kingdomz: { role: 'bridge' as const },
+  dwarvez: {
+    role: 'medium-pipe' as const,
+    minRooms: 10,
+    maxRooms: 16,
+    maxPathToBoss: 10,
+  },
+  roarhimz: {
+    role: 'short-surface-ceremony' as const,
+    maxSurfacePathToBoss: 6,
+  },
+  moredorkz: {
+    role: 'long-ish-endgame' as const,
+    minRooms: 10,
+    maxRooms: 16,
+    minPathToBoss: 7,
+  },
 } as const;
 
 export function roomsForLand(

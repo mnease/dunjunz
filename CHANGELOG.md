@@ -11,6 +11,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ## [Unreleased]
 
+### Added
+
+- **Fellowship of the Few — full epic (PR1–PR9)** — roads north/NW/south open after Glamdolph / full fellowship; new lands **Dwarvez**, **Roarhimz**, **Moredorkz** (mapz + threat 4/4/7); recruit Under-King Bramli → Thrain, Marshal Éorik → Rofa, Queen → Lirael (flags + passives, Best Bud sole follower); goblin/orc crawl; **Zoron** (hp 64) drops black sword; Doom Forje forges **white sword of many Livez**. Journal WHERE paths no longer say “Road opens later.”
+
 ### Fixed
 
 - **Sewerz goose bosses look like geese** — Royal Goose (crowned white goose) and Assistant Honk (junior butter-goose) use dedicated sprites instead of tinted humanoid boss art.

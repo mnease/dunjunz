@@ -1,5 +1,6 @@
 import type { RoomDef } from '../types';
 import { buildAllDeepRooms } from './world-deep';
+import { FELLOWSHIP_ROOMS } from './fellowship-rooms';
 
 /**
  * Tile legend (authored 16×11 rooms, NES Zelda-style):
@@ -1090,9 +1091,10 @@ export const ROOMS: Record<string, RoomDef> = {
     mapX: 1,
     mapY: 3,
     south: 'woodz_edge',
+    north: 'road_north_1',
     stairsDown: 'woodz_b1_foyer',
     tiles: [
-      '################',
+      '########D#######',
       '#gg..........gg#',
       '#g....####....g#',
       '#g...#..S.#...g#',
@@ -1181,15 +1183,16 @@ export const ROOMS: Record<string, RoomDef> = {
     mapX: 0,
     mapY: 2,
     east: 'woodz_edge',
+    west: 'road_nw_1',
     north: 'woodz_arch',
-    // Dirt cross so N door + E mouth stay readable under tall canopies
+    // Dirt cross so N door + E/W mouths stay readable under tall canopies
     tiles: [
       '########D#######',
       '#gg...d..d...gg#',
       '#g....d..d....g#',
       '#g....dddd....g#',
       '#g....d..d....g#',
-      '#g....dddddddddd',
+      'd....ddddddddddd',
       '#g....d..d....g#',
       '#g....dddd....g#',
       '#g....d..d....g#',
@@ -1827,8 +1830,9 @@ export const ROOMS: Record<string, RoomDef> = {
     floor: 0,
     mapX: 1,
     mapY: -3,
-    // Edge is north of the tower — door must open north (was sealed wall + dead-end south D).
+    // Edge is north of the tower; south opens ash road after fellowship.
     north: 'dezertz_edge',
+    south: 'road_south_ash_1',
     stairsDown: 'dezertz_b1_foyer',
     tiles: [
       '########D#######',
@@ -1841,7 +1845,7 @@ export const ROOMS: Record<string, RoomDef> = {
       '#d...#....#...d#',
       '#d....####....d#',
       '#dd..........dd#',
-      '################',
+      '########D#######',
     ],
     entities: [
       {
@@ -2293,6 +2297,9 @@ export const ROOMS: Record<string, RoomDef> = {
 
 // Merge deep wings (4× floor counts per dunjun land)
 Object.assign(ROOMS, buildAllDeepRooms());
+
+// Fellowship of the Few — roads + Dwarvez / Roarhimz / Moredorkz
+Object.assign(ROOMS, FELLOWSHIP_ROOMS);
 
 /** Old room ids → new map ids (save migration). */
 export const ROOM_ALIASES: Record<string, string> = {

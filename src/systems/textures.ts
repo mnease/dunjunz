@@ -3000,6 +3000,31 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#1a1a22', 16, 24, 5, 6);
   });
 
+  // Moredorkz hostiles — Fellowship epic
+  canvasTex(scene, 'goblin', ART_RES, ART_RES, (ctx) => {
+    shadedBlock(ctx, '#4a7a3a', '#6a9a4a', '#2a4a20', 8, 10, 16, 14);
+    fill(ctx, '#3a5a2a', 6, 6, 6, 6); // ear
+    fill(ctx, '#3a5a2a', 20, 6, 6, 6);
+    fill(ctx, '#ffee44', 10, 14, 3, 3);
+    fill(ctx, '#ffee44', 18, 14, 3, 3);
+    fill(ctx, '#6b5344', 12, 20, 8, 6); // rags
+    fill(ctx, '#888', 22, 18, 6, 4); // knife
+    fill(ctx, '#1a1a22', 10, 26, 4, 4);
+    fill(ctx, '#1a1a22', 18, 26, 4, 4);
+  });
+
+  canvasTex(scene, 'orc', ART_RES, ART_RES, (ctx) => {
+    shadedBlock(ctx, '#3a4a3a', '#5a6a5a', '#1a2a1a', 6, 8, 20, 16);
+    fill(ctx, '#e8e0d0', 8, 14, 3, 4); // tusk
+    fill(ctx, '#e8e0d0', 20, 14, 3, 4);
+    fill(ctx, '#ff3344', 10, 12, 3, 3);
+    fill(ctx, '#ff3344', 18, 12, 3, 3);
+    fill(ctx, '#2a2a30', 8, 20, 16, 8); // iron plate
+    fill(ctx, '#c0392b', 12, 6, 8, 4); // cloth
+    fill(ctx, '#1a1a22', 8, 26, 5, 5);
+    fill(ctx, '#1a1a22', 18, 26, 5, 5);
+  });
+
   canvasTex(scene, 'cactus', ART_RES, ART_RES, (ctx) => {
     shadedBlock(ctx, '#3d8b5a', '#5ad47a', '#2a6a40', 12, 4, 8, 24);
     fill(ctx, '#3d8b5a', 6, 10, 6, 10);

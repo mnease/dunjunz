@@ -284,11 +284,13 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
   const roarhimz = !!save.flags?.['fellowship_roarhimz'];
   const elfJoin = !!save.flags?.['fellowship_elf_warrior'];
   const zoronDown = !!save.flags?.['zoron_defeated'];
+  const whiteSword = !!save.flags?.['sword_of_many_livez'];
+  const blackHeld = !!save.flags?.['black_sword_held'];
   let fellowshipStatus: QuestStatus = queenDone ? 'available' : 'locked';
   let fellowshipProgress = 'QUEEN\'S REWARD FIRST';
   let fellowshipHint =
     'Finish the Queen\'s three errands first (Legendary Box).';
-  if (zoronDown) {
+  if (whiteSword) {
     fellowshipStatus = 'done';
     fellowshipProgress = 'SWORD OF MANY LIVEZ';
     fellowshipHint = 'Zoron fallen. The white sword of many Livez is yours.';
@@ -301,19 +303,27 @@ function sideEntries(save: SaveData): QuestLogEntry[] {
         ? 'N: DWARVEZ · NW: ROARHIMZ'
         : n < 3
           ? `${n}/3 ALLIES`
-          : 'MOREDORKZ — ZORON';
+          : zoronDown
+            ? 'BLACK SWORD → VOLCANO'
+            : 'MOREDORKZ — ZORON';
     if (!dwarves) {
       fellowshipHint =
-        'GO: Far north — Land of the Dwarvez · recruit greatest warriors. (Road opens later.)';
+        "GO: Woodz Deep · North Road · Dwarvez Gate · recruit the Under-King's champion.";
     } else if (!roarhimz) {
       fellowshipHint =
-        'GO: Far north-west — Roarhimz horse-folk · recruit fighters. (Road opens later.)';
+        "GO: Woodz Glade west · NW Road · Roarhimz · recruit the Marshal's fighter.";
     } else if (!elfJoin) {
       fellowshipHint =
-        'GO: Queen\'s Court · she will send an elven warrior.';
+        "GO: Queen's Court · receive an elven warrior.";
+    } else if (!zoronDown) {
+      fellowshipHint =
+        'GO: South past Dezertz · Ash Road · Moredorkz · defeat Zoron.';
+    } else if (blackHeld || zoronDown) {
+      fellowshipHint =
+        'GO: Doom Forje west of throne · present the black sword.';
     } else {
       fellowshipHint =
-        'GO: Far south — Moredorkz · face Zoron · take the black sword to the volcano.';
+        'GO: Doom Forje west of throne · present the black sword.';
     }
   } else if (queenDone) {
     fellowshipHint =

@@ -223,10 +223,23 @@ import {
   GLAMDOLPH_ID,
   GLAMDOLPH_ROOM,
   GLAMDOLPH_TILE,
+  MARSHAL_ID,
+  UNDER_KING_ID,
+  VOLCANO_FORJE_ID,
+  ZORON_ID,
+  applyZoronDefeat,
+  forgeWhiteSword,
   glamdolphArrivalDialog,
   glamdolphBanterDialog,
   markFellowshipStarted,
+  northGatekeeperDialog,
+  nwGatekeeperDialog,
+  shouldSpawnFellowshipBarrier,
   shouldTriggerFellowshipCutscene,
+  southGatekeeperDialog,
+  talkMarshal,
+  talkUnderKing,
+  volcanoPadDialog,
 } from '../systems/fellowship';
 import {
   isSmashableKind,
@@ -503,6 +516,8 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   barrel: 'barrel',
   crate: 'crate',
   vase: 'vase',
+  goblin: 'goblin',
+  orc: 'orc',
 };
 
 const MOBILE_HOSTILES = [
@@ -516,6 +531,8 @@ const MOBILE_HOSTILES = [
   'scorpion',
   'tarantula',
   'hornet',
+  'goblin',
+  'orc',
 ] as const;
 
 /** Contact damage hostiles (includes stationary cactus). */
@@ -3386,6 +3403,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    // Fellowship road barriers while gates closed
+    if (!shouldSpawnFellowshipBarrier(this.save, def.id)) {
+      return;
+    }
+
     // One Princess Prizella: tower pre-rescue, throne post-rescue
     if (def.kind === 'princess') {
       const onTower = this.room.id === 'dezertz_tower';
@@ -4630,11 +4652,15 @@ export class GameScene extends Phaser.Scene {
                   ? 0x4a3030
                   : actor.kind === 'hornet'
                     ? 0xffc857
-                    : actor.kind === 'miniboss'
-                      ? 0xff8866
-                      : actor.kind === 'boss'
-                        ? 0xff6b9d
-                        : 0xffc857;
+                    : actor.kind === 'goblin'
+                      ? 0x6a9a4a
+                      : actor.kind === 'orc'
+                        ? 0x5a6a5a
+                        : actor.kind === 'miniboss'
+                          ? 0xff8866
+                          : actor.kind === 'boss'
+                            ? 0xff6b9d
+                            : 0xffc857;
     const colors = [kindTint, 0xffc857, 0xffffff, kindTint];
     for (let i = 0; i < count; i++) {
       const p = this.add.image(px, py, i % 2 === 0 ? 'particle' : 'particle-hit');
@@ -5065,6 +5091,14 @@ export class GameScene extends Phaser.Scene {
       this.ensureBossExitPortal(true);
       return;
     }
+    if (actor.id === ZORON_ID || this.room.id === 'moredorkz_throne') {
+      const r = applyZoronDefeat(this.save);
+      this.save = r.save;
+      this.game.events.emit('dialog-show', r.dialog);
+      if (r.toast) this.game.events.emit('toast', r.toast);
+      this.ensureBossExitPortal(true);
+      return;
+    }
     // Generic boss fallback
     this.save.bossDefeated = true;
     this.game.events.emit('dialog-show', [
@@ -5179,6 +5213,8 @@ export class GameScene extends Phaser.Scene {
           'scorpion',
           'tarantula',
           'hornet',
+          'goblin',
+          'orc',
         ].includes(
           a.kind,
         )
@@ -5796,6 +5832,54 @@ export class GameScene extends Phaser.Scene {
     }
     if (best.id === GLAMDOLPH_ID) {
       this.talkGlamdolph();
+      return;
+    }
+    if (best.id === UNDER_KING_ID) {
+      const r = talkUnderKing(this.save);
+      this.save = r.save;
+      writeSave(this.save);
+      this.emitHud();
+      this.game.events.emit('dialog-show', r.dialog);
+      if (r.toast) this.game.events.emit('toast', r.toast);
+      return;
+    }
+    if (best.id === MARSHAL_ID) {
+      const r = talkMarshal(this.save);
+      this.save = r.save;
+      writeSave(this.save);
+      this.emitHud();
+      this.game.events.emit('dialog-show', r.dialog);
+      if (r.toast) this.game.events.emit('toast', r.toast);
+      return;
+    }
+    if (best.id === 'gatekeeper-north') {
+      this.game.events.emit('dialog-show', northGatekeeperDialog(this.save));
+      return;
+    }
+    if (best.id === 'gatekeeper-nw') {
+      this.game.events.emit('dialog-show', nwGatekeeperDialog(this.save));
+      return;
+    }
+    if (best.id === 'gatekeeper-south') {
+      this.game.events.emit('dialog-show', southGatekeeperDialog(this.save));
+      return;
+    }
+    if (best.id === VOLCANO_FORJE_ID) {
+      const can = forgeWhiteSword(this.save);
+      // Only forge when ceremony ready; otherwise pad dialog
+      if (
+        this.save.flags?.['zoron_defeated'] &&
+        (this.save.flags?.['black_sword_held'] ||
+          this.save.bag.some((i) => i.templateId === 'black_sword'))
+      ) {
+        this.save = can.save;
+        writeSave(this.save);
+        this.emitHud();
+        this.game.events.emit('dialog-show', can.dialog);
+        if (can.toast) this.game.events.emit('toast', can.toast);
+      } else {
+        this.game.events.emit('dialog-show', volcanoPadDialog(this.save));
+      }
       return;
     }
     if (best.id === HEALING_SPRING_ID) {

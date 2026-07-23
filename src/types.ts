@@ -77,7 +77,10 @@ export type EntityKind =
   /** Smashable clutter — hit for coins / occasional potions. */
   | 'barrel'
   | 'crate'
-  | 'vase';
+  | 'vase'
+  /** Moredorkz hostiles (Fellowship epic). */
+  | 'goblin'
+  | 'orc';
 
 /** Non-human best friend companion (randomized per playthrough). */
 export type BestBudId =
@@ -142,7 +145,10 @@ export type LandId =
   | 'woodz'
   | 'dezertz'
   | 'kingdomz'
-  | 'sewerz';
+  | 'sewerz'
+  | 'dwarvez'
+  | 'roarhimz'
+  | 'moredorkz';
 
 export interface EquippedMap {
   weapon: string | null;

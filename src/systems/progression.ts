@@ -46,6 +46,8 @@ export const ENEMY_XP: Record<string, number> = {
   hornet: 5,
   miniboss: 18, // ~2× elite pack; well under land boss 40
   boss: 40,
+  goblin: 6,
+  orc: 12,
 };
 
 export interface ProgressState {

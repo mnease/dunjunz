@@ -565,6 +565,8 @@ export const ENEMY_SPECIES_LOOT: Record<string, SpeciesLootDef> = {
     countMin: 1,
     countMax: 2,
   },
+  goblin: { stackId: 'ore_iron', label: 'SCRAP IRON', chance: 0.4 },
+  orc: { stackId: 'ore_iron', label: 'BLACK IRON', chance: 0.5, countMax: 2 },
 };
 
 /** Optional land / biome mats on top of species parts. */
@@ -576,6 +578,8 @@ const ENEMY_BONUS_MAT: Partial<Record<string, string>> = {
   hornet: 'sand_crystal',
   skeleton: 'ore_iron',
   slime: 'ore_spark',
+  goblin: 'ore_gold',
+  orc: 'ore_gold',
 };
 
 /**
@@ -607,6 +611,8 @@ export function rollEnemyLoot(
     skeleton: [5, 12],
     wolf: [7, 16],
     cactus: [7, 16],
+    goblin: [6, 14],
+    orc: [10, 22],
     cube: [12, 26],
     miniboss: [16, 32],
     boss: [30, 60],

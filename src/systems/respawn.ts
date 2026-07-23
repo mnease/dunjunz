@@ -15,6 +15,8 @@ export const RESPAWN_KINDS: ReadonlySet<string> = new Set([
   'scorpion',
   'tarantula',
   'hornet',
+  'goblin',
+  'orc',
 ]);
 
 /** Base delay before a creep can return (ms). */
@@ -51,6 +53,10 @@ export function isPermanentKill(kind: string, id: string): boolean {
   if (id === 'royal-goose') return true;
   // Wood Elf queen quest — blight pack must stay dead for turn-in
   if (id.startsWith('elf-blight-wolf')) return true;
+  // Fellowship trials — named packs must stay dead
+  if (id.startsWith('dwarvez-mine-skel')) return true;
+  if (id.startsWith('roarhimz-raid-')) return true;
+  if (id === 'zoron') return true;
   // Props / non-combat
   if (
     kind === 'tree' ||

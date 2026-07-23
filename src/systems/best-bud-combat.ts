@@ -150,6 +150,8 @@ export function hostileEntityKinds(): readonly string[] {
     'scorpion',
     'tarantula',
     'hornet',
+    'goblin',
+    'orc',
   ];
 }
 
