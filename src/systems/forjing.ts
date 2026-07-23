@@ -14,7 +14,12 @@ export const FORJING_MATERIALS = [
   'sand_crystal',
   'ore_gold',
   'ore_mithril',
+  'ore_bronze',
+  'ore_silver',
   'gem_rough',
+  'gem_diamond',
+  'gem_ruby',
+  'gem_emerald',
   'horse_hair',
 ] as const;
 

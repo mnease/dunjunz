@@ -4,8 +4,9 @@ import { FELLOWSHIP_ROOMS } from './fellowship-rooms';
 
 /**
  * Tile legend (authored 16×11 rooms, NES Zelda-style):
- *  . floor   # wall   g grass   d dirt   s sand   ~ water
+ *  . floor   # wall   g grass   d dirt   s sand   n snow   ~ water
  *  c royal carpet / dais (kingdom throne)
+ *  Dwarvez land + road_north_* walls use jagged basalt tiles (not brick).
  *  Water auto-classifies: ocean (beach), pond (closed → koi), river (channels / edge strips).
  *  D open door   L locked door
  *  S stairs DOWN   U stairs UP

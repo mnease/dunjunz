@@ -720,6 +720,117 @@ export function drawSandWallTile(
   spark(ctx, 8, 8, 'rgba(220,210,190,0.4)');
 }
 
+/**
+ * Dark jagged mountain / dwarvez cave wall — not brick.
+ * Irregular spikes of basalt, deep cracks, cold stone.
+ */
+export function drawJaggedStoneWall(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  variant = 0,
+): void {
+  // near-black basalt bed
+  vgrad(ctx, ['#2a2830', '#1a181f', '#121018', '#0a0a10'], 0, 0, s, s);
+  dither(ctx, '#1a181f', '#0c0c12', 0, 0, s, s, variant);
+  // jagged top silhouette (cliff teeth)
+  const teeth = [
+    [0, 0, 6, 5],
+    [5, 0, 5, 8],
+    [9, 0, 7, 4],
+    [15, 0, 5, 9],
+    [19, 0, 6, 5],
+    [24, 0, 8, 7],
+  ] as const;
+  for (const [x, y, w, h] of teeth) {
+    const ox = (x + variant * 3) % (s - 4);
+    fill(ctx, '#3a3845', ox, y, w, h);
+    fill(ctx, '#101018', ox, y + h - 1, w, 1);
+  }
+  // deep cracks
+  fill(ctx, '#050508', 4 + variant, 10, 2, 14);
+  fill(ctx, '#050508', 18, 8, 2, 18);
+  fill(ctx, '#050508', 26 - variant, 12, 2, 12);
+  // faceted rock nubs (no mortar rows)
+  cobble(ctx, '#2e2c38', '#4a4858', '#121018', 2, 12, 10, 8, true);
+  cobble(ctx, '#282630', '#3a3848', '#0e0e14', 14, 16, 12, 9, false);
+  cobble(ctx, '#323040', '#4e4c5c', '#14141c', 8, 22, 11, 7, true);
+  cobble(ctx, '#24222c', '#3c3a48', '#0c0c12', 20, 6, 9, 8, false);
+  // cold rim light
+  fill(ctx, 'rgba(120,140,180,0.12)', 0, 0, s, 2);
+  grit(ctx, 'rgba(0,0,0,0.35)', 1, 1, s - 2, s - 2, 4, 0);
+  spark(ctx, 10, 14, 'rgba(90,100,130,0.35)');
+}
+
+/** Rough cave floor — dark stone dust, not polished brick. */
+export function drawJaggedStoneFloor(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  variant = 0,
+): void {
+  vgrad(ctx, ['#2a2832', '#1e1c26', '#16141c', '#121018'], 0, 0, s, s);
+  dither(ctx, '#1e1c26', '#121018', 0, 0, s, s, variant);
+  cobble(ctx, '#24222c', '#363440', '#101018', 3, 4, 9, 6, true);
+  cobble(ctx, '#202028', '#323038', '#0e0e14', 16, 10, 11, 7, false);
+  cobble(ctx, '#262430', '#3a3844', '#12121a', 6, 18, 10, 8, true);
+  fill(ctx, 'rgba(0,0,0,0.25)', 0, s - 2, s, 2);
+  grit(ctx, 'rgba(80,90,110,0.15)', 0, 0, s, s, 5, 1);
+}
+
+/** Mountain snow pack — cold white with blue shadow. */
+export function drawSnowTile(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  variant = 0,
+): void {
+  vgrad(ctx, ['#f8fcff', '#e8f0f8', '#d0dce8', '#b8c8d8'], 0, 0, s, s);
+  dither(ctx, '#e8f0f8', '#c8d4e0', 0, 0, s, s, variant);
+  // soft drifts
+  fill(ctx, 'rgba(255,255,255,0.45)', 0, 6 + variant, s, 2);
+  fill(ctx, 'rgba(160,180,200,0.25)', 0, 16, s, 2);
+  fill(ctx, 'rgba(255,255,255,0.3)', 0, 22, s, 1);
+  // sparkle flecks
+  fill(ctx, '#ffffff', 5 + variant, 8, 2, 1);
+  fill(ctx, '#ffffff', 14, 14, 1, 1);
+  fill(ctx, '#d8e8f8', 22, 10, 2, 1);
+  fill(ctx, '#ffffff', 9, 20, 1, 1);
+  fill(ctx, '#c0d0e0', 26, 24, 2, 1);
+  grit(ctx, 'rgba(255,255,255,0.4)', 0, 0, s, s, 4, 1);
+  fill(ctx, 'rgba(100,120,150,0.12)', 0, s - 1, s, 1);
+}
+
+/** Mineral vein prop — colored crystal/nugget in dark rock. */
+export function drawOreVein(
+  ctx: CanvasRenderingContext2D,
+  mineral:
+    | 'bronze'
+    | 'gold'
+    | 'silver'
+    | 'diamond'
+    | 'ruby'
+    | 'emerald'
+    | 'mithril',
+): void {
+  // rock base
+  shadedBlock(ctx, '#2a2830', '#4a4855', '#121018', 6, 10, 20, 16);
+  fill(ctx, '#1a181f', 8, 12, 16, 12);
+  const colors: Record<string, [string, string, string]> = {
+    bronze: ['#8a5a2b', '#c98a40', '#5a3818'],
+    gold: ['#c9a227', '#ffe08a', '#8a6a10'],
+    silver: ['#a0a8b8', '#e8ecf4', '#606878'],
+    diamond: ['#c8e8ff', '#ffffff', '#68a0d0'],
+    ruby: ['#c0392b', '#ff6b6b', '#6a1810'],
+    emerald: ['#1e8a4a', '#5ad47a', '#0a4a28'],
+    mithril: ['#8ad0e8', '#e0f8ff', '#3a7898'],
+  };
+  const [mid, lite, deep] = colors[mineral] ?? colors.gold!;
+  // crystal cluster
+  cobble(ctx, mid, lite, deep, 10, 8, 8, 10, true);
+  cobble(ctx, mid, lite, deep, 16, 12, 7, 9, false);
+  cobble(ctx, mid, lite, deep, 12, 16, 6, 6, true);
+  spark(ctx, 14, 10, lite);
+  spark(ctx, 18, 14, lite);
+}
+
 export type WaterDrawStyle = 'ocean' | 'pond' | 'river';
 
 /**

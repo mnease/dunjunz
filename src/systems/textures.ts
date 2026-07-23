@@ -37,11 +37,15 @@ import {
   drawDirtTile,
   drawFloorTile,
   drawGrassTile,
+  drawJaggedStoneFloor,
+  drawJaggedStoneWall,
   drawKoiSprite,
   drawLavaTile,
+  drawOreVein,
   drawSandTile,
   drawSandWallTile,
   drawSkyRedwoodSprite,
+  drawSnowTile,
   drawTreeSprite,
   drawWaterTile,
   drawAssistantHonk,
@@ -1708,6 +1712,34 @@ export function generateTextures(scene: Phaser.Scene): void {
   canvasTex(scene, 'tile-sand-wall', ART_RES, ART_RES, (ctx) => {
     drawSandWallTile(ctx, ART_BASE);
   });
+
+  // Mountain snow + Dwarvez jagged stone (not brick)
+  for (let v = 0; v < 3; v++) {
+    const suf = v === 0 ? '' : `-${String.fromCharCode(97 + v)}`;
+    canvasTex(scene, `tile-snow${suf}`, ART_RES, ART_RES, (ctx) => {
+      drawSnowTile(ctx, ART_BASE, v);
+    });
+    canvasTex(scene, `tile-dwarf-wall${suf}`, ART_RES, ART_RES, (ctx) => {
+      drawJaggedStoneWall(ctx, ART_BASE, v);
+    });
+    canvasTex(scene, `tile-dwarf-floor${suf}`, ART_RES, ART_RES, (ctx) => {
+      drawJaggedStoneFloor(ctx, ART_BASE, v);
+    });
+  }
+
+  for (const m of [
+    'bronze',
+    'gold',
+    'silver',
+    'diamond',
+    'ruby',
+    'emerald',
+    'mithril',
+  ] as const) {
+    canvasTex(scene, `ore_vein_${m}`, ART_RES, ART_RES, (ctx) => {
+      drawOreVein(ctx, m);
+    });
+  }
 
   // Legacy water keys = ocean (beach)
   canvasTex(scene, 'tile-water', ART_RES, ART_RES, (ctx) => {

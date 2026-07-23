@@ -15,6 +15,10 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 - **Fellowship of the Few — full epic (PR1–PR9)** — roads north/NW/south open after Glamdolph / full fellowship; new lands **Dwarvez**, **Roarhimz**, **Moredorkz** (mapz + threat 4/4/7); recruit Under-King Bramli → Thrain, Marshal Éorik → Rofa, Queen → Lirael (flags + passives, Best Bud sole follower); goblin/orc crawl; **Zoron** (hp 64) drops black sword; Doom Forje forges **white sword of many Livez**. Journal WHERE paths no longer say “Road opens later.”
 
+### Added
+
+- **Dwarvez approach atmosphere** — North Road is outdoor foothills → high pass with cliffs, river, and rising snow; Dwarvez caves use dark jagged stone walls (not grey bricks); harvestable ore veins (bronze, gold, silver, diamond, ruby, emerald, mithril) chip with **E**.
+
 ### Fixed
 
 - **Best Bud too close** — companion park slot was only ~18px off the hero so sprites overlapped. Buddy now stands about a tile behind / slightly south when following.

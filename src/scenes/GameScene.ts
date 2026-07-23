@@ -248,6 +248,12 @@ import {
   type SmashableKind,
 } from '../systems/smashables';
 import {
+  harvestOreVein,
+  isOreVeinId,
+  mineralFromVeinId,
+  oreVeinTextureKey,
+} from '../systems/ore-vein';
+import {
   markLandCleared,
   princessChampionDialog,
   questHint,
@@ -441,6 +447,8 @@ const CHAR_TO_TILE: Record<string, TileKind> = {
   g: 'grass',
   d: 'dirt',
   s: 'sand',
+  /** Mountain snow (walkable). */
+  n: 'snow',
   '~': 'water',
   D: 'door',
   L: 'locked',
@@ -460,6 +468,7 @@ const TEX: Record<TileKind, string> = {
   grass: 'tile-grass',
   dirt: 'tile-dirt',
   sand: 'tile-sand',
+  snow: 'tile-snow',
   water: 'tile-water',
   door: 'tile-door',
   locked: 'tile-locked',
@@ -518,6 +527,7 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   vase: 'vase',
   goblin: 'goblin',
   orc: 'orc',
+  ore_vein: 'ore_vein_gold',
 };
 
 const MOBILE_HOSTILES = [
@@ -2708,6 +2718,8 @@ export class GameScene extends Phaser.Scene {
         const kind = this.tileGrid[y][x];
         const pos = this.tileToWorld(x, y);
         const onBeach = room.id === BEACH_START_ID;
+        const isMountainApproach =
+          room.id.startsWith('road_north') || land === 'dwarvez';
         const waterBody = kind === 'water' ? this.waterBodies.get(`${x},${y}`) ?? 'pond' : undefined;
         let texKey =
           kind === 'stairs' && (room.floor ?? 0) >= 0
@@ -2716,6 +2728,14 @@ export class GameScene extends Phaser.Scene {
               ? 'tile-sand-wall'
               : kind === 'floor' && onBeach && this.textures.exists('tile-sand')
                 ? 'tile-sand'
+              : kind === 'wall' &&
+                  isMountainApproach &&
+                  this.textures.exists('tile-dwarf-wall')
+                ? 'tile-dwarf-wall'
+              : kind === 'floor' &&
+                  land === 'dwarvez' &&
+                  this.textures.exists('tile-dwarf-floor')
+                ? 'tile-dwarf-floor'
                 : kind === 'water' && waterBody
                   ? waterTextureKeySafe(waterBody, 0, (k) => this.textures.exists(k))
                   : TEX[kind];
@@ -2724,13 +2744,20 @@ export class GameScene extends Phaser.Scene {
           (kind === 'floor' ||
             kind === 'wall' ||
             kind === 'grass' ||
-            kind === 'dirt') &&
+            kind === 'dirt' ||
+            kind === 'snow') &&
           !(onBeach && (kind === 'wall' || kind === 'floor'))
         ) {
           const v = terrainVariant(x, y, 3);
           if (v > 0) {
             // v=1 → -b, v=2 → -c
-            const keyed = `${TEX[kind]}-${v === 1 ? 'b' : 'c'}`;
+            const baseKey =
+              kind === 'wall' && isMountainApproach
+                ? 'tile-dwarf-wall'
+                : kind === 'floor' && land === 'dwarvez'
+                  ? 'tile-dwarf-floor'
+                  : TEX[kind];
+            const keyed = `${baseKey}-${v === 1 ? 'b' : 'c'}`;
             if (this.textures.exists(keyed)) texKey = keyed;
           }
         }
@@ -2746,10 +2773,12 @@ export class GameScene extends Phaser.Scene {
             kind === 'grass' ||
             kind === 'dirt' ||
             kind === 'sand' ||
+            kind === 'snow' ||
             (kind === 'floor' && onBeach)
           ) {
             const gt = this.seasonWeather.groundTint;
-            if (gt !== 0xffffff) img.setTint(gt);
+            // Snow already white — skip warm seasonal dirt tints
+            if (kind !== 'snow' && gt !== 0xffffff) img.setTint(gt);
           }
           // Icy / snowy: cool sheen on water
           if (kind === 'water' && this.seasonWeather.weather === 'icy') {
@@ -3449,6 +3478,10 @@ export class GameScene extends Phaser.Scene {
       ((def.scale ?? 1) >= 6 ||
         (def.id ?? '').includes('redwood') ||
         (def.id ?? '').includes('sky-'));
+    const oreMineral =
+      def.kind === 'ore_vein' ? mineralFromVeinId(def.id ?? '') : null;
+    const oreTex =
+      oreMineral != null ? oreVeinTextureKey(oreMineral) : null;
     const tex =
       def.id === 'queen-wood-elves' && this.textures.exists('elf_queen')
         ? 'elf_queen'
@@ -3470,9 +3503,11 @@ export class GameScene extends Phaser.Scene {
                   ? 'assistant_honk'
                   : isSkyRedwood && this.textures.exists('tree_redwood')
                     ? 'tree_redwood'
-                    : rackTex && this.textures.exists(rackTex)
-                      ? rackTex
-                      : (ENTITY_TEX[def.kind] ?? 'npc');
+                    : oreTex && this.textures.exists(oreTex)
+                      ? oreTex
+                      : rackTex && this.textures.exists(rackTex)
+                        ? rackTex
+                        : (ENTITY_TEX[def.kind] ?? 'npc');
     const placed = this.roomExpand
       ? mapEntityTile(def.x, def.y, this.roomExpand)
       : { x: def.x, y: def.y };
@@ -3572,6 +3607,7 @@ export class GameScene extends Phaser.Scene {
       'table',
       'mirror',
       'throne',
+      'ore_vein',
     ].includes(def.kind);
 
     // Props the hero cannot walk through (interact still uses reach radius)
@@ -3598,7 +3634,8 @@ export class GameScene extends Phaser.Scene {
       def.kind === 'banner' ||
       def.kind === 'barrel' ||
       def.kind === 'crate' ||
-      def.kind === 'vase';
+      def.kind === 'vase' ||
+      def.kind === 'ore_vein';
 
     // Mobile hostiles: chase + walls. Cactus: rooted hazard (overlap only).
     // Solid props: immovable footprint collider. Tumbleweed: drifts, no combat.
@@ -5199,6 +5236,7 @@ export class GameScene extends Phaser.Scene {
       case 'mapz':
       case 'rack':
       case 'cube':
+      case 'ore_vein':
         return 10;
       case 'sign':
       case 'bookshelf':
@@ -5850,6 +5888,20 @@ export class GameScene extends Phaser.Scene {
     }
     if (best.id === GLAMDOLPH_ID) {
       this.talkGlamdolph();
+      return;
+    }
+    if (best.kind === 'ore_vein' || isOreVeinId(best.id)) {
+      const r = harvestOreVein(this.save, best.id ?? '');
+      this.save = r.save;
+      writeSave(this.save);
+      this.emitHud();
+      this.game.events.emit('dialog-show', r.dialog);
+      if (r.toast) this.game.events.emit('toast', r.toast);
+      // Spent veins despawn until reload; collected[] skips next spawn
+      if (r.harvested && best.alive) {
+        best.alive = false;
+        if (best.sprite?.active) best.sprite.destroy();
+      }
       return;
     }
     if (best.id === UNDER_KING_ID) {

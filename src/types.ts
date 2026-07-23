@@ -5,6 +5,8 @@ export type TileKind =
   | 'grass'
   | 'dirt'
   | 'sand' // beach sand (walkable)
+  /** Mountain snow pack (walkable) — Dwarvez approach. */
+  | 'snow'
   | 'water'
   | 'door'
   | 'locked'
@@ -80,7 +82,9 @@ export type EntityKind =
   | 'vase'
   /** Moredorkz hostiles (Fellowship epic). */
   | 'goblin'
-  | 'orc';
+  | 'orc'
+  /** Harvestable mineral deposit (Dwarvez caves). */
+  | 'ore_vein';
 
 /** Non-human best friend companion (randomized per playthrough). */
 export type BestBudId =

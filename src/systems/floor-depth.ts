@@ -63,6 +63,10 @@ export function depthTileTint(
     br = 0.95;
     bg = 0.85;
     bb = 1.0;
+  } else if (land === 'dwarvez') {
+    br = 0.72;
+    bg = 0.7;
+    bb = 0.78; // cold basalt caves
   }
 
   // Crush toward near-black with a residual hue
@@ -85,6 +89,7 @@ export function depthBackdropColor(depth: number, land: LandId = 'dunjunz'): num
   if (land === 'sewerz') return lerpRgb(0x0a1210, 0x020605, t);
   if (land === 'woodz') return lerpRgb(0x0a100c, 0x020403, t);
   if (land === 'dezertz') return lerpRgb(0x120e08, 0x060402, t);
+  if (land === 'dwarvez') return lerpRgb(0x0c0c12, 0x040406, t);
   return lerpRgb(0x0c0a14, 0x030208, t);
 }
 
