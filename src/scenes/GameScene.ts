@@ -2067,8 +2067,8 @@ export class GameScene extends Phaser.Scene {
       mapX: room.mapX,
       mapY: room.mapY,
       floor: room.floor ?? 0,
-      // step 2 = small pixels after nearest upscale (not giant cell stamps)
-      pixelStep: 2,
+      // Terraria-style micro-pixels (TERRARIA_PIXEL inside painter)
+      pixelStep: 3,
     };
     const canvas = paintContinuousGround(groundOpts);
     this.textures.addCanvas(key, canvas);

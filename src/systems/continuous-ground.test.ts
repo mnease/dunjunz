@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  TERRARIA_PIXEL,
   WATER_SHIMMER_PHASES,
   continuousGroundKey,
   continuousWaterKey,
   gridHasFluidSurface,
   isStructureKind,
   structurePropTexture,
+  terrariaPixelColor,
 } from './continuous-ground';
 import type { TileKind } from '../types';
 
@@ -56,5 +58,25 @@ describe('continuous ground', () => {
     expect(structurePropTexture('stairs', -1)).toBe('tile-stairs');
     expect(structurePropTexture('stairs_up')).toBe('tile-stairs-up');
     expect(structurePropTexture('entrance')).toBe('tile-cave-mouth');
+  });
+
+  it('Terraria pixel paint uses hard material edges', () => {
+    expect(TERRARIA_PIXEL).toBe(3);
+    const grid: TileKind[][] = [
+      ['grass', 'grass', 'dirt'],
+      ['grass', 'dirt', 'dirt'],
+      ['wall', 'wall', 'floor'],
+    ];
+    // Same material, different micro-pixels → both grass greens
+    const a = terrariaPixelColor(grid, 0.2, 0.1, 1, 1, 'surface', false, 1);
+    const b = terrariaPixelColor(grid, 0.8, 0.1, 5, 1, 'surface', false, 1);
+    expect(a[1]).toBeGreaterThan(a[0]); // green-ish grass top
+    expect(b[1]).toBeGreaterThan(40);
+    // Dirt cell should not match pure wall purple
+    const dirt = terrariaPixelColor(grid, 1.5, 1.5, 20, 20, 'surface', false, 1);
+    const wall = terrariaPixelColor(grid, 0.5, 2.5, 4, 40, 'surface', false, 1);
+    // dirt browner (R closer to G), wall more purple (B often higher relative)
+    expect(dirt[0]).toBeGreaterThan(50);
+    expect(wall[2]).toBeGreaterThan(20);
   });
 });

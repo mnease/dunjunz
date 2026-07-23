@@ -20,7 +20,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 - **No more visual tiles** — rooms paint as one continuous fractal ground surface (domain-warped biomes). Authored grass/dirt/stone/paths stay for collision & logic; the square stamp grid is gone from the screen.
 - **Continuous water shimmer** — water/lava animate via a multi-phase fractal overlay (foam/glow + soft bob), not tile frames.
 - **Structured doors & cave mouths** — entrances use clear arch/door props and sharp painted thresholds so they no longer blur into the fluid ground.
-- **Small-pixel continuous ground** — fine dither/quantization for crisp tiny pixels; doors/cave mouths stay cell-sized (not giant stamped tiles).
+- **Terraria-style ground pixels** — hard material edges, 16×16 micro-pixels per cell, limited per-material palettes, grass top fringe / dirt speckles / stone cracks. Small pixels yes; giant stamps no.
 - **Fluid fractal terrain** — grass, dirt, stone, snow, and cave floors use fractal noise for continuous color and soft biome edges.
 - **Dwarvez approach atmosphere** — North Road is outdoor foothills → high pass with cliffs, river, and rising snow; Dwarvez caves use dark jagged stone walls (not grey bricks); harvestable ore veins (bronze, gold, silver, diamond, ruby, emerald, mithril) chip with **E**.
 - **Dwarvez cave lighting** — interiors use the same survival-dark rules as deep dungeons (`dark: true`: low ambient, carried torch fuel, **T** place wall torch, dark toast). Snow approach (gate/road/overlook) stays outdoor-lit.
