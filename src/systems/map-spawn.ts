@@ -8,7 +8,8 @@
  */
 
 import { VIEW_TILES_H, VIEW_TILES_W } from '../config';
-import { blocksWalk } from './tile-solidity';
+import { blocksWalk, blocksWalkAt } from './tile-solidity';
+import type { TileKind } from '../types';
 
 export type EntryFrom =
   | 'north'
@@ -19,12 +20,17 @@ export type EntryFrom =
   | 'stairsUp'
   | string;
 
-export type WalkGrid = string[][]; // TileKind strings; walk via blocksWalk (door always open)
+export type WalkGrid = string[][]; // TileKind strings; door always open; water fords access
 
 // sand / dirt / grass / floor / carpet are walkable; door never blocked
 
 function isWalkable(kind: string | undefined): boolean {
   return !!kind && !blocksWalk(kind);
+}
+
+/** Grid-aware walk (water next to door/stairs is a ford). */
+function isWalkableAt(grid: WalkGrid, x: number, y: number): boolean {
+  return !blocksWalkAt(grid as TileKind[][], x, y);
 }
 
 /**
@@ -46,8 +52,9 @@ export function spawnInsideEntryEdge(
       const k = grid[y]?.[x];
       if (isWalkable(k) || k === 'door') {
         let ty = 1;
-        while (ty < h - 1 && !isWalkable(grid[ty]?.[x])) ty++;
-        if (ty >= h - 1 || !isWalkable(grid[ty]?.[x])) continue;
+        // Grid-aware: water next to door is a ford (still walkable)
+        while (ty < h - 1 && !isWalkableAt(grid, x, ty)) ty++;
+        if (ty >= h - 1 || !isWalkableAt(grid, x, ty)) continue;
         candidates.push({
           tx: x,
           ty,
@@ -60,10 +67,10 @@ export function spawnInsideEntryEdge(
     for (let x = 0; x < w; x++) {
       const k = grid[y]?.[x];
       if (isWalkable(k) || k === 'door') {
-        // Walk inward until a truly walkable cell (skip water/lava)
+        // Walk inward; water fording a door counts as walkable
         let ty = h - 2;
-        while (ty > 0 && !isWalkable(grid[ty]?.[x])) ty--;
-        if (ty <= 0 || !isWalkable(grid[ty]?.[x])) continue;
+        while (ty > 0 && !isWalkableAt(grid, x, ty)) ty--;
+        if (ty <= 0 || !isWalkableAt(grid, x, ty)) continue;
         candidates.push({
           tx: x,
           ty,
@@ -75,7 +82,7 @@ export function spawnInsideEntryEdge(
     const x = 0;
     for (let y = 0; y < h; y++) {
       const k = grid[y]?.[x];
-      if (isWalkable(k)) {
+      if (isWalkable(k) || isWalkableAt(grid, x, y)) {
         candidates.push({ tx: 1, ty: y, door: k === 'door' });
       }
     }
@@ -83,7 +90,7 @@ export function spawnInsideEntryEdge(
     const x = w - 1;
     for (let y = 0; y < h; y++) {
       const k = grid[y]?.[x];
-      if (isWalkable(k)) {
+      if (isWalkable(k) || isWalkableAt(grid, x, y)) {
         candidates.push({ tx: w - 2, ty: y, door: k === 'door' });
       }
     }

@@ -40,7 +40,7 @@ import {
 } from '../systems/fractal-noise';
 import {
   blocksProjectile,
-  blocksWalk,
+  blocksWalkAt,
 } from '../systems/tile-solidity';
 import {
   clearAllTouch,
@@ -2191,7 +2191,7 @@ export class GameScene extends Phaser.Scene {
           });
         }
 
-        if (SOLID.includes(kind)) {
+        if (SOLID.includes(kind) && blocksWalkAt(this.tileGrid, x, y)) {
           this.addWallAt(pos.x, pos.y, kind);
         }
       }
@@ -5830,7 +5830,7 @@ export class GameScene extends Phaser.Scene {
           const tx = cx + dx;
           const ty = cy + dy;
           const k = this.tileGrid[ty]?.[tx];
-          if (!k || blocksWalk(k)) continue;
+          if (!k || blocksWalkAt(this.tileGrid, tx, ty)) continue;
           // Prefer empty of solid actors
           const pos = this.tileToWorld(tx, ty);
           const occupied = this.actors.some(
@@ -6876,12 +6876,12 @@ export class GameScene extends Phaser.Scene {
     return { vx: outX, vy: outY };
   }
 
-  /** Walk / AI solid (water blocks feet, not arrows). */
+  /** Walk / AI solid. Water fords door/stairs access; open water still solid. */
   private isSolidTile(tx: number, ty: number): boolean {
     if (ty < 0 || ty >= VIEW_TILES_H || tx < 0 || tx >= VIEW_TILES_W) {
       return true;
     }
-    return blocksWalk(this.tileGrid[ty]![tx]);
+    return blocksWalkAt(this.tileGrid, tx, ty);
   }
 
   /**

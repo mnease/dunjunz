@@ -314,10 +314,11 @@ export const ROOMS: Record<string, RoomDef> = {
       'ddddddddddddddd.',
       'dddddd.S.dddddd.',
       'ddddddddddddddd.',
-      // SE koi pond (closed water → pond classification)
+      // SE koi pond (closed water → pond). Door column kept dirt so south
+      // door is never sealed by water (universal doorway law).
       '#gg.dddd~~..ggg#',
-      '#ggg.dd~~~~.ggg#',
-      '#gggg.d~~..gggg#',
+      '#ggg.dd~~~d.ggg#',
+      '#gggg.ddd..gggg#',
       '#######D########',
     ],
     entities: [
