@@ -33,7 +33,7 @@ import {
   applyTerrariaEntityPass,
   drawTerrariaLightCookie,
   shouldApplyTerrariaEntityPass,
-  terrariaSeedFromKey,
+  terrariaEntityPassOpts,
 } from './terraria-style';
 import {
   block,
@@ -154,15 +154,9 @@ function canvasTex(
     applyMicroDetail(ctx, w, h, Math.abs(seed));
   }
   // Terraria-style entity pass: outline, jagged edge, drop shadow
-  // (characters, foliage, props — not UI chrome or ground tiles)
+  // Soft ambient (koi/crab/sign…) skips jagged grow — that was the tile-cage artifact.
   if (shouldApplyTerrariaEntityPass(key)) {
-    applyTerrariaEntityPass(ctx, w, h, {
-      seed: terrariaSeedFromKey(key),
-      jagged: true,
-      outline: true,
-      shadow: true,
-      snap: true,
-    });
+    applyTerrariaEntityPass(ctx, w, h, terrariaEntityPassOpts(key));
   }
   scene.textures.addCanvas(key, canvas);
 }

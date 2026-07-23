@@ -268,8 +268,51 @@ export function shouldApplyTerrariaEntityPass(key: string): boolean {
   if (key === 'light_cookie') return false;
   if (key.startsWith('mapz_')) return false;
   if (key === 'particle' || key === 'particle-hit') return false;
+  if (key.startsWith('precip_')) return false;
+  if (key.startsWith('proj-') || key.startsWith('slash') || key === 'sword-swing')
+    return false;
   // Entity / prop / character sprites — yes
   return true;
+}
+
+/**
+ * Small ambient / underwater sprites: sparse silhouettes. Full jagged+grow
+ * turns the 1px outline into tile-shaped black cages (koi/crab bug). Soft pass
+ * only — thin outline, no nibble/grow, no drop shadow.
+ */
+const SOFT_AMBIENT_KEYS = new Set([
+  'koi',
+  'crab',
+  'seaweed',
+  'sign',
+  'tumbleweed',
+  'hornet',
+  'heart',
+  'key',
+]);
+
+/**
+ * Per-key pass options. Soft ambient = outline only (Terraria fish still read).
+ */
+export function terrariaEntityPassOpts(key: string): TerrariaPassOpts {
+  const seed = terrariaSeedFromKey(key);
+  if (SOFT_AMBIENT_KEYS.has(key)) {
+    return {
+      outline: true,
+      jagged: false,
+      shadow: false,
+      snap: true,
+      seed,
+    };
+  }
+  // Dense characters / trees: full Terraria entity pass
+  return {
+    outline: true,
+    jagged: true,
+    shadow: true,
+    snap: true,
+    seed,
+  };
 }
 
 /** Seed from texture key string. */

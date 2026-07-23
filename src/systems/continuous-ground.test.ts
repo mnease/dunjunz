@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MATERIAL_WARP,
   TERRARIA_PIXEL,
   WATER_SHIMMER_PHASES,
   continuousGroundKey,
   continuousWaterKey,
   gridHasFluidSurface,
   isStructureKind,
+  sampleKindWarped,
   structurePropTexture,
   terrariaPixelColor,
 } from './continuous-ground';
@@ -60,8 +62,8 @@ describe('continuous ground', () => {
     expect(structurePropTexture('entrance')).toBe('tile-cave-mouth');
   });
 
-  it('Terraria pixel paint uses hard material edges', () => {
-    expect(TERRARIA_PIXEL).toBe(3);
+  it('Terraria pixel paint uses hard material edges at fine density', () => {
+    expect(TERRARIA_PIXEL).toBe(2);
     const grid: TileKind[][] = [
       ['grass', 'grass', 'dirt'],
       ['grass', 'dirt', 'dirt'],
@@ -78,5 +80,19 @@ describe('continuous ground', () => {
     // dirt browner (R closer to G), wall more purple (B often higher relative)
     expect(dirt[0]).toBeGreaterThan(50);
     expect(wall[2]).toBeGreaterThan(20);
+  });
+
+  it('domain warp can move sample off pure cell lattice', () => {
+    expect(MATERIAL_WARP).toBeGreaterThan(0.15);
+    const grid: TileKind[][] = [
+      ['water', 'water', 'dirt'],
+      ['water', 'water', 'dirt'],
+      ['grass', 'grass', 'grass'],
+    ];
+    // Deep inside water should stay water
+    expect(sampleKindWarped(grid, 0.5, 0.5, 42)).toBe('water');
+    // Near a material boundary, warp may yield either kind — both valid materials
+    const near = sampleKindWarped(grid, 1.95, 0.5, 99);
+    expect(['water', 'dirt']).toContain(near);
   });
 });

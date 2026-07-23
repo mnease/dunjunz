@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   shouldApplyTerrariaEntityPass,
+  terrariaEntityPassOpts,
   terrariaSeedFromKey,
 } from './terraria-style';
 
@@ -17,6 +18,19 @@ describe('terraria style', () => {
     expect(shouldApplyTerrariaEntityPass('torch_wall')).toBe(true);
     expect(shouldApplyTerrariaEntityPass('best_bud')).toBe(true);
     expect(shouldApplyTerrariaEntityPass('glamdolph')).toBe(true);
+    expect(shouldApplyTerrariaEntityPass('koi')).toBe(true);
+  });
+
+  it('soft ambient opts skip jagged grow (no tile-cage outline)', () => {
+    const koi = terrariaEntityPassOpts('koi');
+    expect(koi.jagged).toBe(false);
+    expect(koi.shadow).toBe(false);
+    expect(koi.outline).toBe(true);
+    const crab = terrariaEntityPassOpts('crab');
+    expect(crab.jagged).toBe(false);
+    const slime = terrariaEntityPassOpts('slime');
+    expect(slime.jagged).toBe(true);
+    expect(slime.shadow).toBe(true);
   });
 
   it('seed from key is stable', () => {

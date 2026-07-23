@@ -2,20 +2,34 @@
  * Continuous room ground paint — Terraria-like small pixels.
  *
  * Logic grid still drives kinds / collision. Visuals use a fine pixel grid
- * (not one giant stamp per cell): hard material edges, 3–4 color palettes
- * per material, speckles/blades like Terraria dirt/grass/stone.
+ * (not one giant stamp per cell): domain-warped material edges (organic shores,
+ * not axis-aligned cell cages), 3–5 color palettes, speckles like Terraria.
  */
 
 import type { TileKind } from '../types';
 import { COLORS, MAP_PIXEL_H, MAP_PIXEL_W, TILE, SCALE } from '../config';
-import { hash2, seedFromString, valueNoise2 } from './fractal-noise';
+import {
+  fbm01,
+  hash2,
+  seedFromString,
+  valueNoise2,
+} from './fractal-noise';
 
 const CELL = TILE * SCALE; // 48 world px per logical cell
 
 /**
- * World pixels per painted texel. 3 → 16×16 micro-pixels per cell (Terraria block feel).
+ * World pixels per painted texel.
+ * 2 → 24×24 micro-pixels per logic cell (higher-res Terraria feel).
+ * Was 3 (16×16); that still read as big tile blocks at SCALE=3.
  */
-export const TERRARIA_PIXEL = 3;
+export const TERRARIA_PIXEL = 2;
+
+/**
+ * Domain-warp amplitude in tile-space units.
+ * Warps material sampling so shorelines / cliffs are organic, not 48px squares.
+ * Collision still uses the unwarped logic grid.
+ */
+export const MATERIAL_WARP = 0.32;
 
 /** RGB 0–255 */
 type RGB = [number, number, number];
@@ -189,6 +203,32 @@ function sampleKind(grid: TileKind[][], tx: number, ty: number): TileKind {
   return grid[y]![x] ?? 'void';
 }
 
+/**
+ * Domain-warped sample — material edges follow noise, not the logic-cell lattice.
+ * Keeps hard nearest-cell materials (no soft blend) but breaks rectangular cages.
+ */
+export function sampleKindWarped(
+  grid: TileKind[][],
+  tx: number,
+  ty: number,
+  seed: number,
+  amp = MATERIAL_WARP,
+): TileKind {
+  // Two-octave warp for shoreline meander + fine jig
+  const w1x = valueNoise2(tx * 1.4, ty * 1.4, seed + 101);
+  const w1y = valueNoise2(tx * 1.4 + 17.3, ty * 1.4 - 9.1, seed + 211);
+  const w2x = valueNoise2(tx * 3.6 + 4.2, ty * 3.6, seed + 307) * 0.35;
+  const w2y = valueNoise2(tx * 3.6, ty * 3.6 + 8.8, seed + 419) * 0.35;
+  const wx = (w1x + w2x) * amp;
+  const wy = (w1y + w2y) * amp;
+  return sampleKind(grid, tx + wx, ty + wy);
+}
+
+/** Micro-cells per logical cell (for subX/subY fringe math). */
+function microPerCell(): number {
+  return Math.max(8, Math.round(CELL / TERRARIA_PIXEL));
+}
+
 export function isStructureKind(k: TileKind): boolean {
   return (
     k === 'door' ||
@@ -202,7 +242,8 @@ export function isStructureKind(k: TileKind): boolean {
 
 /**
  * Terraria-like pixel color for one micro-pixel.
- * Hard material edges (nearest cell). Intra-material speckles + grass blades.
+ * Domain-warped hard material edges (organic, not cell-cage). Intra-material
+ * speckles + grass blades via world-space hash/fBm.
  */
 export function terrariaPixelColor(
   grid: TileKind[][],
@@ -216,26 +257,28 @@ export function terrariaPixelColor(
   beach: boolean,
   seed: number,
 ): RGB {
-  // Hard edges — no soft blend between materials
-  const kind = sampleKind(grid, tx, ty);
+  // Warped hard edges — materials stay discrete but shores meander
+  const kind = sampleKindWarped(grid, tx, ty, seed);
   const pal = materialPalette(kind, land, beach);
   const structure = isStructureKind(kind);
 
+  // Local coords after warp for structure shapes still feel centered on cell
   const fx = tx - Math.floor(tx);
   const fy = ty - Math.floor(ty);
-  // Micro position within logical cell (0..15 if 16 texels/cell)
-  const subX = Math.floor(fx * 16);
-  const subY = Math.floor(fy * 16);
+  const mpc = microPerCell();
+  const subX = Math.floor(fx * mpc);
+  const subY = Math.floor(fy * mpc);
 
   let h = hash2(mx, my, seed);
-  // Slight spatial noise for organic clumps within a material
-  const clump = hash2(Math.floor(mx / 3), Math.floor(my / 3), seed + 7);
+  // World-space clump (not per-cell) so water/dirt continuous across cell borders
+  const clump = fbm01(mx * 0.11, my * 0.11, seed + 7, 3);
+  const flow = fbm01(mx * 0.07 + 3.1, my * 0.07 - 1.4, seed + 13, 4);
 
   let c: RGB;
 
   if (kind === 'grass') {
     // Terraria grass: dirt-ish body, green top fringe when open above
-    const above = sampleKind(grid, tx, ty - 1);
+    const above = sampleKindWarped(grid, tx, ty - 0.55, seed);
     const openAbove =
       above === 'grass' ||
       above === 'void' ||
@@ -244,25 +287,28 @@ export function terrariaPixelColor(
       above === 'snow' ||
       above === 'sand' ||
       (above !== 'wall' && above !== 'locked');
-    // Top 3 micro-rows: grass surface
-    if (openAbove && subY <= 2) {
+    // Grass surface fringe (top ~12% of cell + noise height)
+    const bladeH = 2 + Math.floor(h * 3);
+    if (openAbove && subY <= bladeH) {
       c = pick(
         [
           [58, 140, 78],
           [80, 170, 95],
           [40, 110, 58],
           [100, 190, 110],
+          [70, 160, 88],
         ],
         h,
       );
       // blade tips stick up 1px sometimes
-      if (subY === 0 && h > 0.55) c = [90, 185, 100];
-    } else if (subY <= 5 && openAbove) {
+      if (subY === 0 && h > 0.5) c = [90, 185, 100];
+    } else if (openAbove && subY <= bladeH + 4) {
       c = pick(
         [
           [47, 107, 69],
           [58, 125, 82],
           [36, 88, 52],
+          [55, 118, 70],
         ],
         h,
       );
@@ -274,35 +320,36 @@ export function terrariaPixelColor(
           [107, 83, 68],
           [75, 58, 42],
           [120, 95, 72],
+          [95, 74, 55],
         ],
-        h,
+        h * 0.6 + clump * 0.4,
       );
     }
   } else if (kind === 'dirt') {
-    c = pick(pal, h * 0.7 + clump * 0.3);
+    c = pick(pal, h * 0.55 + clump * 0.45);
     // occasional pebble
-    if (h > 0.92) c = [150, 140, 125];
+    if (h > 0.93) c = [150, 140, 125];
   } else if (kind === 'sand') {
-    c = pick(pal, h);
-    if (h > 0.9) c = [255, 245, 220];
+    c = pick(pal, h * 0.5 + clump * 0.5);
+    if (h > 0.91) c = [255, 245, 220];
   } else if (kind === 'snow') {
-    c = pick(pal, h);
-    if (h > 0.88) c = [255, 255, 255];
-    if (h < 0.08) c = [170, 190, 210];
+    c = pick(pal, h * 0.45 + clump * 0.55);
+    if (h > 0.9) c = [255, 255, 255];
+    if (h < 0.07) c = [170, 190, 210];
   } else if (kind === 'wall') {
-    c = pick(pal, h * 0.6 + clump * 0.4);
-    // stone crack lines
-    if (hash2(mx, my, seed + 3) > 0.94) c = pal[pal.length - 1]!;
-    // mortar-ish darker every few pixels
-    if ((subX + subY) % 7 === 0 && h < 0.4) {
+    c = pick(pal, h * 0.55 + clump * 0.45);
+    // stone crack lines (world-space, not cell lattice)
+    if (hash2(mx, my, seed + 3) > 0.95) c = pal[pal.length - 1]!;
+    // occasional darker vein (not axis-aligned mortar grid)
+    if (flow > 0.72 && h < 0.45) {
       c = [
-        Math.max(0, c[0] - 20),
+        Math.max(0, c[0] - 22),
         Math.max(0, c[1] - 20),
         Math.max(0, c[2] - 18),
       ];
     }
   } else if (kind === 'floor') {
-    c = pick(pal, h * 0.65 + clump * 0.35);
+    c = pick(pal, h * 0.55 + clump * 0.45);
     if (h > 0.93) {
       c = [
         Math.min(255, c[0] + 18),
@@ -311,12 +358,53 @@ export function terrariaPixelColor(
       ];
     }
   } else if (kind === 'water') {
-    c = pick(pal, h);
-    // highlight sparkle pixel
-    if (h > 0.9) c = [120, 180, 220];
+    // Continuous depth bands via fBm — no per-cell rectangular shade blocks
+    const depth = fbm01(tx * 1.8, ty * 1.8, seed + 40, 4);
+    const spark = hash2(mx, my, seed + 5);
+    if (depth < 0.28) {
+      c = pick(
+        [
+          [55, 120, 170],
+          [70, 140, 190],
+          [90, 160, 200],
+        ],
+        h,
+      );
+    } else if (depth < 0.55) {
+      c = pick(
+        [
+          [40, 100, 155],
+          [35, 90, 140],
+          [50, 115, 165],
+        ],
+        h,
+      );
+    } else if (depth < 0.78) {
+      c = pick(
+        [
+          [30, 75, 125],
+          [25, 65, 110],
+          [40, 90, 140],
+        ],
+        h,
+      );
+    } else {
+      c = pick(
+        [
+          [22, 55, 95],
+          [28, 65, 105],
+          [18, 48, 85],
+        ],
+        h,
+      );
+    }
+    // highlight sparkle pixel (Terraria water glints)
+    if (spark > 0.93) c = [140, 195, 230];
+    else if (spark > 0.88) c = [100, 170, 210];
   } else if (kind === 'lava') {
-    c = pick(pal, h);
-    if (h > 0.88) c = [255, 200, 80];
+    const heat = fbm01(tx * 2.2, ty * 2.2, seed + 55, 3);
+    c = pick(pal, h * 0.4 + heat * 0.6);
+    if (h > 0.9 || heat > 0.85) c = [255, 200, 80];
   } else if (kind === 'stairs' || kind === 'stairs_up' || kind === 'entrance') {
     // Dark maw + stone rim (Terraria-like cave hole)
     const dx = fx - 0.5;
@@ -339,7 +427,12 @@ export function terrariaPixelColor(
       c = band % 2 === 0 ? [70, 60, 90] : [40, 35, 55];
     }
   } else if (kind === 'door' || kind === 'locked') {
-    const frame = subX <= 1 || subX >= 14 || subY <= 1 || subY >= 14;
+    const edge = Math.max(1, Math.floor(mpc / 16));
+    const frame =
+      subX <= edge ||
+      subX >= mpc - 1 - edge ||
+      subY <= edge ||
+      subY >= mpc - 1 - edge;
     if (frame) {
       c = [95, 82, 55];
     } else if (kind === 'locked') {
@@ -352,7 +445,8 @@ export function terrariaPixelColor(
         h,
       );
       // iron band
-      if (subY === 5 || subY === 10) c = [90, 90, 100];
+      if (subY === Math.floor(mpc * 0.35) || subY === Math.floor(mpc * 0.65))
+        c = [90, 90, 100];
     } else {
       c = pick(
         [
@@ -382,7 +476,7 @@ export function terrariaPixelColor(
     c = pick(pal, h);
     if ((subX + subY) % 4 === 0) c = [150, 70, 100];
   } else {
-    c = pick(pal, h);
+    c = pick(pal, h * 0.5 + clump * 0.5);
   }
 
   // Micro shade for depth (still hard pixels)
@@ -394,26 +488,27 @@ export function terrariaPixelColor(
     ];
   }
 
-  // Jagged material borders — darken where neighbor kind differs (Terraria cliff/seam)
+  // Jagged material borders using warped neighbor samples (organic cliff/seam)
   if (!structure) {
-    const nR = sampleKind(grid, tx + 0.08, ty);
-    const nL = sampleKind(grid, tx - 0.08, ty);
-    const nU = sampleKind(grid, tx, ty - 0.08);
-    const nD = sampleKind(grid, tx, ty + 0.08);
+    const step = 0.06;
+    const nR = sampleKindWarped(grid, tx + step, ty, seed);
+    const nL = sampleKindWarped(grid, tx - step, ty, seed);
+    const nU = sampleKindWarped(grid, tx, ty - step, seed);
+    const nD = sampleKindWarped(grid, tx, ty + step, seed);
     const border =
       nR !== kind || nL !== kind || nU !== kind || nD !== kind;
     if (border) {
       // Pixel rim + occasional nibble gap for jagged edge
       const nibble = hash2(mx, my, seed + 19);
-      if (nibble < 0.12) {
-        // show neighbor speck (jag)
+      if (nibble < 0.18) {
+        // show neighbor speck (jag) — more often = more organic shoreline
         const nk = nR !== kind ? nR : nL !== kind ? nL : nU !== kind ? nU : nD;
         c = pick(materialPalette(nk, land, beach), hash2(mx, my, seed + 21));
-      } else {
+      } else if (nibble < 0.55) {
         c = [
-          Math.max(0, c[0] - 28),
-          Math.max(0, c[1] - 26),
-          Math.max(0, c[2] - 24),
+          Math.max(0, c[0] - 32),
+          Math.max(0, c[1] - 28),
+          Math.max(0, c[2] - 26),
         ];
       }
     }
@@ -477,9 +572,9 @@ export function paintContinuousGround(
       const worldY = py * step + step * 0.5;
       const tx = Math.max(0, Math.min(gw - 0.001, worldX / CELL));
       const ty = Math.max(0, Math.min(gh - 0.001, worldY / CELL));
-      // Stable world micro-coords for hash (across map cells)
-      const mx = Math.floor(mapX * 64 + px);
-      const my = Math.floor(mapY * 64 + py);
+      // Stable world micro-coords for hash (across map cells; finer with TERRARIA_PIXEL=2)
+      const mx = Math.floor(mapX * 96 + px);
+      const my = Math.floor(mapY * 96 + py);
       const [R, G, B] = terrariaPixelColor(
         grid,
         tx,
@@ -574,7 +669,8 @@ export function paintContinuousWaterOverlay(
       const worldY = py * step + step * 0.5;
       const tx = Math.max(0, Math.min(gw - 0.001, worldX / CELL));
       const ty = Math.max(0, Math.min(gh - 0.001, worldY / CELL));
-      const kind = sampleKind(grid, tx, ty);
+      // Same domain warp as ground so shimmer mask matches organic shores
+      const kind = sampleKindWarped(grid, tx, ty, seed);
       const i = (py * paintW + px) * 4;
       if (kind !== 'water' && kind !== 'lava') {
         data[i] = 0;
@@ -583,43 +679,54 @@ export function paintContinuousWaterOverlay(
         data[i + 3] = 0;
         continue;
       }
-      const mx = Math.floor(mapX * 64 + px + ph * 2);
-      const my = Math.floor(mapY * 64 + py - ph);
-      // Phase-shifted sparkle pattern (hard pixels)
+      const mx = Math.floor(mapX * 96 + px + ph * 3);
+      const my = Math.floor(mapY * 96 + py - ph * 2);
+      // Phase-shifted sparkle + continuous wave (hard pixels, world-space)
       const h = hash2(mx, my, roomSeed + 4);
-      const wave = valueNoise2(
-        tx * 2.5 + ph * 0.4,
-        ty * 2.5 - ph * 0.3,
+      const wave = fbm01(
+        tx * 2.2 + ph * 0.35,
+        ty * 2.2 - ph * 0.28,
         roomSeed,
+        3,
       );
       if (kind === 'water') {
-        if (h > 0.82 || wave > 0.55) {
-          data[i] = 160;
-          data[i + 1] = 210;
+        if (h > 0.88 || wave > 0.72) {
+          data[i] = 170;
+          data[i + 1] = 220;
           data[i + 2] = 255;
-          data[i + 3] = beach ? 210 : 170;
-        } else if (h > 0.55) {
-          data[i] = 50;
-          data[i + 1] = 110;
-          data[i + 2] = 170;
-          data[i + 3] = 100;
-        } else {
-          data[i] = 30;
-          data[i + 1] = 80;
-          data[i + 2] = 130;
+          data[i + 3] = beach ? 200 : 160;
+        } else if (h > 0.7 || wave > 0.55) {
+          data[i] = 90;
+          data[i + 1] = 160;
+          data[i + 2] = 210;
+          data[i + 3] = 90;
+        } else if (h > 0.45) {
+          data[i] = 45;
+          data[i + 1] = 105;
+          data[i + 2] = 165;
           data[i + 3] = 55;
+        } else {
+          data[i] = 0;
+          data[i + 1] = 0;
+          data[i + 2] = 0;
+          data[i + 3] = 0;
         }
       } else {
-        if (h > 0.8 || wave > 0.5) {
+        if (h > 0.82 || wave > 0.65) {
           data[i] = 255;
           data[i + 1] = 200;
           data[i + 2] = 80;
-          data[i + 3] = 210;
-        } else {
+          data[i + 3] = 200;
+        } else if (h > 0.5) {
           data[i] = 220;
           data[i + 1] = 70;
           data[i + 2] = 30;
-          data[i + 3] = 110;
+          data[i + 3] = 90;
+        } else {
+          data[i] = 0;
+          data[i + 1] = 0;
+          data[i + 2] = 0;
+          data[i + 3] = 0;
         }
       }
     }

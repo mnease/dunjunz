@@ -1395,27 +1395,55 @@ export function drawWoodElfQueen(ctx: CanvasRenderingContext2D): void {
 /**
  * Koi fish — orange/white/black pattern, non-combat pond swimmer.
  */
+/**
+ * Pond koi — organic fish silhouette (Terraria-density pixels).
+ * Drawn compact so the soft outline pass hugs the body, not a tile cage.
+ */
 export function drawKoiSprite(ctx: CanvasRenderingContext2D, _s: number): void {
-  // body
-  fill(ctx, '#e87840', 6, 12, 18, 8);
-  fill(ctx, '#f0a060', 7, 13, 14, 5);
-  fill(ctx, '#fff0e0', 10, 14, 6, 3);
-  fill(ctx, '#1a1010', 16, 13, 4, 3);
-  fill(ctx, '#e04030', 8, 15, 3, 2);
-  // head / nose
-  fill(ctx, '#f09050', 22, 13, 5, 5);
-  fill(ctx, '#1a1010', 25, 14, 2, 2);
-  spark(ctx, 25, 14, '#ffffff');
-  // tail
-  fill(ctx, '#e87840', 2, 11, 5, 4);
-  fill(ctx, '#e87840', 2, 16, 5, 4);
-  fill(ctx, '#f0a060', 3, 12, 3, 2);
-  fill(ctx, '#f0a060', 3, 17, 3, 2);
-  // fins
-  fill(ctx, '#f0a060', 12, 10, 4, 2);
-  fill(ctx, '#f0a060', 12, 19, 4, 2);
-  // soft under-glow (in water)
-  fill(ctx, 'rgba(255,200,150,0.25)', 8, 20, 12, 2);
+  // Tail flukes (forked, organic)
+  fill(ctx, '#d06030', 3, 11, 3, 3);
+  fill(ctx, '#e87840', 4, 12, 3, 2);
+  fill(ctx, '#d06030', 3, 17, 3, 3);
+  fill(ctx, '#e87840', 4, 17, 3, 2);
+  fill(ctx, '#c05028', 2, 13, 2, 2);
+  fill(ctx, '#c05028', 2, 16, 2, 2);
+  // Tail stem
+  fill(ctx, '#e87840', 5, 13, 3, 5);
+  fill(ctx, '#f0a060', 6, 14, 2, 3);
+  // Body — tapered ellipse via stepped rows (not one big rect)
+  fill(ctx, '#e87840', 8, 12, 12, 7);
+  fill(ctx, '#e87840', 9, 11, 10, 1);
+  fill(ctx, '#e87840', 9, 19, 10, 1);
+  fill(ctx, '#d86838', 8, 18, 11, 1);
+  // Belly highlight
+  fill(ctx, '#f0a060', 10, 13, 9, 4);
+  fill(ctx, '#fff0e0', 12, 14, 5, 2);
+  // Orange-red markings (koi pattern)
+  fill(ctx, '#e04030', 10, 12, 3, 2);
+  fill(ctx, '#e04030', 16, 15, 3, 2);
+  fill(ctx, '#c03020', 14, 17, 2, 1);
+  // Dark dorsal patch
+  fill(ctx, '#3a2018', 15, 12, 4, 2);
+  fill(ctx, '#2a1810', 17, 13, 2, 1);
+  // Dorsal fin
+  fill(ctx, '#f0a060', 13, 9, 3, 2);
+  fill(ctx, '#e87840', 14, 10, 2, 1);
+  // Pectoral fins
+  fill(ctx, '#f09050', 12, 19, 3, 2);
+  fill(ctx, '#e87840', 13, 20, 2, 1);
+  fill(ctx, '#f09050', 18, 19, 2, 1);
+  // Head / snout taper
+  fill(ctx, '#f09050', 19, 12, 5, 6);
+  fill(ctx, '#f0a060', 20, 13, 4, 4);
+  fill(ctx, '#e87840', 23, 13, 2, 4);
+  fill(ctx, '#f0a060', 24, 14, 2, 2);
+  // Eye
+  fill(ctx, '#1a1010', 22, 13, 2, 2);
+  spark(ctx, 22, 13, '#ffffff');
+  // Mouth tip
+  fill(ctx, '#d86838', 25, 15, 1, 1);
+  // Soft under-glow (in water) — low alpha, inside body bounds
+  fill(ctx, 'rgba(255,200,150,0.2)', 10, 18, 10, 1);
 }
 
 /**
