@@ -46,11 +46,14 @@ import {
   drawWaterTile,
   drawAssistantHonk,
   drawBanner,
+  drawBarrel,
   drawCarpetTile,
+  drawCrate,
   drawGlamdolph,
   drawPillar,
   drawRoyalGoose,
   drawThrone,
+  drawVase,
   drawWoodElfGuard,
   drawWoodElfQueen,
   fill,
@@ -2974,6 +2977,15 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
   canvasTex(scene, 'banner', ART_RES, ART_RES, (ctx) => {
     drawBanner(ctx);
+  });
+  canvasTex(scene, 'barrel', ART_RES, ART_RES, (ctx) => {
+    drawBarrel(ctx);
+  });
+  canvasTex(scene, 'crate', ART_RES, ART_RES, (ctx) => {
+    drawCrate(ctx);
+  });
+  canvasTex(scene, 'vase', ART_RES, ART_RES, (ctx) => {
+    drawVase(ctx);
   });
 
   canvasTex(scene, 'wolf', ART_RES, ART_RES, (ctx) => {

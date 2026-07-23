@@ -73,7 +73,11 @@ export type EntityKind =
   /** Kingdom throne room — solid royal props. */
   | 'throne'
   | 'pillar'
-  | 'banner';
+  | 'banner'
+  /** Smashable clutter — hit for coins / occasional potions. */
+  | 'barrel'
+  | 'crate'
+  | 'vase';
 
 /** Non-human best friend companion (randomized per playthrough). */
 export type BestBudId =

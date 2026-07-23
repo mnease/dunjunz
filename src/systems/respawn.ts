@@ -64,7 +64,13 @@ export function isPermanentKill(kind: string, id: string): boolean {
     kind === 'koi' ||
     kind === 'crab' ||
     kind === 'palm' ||
-    kind === 'seaweed'
+    kind === 'seaweed' ||
+    kind === 'barrel' ||
+    kind === 'crate' ||
+    kind === 'vase' ||
+    kind === 'throne' ||
+    kind === 'pillar' ||
+    kind === 'banner'
   ) {
     return true;
   }

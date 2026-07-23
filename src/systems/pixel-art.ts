@@ -1082,6 +1082,56 @@ export function drawPillar(ctx: CanvasRenderingContext2D): void {
   fill(ctx, '#c9a227', 8, 26, 16, 1);
 }
 
+/** Wooden barrel — staves + metal bands. Author 32. */
+export function drawBarrel(ctx: CanvasRenderingContext2D): void {
+  fill(ctx, 'rgba(0,0,0,0.2)', 8, 28, 16, 3);
+  shadedBlock(ctx, '#6b4423', '#8b5a2b', '#3a2410', 8, 6, 16, 22);
+  fill(ctx, '#5a3d1a', 9, 8, 2, 18);
+  fill(ctx, '#5a3d1a', 21, 8, 2, 18);
+  // Metal bands
+  fill(ctx, '#6a6a78', 7, 10, 18, 3);
+  fill(ctx, '#6a6a78', 7, 20, 18, 3);
+  fill(ctx, '#9a9aa8', 8, 11, 16, 1);
+  fill(ctx, '#9a9aa8', 8, 21, 16, 1);
+  // Lid
+  shadedBlock(ctx, '#5a3d1a', '#7a5a38', '#2a1810', 9, 4, 14, 4);
+  fill(ctx, '#c9a227', 14, 5, 4, 2);
+}
+
+/** Wooden crate / box. Author 32. */
+export function drawCrate(ctx: CanvasRenderingContext2D): void {
+  fill(ctx, 'rgba(0,0,0,0.2)', 6, 28, 20, 3);
+  shadedBlock(ctx, '#5a3d1a', '#8b5a2b', '#2a1810', 6, 8, 20, 20);
+  fill(ctx, '#3a2410', 7, 9, 18, 2);
+  fill(ctx, '#3a2410', 7, 17, 18, 2);
+  fill(ctx, '#3a2410', 7, 25, 18, 2);
+  fill(ctx, '#3a2410', 12, 9, 2, 18);
+  fill(ctx, '#3a2410', 18, 9, 2, 18);
+  // Nails
+  fill(ctx, '#888', 8, 10, 2, 2);
+  fill(ctx, '#888', 22, 10, 2, 2);
+  fill(ctx, '#888', 8, 24, 2, 2);
+  fill(ctx, '#888', 22, 24, 2, 2);
+  fill(ctx, '#c9a070', 7, 8, 18, 1);
+}
+
+/** Ceramic vase — smashable pot. Author 32. */
+export function drawVase(ctx: CanvasRenderingContext2D): void {
+  fill(ctx, 'rgba(0,0,0,0.2)', 10, 28, 12, 3);
+  // Body
+  shadedBlock(ctx, '#6a4050', '#a06078', '#3a2030', 9, 10, 14, 16);
+  fill(ctx, '#c08098', 11, 12, 4, 8);
+  // Neck + rim
+  shadedBlock(ctx, '#5a3040', '#905868', '#2a1820', 12, 6, 8, 6);
+  fill(ctx, '#c9a227', 11, 5, 10, 2);
+  fill(ctx, '#e8d070', 13, 5, 6, 1);
+  // Base
+  fill(ctx, '#4a2838', 10, 24, 12, 3);
+  // Pattern stripe
+  fill(ctx, '#ffc857', 10, 16, 12, 2);
+  spark(ctx, 14, 13, '#ffd0e0');
+}
+
 /** Wall banner / hanging flag (purple + gold). Author 32. */
 export function drawBanner(ctx: CanvasRenderingContext2D): void {
   // Pole

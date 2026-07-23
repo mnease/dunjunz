@@ -229,6 +229,12 @@ import {
   shouldTriggerFellowshipCutscene,
 } from '../systems/fellowship';
 import {
+  isSmashableKind,
+  smashableEntityDefs,
+  rollSmashLoot,
+  type SmashableKind,
+} from '../systems/smashables';
+import {
   markLandCleared,
   princessChampionDialog,
   questHint,
@@ -494,6 +500,9 @@ const ENTITY_TEX: Record<EntityKind, string> = {
   throne: 'throne',
   pillar: 'pillar',
   banner: 'banner',
+  barrel: 'barrel',
+  crate: 'crate',
+  vase: 'vase',
 };
 
 const MOBILE_HOSTILES = [
@@ -2799,6 +2808,9 @@ export class GameScene extends Phaser.Scene {
       this.spawnEntity(koi);
     }
 
+    // Corner barrels / crates / vases (smash for coins + occasional potions)
+    this.spawnCornerSmashables();
+
     // Ensure boss chest appears after victory if not collected
     if (
       (resolved === 'b8_boss' || resolved === 'b2_boss') &&
@@ -3545,7 +3557,10 @@ export class GameScene extends Phaser.Scene {
       def.kind === 'mirror' ||
       def.kind === 'throne' ||
       def.kind === 'pillar' ||
-      def.kind === 'banner';
+      def.kind === 'banner' ||
+      def.kind === 'barrel' ||
+      def.kind === 'crate' ||
+      def.kind === 'vase';
 
     // Mobile hostiles: chase + walls. Cactus: rooted hazard (overlap only).
     // Solid props: immovable footprint collider. Tumbleweed: drifts, no combat.
@@ -3631,6 +3646,13 @@ export class GameScene extends Phaser.Scene {
       } else if (def.kind === 'banner') {
         bw = 8;
         bh = 10;
+      } else if (
+        def.kind === 'barrel' ||
+        def.kind === 'crate' ||
+        def.kind === 'vase'
+      ) {
+        bw = 12;
+        bh = 12;
       }
       body.setSize(bw, bh);
       body.setOffset((fw - bw) / 2, Math.max(0, fh - bh - 1));
@@ -3724,6 +3746,9 @@ export class GameScene extends Phaser.Scene {
       def.kind === 'throne' ||
       def.kind === 'pillar' ||
       def.kind === 'banner' ||
+      def.kind === 'barrel' ||
+      def.kind === 'crate' ||
+      def.kind === 'vase' ||
       def.kind === 'seaweed'
         ? 99
         : resolveEnemyHp(def.kind, def.hp, threat);
@@ -3768,6 +3793,11 @@ export class GameScene extends Phaser.Scene {
     if (def.kind === 'dummy') {
       // Shared drill HP pool for the active weapon stage
       this.syncDummyDrillHp(actor);
+      this.physics.add.overlap(this.swordHit, sprite, () =>
+        this.hitEnemy(actor),
+      );
+    } else if (isSmashableKind(def.kind)) {
+      // Smash for coins / potions — melee + projectiles
       this.physics.add.overlap(this.swordHit, sprite, () =>
         this.hitEnemy(actor),
       );
@@ -4368,6 +4398,11 @@ export class GameScene extends Phaser.Scene {
       this.onDummyHit(actor);
       return;
     }
+    // Corner smashables — short HP, loot, no XP
+    if (isSmashableKind(actor.kind)) {
+      this.hitSmashable(actor);
+      return;
+    }
 
     // Best Bud is immortal friendship — not a target
     if (actor.kind === 'best_bud') {
@@ -4768,6 +4803,64 @@ export class GameScene extends Phaser.Scene {
     this.spawnGlamdolph();
   }
 
+  /** Place smashable clutter in free authored corners (stable per room + run seed). */
+  private spawnCornerSmashables(): void {
+    if (!this.room) return;
+    const occTiles = new Set<string>();
+    const occIds = new Set<string>();
+    for (const a of this.actors) {
+      if (a.id) occIds.add(a.id);
+    }
+    for (const def of this.room.entities ?? []) {
+      if (def.id) occIds.add(def.id);
+      occTiles.add(`${def.x},${def.y}`);
+    }
+    // Authored tile walkability (pre-expand coords used by entity defs)
+    const CHAR: Record<string, string> = {
+      '#': 'wall',
+      '.': 'floor',
+      g: 'grass',
+      d: 'dirt',
+      s: 'sand',
+      c: 'carpet',
+      '~': 'water',
+      D: 'door',
+      L: 'locked',
+      S: 'stairs',
+      U: 'stairs_up',
+      '=': 'lava',
+      P: 'pad',
+      ' ': 'void',
+    };
+    const walk = (x: number, y: number) => {
+      const row = this.room.tiles[y];
+      if (!row || x < 0 || x >= row.length) return false;
+      const k = CHAR[row[x]!] ?? 'floor';
+      return (
+        k === 'floor' ||
+        k === 'grass' ||
+        k === 'dirt' ||
+        k === 'sand' ||
+        k === 'carpet' ||
+        k === 'pad'
+      );
+    };
+    const seed =
+      typeof this.save.runSeed === 'number' ? this.save.runSeed : 1;
+    const defs = smashableEntityDefs(
+      this.room.id,
+      seed,
+      walk,
+      occIds,
+      occTiles,
+      this.save.collected,
+    );
+    for (const def of defs) {
+      // Fresh HP from table (def.hp set in smashableEntityDefs)
+      this.spawnEntity(def);
+    }
+  }
+
   private useHealingSpring(): void {
     const r = drinkHealingSpring(this.save, this.elfHealUsedThisVisit);
     this.save = r.save;
@@ -5116,6 +5209,51 @@ export class GameScene extends Phaser.Scene {
     const tid = inst?.templateId;
     const look = appearanceFromSave(this.save).weapon;
     return tutorialWeaponFromEquip(tid, look);
+  }
+
+  private hitSmashable(actor: Actor): void {
+    if (!actor.alive || !isSmashableKind(actor.kind)) return;
+    if (actor.hurtCooldown > 0) return;
+    actor.hurtCooldown = 160;
+    const dmg = Math.max(1, computePlayerDamage(this.save) | 0);
+    actor.hp -= dmg;
+    playSfx('hit_enemy');
+    actor.sprite.setTint(0xffffff);
+    sparkBurst(this, actor.sprite.x, actor.sprite.y, 0xc9a070, 4);
+    this.time.delayedCall(60, () => {
+      if (actor.alive && actor.sprite?.active) actor.sprite.clearTint();
+    });
+    if (actor.hp > 0) {
+      this.game.events.emit(
+        'toast',
+        `${actor.kind.toUpperCase()} ${actor.hp}/${actor.maxHp}`,
+      );
+      return;
+    }
+    this.breakSmashable(actor);
+  }
+
+  private breakSmashable(actor: Actor): void {
+    if (!isSmashableKind(actor.kind)) return;
+    actor.alive = false;
+    const kind = actor.kind as SmashableKind;
+    const drops = rollSmashLoot(kind);
+    this.save = applyLootToSave(this.save, drops);
+    if (actor.id && !this.save.collected.includes(actor.id)) {
+      this.save.collected.push(actor.id);
+    }
+    writeSave(this.save);
+    this.emitHud();
+    playSfx('pickup');
+    sparkBurst(this, actor.sprite.x, actor.sprite.y, 0xffc857, 8);
+    sparkBurst(this, actor.sprite.x, actor.sprite.y, 0xc9a070, 6);
+    if (actor.sprite?.active) actor.sprite.destroy();
+    this.actors = this.actors.filter((a) => a !== actor);
+    const lines = lootSummary(drops);
+    this.game.events.emit(
+      'toast',
+      lines.length ? `SMASH! ${lines.join(' · ')}` : 'SMASH!',
+    );
   }
 
   private onDummyHit(actor: Actor, damageOverride?: number): void {
@@ -7407,6 +7545,10 @@ export class GameScene extends Phaser.Scene {
 
     if (actor.kind === 'dummy') {
       this.onDummyHit(actor, dmg);
+      return true;
+    }
+    if (isSmashableKind(actor.kind)) {
+      this.hitSmashable(actor);
       return true;
     }
 

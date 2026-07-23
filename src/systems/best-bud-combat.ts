@@ -162,5 +162,12 @@ export function isHostileKind(kind: string): boolean {
  * Training dummies are not hostiles but must still take ranged drill hits.
  */
 export function isPlayerProjectileTarget(kind: string): boolean {
-  return kind === 'dummy' || isHostileKind(kind) || kind === 'boss';
+  return (
+    kind === 'dummy' ||
+    kind === 'barrel' ||
+    kind === 'crate' ||
+    kind === 'vase' ||
+    isHostileKind(kind) ||
+    kind === 'boss'
+  );
 }

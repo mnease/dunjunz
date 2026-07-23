@@ -23,6 +23,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
+- **Smashable clutter** — barrels, crates, and vases spawn in free room corners. Hit them for **coins** and occasional **potions** (stay broken after smash).
 - **Active beta banner** — site-wide notice on the landing and play pages that DUNJUNZ is in active beta with new story lines and features shipping often.
 - **Throne room decor** — Princess Prizella’s hall gets a **dais carpet**, **throne**, wall **pillars**, **banners**, torches, and lamps so the Kingdomz office reads royal.
 - **Quest tracker + WHERE hints** — journal (**J** / Quests button) lists active jobs first with a **WHERE** line (where to go next). HUD strip under the chrome always shows the current objective. Elf errands and Fellowship get path-specific hints.
