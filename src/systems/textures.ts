@@ -49,6 +49,7 @@ import {
   hex,
   shadedBlock,
   spark,
+  vgrad,
 } from './pixel-art';
 
 function canvasTex(
@@ -2404,99 +2405,407 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, 'rgba(80,60,30,0.2)', 15, 8, 1, 16);
   });
 
-  // Graphic mapz UI tiles (56×56 matches UIScene MAPZ_CELL)
-  const cell = 56;
-  const drawMapzCell = (
+  /**
+   * Graphic mapz tiles — ART at 112px so large display stays detailed.
+   * UI scales display size dynamically (72–148); textures stay crisp.
+   */
+  const cell = 112;
+  const drawMapzCellRich = (
     ctx: CanvasRenderingContext2D,
     fillCol: string,
     border: string,
     mode: 'visited' | 'unknown' | 'current',
   ) => {
-    // outer void
-    fill(ctx, '#0a0c10', 0, 0, cell, cell);
-    // stone rim
-    shadedBlock(ctx, '#2a3040', border, '#12161f', 2, 2, cell - 4, cell - 4);
-    // room fill
-    fill(ctx, fillCol, 6, 6, cell - 12, cell - 12);
-    // floor plate detail
-    fill(ctx, 'rgba(0,0,0,0.2)', 10, 10, cell - 20, cell - 22);
-    dither(ctx, fillCol, 'rgba(0,0,0,0.12)', 10, 10, cell - 20, cell - 22, 0);
-    // top highlight on rim
-    fill(ctx, 'rgba(255,255,255,0.12)', 6, 6, cell - 12, 3);
-    // corner studs
+    fill(ctx, '#080a10', 0, 0, cell, cell);
+    // Double-rim stone frame
+    shadedBlock(ctx, '#2a3048', border, '#12161f', 2, 2, cell - 4, cell - 4);
+    shadedBlock(ctx, '#3a4258', '#6a7890', '#1a2030', 6, 6, cell - 12, cell - 12);
+    // Inner floor
+    fill(ctx, fillCol, 12, 12, cell - 24, cell - 24);
+    // Floor checker / cobble channels
+    dither(ctx, fillCol, 'rgba(0,0,0,0.15)', 14, 14, cell - 28, cell - 28, 0);
+    fill(ctx, 'rgba(0,0,0,0.18)', 14, 14, cell - 28, 1);
+    fill(ctx, 'rgba(0,0,0,0.12)', 14, Math.floor(cell / 2), cell - 28, 1);
+    fill(ctx, 'rgba(0,0,0,0.12)', Math.floor(cell / 2), 14, 1, cell - 28);
+    // Bevel hilite
+    fill(ctx, 'rgba(255,255,255,0.18)', 12, 12, cell - 24, 4);
+    fill(ctx, 'rgba(255,255,255,0.08)', 12, 12, 3, cell - 24);
+    // Corner brass studs
     for (const [x, y] of [
-      [4, 4],
-      [cell - 8, 4],
-      [4, cell - 8],
-      [cell - 8, cell - 8],
+      [8, 8],
+      [cell - 14, 8],
+      [8, cell - 14],
+      [cell - 14, cell - 14],
     ] as const) {
-      fill(ctx, border, x, y, 3, 3);
-      fill(ctx, 'rgba(255,255,255,0.25)', x, y, 1, 1);
+      fill(ctx, border, x, y, 6, 6);
+      fill(ctx, 'rgba(255,255,255,0.4)', x + 1, y + 1, 2, 2);
+      fill(ctx, 'rgba(0,0,0,0.3)', x + 3, y + 3, 2, 2);
     }
+    // Door notch guides (all four sides as inset marks)
+    fill(ctx, 'rgba(0,0,0,0.35)', cell / 2 - 8, 6, 16, 5);
+    fill(ctx, 'rgba(0,0,0,0.35)', cell / 2 - 8, cell - 11, 16, 5);
+    fill(ctx, 'rgba(0,0,0,0.35)', 6, cell / 2 - 8, 5, 16);
+    fill(ctx, 'rgba(0,0,0,0.35)', cell - 11, cell / 2 - 8, 5, 16);
+
     if (mode === 'unknown') {
-      // hatch fog
-      grit(ctx, 'rgba(0,0,0,0.35)', 8, 8, cell - 16, cell - 16, 3, 1);
+      grit(ctx, 'rgba(0,0,0,0.4)', 14, 14, cell - 28, cell - 28, 3, 1);
+      // fog swirls
+      fill(ctx, 'rgba(40,50,60,0.45)', 20, 24, 30, 18);
+      fill(ctx, 'rgba(40,50,60,0.35)', 55, 50, 28, 20);
       ctx.fillStyle = border;
-      ctx.font = 'bold 24px monospace';
+      ctx.font = 'bold 42px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('?', cell / 2, cell / 2 + 1);
+      ctx.fillText('?', cell / 2, cell / 2 + 2);
     }
     if (mode === 'current') {
-      // gold frame pulse base
       ctx.strokeStyle = '#ffc857';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(5, 5, cell - 10, cell - 10);
-      // player diamond
-      fill(ctx, '#ff6b9d', cell / 2 - 6, 16, 12, 12);
-      fill(ctx, '#ffc857', cell / 2 - 4, 18, 8, 8);
-      fill(ctx, '#fff', cell / 2 - 2, 20, 4, 4);
+      ctx.lineWidth = 4;
+      ctx.strokeRect(10, 10, cell - 20, cell - 20);
+      ctx.strokeStyle = 'rgba(255,200,87,0.35)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(14, 14, cell - 28, cell - 28);
+      // YOU marker — filled star-ish diamond
+      const cx = cell / 2;
+      const cy = 36;
+      fill(ctx, '#ff6b9d', cx - 10, cy - 4, 20, 20);
+      fill(ctx, '#ffc857', cx - 7, cy - 1, 14, 14);
+      fill(ctx, '#fff8e0', cx - 4, cy + 2, 8, 8);
+      spark(ctx, cx - 1, cy + 4, '#ffffff');
     }
   };
 
   canvasTex(scene, 'mapz_cell_visited', cell, cell, (ctx) => {
-    drawMapzCell(ctx, '#2f6b45', '#7dffb3', 'visited');
+    drawMapzCellRich(ctx, '#2f6b45', '#7dffb3', 'visited');
   });
   canvasTex(scene, 'mapz_cell_unknown', cell, cell, (ctx) => {
-    drawMapzCell(ctx, '#1a2a20', '#5a6a60', 'unknown');
+    drawMapzCellRich(ctx, '#1a2a20', '#5a6a60', 'unknown');
   });
   canvasTex(scene, 'mapz_cell_current', cell, cell, (ctx) => {
-    drawMapzCell(ctx, '#3a8a55', '#ffc857', 'current');
+    drawMapzCellRich(ctx, '#3a8a55', '#ffc857', 'current');
   });
-  // Base plate for land-tinted rooms (UI multiplies land color)
+  // Tintable base plate (white→land color via setTint)
   canvasTex(scene, 'mapz_cell_base', cell, cell, (ctx) => {
-    fill(ctx, '#ffffff', 0, 0, cell, cell);
-    // rim keeps some darkness after tint
-    fill(ctx, '#c8c8c8', 0, 0, cell, cell);
-    shadedBlock(ctx, '#e8e8e8', '#ffffff', '#909090', 2, 2, cell - 4, cell - 4);
-    fill(ctx, '#d0d0d0', 8, 8, cell - 16, cell - 16);
-    dither(ctx, '#d8d8d8', '#c0c0c0', 10, 10, cell - 20, cell - 20, 0);
-    fill(ctx, 'rgba(255,255,255,0.5)', 10, 10, cell - 20, 3);
+    fill(ctx, '#b8b8c0', 0, 0, cell, cell);
+    shadedBlock(ctx, '#e0e0e8', '#ffffff', '#9090a0', 3, 3, cell - 6, cell - 6);
+    fill(ctx, '#d0d0d8', 14, 14, cell - 28, cell - 28);
+    // mini floor tiles
+    for (let ty = 18; ty < cell - 20; ty += 12) {
+      for (let tx = 18; tx < cell - 20; tx += 12) {
+        fill(ctx, 'rgba(255,255,255,0.12)', tx, ty, 10, 1);
+        fill(ctx, 'rgba(0,0,0,0.08)', tx, ty + 9, 10, 1);
+      }
+    }
+    dither(ctx, '#d8d8e0', '#c4c4cc', 16, 16, cell - 32, cell - 32, 0);
+    fill(ctx, 'rgba(255,255,255,0.45)', 14, 14, cell - 28, 5);
     for (const [x, y] of [
-      [4, 4],
-      [cell - 8, 4],
-      [4, cell - 8],
-      [cell - 8, cell - 8],
+      [8, 8],
+      [cell - 16, 8],
+      [8, cell - 16],
+      [cell - 16, cell - 16],
     ] as const) {
-      fill(ctx, '#ffffff', x, y, 3, 3);
+      fill(ctx, '#ffffff', x, y, 8, 8);
+      fill(ctx, '#a0a0b0', x + 2, y + 2, 4, 4);
+    }
+    // door notch guides
+    fill(ctx, 'rgba(0,0,0,0.2)', cell / 2 - 10, 6, 20, 6);
+    fill(ctx, 'rgba(0,0,0,0.2)', cell / 2 - 10, cell - 12, 20, 6);
+    fill(ctx, 'rgba(0,0,0,0.2)', 6, cell / 2 - 10, 6, 20);
+    fill(ctx, 'rgba(0,0,0,0.2)', cell - 12, cell / 2 - 10, 6, 20);
+  });
+
+  // Land-specific floor overlays (additive detail when visited)
+  const landOverlays: [string, (ctx: CanvasRenderingContext2D) => void][] = [
+    [
+      'mapz_overlay_surface',
+      (ctx) => {
+        // grass tufts + dirt path
+        fill(ctx, 'rgba(0,0,0,0)', 0, 0, cell, cell);
+        for (const [x, y] of [
+          [20, 22],
+          [70, 28],
+          [30, 70],
+          [80, 75],
+          [50, 40],
+        ] as const) {
+          fill(ctx, 'rgba(90,200,110,0.55)', x, y, 8, 10);
+          fill(ctx, 'rgba(40,120,60,0.5)', x + 2, y + 2, 3, 6);
+        }
+        fill(ctx, 'rgba(120,90,50,0.4)', 40, 48, 32, 14);
+      },
+    ],
+    [
+      'mapz_overlay_dunjunz',
+      (ctx) => {
+        fill(ctx, 'rgba(0,0,0,0)', 0, 0, cell, cell);
+        // torch glows
+        fill(ctx, 'rgba(255,140,60,0.35)', 22, 24, 14, 14);
+        fill(ctx, 'rgba(255,200,80,0.5)', 26, 28, 6, 6);
+        fill(ctx, 'rgba(255,140,60,0.35)', 76, 70, 14, 14);
+        fill(ctx, 'rgba(255,200,80,0.5)', 80, 74, 6, 6);
+        // stone cracks
+        fill(ctx, 'rgba(0,0,0,0.35)', 35, 40, 2, 30);
+        fill(ctx, 'rgba(0,0,0,0.3)', 50, 55, 25, 2);
+      },
+    ],
+    [
+      'mapz_overlay_woodz',
+      (ctx) => {
+        fill(ctx, 'rgba(0,0,0,0)', 0, 0, cell, cell);
+        for (const [x, y] of [
+          [24, 30],
+          [72, 26],
+          [48, 68],
+          [80, 72],
+        ] as const) {
+          fill(ctx, 'rgba(60,40,20,0.7)', x + 4, y + 10, 6, 14);
+          fill(ctx, 'rgba(40,120,50,0.65)', x, y, 14, 12);
+          fill(ctx, 'rgba(80,180,80,0.5)', x + 2, y + 2, 8, 6);
+        }
+      },
+    ],
+    [
+      'mapz_overlay_dezertz',
+      (ctx) => {
+        fill(ctx, 'rgba(0,0,0,0)', 0, 0, cell, cell);
+        fill(ctx, 'rgba(255,220,140,0.25)', 18, 30, 76, 8);
+        fill(ctx, 'rgba(180,140,60,0.3)', 22, 55, 70, 6);
+        fill(ctx, 'rgba(255,240,180,0.2)', 30, 72, 50, 5);
+        // cactus
+        fill(ctx, 'rgba(60,140,70,0.7)', 70, 40, 8, 22);
+        fill(ctx, 'rgba(60,140,70,0.65)', 64, 48, 6, 8);
+      },
+    ],
+    [
+      'mapz_overlay_kingdomz',
+      (ctx) => {
+        fill(ctx, 'rgba(0,0,0,0)', 0, 0, cell, cell);
+        // banner + crown hint
+        fill(ctx, 'rgba(200,160,60,0.55)', 40, 28, 32, 8);
+        fill(ctx, 'rgba(160,80,200,0.5)', 44, 36, 24, 28);
+        fill(ctx, 'rgba(255,200,87,0.7)', 50, 22, 4, 8);
+        fill(ctx, 'rgba(255,200,87,0.7)', 58, 20, 4, 10);
+        fill(ctx, 'rgba(255,200,87,0.7)', 66, 22, 4, 8);
+      },
+    ],
+    [
+      'mapz_overlay_sewerz',
+      (ctx) => {
+        fill(ctx, 'rgba(0,0,0,0)', 0, 0, cell, cell);
+        fill(ctx, 'rgba(40,90,80,0.5)', 20, 50, 72, 18);
+        fill(ctx, 'rgba(80,160,140,0.35)', 24, 54, 64, 6);
+        fill(ctx, 'rgba(30,50,45,0.6)', 30, 28, 10, 24);
+        fill(ctx, 'rgba(30,50,45,0.6)', 72, 28, 10, 24);
+      },
+    ],
+  ];
+  for (const [key, draw] of landOverlays) {
+    canvasTex(scene, key, cell, cell, draw);
+  }
+
+  // Feature icons (24×24, scaled up on big cells)
+  const iconS = 28;
+  const featureIcons: [string, (ctx: CanvasRenderingContext2D) => void][] = [
+    [
+      'mapz_feat_boss',
+      (ctx) => {
+        fill(ctx, 'rgba(20,10,10,0.5)', 0, 0, iconS, iconS);
+        fill(ctx, '#c0392b', 6, 10, 16, 12);
+        fill(ctx, '#1a1a22', 8, 8, 4, 4);
+        fill(ctx, '#1a1a22', 16, 8, 4, 4);
+        fill(ctx, '#ff3344', 10, 14, 2, 2);
+        fill(ctx, '#ff3344', 16, 14, 2, 2);
+        fill(ctx, '#e8e0d0', 12, 18, 4, 3);
+      },
+    ],
+    [
+      'mapz_feat_chest',
+      (ctx) => {
+        shadedBlock(ctx, '#8b5a2b', '#c9a227', '#5a3d1a', 4, 10, 20, 12);
+        shadedBlock(ctx, '#a06830', '#ffc857', '#6b4423', 4, 6, 20, 8);
+        fill(ctx, '#ffc857', 12, 12, 4, 5);
+      },
+    ],
+    [
+      'mapz_feat_shop',
+      (ctx) => {
+        fill(ctx, '#c9a227', 6, 8, 16, 14);
+        fill(ctx, '#ffc857', 8, 10, 12, 4);
+        fill(ctx, '#fff3a0', 12, 16, 4, 4);
+      },
+    ],
+    [
+      'mapz_feat_forje',
+      (ctx) => {
+        fill(ctx, '#5a5a68', 4, 14, 20, 8);
+        fill(ctx, '#8a8a98', 6, 10, 16, 6);
+        fill(ctx, '#ff8a4c', 10, 4, 8, 8);
+        fill(ctx, '#ffcc66', 12, 2, 4, 4);
+      },
+    ],
+    [
+      'mapz_feat_water',
+      (ctx) => {
+        fill(ctx, '#1a5080', 4, 8, 20, 14);
+        fill(ctx, '#3d8ec0', 6, 10, 16, 4);
+        fill(ctx, 'rgba(200,230,255,0.5)', 8, 16, 10, 2);
+      },
+    ],
+    [
+      'mapz_feat_cave',
+      (ctx) => {
+        fill(ctx, '#2a2438', 4, 6, 20, 18);
+        fill(ctx, '#0a0c10', 8, 12, 12, 12);
+        fill(ctx, '#5a4a30', 4, 20, 20, 4);
+      },
+    ],
+    [
+      'mapz_feat_guild',
+      (ctx) => {
+        fill(ctx, '#c9a227', 6, 6, 16, 4);
+        fill(ctx, '#6a5a40', 8, 10, 12, 14);
+        fill(ctx, '#ffc857', 12, 4, 4, 4);
+        fill(ctx, '#3a3020', 12, 16, 4, 8);
+      },
+    ],
+    [
+      'mapz_feat_beach',
+      (ctx) => {
+        fill(ctx, '#3d8ec0', 2, 4, 24, 10);
+        fill(ctx, '#e8d4a8', 2, 12, 24, 12);
+        fill(ctx, '#2a8a40', 18, 8, 6, 10);
+      },
+    ],
+    [
+      'mapz_feat_stairs',
+      (ctx) => {
+        for (let i = 0; i < 5; i++) {
+          const y = 20 - i * 3;
+          shadedBlock(ctx, '#ff6b9d', '#ffb0c8', '#a03050', 4 + i * 2, y, 20 - i * 4, 3);
+        }
+      },
+    ],
+    [
+      'mapz_feat_portal',
+      (ctx) => {
+        fill(ctx, '#4a2a7a', 6, 4, 16, 20);
+        fill(ctx, '#7a5ab0', 8, 6, 12, 16);
+        fill(ctx, '#c9a0ff', 12, 10, 4, 8);
+        spark(ctx, 13, 12, '#fff');
+      },
+    ],
+    [
+      'mapz_feat_trees',
+      (ctx) => {
+        fill(ctx, '#5a3a22', 12, 14, 4, 10);
+        fill(ctx, '#2f6b45', 6, 6, 16, 12);
+        fill(ctx, '#3a8f5a', 8, 4, 10, 8);
+      },
+    ],
+    [
+      'mapz_feat_dark',
+      (ctx) => {
+        fill(ctx, '#0a0c14', 4, 4, 20, 20);
+        fill(ctx, '#ff8a4c', 12, 8, 4, 10);
+        fill(ctx, '#ffcc66', 13, 6, 2, 4);
+      },
+    ],
+    [
+      'mapz_feat_hazard',
+      (ctx) => {
+        fill(ctx, '#c44b2b', 8, 6, 12, 16);
+        fill(ctx, '#ff8a4c', 10, 10, 8, 8);
+        fill(ctx, '#fff', 12, 8, 4, 2);
+      },
+    ],
+    [
+      'mapz_feat_sand',
+      (ctx) => {
+        fill(ctx, '#c9b080', 4, 8, 20, 14);
+        fill(ctx, '#e8d4a8', 6, 10, 16, 4);
+        fill(ctx, '#fff8e0', 10, 16, 8, 2);
+      },
+    ],
+    [
+      'mapz_feat_grass',
+      (ctx) => {
+        fill(ctx, '#2f6b45', 4, 10, 20, 12);
+        fill(ctx, '#5ad45a', 8, 6, 3, 10);
+        fill(ctx, '#5ad45a', 14, 4, 3, 12);
+        fill(ctx, '#5ad45a', 20, 7, 3, 9);
+      },
+    ],
+  ];
+  for (const [key, draw] of featureIcons) {
+    canvasTex(scene, key, iconS, iconS, (ctx) => {
+      fill(ctx, 'rgba(10,12,16,0.55)', 0, 0, iconS, iconS);
+      draw(ctx);
+    });
+  }
+
+  canvasTex(scene, 'mapz_stairs', 28, 28, (ctx) => {
+    fill(ctx, '#2a1520', 0, 0, 28, 28);
+    for (let i = 0; i < 6; i++) {
+      const y = 22 - i * 3;
+      shadedBlock(ctx, '#ff6b9d', '#ffb0c8', '#a03050', 3 + i, y, 22 - i * 2, 3);
     }
   });
-  canvasTex(scene, 'mapz_stairs', 16, 16, (ctx) => {
-    fill(ctx, '#2a1520', 0, 0, 16, 16);
-    for (let i = 0; i < 5; i++) {
-      const y = 12 - i * 2;
-      shadedBlock(ctx, '#ff6b9d', '#ffb0c8', '#a03050', 2 + i, y, 12 - i * 2, 2);
+  canvasTex(scene, 'mapz_link_h', 40, 16, (ctx) => {
+    fill(ctx, '#0a0c10', 0, 0, 40, 16);
+    shadedBlock(ctx, '#4a7060', '#7dffb3', '#2a4a38', 0, 3, 40, 10);
+    fill(ctx, 'rgba(255,255,255,0.25)', 0, 4, 40, 2);
+    fill(ctx, 'rgba(0,0,0,0.25)', 0, 11, 40, 2);
+    // plank lines
+    fill(ctx, 'rgba(0,0,0,0.2)', 10, 3, 1, 10);
+    fill(ctx, 'rgba(0,0,0,0.2)', 20, 3, 1, 10);
+    fill(ctx, 'rgba(0,0,0,0.2)', 30, 3, 1, 10);
+  });
+  canvasTex(scene, 'mapz_link_v', 16, 40, (ctx) => {
+    fill(ctx, '#0a0c10', 0, 0, 16, 40);
+    shadedBlock(ctx, '#4a7060', '#7dffb3', '#2a4a38', 3, 0, 10, 40);
+    fill(ctx, 'rgba(255,255,255,0.25)', 4, 0, 2, 40);
+    fill(ctx, 'rgba(0,0,0,0.25)', 11, 0, 2, 40);
+    fill(ctx, 'rgba(0,0,0,0.2)', 3, 10, 10, 1);
+    fill(ctx, 'rgba(0,0,0,0.2)', 3, 20, 10, 1);
+    fill(ctx, 'rgba(0,0,0,0.2)', 3, 30, 10, 1);
+  });
+
+  // Parchment map backdrop (tiled/stretched under grid)
+  canvasTex(scene, 'mapz_parchment', 128, 128, (ctx) => {
+    vgrad(ctx, ['#e8d8b0', '#d4c090', '#c4b080', '#b8a070'], 0, 0, 128, 128);
+    dither(ctx, '#d4c090', '#c0ac7a', 0, 0, 128, 128, 0);
+    grit(ctx, 'rgba(80,60,30,0.12)', 0, 0, 128, 128, 5, 1);
+    // edge wear
+    fill(ctx, 'rgba(90,70,40,0.15)', 0, 0, 128, 4);
+    fill(ctx, 'rgba(90,70,40,0.15)', 0, 124, 128, 4);
+    fill(ctx, 'rgba(90,70,40,0.12)', 0, 0, 4, 128);
+    fill(ctx, 'rgba(90,70,40,0.12)', 124, 0, 4, 128);
+    // faint grid
+    for (let i = 16; i < 128; i += 16) {
+      fill(ctx, 'rgba(90,70,40,0.08)', i, 0, 1, 128);
+      fill(ctx, 'rgba(90,70,40,0.08)', 0, i, 128, 1);
     }
   });
-  canvasTex(scene, 'mapz_link_h', 20, 10, (ctx) => {
-    fill(ctx, '#0a0c10', 0, 0, 20, 10);
-    shadedBlock(ctx, '#5a8a70', '#7dffb3', '#2a4a38', 0, 2, 20, 6);
-    fill(ctx, 'rgba(255,255,255,0.2)', 0, 3, 20, 1);
-  });
-  canvasTex(scene, 'mapz_link_v', 10, 20, (ctx) => {
-    fill(ctx, '#0a0c10', 0, 0, 10, 20);
-    shadedBlock(ctx, '#5a8a70', '#7dffb3', '#2a4a38', 2, 0, 6, 20);
-    fill(ctx, 'rgba(255,255,255,0.2)', 3, 0, 1, 20);
+
+  // Compass rose
+  canvasTex(scene, 'mapz_compass', 64, 64, (ctx) => {
+    fill(ctx, 'rgba(10,12,16,0.65)', 0, 0, 64, 64);
+    // ring
+    ctx.strokeStyle = '#c9a227';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(32, 32, 26, 0, Math.PI * 2);
+    ctx.stroke();
+    // N pointer
+    fill(ctx, '#ffc857', 30, 6, 4, 22);
+    fill(ctx, '#e74c3c', 28, 6, 8, 8);
+    fill(ctx, '#7dffb3', 30, 36, 4, 20);
+    fill(ctx, '#9b8fd4', 10, 30, 20, 4);
+    fill(ctx, '#9b8fd4', 34, 30, 20, 4);
+    ctx.fillStyle = '#ffc857';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('N', 32, 12);
   });
 
   // Forje anvil + glow

@@ -1043,6 +1043,29 @@ describe('mapz discovery + fog of war', () => {
     save = reconcileMapzFromCollected(save);
     expect(save.discoveredMapz).toContain('surface');
   });
+
+  it('mapz cells carry features and large display sizes', async () => {
+    const { buildMapzCells, featuresForRoom, mapzDisplayCellSize } =
+      await import('./mapz');
+    const beach = ROOMS.beach_start;
+    expect(beach).toBeTruthy();
+    const feats = featuresForRoom(beach!);
+    expect(feats).toContain('beach');
+    expect(feats.some((f) => f === 'sand' || f === 'water')).toBe(true);
+
+    let save = defaultSave();
+    save = discoverMapz(save, 'surface');
+    save = markRoomVisited(save, 'beach_start');
+    const cells = buildMapzCells(ROOMS, save, 'surface');
+    const bc = cells.find((c) => c.roomId === 'beach_start');
+    expect(bc?.midTitle).toBeTruthy();
+    expect(bc?.features.length).toBeGreaterThan(0);
+
+    // Sparse maps get big cells; dense maps stay readable
+    expect(mapzDisplayCellSize(2, 2, 900, 500)).toBeGreaterThanOrEqual(100);
+    expect(mapzDisplayCellSize(8, 6, 900, 500)).toBeGreaterThanOrEqual(72);
+    expect(mapzDisplayCellSize(8, 6, 900, 500)).toBeLessThanOrEqual(148);
+  });
 });
 
 describe('deep dungeons 4× floors', () => {

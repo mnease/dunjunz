@@ -86,6 +86,24 @@ export function hasMapz(save: SaveData, land: LandId): boolean {
   return save.discoveredMapz.includes(land);
 }
 
+/** Feature icons drawn on visited mapz cells. */
+export type MapzFeature =
+  | 'beach'
+  | 'guild'
+  | 'cave'
+  | 'boss'
+  | 'shop'
+  | 'chest'
+  | 'forje'
+  | 'water'
+  | 'grass'
+  | 'sand'
+  | 'trees'
+  | 'dark'
+  | 'stairs'
+  | 'portal'
+  | 'hazard';
+
 export interface MapzCell {
   roomId: string;
   mapX: number;
@@ -93,6 +111,8 @@ export interface MapzCell {
   floor: number;
   title: string;
   shortTitle: string;
+  /** Slightly longer label for large cells. */
+  midTitle: string;
   visited: boolean;
   current: boolean;
   /** Outgoing doors on this room (for corridor stubs). */
@@ -102,6 +122,8 @@ export interface MapzCell {
   west?: boolean;
   stairsDown?: boolean;
   stairsUp?: boolean;
+  /** Derived feature icons (visited rooms only on UI). */
+  features: MapzFeature[];
 }
 
 export interface MapzViewModel {
@@ -125,6 +147,81 @@ function shortTitle(title: string): string {
   return part.length > 10 ? part.slice(0, 9) + '…' : part;
 }
 
+function midTitle(title: string): string {
+  const part = title.split('·')[0]?.trim() ?? title;
+  return part.length > 16 ? part.slice(0, 15) + '…' : part;
+}
+
+/** Infer map icons from room authoring (tiles + entities + id). */
+export function featuresForRoom(room: RoomDef): MapzFeature[] {
+  const tags = new Set<MapzFeature>();
+  const id = room.id.toLowerCase();
+  const title = room.title.toUpperCase();
+  const ents = room.entities ?? [];
+
+  if (id.includes('beach') || title.includes('BEACH')) tags.add('beach');
+  if (id.includes('guild') || title.includes('GUILD')) tags.add('guild');
+  if (
+    id.includes('entrance') ||
+    title.includes('ENTRANCE') ||
+    title.includes('CAVE')
+  ) {
+    tags.add('cave');
+  }
+  if (id.includes('boss') || title.includes('BOSS') || title.includes('THRONE')) {
+    tags.add('boss');
+  }
+  if (ents.some((e) => e.kind === 'boss' || e.kind === 'miniboss')) {
+    tags.add('boss');
+  }
+  if (ents.some((e) => e.kind === 'merchant')) tags.add('shop');
+  if (ents.some((e) => e.kind === 'chest')) tags.add('chest');
+  if (ents.some((e) => e.kind === 'forje')) tags.add('forje');
+  if (ents.some((e) => e.kind === 'portal')) tags.add('portal');
+  if (ents.some((e) => e.kind === 'tree' || e.kind === 'palm')) tags.add('trees');
+  if (room.stairsDown || room.stairsUp) tags.add('stairs');
+  if (room.dark) tags.add('dark');
+  if (room.sideRole === 'hazard') tags.add('hazard');
+  if (room.sideRole === 'vault') tags.add('chest');
+
+  let hasWater = false;
+  let hasGrass = false;
+  let hasSand = false;
+  for (const row of room.tiles) {
+    if (row.includes('~')) hasWater = true;
+    if (row.includes('g')) hasGrass = true;
+    if (row.includes('s')) hasSand = true;
+  }
+  if (hasWater) tags.add('water');
+  if (hasGrass) tags.add('grass');
+  if (hasSand) tags.add('sand');
+
+  // Cap icons so cells stay readable
+  const priority: MapzFeature[] = [
+    'boss',
+    'guild',
+    'beach',
+    'cave',
+    'forje',
+    'shop',
+    'stairs',
+    'chest',
+    'portal',
+    'water',
+    'trees',
+    'sand',
+    'grass',
+    'dark',
+    'hazard',
+  ];
+  const ordered: MapzFeature[] = [];
+  for (const p of priority) {
+    if (tags.has(p)) ordered.push(p);
+    if (ordered.length >= 4) break;
+  }
+  return ordered;
+}
+
 /** Build cells for a land (all floors). */
 export function buildMapzCells(
   rooms: Record<string, RoomDef>,
@@ -142,6 +239,7 @@ export function buildMapzCells(
       floor: r.floor ?? 0,
       title: r.title,
       shortTitle: shortTitle(r.title),
+      midTitle: midTitle(r.title),
       visited: save.visitedRooms.includes(r.id),
       current: save.roomId === r.id,
       north: !!r.north,
@@ -150,9 +248,30 @@ export function buildMapzCells(
       west: !!r.west,
       stairsDown: !!r.stairsDown,
       stairsUp: !!r.stairsUp,
+      features: featuresForRoom(r),
     });
   }
   return cells;
+}
+
+/**
+ * Ideal display cell size (px) for a mapz grid so it fills the playfield.
+ * Sparse lands get big rooms; dense floors stay readable.
+ */
+export function mapzDisplayCellSize(
+  cols: number,
+  rows: number,
+  availW: number,
+  availH: number,
+  gap = 12,
+): number {
+  const c = Math.max(1, cols);
+  const r = Math.max(1, rows);
+  const fromW = Math.floor((availW - (c - 1) * gap) / c);
+  const fromH = Math.floor((availH - (r - 1) * gap) / r);
+  const raw = Math.min(fromW, fromH);
+  // Floor 72 / cap 148 — major step up from old fixed 56
+  return Math.max(72, Math.min(148, raw));
 }
 
 export function floorsForLand(

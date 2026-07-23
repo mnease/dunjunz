@@ -44,6 +44,8 @@ import {
   buildMapzView,
   floorLabel,
   landForRoom,
+  mapzDisplayCellSize,
+  type MapzFeature,
   type MapzOpenPayload,
   type MapzViewModel,
 } from '../systems/mapz';
@@ -76,8 +78,8 @@ import { playSfx } from '../systems/audio';
 import { xpProgressInLevel } from '../systems/progression';
 import type { EquipSlot, LandId, SaveData } from '../types';
 
-const MAPZ_CELL = 56;
-const MAPZ_GAP = 14;
+const MAPZ_GAP = 12;
+const MAPZ_SIDE_PANEL_W = 260;
 const SHOP_CELL = 56;
 const SHOP_GAP = 10;
 const FORJE_CELL = 56;
@@ -1720,16 +1722,20 @@ export class UIScene extends Phaser.Scene {
     this.game.events.emit('mapz-state', false);
   }
 
+  private mapzFeatureTex(f: MapzFeature): string {
+    return `mapz_feat_${f}`;
+  }
+
   private renderGraphicMapz(view: MapzViewModel): void {
     this.clearMapzPieces();
     if (!this.mapzLayer) return;
 
     const info = view.landInfo;
+    const borderHex = `#${info.border.toString(16).padStart(6, '0')}`;
     this.mapzTitle?.setText(info.name);
-    this.mapzTitle?.setColor(
-      `#${info.border.toString(16).padStart(6, '0')}`,
-    );
-    this.mapzBg?.setStrokeStyle(4, info.border);
+    this.mapzTitle?.setColor(borderHex);
+    this.mapzTitle?.setFontSize('16px');
+    this.mapzBg?.setStrokeStyle(5, info.border);
 
     if (!view.unlocked) {
       this.mapzSubtitle?.setText('FIND A MAPZ SCROLL TO REVEAL THIS LAND');
@@ -1739,7 +1745,7 @@ export class UIScene extends Phaser.Scene {
       const locked = this.add
         .text(GAME_W / 2, GAME_H / 2, '???', {
           fontFamily: '"Press Start 2P", monospace',
-          fontSize: '28px',
+          fontSize: '36px',
           color: '#5a6a60',
         })
         .setOrigin(0.5)
@@ -1752,9 +1758,8 @@ export class UIScene extends Phaser.Scene {
     const floorBits = view.floors.map((f) =>
       f === view.floor ? `[${floorLabel(f)}]` : floorLabel(f),
     );
-    this.mapzSubtitle?.setText(
-      `${info.blurb}   ·   ${floorBits.join(' ')}`,
-    );
+    this.mapzSubtitle?.setText(`${info.blurb}   ·   ${floorBits.join(' ')}`);
+    this.mapzSubtitle?.setFontSize('10px');
 
     if (!view.cells.length) {
       this.mapzLegend?.setText('NO ROOMS ON THIS FLOOR');
@@ -1763,33 +1768,64 @@ export class UIScene extends Phaser.Scene {
 
     const cols = view.maxX - view.minX + 1;
     const rows = view.maxY - view.minY + 1;
-    const gridW = cols * MAPZ_CELL + (cols - 1) * MAPZ_GAP;
-    const gridH = rows * MAPZ_CELL + (rows - 1) * MAPZ_GAP;
-    const originX = GAME_W / 2 - gridW / 2 + MAPZ_CELL / 2;
-    const originY = HUD_H + 90 + MAPZ_CELL / 2;
+    // Leave room for title / legend / side room list
+    const availW = GAME_W - 48 - MAPZ_SIDE_PANEL_W;
+    const availH = GAME_H - HUD_H - 150;
+    const cell = mapzDisplayCellSize(cols, rows, availW, availH, MAPZ_GAP);
+    const gap = MAPZ_GAP;
+    const gridW = cols * cell + (cols - 1) * gap;
+    const gridH = rows * cell + (rows - 1) * gap;
+    // Center grid in left map area
+    const mapAreaCx = 24 + availW / 2;
+    const mapAreaCy = HUD_H + 78 + availH / 2;
+    const originX = mapAreaCx - gridW / 2 + cell / 2;
+    const originY = mapAreaCy - gridH / 2 + cell / 2;
+
+    // Parchment backdrop behind the grid
+    if (this.textures.exists('mapz_parchment')) {
+      const parch = this.add
+        .image(mapAreaCx, mapAreaCy, 'mapz_parchment')
+        .setDisplaySize(gridW + 48, gridH + 48)
+        .setAlpha(0.92)
+        .setScrollFactor(0);
+      this.mapzLayer.add(parch);
+      this.mapzPieces.push(parch);
+      const parchRim = this.add
+        .rectangle(mapAreaCx, mapAreaCy, gridW + 52, gridH + 52, 0x000000, 0)
+        .setStrokeStyle(3, info.border, 0.85)
+        .setScrollFactor(0);
+      this.mapzLayer.add(parchRim);
+      this.mapzPieces.push(parchRim);
+    }
+
+    // Compass
+    if (this.textures.exists('mapz_compass')) {
+      const compass = this.add
+        .image(40, HUD_H + 100, 'mapz_compass')
+        .setDisplaySize(56, 56)
+        .setScrollFactor(0)
+        .setAlpha(0.95);
+      this.mapzLayer.add(compass);
+      this.mapzPieces.push(compass);
+    }
 
     const cellPos = (mapX: number, mapY: number) => {
       const col = mapX - view.minX;
-      // Y high (north) at top of screen
       const row = view.maxY - mapY;
       return {
-        x: originX + col * (MAPZ_CELL + MAPZ_GAP),
-        y: originY + row * (MAPZ_CELL + MAPZ_GAP),
+        x: originX + col * (cell + gap),
+        y: originY + row * (cell + gap),
       };
     };
 
-    // Corridor links first (under rooms) — textured bridges
+    // Corridor links (under rooms)
     for (const c of view.cells) {
       if (!c.visited && !c.current) continue;
       const p = cellPos(c.mapX, c.mapY);
       if (c.east) {
         const link = this.add
-          .image(
-            p.x + MAPZ_CELL / 2 + MAPZ_GAP / 2,
-            p.y,
-            'mapz_link_h',
-          )
-          .setDisplaySize(MAPZ_GAP + 6, 10)
+          .image(p.x + cell / 2 + gap / 2, p.y, 'mapz_link_h')
+          .setDisplaySize(gap + 10, Math.max(12, Math.floor(cell * 0.14)))
           .setTint(info.border)
           .setScrollFactor(0);
         this.mapzLayer.add(link);
@@ -1797,12 +1833,8 @@ export class UIScene extends Phaser.Scene {
       }
       if (c.north) {
         const link = this.add
-          .image(
-            p.x,
-            p.y - MAPZ_CELL / 2 - MAPZ_GAP / 2,
-            'mapz_link_v',
-          )
-          .setDisplaySize(10, MAPZ_GAP + 6)
+          .image(p.x, p.y - cell / 2 - gap / 2, 'mapz_link_v')
+          .setDisplaySize(Math.max(12, Math.floor(cell * 0.14)), gap + 10)
           .setTint(info.border)
           .setScrollFactor(0);
         this.mapzLayer.add(link);
@@ -1810,59 +1842,82 @@ export class UIScene extends Phaser.Scene {
       }
     }
 
+    const overlayKey = `mapz_overlay_${view.land}`;
+    const labelSize = cell >= 110 ? '10px' : cell >= 90 ? '8px' : '7px';
+    const iconSize = Math.max(18, Math.floor(cell * 0.22));
+
     for (const c of view.cells) {
       const p = cellPos(c.mapX, c.mapY);
       const landTint = c.current
-        ? Phaser.Display.Color.IntegerToColor(info.color).brighten(25).color
+        ? Phaser.Display.Color.IntegerToColor(info.color).brighten(28).color
         : c.visited
           ? info.color
           : info.fog;
-      const border = c.current ? COLORS.gold : c.visited ? info.border : 0x3a4250;
+      const border = c.current
+        ? COLORS.gold
+        : c.visited
+          ? info.border
+          : 0x3a4250;
 
-      // Detailed base plate, land-tinted
       const room = this.add
         .image(p.x, p.y, 'mapz_cell_base')
-        .setDisplaySize(MAPZ_CELL, MAPZ_CELL)
+        .setDisplaySize(cell, cell)
         .setTint(landTint)
         .setScrollFactor(0);
       this.mapzLayer.add(room);
       this.mapzPieces.push(room);
 
-      // Rim stroke for visited/current clarity
+      // Land terrain overlay on known rooms
+      if ((c.visited || c.current) && this.textures.exists(overlayKey)) {
+        const ov = this.add
+          .image(p.x, p.y, overlayKey)
+          .setDisplaySize(cell, cell)
+          .setAlpha(0.85)
+          .setScrollFactor(0);
+        this.mapzLayer.add(ov);
+        this.mapzPieces.push(ov);
+      }
+
       const rim = this.add
-        .rectangle(p.x, p.y, MAPZ_CELL - 2, MAPZ_CELL - 2, 0x000000, 0)
-        .setStrokeStyle(c.current ? 3 : 2, border, c.visited || c.current ? 0.95 : 0.45)
+        .rectangle(p.x, p.y, cell - 2, cell - 2, 0x000000, 0)
+        .setStrokeStyle(
+          c.current ? 4 : 2,
+          border,
+          c.visited || c.current ? 0.98 : 0.5,
+        )
         .setScrollFactor(0);
       this.mapzLayer.add(rim);
       this.mapzPieces.push(rim);
 
-      // Door notches on visited rooms (exit hints)
+      // Door notches (larger)
       if (c.visited || c.current) {
         const notch = 0x0a0c10;
+        const nw = Math.max(12, Math.floor(cell * 0.18));
+        const nd = Math.max(6, Math.floor(cell * 0.08));
         if (c.north) {
           const n = this.add
-            .rectangle(p.x, p.y - MAPZ_CELL / 2 + 3, 10, 6, notch, 1)
+            .rectangle(p.x, p.y - cell / 2 + nd / 2 + 1, nw, nd, notch, 1)
             .setScrollFactor(0);
           this.mapzLayer.add(n);
           this.mapzPieces.push(n);
         }
         if (c.south) {
           const n = this.add
-            .rectangle(p.x, p.y + MAPZ_CELL / 2 - 3, 10, 6, notch, 1)
+            .rectangle(p.x, p.y + cell / 2 - nd / 2 - 1, nw, nd, notch, 1)
             .setScrollFactor(0);
           this.mapzLayer.add(n);
           this.mapzPieces.push(n);
         }
         if (c.east) {
           const n = this.add
-            .rectangle(p.x + MAPZ_CELL / 2 - 3, p.y, 6, 10, notch, 1)
+            .rectangle(p.x + cell / 2 - nd / 2 - 1, p.y, nd, nw, notch, 1)
             .setScrollFactor(0);
           this.mapzLayer.add(n);
           this.mapzPieces.push(n);
         }
         if (c.west) {
           const n = this.add
-            .rectangle(p.x - MAPZ_CELL / 2 + 3, p.y, 6, 10, notch, 1)
+            .rectangle(p.x - cell / 2 + nd / 2 + 1, p.y, nd, nw, notch, 1)
             .setScrollFactor(0);
           this.mapzLayer.add(n);
           this.mapzPieces.push(n);
@@ -1873,7 +1928,7 @@ export class UIScene extends Phaser.Scene {
         const q = this.add
           .text(p.x, p.y, '?', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '18px',
+            fontSize: cell >= 100 ? '28px' : '20px',
             color: '#6a738a',
           })
           .setOrigin(0.5)
@@ -1881,14 +1936,38 @@ export class UIScene extends Phaser.Scene {
         this.mapzLayer.add(q);
         this.mapzPieces.push(q);
       } else {
+        // Feature icons along top of cell
+        const feats = c.features.filter((f) => f !== 'stairs');
+        const show = feats.slice(0, cell >= 100 ? 4 : 3);
+        const totalW = show.length * (iconSize + 4) - 4;
+        let ix = p.x - totalW / 2 + iconSize / 2;
+        const iy = p.y - cell / 2 + iconSize / 2 + 10;
+        for (const f of show) {
+          const key = this.mapzFeatureTex(f);
+          if (this.textures.exists(key)) {
+            const ic = this.add
+              .image(ix, iy, key)
+              .setDisplaySize(iconSize, iconSize)
+              .setScrollFactor(0);
+            this.mapzLayer.add(ic);
+            this.mapzPieces.push(ic);
+          }
+          ix += iconSize + 4;
+        }
+
         const label = this.add
-          .text(p.x, p.y + (c.current ? 12 : 2), c.shortTitle, {
-            fontFamily: '"Press Start 2P", monospace',
-            fontSize: '7px',
-            color: '#f4f0ff',
-            align: 'center',
-            wordWrap: { width: MAPZ_CELL - 10 },
-          })
+          .text(
+            p.x,
+            p.y + (c.current ? cell * 0.18 : cell * 0.08),
+            cell >= 96 ? c.midTitle : c.shortTitle,
+            {
+              fontFamily: '"Press Start 2P", monospace',
+              fontSize: labelSize,
+              color: '#f4f0ff',
+              align: 'center',
+              wordWrap: { width: cell - 16 },
+            },
+          )
           .setOrigin(0.5)
           .setScrollFactor(0);
         this.mapzLayer.add(label);
@@ -1896,8 +1975,14 @@ export class UIScene extends Phaser.Scene {
 
         if (c.stairsDown || c.stairsUp) {
           const stair = this.add
-            .image(p.x + (c.current ? 14 : 0), p.y - 16, 'mapz_stairs')
-            .setDisplaySize(14, 14)
+            .image(
+              p.x + cell * 0.28,
+              p.y - cell * 0.12,
+              this.textures.exists('mapz_feat_stairs')
+                ? 'mapz_feat_stairs'
+                : 'mapz_stairs',
+            )
+            .setDisplaySize(iconSize + 4, iconSize + 4)
             .setTint(c.stairsDown ? 0xff6b9d : 0x7dffb3)
             .setScrollFactor(0);
           this.mapzLayer.add(stair);
@@ -1907,9 +1992,9 @@ export class UIScene extends Phaser.Scene {
 
       if (c.current) {
         const you = this.add
-          .text(p.x, p.y - 14, '★', {
-            fontFamily: 'monospace',
-            fontSize: '16px',
+          .text(p.x, p.y - cell * 0.08, '★ YOU', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: cell >= 100 ? '11px' : '9px',
             color: '#ffc857',
           })
           .setOrigin(0.5)
@@ -1918,7 +2003,7 @@ export class UIScene extends Phaser.Scene {
         this.mapzPieces.push(you);
         this.tweens.add({
           targets: you,
-          alpha: 0.35,
+          alpha: 0.4,
           duration: 420,
           yoyo: true,
           repeat: -1,
@@ -1926,19 +2011,55 @@ export class UIScene extends Phaser.Scene {
       }
     }
 
-    // Center the grid if taller/wider - adjust origin when grid is small
-    void gridH;
+    // Side room list (visited / current)
+    const listX = GAME_W - MAPZ_SIDE_PANEL_W + 16;
+    const listTitle = this.add
+      .text(listX, HUD_H + 78, 'ROOMS', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '10px',
+        color: borderHex,
+      })
+      .setScrollFactor(0);
+    this.mapzLayer.add(listTitle);
+    this.mapzPieces.push(listTitle);
+
+    const sorted = [...view.cells].sort(
+      (a, b) =>
+        Number(b.current) - Number(a.current) ||
+        Number(b.visited) - Number(a.visited) ||
+        b.mapY - a.mapY ||
+        a.mapX - b.mapX,
+    );
+    let ly = HUD_H + 100;
+    for (const c of sorted.slice(0, 14)) {
+      const mark = c.current ? '★' : c.visited ? '●' : '?';
+      const col = c.current ? '#ffc857' : c.visited ? '#eef1f8' : '#6a738a';
+      const line = this.add
+        .text(listX, ly, `${mark} ${c.midTitle}`, {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '7px',
+          color: col,
+          wordWrap: { width: MAPZ_SIDE_PANEL_W - 36 },
+        })
+        .setScrollFactor(0);
+      this.mapzLayer.add(line);
+      this.mapzPieces.push(line);
+      ly += 18;
+      if (ly > GAME_H - 100) break;
+    }
 
     const legendLines = [
-      '★ YOU   solid = VISITED   ? = UNKNOWN',
-      '▲▼ STAIRS   bars = DOORS',
+      `★ YOU   ● VISITED   ? FOG   cell ${cell}px`,
+      'ICONS: boss guild cave chest shop forje water stairs…',
     ];
     if (view.discoveredLands.length > 1) {
       legendLines.push(
-        `LANDS: ${view.discoveredLands.map((l) => l.toUpperCase()).join(' · ')}`,
+        `LANDS: ${view.discoveredLands.map((l) => l.toUpperCase()).join(' · ')}  (, . switch)`,
       );
     }
     this.mapzLegend?.setText(legendLines.join('\n'));
+    this.mapzLegend?.setFontSize('8px');
+    this.mapzLegend?.setPosition(40, GAME_H - 92);
   }
 
   private onForjingToggle = (
