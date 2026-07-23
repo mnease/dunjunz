@@ -17,6 +17,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Fixed
 
+- **Best Bud too close** — companion park slot was only ~18px off the hero so sprites overlapped. Buddy now stands about a tile behind / slightly south when following.
 - **Fellowship road gates bashable** — closed-road `gate-block-*` props used smashable crates; smashing them permanently cleared the barrier and skipped flag locks. Barriers are solid pillars only; smash path also ignores `gate-block-` ids.
 
 - **Sewerz goose bosses look like geese** — Royal Goose (crowned white goose) and Assistant Honk (junior butter-goose) use dedicated sprites instead of tinted humanoid boss art.

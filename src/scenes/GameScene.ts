@@ -3025,6 +3025,20 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * Park slot relative to hero (world px). ~1 tile behind / slightly south so
+   * scaled bud sprites don't sit on the hero's boots.
+   */
+  private companionParkSlot(): { x: number; y: number } {
+    const px = this.player?.x ?? 0;
+    const py = this.player?.y ?? 0;
+    // TILE*SCALE = one tile (48). Keep about a tile of personal space.
+    return {
+      x: px - TILE * SCALE * 1.05,
+      y: py + TILE * SCALE * 0.4,
+    };
+  }
+
   /** Spawn/destroy following companion based on quest stage. */
   private syncCompanion(): void {
     if (!isCompanionActive(this.save) || !this.player) {
@@ -3039,9 +3053,8 @@ export class GameScene extends Phaser.Scene {
     }
     const bud = getBestBud(this.save.bestBudId);
     if (!this.companionSprite?.active) {
-      const px = this.player.x - 22;
-      const py = this.player.y + 4;
-      this.companionSprite = this.physics.add.sprite(px, py, 'best_bud');
+      const park = this.companionParkSlot();
+      this.companionSprite = this.physics.add.sprite(park.x, park.y, 'best_bud');
       this.companionSprite.setScale(SPRITE_SCALE);
       this.applyYSortDepth(this.companionSprite);
       this.companionSprite.setImmovable(true);
@@ -3076,10 +3089,13 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (this.budAnimLock > 0) return;
-    const dx = this.player.x - 18 - this.companionSprite.x;
-    const dy = this.player.y + 2 - this.companionSprite.y;
+    const park = this.companionParkSlot();
+    const dx = park.x - this.companionSprite.x;
+    const dy = park.y - this.companionSprite.y;
     const dist = Math.hypot(dx, dy);
-    if (dist > 24) {
+    // Arrive radius: stop micro-nudging once near the park slot
+    const arrive = TILE * SCALE * 0.35;
+    if (dist > arrive) {
       this.companionSprite.x += dx * 0.12;
       this.companionSprite.y += dy * 0.12;
       faceBuddyToward(this.companionSprite, this.player.x, this.player.y);
