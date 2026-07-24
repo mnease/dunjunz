@@ -103,11 +103,13 @@ Core Keeper reads as *almost realistic while pixelated* because of **systems sta
     1   Structure props (doors, cave mouths, pillars)
     2   Floor decorations / smashables / loot
     3   Entities (player, buddies, enemies, NPCs)
-    4   Weapon swings / combat VFX
-    5   Lighting veil / cookies
-    6   Weather particles
-    7   HUD / UI chrome
+    85  Weather particles
+    88  Surface sun shade (outdoor)
+    90  Lighting veil / cookies
+    95  Weapon swings / combat VFX (lightning arcs, slashes, projectiles) — ABOVE veil
+    100 HUD / UI chrome
     ```
+    Combat FX must use `DEPTH.combatFx` (> light veil) or arcs vanish in dark rooms.
 21. **Vignette is light-system territory**, not baked into every tile. Soft corner darkening via ambient / RT, not per-tile black.
 
 ### 2.6 Lighting (Core Keeper soft torch)

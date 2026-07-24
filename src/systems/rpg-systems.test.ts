@@ -3719,6 +3719,16 @@ describe('lightning arc geometry', () => {
     expect(distPointToPolyline(50, 0, path)).toBeLessThan(12);
     expect(distPointToPolyline(50, 80, path)).toBeGreaterThan(20);
   });
+
+  it('combat FX depth is above light veil so arcs stay visible in dark rooms', async () => {
+    const { DEPTH } = await import('../config');
+    expect(DEPTH.combatFx).toBeGreaterThan(DEPTH.lightVeil);
+    expect(DEPTH.lightVeil).toBeGreaterThan(DEPTH.weather);
+    // staff_lightning still uses arc path, not slow projectile
+    const { getTemplate } = await import('./items');
+    expect(getTemplate('staff_lightning')?.projectile).toBe('lightning');
+    expect(getTemplate('wizard_staff')?.projectile).toBe('bolt');
+  });
 });
 
 describe('loot boxes', () => {

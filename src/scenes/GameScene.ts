@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {
   ART_RES,
   COLORS,
+  DEPTH,
   GAME_H,
   GAME_W,
   HUD_H,
@@ -932,7 +933,7 @@ export class GameScene extends Phaser.Scene {
     // breaks Arcade overlap vs some enemies (notably oversized cube/boss frames).
     this.swordHit = this.physics.add.image(-999, -999, 'sword-swing');
     this.swordHit.setScale(SPRITE_SCALE);
-    this.swordHit.setDepth(15);
+    this.swordHit.setDepth(DEPTH.combatFx);
     this.swordHit.setVisible(false);
     this.swordHit.setActive(true);
     const swordBody = this.swordHit.body as Phaser.Physics.Arcade.Body;
@@ -2389,7 +2390,7 @@ export class GameScene extends Phaser.Scene {
         .renderTexture(0, 0, GAME_W, GAME_H)
         .setOrigin(0, 0)
         .setScrollFactor(0)
-        .setDepth(88); // under dungeon light veil (90), over world
+        .setDepth(DEPTH.surfaceShadow); // under dungeon light veil, over world
     }
     if (this.lightCookie && !this.goAlive(this.lightCookie)) {
       this.lightCookie = null;
@@ -2455,7 +2456,7 @@ export class GameScene extends Phaser.Scene {
         const img = this.add
           .image(x, y, texRain)
           .setScrollFactor(0)
-          .setDepth(85)
+          .setDepth(DEPTH.weather)
           .setScale(SCALE * 0.55);
         img.setAlpha(0.85);
         img.setData('vx', Phaser.Math.FloatBetween(-20, -8));
@@ -2465,7 +2466,7 @@ export class GameScene extends Phaser.Scene {
         const img = this.add
           .image(x, y, texSnow)
           .setScrollFactor(0)
-          .setDepth(85)
+          .setDepth(DEPTH.weather)
           .setScale(SCALE * Phaser.Math.FloatBetween(0.4, 0.7));
         img.setAlpha(0.9);
         img.setData('vx', Phaser.Math.FloatBetween(-30, 30));
@@ -2475,7 +2476,7 @@ export class GameScene extends Phaser.Scene {
         const img = this.add
           .image(x, y, texSleet)
           .setScrollFactor(0)
-          .setDepth(85)
+          .setDepth(DEPTH.weather)
           .setScale(SCALE * 0.5);
         img.setAlpha(0.85);
         img.setData('vx', Phaser.Math.FloatBetween(-40, -10));
@@ -2621,7 +2622,7 @@ export class GameScene extends Phaser.Scene {
         .renderTexture(0, 0, GAME_W, GAME_H)
         .setOrigin(0, 0)
         .setScrollFactor(0)
-        .setDepth(90);
+        .setDepth(DEPTH.lightVeil);
     }
     if (this.lightCookie && !this.goAlive(this.lightCookie)) {
       this.lightCookie = null;
@@ -4882,7 +4883,7 @@ export class GameScene extends Phaser.Scene {
       const p = this.add.image(px, py, i % 2 === 0 ? 'particle' : 'particle-hit');
       p.setScale(SCALE * (0.6 + Math.random() * 0.5));
       p.setTint(colors[i % colors.length]!);
-      p.setDepth(18);
+      p.setDepth(DEPTH.combatFx);
       this.tweens.add({
         targets: p,
         x: px + Phaser.Math.Between(-48, 48),
@@ -6485,7 +6486,7 @@ export class GameScene extends Phaser.Scene {
     this.swordHit.setAngle(angle - 25);
     this.swordHit.setVisible(true);
     this.swordHit.setActive(true);
-    this.swordHit.setDepth(15);
+    this.swordHit.setDepth(DEPTH.combatFx);
     this.swordHit.setScale(SPRITE_SCALE * 0.85);
     this.swordHit.setAlpha(1);
     const body = this.swordHit.body as Phaser.Physics.Arcade.Body;
@@ -7722,7 +7723,10 @@ export class GameScene extends Phaser.Scene {
     emitsLight = false,
   ): void {
     const key = this.textures.exists(texture) ? texture : 'particle-hit';
-    const img = this.add.image(x, y, key).setDepth(14).setScale(SCALE * 0.95);
+    const img = this.add
+      .image(x, y, key)
+      .setDepth(DEPTH.combatFx)
+      .setScale(SCALE * 0.95);
     if (angleDeg) img.setAngle(angleDeg);
     // Fireballs always light the room mid-flight (staff or hard-mode DM)
     const lights =

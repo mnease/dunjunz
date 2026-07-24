@@ -54,6 +54,25 @@ export const MAP_PIXEL_H = VIEW_TILES_H * TILE * SCALE;
 export const PLAY_W = GAME_W;
 export const PLAY_H = GAME_H - HUD_H;
 
+/**
+ * Phaser depth stack (world → chrome). Combat VFX must sit **above** the
+ * crawl light veil or lightning arcs / slashes vanish under dark rooms
+ * (read as “ball spark only” instead of full arc).
+ */
+export const DEPTH = {
+  ground: 0,
+  structure: 1,
+  floorDeco: 2,
+  entityFloor: 3,
+  /** Player / actors use feetY bias around 20+ */
+  surfaceShadow: 88,
+  weather: 85,
+  lightVeil: 90,
+  /** Lightning arcs, slashes, sparks, projectiles — above veil */
+  combatFx: 95,
+  hud: 100,
+} as const;
+
 export const COLORS = {
   black: 0x0a0c10,
   floor: 0x2b2438,

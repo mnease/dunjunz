@@ -5,7 +5,7 @@
 **Style law:** [`graphics-v2-style-bible.md`](./graphics-v2-style-bible.md)  
 **Architecture detail:** [`graphics-system-v2-architecture.md`](./graphics-system-v2-architecture.md) (refined by this doc)  
 **Branch:** `graphics-v2` = **staging** · **`main`** = production only on promote  
-**Next implement:** Phase M promote (operator go/no-go after bake)  
+**Next implement:** Phase M promote **or** Density track Dn0–Dn3 (Terraria-level craft) then M — see [`graphics-v2-density-plan.md`](./graphics-v2-density-plan.md)  
 **Deploy law:** [`STAGING.md`](./STAGING.md)
 
 | Environment | Branch | URL |

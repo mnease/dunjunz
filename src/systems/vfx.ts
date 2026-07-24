@@ -5,7 +5,7 @@
 
 import type Phaser from 'phaser';
 import { loadSettings } from './settings';
-import { SCALE, SPRITE_SCALE } from '../config';
+import { DEPTH, SCALE, SPRITE_SCALE } from '../config';
 
 export function motionAllowed(): boolean {
   return !loadSettings().reduceMotion;
@@ -25,7 +25,7 @@ export function sparkBurst(
     const p = scene.add.image(x, y, 'particle');
     p.setScale(SCALE * (0.5 + Math.random() * 0.6));
     p.setTint(color);
-    p.setDepth(20);
+    p.setDepth(DEPTH.combatFx);
     const ang = Math.random() * Math.PI * 2;
     const dist = 18 + Math.random() * 36;
     scene.tweens.add({
@@ -52,7 +52,7 @@ export function slashArc(
   const p = scene.add.image(x, y, 'slash-arc');
   p.setScale(SCALE * 0.9);
   p.setAngle(angleDeg);
-  p.setDepth(16);
+  p.setDepth(DEPTH.combatFx);
   p.setAlpha(0.9);
   scene.tweens.add({
     targets: p,
@@ -120,7 +120,8 @@ export function drawLightningArc(
   const duration = opts?.durationMs ?? 220;
   const forks = opts?.forks !== false;
 
-  const g = scene.add.graphics().setDepth(18);
+  // Above light veil (DEPTH.lightVeil=90) so arcs read in dark rooms / guild
+  const g = scene.add.graphics().setDepth(DEPTH.combatFx);
   // Outer glow
   g.lineStyle(5, color, 0.35);
   g.beginPath();
@@ -181,7 +182,7 @@ export function drawLightningArc(
   // Second flicker bolt slightly offset
   scene.time.delayedCall(40, () => {
     if (!scene.sys?.isActive()) return;
-    const g2 = scene.add.graphics().setDepth(18);
+    const g2 = scene.add.graphics().setDepth(DEPTH.combatFx);
     g2.lineStyle(2, core, 0.85);
     g2.beginPath();
     const j = 3;
