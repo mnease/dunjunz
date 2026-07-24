@@ -271,6 +271,10 @@ import {
   type SmashableKind,
 } from '../systems/smashables';
 import {
+  decoCellHash,
+  placeFloorDecorations,
+} from '../systems/prop-density';
+import {
   harvestOreVein,
   isOreVeinId,
   mineralFromVeinId,
@@ -3020,6 +3024,8 @@ export class GameScene extends Phaser.Scene {
 
     // Corner barrels / crates / vases (smash for coins + occasional potions)
     this.spawnCornerSmashables();
+    // Floor clutter (Dn2) — seed-stable sprites, no collision
+    this.spawnFloorDecorations();
 
     // Ensure boss chest appears after victory if not collected
     if (
@@ -5044,6 +5050,60 @@ export class GameScene extends Phaser.Scene {
     if (this.room?.id !== GLAMDOLPH_ROOM) return;
     if (!this.save.flags?.[FLAG_FELLOWSHIP_STARTED]) return;
     this.spawnGlamdolph();
+  }
+
+  /**
+   * Floor decoration clutter (Dn2) — pebbles/roots/etc. on walkable cells.
+   * Pure placement via prop-density; sprites only (mapTile cleanup, no collision).
+   */
+  private spawnFloorDecorations(): void {
+    if (!this.room || !this.tileGrid.length) return;
+    const land = this.room.land ?? 'surface';
+    // Skip prop-dense authored interiors (already furnished)
+    const id = this.room.id.toLowerCase();
+    if (
+      id === 'guild_hall' ||
+      id.includes('shop') ||
+      id.includes('throne') ||
+      id.includes('forje')
+    ) {
+      return;
+    }
+    const occ = new Set<string>();
+    for (const a of this.actors) {
+      if (!a.alive || !a.sprite?.active) continue;
+      const t = this.worldToTile(a.sprite.x, a.sprite.y);
+      occ.add(`${t.tx},${t.ty}`);
+    }
+    for (const def of this.room.entities ?? []) {
+      occ.add(`${def.x},${def.y}`);
+    }
+    const seed =
+      (typeof this.save.runSeed === 'number' ? this.save.runSeed : 1) ^
+      seedFromString(this.room.id);
+    const placements = placeFloorDecorations({
+      grid: this.tileGrid,
+      roomId: this.room.id,
+      land,
+      seed,
+      occupied: occ,
+      maxTotal: 40,
+    });
+    for (const p of placements) {
+      if (!this.textures.exists(p.texKey)) continue;
+      const pos = this.tileToWorld(p.x, p.y);
+      // Slight sub-tile jitter from seed (stable) so props don't sit on grid centers only
+      const j = decoCellHash(this.room.id, p.x, p.y, seed, 21);
+      const jx = ((j % 7) - 3) * 1.5;
+      const jy = (((j >> 3) % 7) - 3) * 1.5;
+      const img = this.add
+        .image(pos.x + jx, pos.y + jy, p.texKey)
+        .setScale(SPRITE_SCALE * 0.55)
+        .setDepth(DEPTH.floorDeco + (p.y % 3) * 0.01)
+        .setAlpha(0.92);
+      img.setData('mapTile', true);
+      img.setData('floorDeco', p.kind);
+    }
   }
 
   /** Place smashable clutter in free authored corners (stable per room + run seed). */

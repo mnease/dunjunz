@@ -226,21 +226,33 @@ function drawAutotileFluidFrame(
     const hi2 = phase === 0 ? '#a8d8f0' : '#c0e8ff';
     ctx.fillStyle = body;
     ctx.fillRect(0, 0, s, s);
-    // Subtle grit (fill only — silhouette fixed)
-    ctx.fillStyle = mid;
-    for (let i = 2; i < s - 2; i += 4) {
-      for (let j = 2; j < s - 2; j += 5) {
+    // Density: deeper body grit + ripple bands (fill only — no holes)
+    ctx.fillStyle = deep;
+    for (let i = 2; i < s - 2; i += 3) {
+      for (let j = 2; j < s - 2; j += 3) {
         if (((i * 17 + j * 31 + mask * 3) & 7) === 0) ctx.fillRect(i, j, 1, 1);
       }
     }
+    ctx.fillStyle = mid;
+    for (let i = 2; i < s - 2; i += 3) {
+      for (let j = 2; j < s - 2; j += 4) {
+        if (((i * 11 + j * 19 + mask) & 5) === 0) ctx.fillRect(i, j, 1, 1);
+      }
+    }
+    // Soft horizontal ripples
+    ctx.fillStyle = mid;
+    for (let row = 5; row < s - 4; row += 6) {
+      const yy = row + ((mask + phase) % 2);
+      ctx.fillRect(3, yy, s - 6, 1);
+    }
     // Phase-shifted sparkles only (same opaque footprint)
     ctx.fillStyle = hi;
-    for (let i = 3; i < s - 3; i += 6) {
+    for (let i = 3; i < s - 3; i += 4) {
       if (((i + mask + phase * 2) & 3) === 0)
         ctx.fillRect(i, 4 + ((mask + phase) % 5), 2, 1);
     }
     ctx.fillStyle = hi2;
-    for (let i = 4; i < s - 4; i += 7) {
+    for (let i = 4; i < s - 4; i += 5) {
       if (((i * 3 + phase) & 5) === 0)
         ctx.fillRect(i, 8 + ((mask + phase * 3) % 6), 1, 1);
     }
@@ -259,6 +271,18 @@ function drawAutotileFluidFrame(
     if (openS) ctx.fillRect(1, s - 2, s - 2, 1);
     if (openW) ctx.fillRect(1, 1, 1, s - 2);
     if (openE) ctx.fillRect(s - 2, 1, 1, s - 2);
+    // Foam nicks only on open edges (extra craft, still edge-only)
+    ctx.fillStyle = hi2;
+    if (openN) {
+      for (let i = 3; i < s - 3; i += 4) {
+        if (((i + mask) & 2) === 0) ctx.fillRect(i, 0, 1, 1);
+      }
+    }
+    if (openS) {
+      for (let i = 3; i < s - 3; i += 4) {
+        if (((i + mask + 1) & 2) === 0) ctx.fillRect(i, s - 1, 1, 1);
+      }
+    }
   } else {
     // Lava — orange body + dark crust on open edges
     const body = full ? '#c44b2b' : '#d45530';
@@ -267,12 +291,18 @@ function drawAutotileFluidFrame(
     const crust = '#5a2a18';
     ctx.fillStyle = body;
     ctx.fillRect(0, 0, s, s);
+    // Dense bubble field (opaque body)
     ctx.fillStyle = hot;
-    for (let i = 3; i < s - 3; i += 5) {
-      for (let j = 3; j < s - 3; j += 5) {
+    for (let i = 2; i < s - 2; i += 3) {
+      for (let j = 2; j < s - 2; j += 3) {
         if (((i * 13 + j * 19 + mask + phase) & 5) === 0)
           ctx.fillRect(i, j, 2, 1);
       }
+    }
+    ctx.fillStyle = core;
+    for (let i = 4; i < s - 4; i += 6) {
+      if (((i + mask + phase) & 3) === 0)
+        ctx.fillRect(i, 5 + ((i + phase) % 8), 2, 2);
     }
     if (full || ((mask + 1 + phase) & 3) === 0) {
       ctx.fillStyle = core;
@@ -360,22 +390,75 @@ function drawAutotileLandFrame(
   const full = isFullFillMask(mask);
   ctx.fillStyle = full ? p.base : p.base;
   ctx.fillRect(0, 0, s, s);
-  // Fill grit
+  // Density craft: denser fill grit + chips (opaque body only — full cell)
   ctx.fillStyle = p.deep;
-  for (let i = 1; i < s - 1; i += 3) {
-    for (let j = 1; j < s - 1; j += 4) {
-      if (((i * 11 + j * 17 + mask) & 5) === 0) ctx.fillRect(i, j, 1, 1);
+  for (let i = 1; i < s - 1; i += 2) {
+    for (let j = 1; j < s - 1; j += 3) {
+      if (((i * 11 + j * 17 + mask * 5) & 7) < 2) ctx.fillRect(i, j, 1, 1);
     }
   }
   ctx.fillStyle = p.light;
-  for (let i = 2; i < s - 2; i += 5) {
-    if (((i + mask) & 3) === 0) ctx.fillRect(i, 2 + (mask % 4), 1, 1);
+  for (let i = 2; i < s - 2; i += 3) {
+    for (let j = 2; j < s - 2; j += 4) {
+      if (((i * 13 + j * 7 + mask) & 7) === 0) ctx.fillRect(i, j, 1, 1);
+    }
   }
-  // Grass blades only on grass
+  // Material-specific internal craft (still solid fill — no holes)
   if (material === 'grass') {
     ctx.fillStyle = p.light;
+    for (let i = 2; i < s - 2; i += 2) {
+      if (((i * 7 + mask) & 3) !== 0) continue;
+      const h = 2 + ((i + mask) % 3);
+      ctx.fillRect(i, 1 + ((i * 3) % 2), 1, h);
+      if (((i + mask) & 5) === 0) ctx.fillRect(i + 1, 2, 1, 1); // tip fleck
+    }
+    // Tiny flower dots (sparse)
+    ctx.fillStyle = '#ffc857';
+    for (let i = 4; i < s - 4; i += 6) {
+      if (((i + mask * 3) & 7) === 0) ctx.fillRect(i, 6 + (mask % 5), 1, 1);
+    }
+  } else if (material === 'dirt') {
+    // Ruts + pebbles
+    ctx.fillStyle = p.deep;
+    for (let r = 0; r < 3; r++) {
+      const yy = 6 + r * 7 + (mask % 3);
+      if (yy < s - 2) ctx.fillRect(2, yy, s - 4, 1);
+    }
+    ctx.fillStyle = p.light;
+    for (let i = 3; i < s - 3; i += 4) {
+      if (((i + mask) & 3) === 0) ctx.fillRect(i, 4 + ((i + mask) % 8), 2, 1);
+    }
+  } else if (material === 'wall' || material === 'floor') {
+    // Brick / cobble suggestion via horizontal bands + chips
+    ctx.fillStyle = p.deep;
+    for (let row = 4; row < s - 3; row += 5) {
+      ctx.fillRect(1, row, s - 2, 1);
+      const offset = (row / 5 + mask) % 2 === 0 ? 0 : 3;
+      for (let col = 2 + offset; col < s - 2; col += 6) {
+        ctx.fillRect(col, row - 3, 1, 3);
+      }
+    }
+    ctx.fillStyle = p.light;
+    for (let i = 3; i < s - 3; i += 5) {
+      if (((i * 5 + mask) & 3) === 0) ctx.fillRect(i, 3 + (mask % 6), 1, 1);
+    }
+  } else if (material === 'sand') {
+    ctx.fillStyle = p.light;
     for (let i = 2; i < s - 2; i += 3) {
-      if (((i * 7 + mask) & 2) === 0) ctx.fillRect(i, 1, 1, 2);
+      if (((i + mask) & 2) === 0) ctx.fillRect(i, 3 + ((i * 2) % 8), 2, 1);
+    }
+    ctx.fillStyle = p.deep;
+    for (let i = 4; i < s - 4; i += 5) {
+      ctx.fillRect(i, 10 + (mask % 4), 1, 1);
+    }
+  } else if (material === 'snow') {
+    ctx.fillStyle = p.light;
+    for (let i = 2; i < s - 2; i += 4) {
+      if (((i + mask) & 3) === 0) ctx.fillRect(i, 2 + ((i + mask) % 7), 2, 1);
+    }
+    ctx.fillStyle = p.deep;
+    for (let i = 3; i < s - 3; i += 5) {
+      ctx.fillRect(i, 12 + (mask % 5), 1, 1);
     }
   }
   // Open edges — dark rim (bit clear = different material neighbor)
@@ -2613,6 +2696,10 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#7dffb3', 7, 11, 18, 9);
     fill(ctx, '#9ef0b8', 9, 12, 8, 4);
     fill(ctx, '#4aba60', 6, 20, 20, 6); // lower body volume
+    // Density: body blotches + rim shade
+    fill(ctx, '#3a9a50', 8, 15, 3, 2);
+    fill(ctx, '#3a9a50', 18, 18, 4, 2);
+    fill(ctx, '#2a7a38', 12, 21, 5, 2);
     fill(ctx, '#fff', 9, 14, 5, 5);
     fill(ctx, '#fff', 18, 14, 5, 5);
     fill(ctx, '#1a1a2e', 11, 16, 3, 3);
@@ -2623,6 +2710,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     // bubble glints + drip
     fill(ctx, 'rgba(200,255,220,0.5)', 10, 18, 2, 2);
     fill(ctx, 'rgba(200,255,220,0.4)', 20, 20, 2, 1);
+    fill(ctx, 'rgba(255,255,255,0.35)', 15, 12, 2, 1);
     fill(ctx, '#3a8a48', 8, 26, 2, 3);
     fill(ctx, '#3a8a48', 22, 25, 2, 2);
     spark(ctx, 14, 13, '#c9ffe0');
@@ -2634,6 +2722,8 @@ export function generateTextures(scene: Phaser.Scene): void {
     block(ctx, '#5ad45a', '#1a4a20', 4, 11, 24, 17);
     fill(ctx, '#7dffb3', 6, 13, 20, 7);
     fill(ctx, '#4aba60', 5, 21, 22, 5);
+    fill(ctx, '#3a9a50', 10, 16, 3, 2);
+    fill(ctx, '#3a9a50', 17, 19, 4, 2);
     fill(ctx, '#fff', 8, 14, 5, 5);
     fill(ctx, '#fff', 19, 13, 5, 5);
     fill(ctx, '#1a1a2e', 10, 16, 3, 3);
@@ -2645,10 +2735,11 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   canvasTex(scene, 'skeleton', ART_RES, ART_RES, (ctx) => {
-    // skull with cartoon hollow eyes
+    // skull with cartoon hollow eyes + denser bone craft
     fill(ctx, '#6a6050', 9, 1, 14, 12);
     fill(ctx, '#e8e0d0', 10, 2, 12, 10);
     fill(ctx, '#fff8e8', 12, 3, 8, 3);
+    fill(ctx, '#d0c8b8', 11, 4, 2, 2); // brow shade
     fill(ctx, '#1a1a2e', 12, 6, 4, 4);
     fill(ctx, '#1a1a2e', 18, 6, 4, 4);
     spark(ctx, 13, 6, '#ffffff');
@@ -2657,29 +2748,44 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#c8c0b0', 13, 12, 2, 1);
     fill(ctx, '#c8c0b0', 17, 12, 2, 1);
     fill(ctx, '#d8d0c0', 15, 10, 2, 1); // nasal
+    // teeth row
+    fill(ctx, '#f0e8d8', 13, 12, 1, 1);
+    fill(ctx, '#f0e8d8', 15, 12, 1, 1);
+    fill(ctx, '#f0e8d8', 17, 12, 1, 1);
     // ribcage
     fill(ctx, '#e8e0d0', 11, 14, 10, 10);
     fill(ctx, '#c8c0b0', 12, 16, 8, 1);
     fill(ctx, '#c8c0b0', 12, 19, 8, 1);
     fill(ctx, '#c8c0b0', 12, 22, 8, 1);
+    fill(ctx, '#a8a090', 12, 17, 8, 1);
+    fill(ctx, '#a8a090', 12, 20, 8, 1);
     fill(ctx, '#b8b0a0', 15, 15, 2, 8); // sternum
     fill(ctx, '#e8e0d0', 5, 14, 6, 4);
     fill(ctx, '#e8e0d0', 21, 14, 6, 4);
+    fill(ctx, '#c8c0b0', 6, 15, 1, 2); // arm joint
+    fill(ctx, '#c8c0b0', 25, 15, 1, 2);
     fill(ctx, '#e8e0d0', 10, 24, 5, 6);
     fill(ctx, '#e8e0d0', 17, 24, 5, 6);
+    fill(ctx, '#c8c0b0', 11, 27, 3, 1);
+    fill(ctx, '#c8c0b0', 18, 27, 3, 1);
   });
 
   canvasTex(scene, 'redshirt', ART_RES, ART_RES, (ctx) => {
-    // red tunic + cartoon face + hair
+    // red tunic + cartoon face + hair + denser kit
     shadedBlock(ctx, '#c0392b', '#e05050', '#7a1818', 8, 12, 16, 12);
     fill(ctx, '#ffc857', 12, 14, 8, 2); // rank strip
+    fill(ctx, '#a02820', 9, 18, 14, 2); // belt
+    fill(ctx, '#c0c8d0', 14, 18, 4, 2); // buckle
     hairMass(ctx, 10, 4, 12, { color: '#1a1a22', bangs: true });
     cartoonFace(ctx, 10, 4, 12, 9);
     fill(ctx, '#1a1a22', 9, 24, 6, 6);
     fill(ctx, '#1a1a22', 17, 24, 6, 6);
+    fill(ctx, '#3a3a48', 10, 26, 4, 2); // boot tops
+    fill(ctx, '#3a3a48', 18, 26, 4, 2);
     fill(ctx, '#888', 5, 13, 4, 9);
     fill(ctx, '#3a3a48', 22, 15, 7, 5);
     fill(ctx, '#ff2030', 26, 16, 3, 3);
+    fill(ctx, '#c0d0e0', 6, 14, 2, 1); // phaser highlight
   });
 
   canvasTex(scene, 'captain', ART_RES, ART_RES, (ctx) => {
@@ -3715,6 +3821,51 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillStyle = '#222';
     ctx.fillRect(7, 5, 1, 1);
     ctx.fillRect(9, 5, 1, 1);
+  });
+
+  // Floor clutter decorations (Dn2) — small sprites, no entity outline pass
+  canvasTex(scene, 'deco_pebble', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, 'rgba(0,0,0,0.2)', 10, 20, 12, 3);
+    fill(ctx, '#6a6050', 11, 16, 10, 6);
+    fill(ctx, '#9a9080', 12, 17, 6, 3);
+    fill(ctx, '#4a4038', 13, 20, 5, 2);
+    spark(ctx, 14, 18, '#c8c0b0');
+  });
+  canvasTex(scene, 'deco_root', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#3d2b1f', 8, 18, 16, 3);
+    fill(ctx, '#5a4030', 10, 16, 4, 5);
+    fill(ctx, '#5a4030', 16, 15, 3, 6);
+    fill(ctx, '#5a4030', 20, 17, 5, 4);
+    fill(ctx, '#8b5a2b', 11, 16, 2, 3);
+    fill(ctx, '#2a1810', 12, 19, 10, 1);
+  });
+  canvasTex(scene, 'deco_mushroom', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, 'rgba(0,0,0,0.2)', 12, 24, 8, 2);
+    fill(ctx, '#d0c8b0', 14, 16, 4, 8);
+    fill(ctx, '#c0392b', 10, 12, 12, 6);
+    fill(ctx, '#e05050', 12, 13, 8, 3);
+    fill(ctx, '#fff3a0', 13, 14, 2, 2);
+    fill(ctx, '#fff3a0', 18, 15, 1, 1);
+  });
+  canvasTex(scene, 'deco_leaf', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, '#2a6a38', 10, 14, 12, 8);
+    fill(ctx, '#3a8f5a', 12, 15, 8, 5);
+    fill(ctx, '#5ad47a', 14, 16, 4, 2);
+    fill(ctx, '#1a4028', 16, 14, 1, 8);
+  });
+  canvasTex(scene, 'deco_ore_crumb', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, 'rgba(0,0,0,0.2)', 11, 21, 10, 3);
+    fill(ctx, '#5a6578', 12, 15, 8, 7);
+    fill(ctx, '#7a90a8', 13, 16, 5, 4);
+    fill(ctx, '#c0d8f0', 14, 17, 2, 2);
+    spark(ctx, 15, 16, '#e0f0ff');
+  });
+  canvasTex(scene, 'deco_bone_chip', ART_RES, ART_RES, (ctx) => {
+    fill(ctx, 'rgba(0,0,0,0.15)', 10, 20, 12, 3);
+    fill(ctx, '#e8e0d0', 12, 14, 8, 7);
+    fill(ctx, '#c8c0b0', 13, 15, 2, 5);
+    fill(ctx, '#fff8e8', 16, 16, 3, 3);
+    fill(ctx, '#a8a090', 14, 19, 4, 1);
   });
 
   // Warm soft-stepped torch cookie (Phase E) — gold peak, not cold white.

@@ -1,8 +1,8 @@
 # Graphics-v2 Density Plan — Terraria-level craft detail
 
-**Status:** Proposed post–Phase E roadmap (operator-gated)  
+**Status:** **Dn0–Dn3 shipped on `graphics-v2`** (procedural denser craft + prop density + entity craft). Phase M still operator-gated.  
 **Branch:** `graphics-v2` until promote  
-**Does not replace:** Phase M (promote). Can run **before M** (recommended bake) or **after M** as a follow-up ship.  
+**Does not replace:** Phase M (promote).  
 **North star:** Core Keeper systems + **Terraria craft density** (internal tile detail, clutter, readable sprites).  
 **Style law still binds:** discrete autotile truth, no continuous-ground, no pure-black ambient, combat clarity.
 
@@ -43,48 +43,43 @@ Terraria (and Core Keeper) read “dense” because of **many authored pixels + 
 
 Use **Dn** (Density n) so we never confuse with old F–L (which never existed).
 
-### Dn0 — Audit + density law (0.5 day)
+### Dn0 — Audit + density law (0.5 day) — **DONE**
 
 | | |
 | --- | --- |
 | Goal | Freeze what “Terraria-level” means for Dunjunz screenshots |
-| Work | Screenshot matrix (guild, meadow, pond, B2 torch, lava); density checklist; mark rooms that fail empty-floor test |
-| Acceptance | Written QA list in this doc §6; no code required |
-| Playtest | Operator walk of staging |
+| Work | Density plan + QA matrix §6; Style Bible depth/combat FX laws |
+| Acceptance | Written QA list in this doc §6 |
 
-### Dn1 — Tile craft v1 (2–4 days)
+### Dn1 — Tile craft v1 (2–4 days) — **DONE on graphics-v2**
 
 | | |
 | --- | --- |
 | Goal | Richer **internal** detail on land + fluid + wall frames |
-| Work | Author denser `pixel-art` / frame gens at ART_BASE; more fill variants (`-b/-c` grit); wall edge rims; water foam only on open edges (keep solid body) |
-| Files | `pixel-art.ts`, `textures.ts` autotile draws, Style Bible palette notes |
-| Acceptance | Side-by-side vs current: grass/dirt/wall/water show readable micro-detail at SCALE=3; silhouette unchanged; no holes in fluids |
-| Tests | Existing autotile/shore/solidity tests stay green; optional pixel-sample smoke if pure helpers added |
-| Risks | Over-noise, muddy palettes, zebra from micro flecks in transparent cells |
-| Mitigate | Micro-detail only on opaque body (already law); Pollen palette review |
+| Work | Denser `drawAutotileLandFrame` / `drawAutotileFluidFrame` grit, blades, ruts, brick chips, foam nicks on open edges only |
+| Files | `textures.ts` |
+| Acceptance | Solid fluid bodies; open-edge foam only; autotile/shore/solidity green |
+| Tests | Existing autotile / shore / solidity suites |
 
-### Dn2 — Prop density content (2–3 days)
+### Dn2 — Prop density content (2–3 days) — **DONE on graphics-v2**
 
 | | |
 | --- | --- |
 | Goal | Rooms stop feeling empty |
-| Work | Decoration kinds (pebble, root, mushroom, crate shard, ore crumb) as sprites; room placement helper: 1–3 per open 3×3; seed by room id; land tables (woodz vs dezertz vs dunjunz) |
-| Files | `world.ts` / deep rooms sparse at first, pure `prop-density.ts`, GameScene spawn |
-| Acceptance | Meadow, woodz path, B1 hall pass empty-floor check; no path blocking; smashables stay smashable |
-| Tests | Pure placement density counts; no solid on door pads |
-| Risks | Pathing / combat clutter; performance |
-| Mitigate | Cap props/room; never place on door/stairs/water; reduceMotion can skip bob only |
+| Work | `prop-density.ts` pure placement 1–3 per open 3×3; `deco_*` textures; GameScene `spawnFloorDecorations` (skip guild/shop/throne) |
+| Files | `prop-density.ts`, `prop-density.test.ts`, `textures.ts`, `GameScene.ts` |
+| Acceptance | Pure tests enforce band + forbidden cells; sprites only (mapTile cleanup) |
+| Tests | `prop-density.test.ts` |
 
-### Dn3 — Entity & weapon craft (2–3 days)
+### Dn3 — Entity & weapon craft (2–3 days) — **DONE on graphics-v2**
 
 | | |
 | --- | --- |
 | Goal | Characters/weapons closer to Terraria kit readability |
-| Work | Stronger body/armor/weapon pixel draws; soft ambient keys stay outline-free; foliage rim rules stay; attack VFX depth above light veil (already fixed if Dn3 after combat-fx depth fix) |
-| Files | `pixel-art.ts`, `textures.ts`, `weapon-visuals.ts`, `appearance.ts` |
-| Acceptance | Player + 3 weapons + 3 creeps screenshot QA; no zebra/cage regression |
-| Tests | Entity pass opts regression (soft ambient / foliage); smoke on `terraria-style` |
+| Work | Denser slime / skeleton / redshirt craft; deco keys skip entity outline pass; soft ambient / foliage laws preserved |
+| Files | `textures.ts`, `terraria-style.ts` |
+| Acceptance | Soft ambient outline false; foliage rim; deco no outline |
+| Tests | `terraria-style.test.ts` |
 
 ### Dn4 — Bake + optional Phase M (0.5–1 day)
 

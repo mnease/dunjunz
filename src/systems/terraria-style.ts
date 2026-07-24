@@ -311,6 +311,7 @@ export function shouldApplyTerrariaEntityPass(key: string): boolean {
   if (key.startsWith('proj-') || key.startsWith('slash') || key === 'sword-swing')
     return false;
   if (key.startsWith('slot_') || key === 'slot_frame') return false;
+  if (key.startsWith('deco_')) return false; // floor clutter — no outline cage
   // Entity / prop / character sprites — yes
   return true;
 }
