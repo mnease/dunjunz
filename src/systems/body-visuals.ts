@@ -428,7 +428,7 @@ export function drawBodyBase(
     m.legW,
     m.legH,
   );
-  // Boots
+  // Boots — denser sole + cuff (Dn3)
   shadedBlock(
     ctx,
     '#3d2b1f',
@@ -449,13 +449,20 @@ export function drawBodyBase(
     m.legW + 1,
     3,
   );
+  fill(ctx, '#2a1810', m.leftLegX + leftOff, m.footY + 2, m.legW, 1);
+  fill(ctx, '#2a1810', m.rightLegX + rightOff, m.footY + 2, m.legW, 1);
+  fill(ctx, '#6b4423', m.leftLegX + leftOff, m.footY, 1, 2);
+  fill(ctx, '#6b4423', m.rightLegX + rightOff, m.footY, 1, 2);
+  // Shin crease
+  fill(ctx, '#1a2840', m.leftLegX + 1 + leftOff, legTop + 2, 1, Math.max(2, m.legH - 4));
+  fill(ctx, '#1a2840', m.rightLegX + 1 + rightOff, legTop + 2, 1, Math.max(2, m.legH - 4));
   // Halfling oversized feet
   if (race === 'halfling') {
     fill(ctx, '#3d2b1f', m.leftLegX - 2 + leftOff, m.footY + 1, m.legW + 3, 2);
     fill(ctx, '#3d2b1f', m.rightLegX - 2 + rightOff, m.footY + 1, m.legW + 3, 2);
   }
 
-  // Torso tunic
+  // Torso tunic — denser folds + belt (Dn3)
   const tunic =
     race === 'construct'
       ? { mid: '#6a7888', hi: '#9aabc0', sh: '#3a4558' }
@@ -465,7 +472,10 @@ export function drawBodyBase(
   shadedBlock(ctx, tunic.mid, tunic.hi, tunic.sh, m.torsoX, m.torsoY, m.torsoW, m.torsoH);
   if (race !== 'dragonborn' && race !== 'construct') {
     fill(ctx, '#4a8cef', m.torsoX + 2, m.torsoY + 2, m.torsoW - 4, 3);
+    fill(ctx, '#1a4aaf', m.torsoX + 2, m.torsoY + 5, m.torsoW - 5, 1); // fold
+    fill(ctx, '#5a9aff', m.torsoX + 3, m.torsoY + 6, 2, Math.max(2, m.torsoH - 10));
     fill(ctx, '#c9a227', m.torsoX + 3, m.torsoY + m.torsoH - 3, m.torsoW - 6, 2);
+    fill(ctx, '#ffc857', m.torsoX + Math.floor(m.torsoW / 2) - 1, m.torsoY + m.torsoH - 3, 2, 2); // buckle
   }
   if (race === 'construct') {
     fill(ctx, p.skinSh, m.torsoX + 2, m.torsoY + 3, m.torsoW - 4, 1);

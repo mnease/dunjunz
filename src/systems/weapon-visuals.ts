@@ -107,16 +107,26 @@ export function drawWeaponAvatar(
           : look === 'staff_ice'
             ? { deep: '#0a2048', mid: '#2a60a0', hi: '#80b0e0', spark: '#c0e0ff' }
             : { deep: '#0a4a30', mid: '#2a8a5a', hi: '#7dffb3', spark: '#c9ffe0' };
+    // Density craft: haft grain, wrap bands, faceted crystal
     fill(ctx, '#3a2010', 25, 5, 4, 23);
     fill(ctx, '#6b4423', 26, 7, 2, 19);
     fill(ctx, '#8b5a2b', 26, 9, 1, 15);
+    fill(ctx, '#5a3820', 27, 10, 1, 12); // grain line
     fill(ctx, '#2a1810', 24, 13, 6, 1);
     fill(ctx, '#2a1810', 24, 19, 6, 1);
+    fill(ctx, '#c9a227', 24, 14, 6, 1); // wrap ring
+    fill(ctx, '#c9a227', 24, 18, 6, 1);
     block(ctx, crystal.mid, crystal.deep, 23, 2, 9, 8);
     fill(ctx, crystal.hi, 25, 3, 5, 5);
+    fill(ctx, crystal.deep, 24, 3, 1, 6); // facet shade
     fill(ctx, crystal.spark, 26, 4, 2, 2);
+    fill(ctx, crystal.hi, 28, 5, 2, 1); // facet edge
     spark(ctx, 27, 4, '#ffffff');
     spark(ctx, 25, 6, crystal.hi);
+    if (look === 'staff_lightning') {
+      fill(ctx, '#e0f8ff', 24, 1, 1, 2); // arc nubs
+      fill(ctx, '#e0f8ff', 30, 2, 1, 2);
+    }
     return;
   }
 
@@ -164,13 +174,29 @@ export function drawWeaponAvatar(
   if (look === 'iron') {
     bladeVertical(ctx, 25, 3, 5, 18, '#9aabc0', '#e0e8f0', '#4a5060', '#2a3040');
     fill(ctx, '#c0c8d0', 25, 3, 5, 2);
+    fill(ctx, '#e0e8f0', 26, 5, 1, 12); // fuller
+    fill(ctx, '#c9a227', 24, 19, 7, 2); // guard plate
+    fill(ctx, '#ffc857', 26, 19, 3, 1);
     hiltBelow(ctx, 27, 20, 10);
+    fill(ctx, '#c9a227', 26, 28, 3, 2); // pommel
+    spark(ctx, 27, 4, '#ffffff');
     return;
   }
 
-  // mild sword — sharp steel
+  // mild sword — sharp steel with denser kit (Dn3)
   bladeVertical(ctx, 25, 6, 5, 15, '#dfe6f0', '#ffffff', '#607080', '#3a4050');
+  fill(ctx, '#ffffff', 26, 7, 1, 10); // edge gleam
+  fill(ctx, '#a0a8b8', 28, 8, 1, 10); // back bevel
+  fill(ctx, '#c0c8d8', 26, 9, 1, 8); // fuller groove
+  fill(ctx, '#c9a227', 23, 19, 9, 2); // crossguard
+  fill(ctx, '#ffc857', 24, 19, 2, 1);
+  fill(ctx, '#ffc857', 29, 19, 2, 1);
   hiltBelow(ctx, 27, 20, 9);
+  fill(ctx, '#8b5a2b', 26, 21, 2, 5); // wrap
+  fill(ctx, '#5a3d1a', 26, 22, 1, 3);
+  fill(ctx, '#c9a227', 26, 27, 3, 2); // pommel
+  spark(ctx, 27, 6, '#ffffff');
+  spark(ctx, 27, 27, '#ffe080');
 }
 
 /**
@@ -275,16 +301,26 @@ export function drawWeaponIcon(
           : look === 'staff_ice'
             ? { deep: '#0a2048', mid: '#2a60a0', hi: '#80b0e0', spark: '#c0e0ff' }
             : { deep: '#0a4a30', mid: '#2a8a5a', hi: '#7dffb3', spark: '#c9ffe0' };
+    // Density craft (icon): haft grain + wrap + faceted crystal
     fill(ctx, '#3a2010', 12, 7, 7, 23);
     fill(ctx, '#6b4423', 13, 9, 5, 19);
     fill(ctx, '#8b5a2b', 14, 11, 2, 15);
+    fill(ctx, '#5a3820', 15, 12, 1, 12);
     fill(ctx, '#2a1810', 11, 13, 9, 2);
     fill(ctx, '#2a1810', 11, 19, 9, 2);
+    fill(ctx, '#c9a227', 11, 14, 9, 1);
+    fill(ctx, '#c9a227', 11, 18, 9, 1);
     block(ctx, crystal.mid, crystal.deep, 9, 1, 14, 11);
     fill(ctx, crystal.hi, 12, 3, 8, 7);
+    fill(ctx, crystal.deep, 10, 3, 2, 8);
     fill(ctx, crystal.spark, 14, 4, 3, 3);
+    fill(ctx, crystal.hi, 18, 5, 3, 2);
     spark(ctx, 15, 4, '#ffffff');
     spark(ctx, 13, 7, crystal.hi);
+    if (look === 'staff_lightning') {
+      fill(ctx, '#e0f8ff', 10, 0, 2, 2);
+      fill(ctx, '#e0f8ff', 20, 1, 2, 2);
+    }
     return;
   }
 
@@ -328,13 +364,28 @@ export function drawWeaponIcon(
 
   if (look === 'iron') {
     bladeVertical(ctx, 12, 2, 8, 18, '#9aabc0', '#e0e8f0', '#4a5060', '#2a3040');
+    fill(ctx, '#e0e8f0', 14, 4, 2, 14);
+    fill(ctx, '#c9a227', 10, 18, 12, 3);
     hiltBelow(ctx, 16, 19, 14);
+    fill(ctx, '#c9a227', 14, 28, 4, 3);
+    spark(ctx, 15, 3, '#ffffff');
     return;
   }
 
-  // mild sword default
+  // mild sword default — denser icon craft (Dn3)
   bladeVertical(ctx, 12, 3, 8, 17, '#dfe6f0', '#ffffff', '#607080', '#3a4050');
+  fill(ctx, '#ffffff', 13, 4, 2, 12);
+  fill(ctx, '#a0a8b8', 18, 5, 1, 12);
+  fill(ctx, '#c0c8d8', 15, 6, 1, 10);
+  fill(ctx, '#c9a227', 9, 18, 14, 3);
+  fill(ctx, '#ffc857', 10, 18, 3, 2);
+  fill(ctx, '#ffc857', 19, 18, 3, 2);
   hiltBelow(ctx, 16, 19, 12);
+  fill(ctx, '#8b5a2b', 14, 21, 4, 6);
+  fill(ctx, '#5a3d1a', 15, 22, 2, 4);
+  fill(ctx, '#c9a227', 14, 28, 4, 3);
+  spark(ctx, 15, 4, '#ffffff');
+  spark(ctx, 16, 28, '#ffe080');
 }
 
 /**

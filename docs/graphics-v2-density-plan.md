@@ -76,10 +76,10 @@ Use **Dn** (Density n) so we never confuse with old F–L (which never existed).
 | | |
 | --- | --- |
 | Goal | Characters/weapons closer to Terraria kit readability |
-| Work | Denser slime / skeleton / redshirt craft; deco keys skip entity outline pass; soft ambient / foliage laws preserved |
-| Files | `textures.ts`, `terraria-style.ts` |
-| Acceptance | Soft ambient outline false; foliage rim; deco no outline |
-| Tests | `terraria-style.test.ts` |
+| Work | Denser **player** body (`drawBodyBase` folds/boots/belt); **weapons** mild sword / iron / lightning staff avatar+icon; denser slime / skeleton / redshirt; deco keys skip entity outline; soft ambient / foliage laws preserved |
+| Files | `body-visuals.ts`, `weapon-visuals.ts`, `textures.ts`, `terraria-style.ts` |
+| Acceptance | Player + ≥3 weapon looks denser on real draw path; 3 creeps denser; soft ambient outline false; foliage rim; deco no outline |
+| Tests | `density-craft.test.ts`, `terraria-style.test.ts` |
 
 ### Dn4 — Bake + optional Phase M (0.5–1 day)
 

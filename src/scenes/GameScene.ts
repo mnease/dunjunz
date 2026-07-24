@@ -5075,8 +5075,14 @@ export class GameScene extends Phaser.Scene {
       const t = this.worldToTile(a.sprite.x, a.sprite.y);
       occ.add(`${t.tx},${t.ty}`);
     }
+    // Authored entity coords are 16×11; map into expanded VIEW_TILES (same as spawnEntity)
     for (const def of this.room.entities ?? []) {
-      occ.add(`${def.x},${def.y}`);
+      if (this.roomExpand) {
+        const m = mapEntityTile(def.x, def.y, this.roomExpand);
+        occ.add(`${m.x},${m.y}`);
+      } else {
+        occ.add(`${def.x},${def.y}`);
+      }
     }
     const seed =
       (typeof this.save.runSeed === 'number' ? this.save.runSeed : 1) ^

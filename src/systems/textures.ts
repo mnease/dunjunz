@@ -3496,15 +3496,24 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   canvasTex(scene, 'wolf', ART_RES, ART_RES, (ctx) => {
+    // Density craft: fur bands, snout, claws
     shadedBlock(ctx, '#6a6a78', '#9a9aa8', '#3a3a48', 6, 12, 18, 12);
     fill(ctx, '#4a4a58', 4, 8, 12, 8);
+    fill(ctx, '#5a5a68', 7, 13, 14, 3); // fur band
     fill(ctx, '#3a3a48', 2, 4, 6, 6);
     fill(ctx, '#3a3a48', 12, 4, 6, 6);
+    fill(ctx, '#2a2a35', 3, 5, 2, 3); // ear shade
+    fill(ctx, '#2a2a35', 13, 5, 2, 3);
     fill(ctx, '#ff3344', 6, 10, 2, 2);
     fill(ctx, '#ff3344', 14, 10, 2, 2);
+    fill(ctx, '#c0c0c8', 8, 12, 4, 2); // snout
+    fill(ctx, '#1a1a22', 9, 13, 2, 1); // nose
     fill(ctx, '#888', 22, 16, 8, 4);
+    fill(ctx, '#a0a0a8', 24, 17, 3, 1); // tail tip
     fill(ctx, '#1a1a22', 8, 24, 5, 6);
     fill(ctx, '#1a1a22', 16, 24, 5, 6);
+    fill(ctx, '#3a3a48', 9, 28, 3, 1); // claws
+    fill(ctx, '#3a3a48', 17, 28, 3, 1);
   });
 
   // Moredorkz hostiles — Fellowship epic
@@ -3512,10 +3521,16 @@ export function generateTextures(scene: Phaser.Scene): void {
     shadedBlock(ctx, '#4a7a3a', '#6a9a4a', '#2a4a20', 8, 10, 16, 14);
     fill(ctx, '#3a5a2a', 6, 6, 6, 6); // ear
     fill(ctx, '#3a5a2a', 20, 6, 6, 6);
+    fill(ctx, '#2a4a20', 7, 7, 2, 3);
+    fill(ctx, '#2a4a20', 21, 7, 2, 3);
     fill(ctx, '#ffee44', 10, 14, 3, 3);
     fill(ctx, '#ffee44', 18, 14, 3, 3);
+    fill(ctx, '#1a1a22', 11, 15, 1, 1);
+    fill(ctx, '#1a1a22', 19, 15, 1, 1);
     fill(ctx, '#6b5344', 12, 20, 8, 6); // rags
+    fill(ctx, '#8a6a50', 13, 21, 6, 2);
     fill(ctx, '#888', 22, 18, 6, 4); // knife
+    fill(ctx, '#c0c8d0', 25, 18, 2, 1); // blade tip
     fill(ctx, '#1a1a22', 10, 26, 4, 4);
     fill(ctx, '#1a1a22', 18, 26, 4, 4);
   });
