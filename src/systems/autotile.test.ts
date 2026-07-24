@@ -21,7 +21,9 @@ import {
   landAutotileKey,
   landMatch,
   resolveAutotileTextureKey,
+  pickTextureKey,
   resolveLandAutotileTextureKey,
+  resolveRoomCellTextureCandidates,
   structureTextureKey,
 } from './autotile';
 
@@ -200,5 +202,86 @@ describe('land edge masks (Phase C)', () => {
     expect(isAutotileLand('grass')).toBe(true);
     expect(isAutotileLand('water')).toBe(false);
     expect(isAutotileFluid('dirt')).toBe(false);
+  });
+});
+
+describe('resolveRoomCellTextureCandidates themed land precedence', () => {
+  const wallBlock = grid([
+    '#####',
+    '#####',
+    '#####',
+  ]);
+
+  it('beach walls prefer tile-sand-wall before generic at-wall-*', () => {
+    const c = resolveRoomCellTextureCandidates(wallBlock, 2, 1, {
+      roomId: 'beach_start',
+      land: 'surface',
+      onBeach: true,
+      isMountainApproach: false,
+    });
+    expect(c[0]).toBe('tile-sand-wall');
+    expect(c.some((k) => k.startsWith('at-wall-'))).toBe(true);
+    // With sand-wall present, pick must not be purple generic wall full-fill first
+    expect(
+      pickTextureKey(c, (k) => k === 'tile-sand-wall' || k.startsWith('at-wall-')),
+    ).toBe('tile-sand-wall');
+  });
+
+  it('mountain approach walls prefer tile-dwarf-wall before at-wall-*', () => {
+    const c = resolveRoomCellTextureCandidates(wallBlock, 2, 1, {
+      roomId: 'road_north_1',
+      land: 'dwarvez',
+      onBeach: false,
+      isMountainApproach: true,
+    });
+    expect(c[0]).toBe('tile-dwarf-wall');
+    expect(
+      pickTextureKey(c, (k) =>
+        k === 'tile-dwarf-wall' || k.startsWith('at-wall-'),
+      ),
+    ).toBe('tile-dwarf-wall');
+  });
+
+  it('dwarvez floors prefer tile-dwarf-floor before at-floor-*', () => {
+    const floors = grid([
+      '.....',
+      '.....',
+      '.....',
+    ]);
+    const c = resolveRoomCellTextureCandidates(floors, 1, 1, {
+      roomId: 'dwarvez_hall',
+      land: 'dwarvez',
+      onBeach: false,
+      isMountainApproach: false,
+    });
+    expect(c[0]).toBe('tile-dwarf-floor');
+    expect(
+      pickTextureKey(c, (k) =>
+        k === 'tile-dwarf-floor' || k.startsWith('at-floor-'),
+      ),
+    ).toBe('tile-dwarf-floor');
+  });
+
+  it('surface meadow walls use land autotile first (no themed override)', () => {
+    const c = resolveRoomCellTextureCandidates(wallBlock, 2, 1, {
+      roomId: 'overworld',
+      land: 'surface',
+      onBeach: false,
+      isMountainApproach: false,
+    });
+    expect(c[0]).toMatch(/^at-wall-\d+$/);
+    expect(c[0]).not.toBe('tile-sand-wall');
+    expect(c[0]).not.toBe('tile-dwarf-wall');
+  });
+
+  it('door still short-circuits to structure before land', () => {
+    const g = grid(['###', '#D#', '###']);
+    const c = resolveRoomCellTextureCandidates(g, 1, 1, {
+      roomId: 'overworld',
+      land: 'surface',
+      onBeach: false,
+      isMountainApproach: false,
+    });
+    expect(c[0]).toBe('tile-door');
   });
 });
