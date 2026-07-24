@@ -40,7 +40,11 @@ import {
 } from '../systems/fractal-noise';
 import {
   isAutotileFluid,
+  isAutotileLand,
+  isStructureVisualKind,
   resolveAutotileTextureKey,
+  resolveLandAutotileTextureKey,
+  structureTextureKey,
 } from '../systems/autotile';
 import { resolveShoreTextureKey } from '../systems/shore';
 import {
@@ -2078,14 +2082,18 @@ export class GameScene extends Phaser.Scene {
           kind === 'water'
             ? (this.waterBodies.get(`${x},${y}`) ?? 'pond')
             : undefined;
-        // Phase A: fluid cells use 4-bit autotile frames (solid interior, no holes)
+        // Resolve order: structure → fluid → shore → land autotile → legacy TEX
+        const structKey = isStructureVisualKind(kind)
+          ? structureTextureKey(kind, room.floor ?? 0)
+          : null;
+        // Phase A: fluid 4-bit frames
         const atKey =
-          isAutotileFluid(kind)
+          !structKey && isAutotileFluid(kind)
             ? resolveAutotileTextureKey(this.tileGrid, x, y)
             : null;
-        // Phase B: land N4 to water → land-aware shore (never walls/structures/water)
+        // Phase B: land N4 to water → shore (never structures/fluids)
         const shoreKey =
-          !atKey
+          !structKey && !atKey
             ? resolveShoreTextureKey(
                 this.tileGrid,
                 x,
@@ -2094,37 +2102,44 @@ export class GameScene extends Phaser.Scene {
                 room.id,
               )
             : null;
-        let texKey =
-          atKey && this.textures.exists(atKey)
-            ? atKey
-            : shoreKey && this.textures.exists(shoreKey)
-              ? shoreKey
-              : kind === 'stairs' && (room.floor ?? 0) >= 0
-                ? 'tile-cave-mouth'
-                : kind === 'wall' &&
-                    onBeach &&
-                    this.textures.exists('tile-sand-wall')
-                  ? 'tile-sand-wall'
-                  : kind === 'floor' &&
-                      onBeach &&
-                      this.textures.exists('tile-sand')
-                    ? 'tile-sand'
-                    : kind === 'wall' &&
-                        isMountainApproach &&
-                        this.textures.exists('tile-dwarf-wall')
-                      ? 'tile-dwarf-wall'
-                      : kind === 'floor' &&
-                          land === 'dwarvez' &&
-                          this.textures.exists('tile-dwarf-floor')
-                        ? 'tile-dwarf-floor'
-                        : kind === 'water' && waterBody
-                          ? waterTextureKeySafe(waterBody, 0, (k) =>
-                              this.textures.exists(k),
-                            )
-                          : TEX[kind];
+        // Phase C: land edge autotile (grass/dirt/wall/…)
+        const landKey =
+          !structKey && !atKey && !shoreKey && isAutotileLand(kind)
+            ? resolveLandAutotileTextureKey(this.tileGrid, x, y)
+            : null;
 
-        // Fractal terrain variants — same kinds, varied frames (not continuous paint)
-        // Skip when fluid autotile or shore override owns the cell
+        let texKey =
+          structKey && this.textures.exists(structKey)
+            ? structKey
+            : atKey && this.textures.exists(atKey)
+              ? atKey
+              : shoreKey && this.textures.exists(shoreKey)
+                ? shoreKey
+                : landKey && this.textures.exists(landKey)
+                  ? landKey
+                  : kind === 'wall' &&
+                      onBeach &&
+                      this.textures.exists('tile-sand-wall')
+                    ? 'tile-sand-wall'
+                    : kind === 'floor' &&
+                        onBeach &&
+                        this.textures.exists('tile-sand')
+                      ? 'tile-sand'
+                      : kind === 'wall' &&
+                          isMountainApproach &&
+                          this.textures.exists('tile-dwarf-wall')
+                        ? 'tile-dwarf-wall'
+                        : kind === 'floor' &&
+                            land === 'dwarvez' &&
+                            this.textures.exists('tile-dwarf-floor')
+                          ? 'tile-dwarf-floor'
+                          : kind === 'water' && waterBody
+                            ? waterTextureKeySafe(waterBody, 0, (k) =>
+                                this.textures.exists(k),
+                              )
+                            : TEX[kind];
+
+        // Fractal fill variants only when legacy stamps still used (not autotile)
         const fluidKinds =
           kind === 'floor' ||
           kind === 'wall' ||
@@ -2139,8 +2154,10 @@ export class GameScene extends Phaser.Scene {
           room.floor ?? 0,
         );
         const usedSpecial =
+          (structKey && this.textures.exists(structKey)) ||
           (atKey && this.textures.exists(atKey)) ||
-          (shoreKey && this.textures.exists(shoreKey));
+          (shoreKey && this.textures.exists(shoreKey)) ||
+          (landKey && this.textures.exists(landKey));
         if (
           !usedSpecial &&
           fluidKinds &&

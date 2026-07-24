@@ -1,11 +1,11 @@
 # Dunjunz Graphics-v2 Rebuild Plan
 
-**Status:** Design LOCK + **Phase S + A + B shipped** on `graphics-v2`.  
+**Status:** Design LOCK + **Phase S + A + B + C shipped** on `graphics-v2`.  
 **North star:** Core Keeper–inspired discrete autotile world on clean-slate render path  
 **Style law:** [`graphics-v2-style-bible.md`](./graphics-v2-style-bible.md)  
 **Architecture detail:** [`graphics-system-v2-architecture.md`](./graphics-system-v2-architecture.md) (refined by this doc)  
 **Branch:** `graphics-v2` = **staging** · **`main`** = production only on promote  
-**Next implement:** Phase C land autotile + structure  
+**Next implement:** Phase D entity polish + optional fluid anim  
 **Deploy law:** [`STAGING.md`](./STAGING.md)
 
 | Environment | Branch | URL |
@@ -269,13 +269,13 @@ Goal: **clean-slate render path** — no half-dead continuous path that can be r
 | Risks | Shore on doors/stairs; double-wide ring from 8-neigh too early |
 | Mitigate | 4-neigh only P0; structure skip list |
 
-### Phase C — Land autotile + structure unify (2–4 days)
+### Phase C — Land autotile + structure unify (2–4 days) — **DONE on graphics-v2**
 
 | Field | Content |
 | --- | --- |
-| Goal | Grass/dirt/snow/floor/wall edges + structure props in one resolve path |
-| Work | Blob or edge sets for land; season tint reattach; cave mouth/door pads |
-| Acceptance | Meadow path edges; dungeon wall corners; doors readable (Comb) |
+| Goal | Grass/dirt/snow/floor/wall/sand edges + structure short-circuit in one resolve path |
+| Work | `landAutotileKey` + 16 frames per land material; `structureTextureKey`; placeRoomTiles order structure→fluid→shore→land |
+| Acceptance | Interior land full-fill; grass–dirt open edges; wall corridors edged; doors use tile-door |
 | Playtest | surface meadow, dunjunz corridor, dwarvez approach, kingdom carpet room |
 | Risks | Palette bleed across lands; over-tint fighting autotile dark edges |
 | Mitigate | Tint only fill variants; land palette tables in Style Bible |

@@ -6,9 +6,11 @@ import {
   EDGE_S,
   EDGE_W,
   allEdgeMasks,
+  allLandMaterials,
   autotileTextureKey,
   isFullFillMask,
-  type AutotileMaterial,
+  type FluidMaterial,
+  type LandMaterial,
 } from './autotile';
 import {
   allShoreMaterials,
@@ -172,7 +174,7 @@ function canvasTex(
 function drawAutotileFluidFrame(
   ctx: CanvasRenderingContext2D,
   s: number,
-  material: AutotileMaterial,
+  material: FluidMaterial,
   mask: number,
 ): void {
   const full = isFullFillMask(mask);
@@ -244,12 +246,112 @@ function drawAutotileFluidFrame(
 /** Boot all 16 fluid autotile keys for a material. */
 function generateAutotileFluidSet(
   scene: Phaser.Scene,
-  material: AutotileMaterial,
+  material: FluidMaterial,
 ): void {
   for (const mask of allEdgeMasks()) {
     const key = autotileTextureKey(material, mask);
     canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
       drawAutotileFluidFrame(ctx, ART_BASE, material, mask);
+    });
+  }
+}
+
+/** Style Bible land ramps — solid fill + open-edge darken (Phase C). */
+function drawAutotileLandFrame(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  material: LandMaterial,
+  mask: number,
+): void {
+  const pal: Record<
+    LandMaterial,
+    { deep: string; base: string; light: string; edge: string }
+  > = {
+    grass: {
+      deep: '#1c5d2e',
+      base: '#3a7d52',
+      light: '#55b626',
+      edge: '#2f6b45',
+    },
+    dirt: {
+      deep: '#604926',
+      base: '#8d663d',
+      light: '#b47f49',
+      edge: '#7f5f32',
+    },
+    wall: {
+      deep: '#3a3150',
+      base: '#5c4d7a',
+      light: '#7a6a98',
+      edge: '#2a2438',
+    },
+    snow: {
+      deep: '#a0b0c0',
+      base: '#e8f0f8',
+      light: '#ffffff',
+      edge: '#c0d0e0',
+    },
+    floor: {
+      deep: '#2b2438',
+      base: '#342b45',
+      light: '#4a3d5c',
+      edge: '#1a1528',
+    },
+    sand: {
+      deep: '#a89068',
+      base: '#e8d4a8',
+      light: '#f0e4c4',
+      edge: '#c9b080',
+    },
+  };
+  const p = pal[material];
+  const full = isFullFillMask(mask);
+  ctx.fillStyle = full ? p.base : p.base;
+  ctx.fillRect(0, 0, s, s);
+  // Fill grit
+  ctx.fillStyle = p.deep;
+  for (let i = 1; i < s - 1; i += 3) {
+    for (let j = 1; j < s - 1; j += 4) {
+      if (((i * 11 + j * 17 + mask) & 5) === 0) ctx.fillRect(i, j, 1, 1);
+    }
+  }
+  ctx.fillStyle = p.light;
+  for (let i = 2; i < s - 2; i += 5) {
+    if (((i + mask) & 3) === 0) ctx.fillRect(i, 2 + (mask % 4), 1, 1);
+  }
+  // Grass blades only on grass
+  if (material === 'grass') {
+    ctx.fillStyle = p.light;
+    for (let i = 2; i < s - 2; i += 3) {
+      if (((i * 7 + mask) & 2) === 0) ctx.fillRect(i, 1, 1, 2);
+    }
+  }
+  // Open edges — dark rim (bit clear = different material neighbor)
+  const openN = (mask & EDGE_N) === 0;
+  const openE = (mask & EDGE_E) === 0;
+  const openS = (mask & EDGE_S) === 0;
+  const openW = (mask & EDGE_W) === 0;
+  ctx.fillStyle = p.edge;
+  if (openN) ctx.fillRect(0, 0, s, 2);
+  if (openS) ctx.fillRect(0, s - 2, s, 2);
+  if (openW) ctx.fillRect(0, 0, 2, s);
+  if (openE) ctx.fillRect(s - 2, 0, 2, s);
+  // Slight inner shade on open edges for depth
+  ctx.fillStyle = p.deep;
+  if (openN) ctx.fillRect(1, 2, s - 2, 1);
+  if (openS) ctx.fillRect(1, s - 3, s - 2, 1);
+  if (openW) ctx.fillRect(2, 1, 1, s - 2);
+  if (openE) ctx.fillRect(s - 3, 1, 1, s - 2);
+}
+
+function generateAutotileLandSet(
+  scene: Phaser.Scene,
+  material: LandMaterial,
+): void {
+  for (const mask of allEdgeMasks()) {
+    const key = autotileTextureKey(material, mask);
+    canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
+      drawAutotileLandFrame(ctx, ART_BASE, material, mask);
     });
   }
 }
@@ -1988,6 +2090,10 @@ export function generateTextures(scene: Phaser.Scene): void {
   generateAutotileFluidSet(scene, 'lava');
   // Phase B: land-aware shore fills (1-cell ring around water)
   generateShoreTextures(scene);
+  // Phase C: land edge sets (grass/dirt/wall/snow/floor/sand)
+  for (const mat of allLandMaterials()) {
+    generateAutotileLandSet(scene, mat);
+  }
 
   canvasTex(scene, 'tile-door', ART_RES, ART_RES, (ctx) => {
     // floor behind so open sides read as passage
