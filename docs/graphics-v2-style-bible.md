@@ -95,7 +95,7 @@ Core Keeper reads as *almost realistic while pixelated* because of **systems sta
 
 ### 2.5 Outlines, shadows, depth
 
-18. **Entities:** 1px dark outline (`#1a1420` family) + 1–2px drop shadow offset. Optional color snap. **No jagged grow on soft ambient** (koi, signs, crabs) — it cages silhouettes.
+18. **Entities:** Dense sprites get 1px dark outline (`#1a1420` family) + 1–2px drop shadow. Soft ambient (koi, signs, crabs, palms) gets **no** outline/jagged/shadow — outlining sparse silhouettes or micro flecks reads as zebra hatch. Micro-detail only mutates already-opaque body pixels.
 19. **Terrain frames** may include **internal** dark edge pixels where the mask says “open to other material.” Do not run entity outline pass on full-room ground.
 20. **Depth order (law):**
     ```
@@ -150,7 +150,8 @@ Core Keeper reads as *almost realistic while pixelated* because of **systems sta
 | Bilinear world filtering | Soft mush |
 | Pure black ambient FoW | Unreadable combat |
 | Near-black water interiors | Muddy ponds |
-| Jagged grow on koi / soft ambient | Black cages |
+| Jagged grow / outline on soft ambient | Black cages / zebra hatch |
+| Micro flecks into transparent then outline | Zebra hatch around crabs/characters |
 | Merging unfinished v2 to `main` | Live classic tiles stay clean |
 | Content redesign disguised as graphics | Render-only rebuild |
 

@@ -94,6 +94,10 @@ import {
 /**
  * Native-resolution micro-detail after author→ART_RES upscale.
  * Adds fine grit / edge light that only exists at 64px (true density).
+ *
+ * Only mutates already-opaque body pixels. Painting flecks into transparent
+ * cells used to create phantom alpha islands that entity outline then stroked
+ * as zebra/hatch around sparse sprites (crabs, koi, palms).
  */
 function applyMicroDetail(
   ctx: CanvasRenderingContext2D,
@@ -101,33 +105,50 @@ function applyMicroDetail(
   h: number,
   seed = 0,
 ): void {
-  // Soft NW light rim
-  ctx.fillStyle = 'rgba(255,255,255,0.06)';
-  for (let i = 0; i < w; i++) {
-    if ((i + seed) % 3 === 0) ctx.fillRect(i, 0, 1, 1);
-  }
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const aMin = 24;
   for (let j = 0; j < h; j++) {
-    if ((j + seed * 2) % 4 === 0) ctx.fillRect(0, j, 1, 1);
-  }
-  // Fine dark grit
-  ctx.fillStyle = 'rgba(0,0,0,0.1)';
-  for (let j = 1; j < h - 1; j++) {
-    for (let i = 1; i < w - 1; i++) {
-      const n = (i * 17 + j * 31 + seed * 13) & 31;
-      if (n === 0) ctx.fillRect(i, j, 1, 1);
+    for (let i = 0; i < w; i++) {
+      const idx = (j * w + i) * 4;
+      if (d[idx + 3]! < aMin) continue;
+      // Soft NW light rim (top / left edge of body)
+      if (j === 0 && (i + seed) % 3 === 0) {
+        d[idx] = Math.min(255, d[idx]! + 14);
+        d[idx + 1] = Math.min(255, d[idx + 1]! + 14);
+        d[idx + 2] = Math.min(255, d[idx + 2]! + 14);
+      } else if (i === 0 && (j + seed * 2) % 4 === 0) {
+        d[idx] = Math.min(255, d[idx]! + 14);
+        d[idx + 1] = Math.min(255, d[idx + 1]! + 14);
+        d[idx + 2] = Math.min(255, d[idx + 2]! + 14);
+      }
+      // Fine dark grit
+      if (i > 0 && j > 0 && i < w - 1 && j < h - 1) {
+        const n = (i * 17 + j * 31 + seed * 13) & 31;
+        if (n === 0) {
+          d[idx] = Math.max(0, d[idx]! - 18);
+          d[idx + 1] = Math.max(0, d[idx + 1]! - 18);
+          d[idx + 2] = Math.max(0, d[idx + 2]! - 18);
+        }
+      }
+      // Fine light flecks
+      if (i > 1 && j > 1 && i < w - 2 && j < h - 2) {
+        const n = (i * 23 + j * 11 + seed * 7) & 47;
+        if (n === 0) {
+          d[idx] = Math.min(255, d[idx]! + 16);
+          d[idx + 1] = Math.min(255, d[idx + 1]! + 16);
+          d[idx + 2] = Math.min(255, d[idx + 2]! + 16);
+        }
+      }
+      // Bottom contact shadow on lowest body row only
+      if (j === h - 1) {
+        d[idx] = Math.max(0, Math.round(d[idx]! * 0.88));
+        d[idx + 1] = Math.max(0, Math.round(d[idx + 1]! * 0.88));
+        d[idx + 2] = Math.max(0, Math.round(d[idx + 2]! * 0.88));
+      }
     }
   }
-  // Fine light flecks
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
-  for (let j = 2; j < h - 2; j++) {
-    for (let i = 2; i < w - 2; i++) {
-      const n = (i * 23 + j * 11 + seed * 7) & 47;
-      if (n === 0) ctx.fillRect(i, j, 1, 1);
-    }
-  }
-  // Bottom contact shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.12)';
-  ctx.fillRect(0, h - 1, w, 1);
+  ctx.putImageData(img, 0, 0);
 }
 
 /**
@@ -164,14 +185,16 @@ function canvasTex(
   draw(ctx);
   if (upscaled) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    // Stable seed from key so textures don't shimmer between loads
+  }
+  // Entity polish first on clean silhouette, then body-only micro grit.
+  // (Old order: micro flecks into transparent → outline zebra hatch.)
+  if (shouldApplyTerrariaEntityPass(key)) {
+    applyTerrariaEntityPass(ctx, w, h, terrariaEntityPassOpts(key));
+  }
+  if (upscaled) {
     let seed = 0;
     for (let i = 0; i < key.length; i++) seed = (seed * 31 + key.charCodeAt(i)) | 0;
     applyMicroDetail(ctx, w, h, Math.abs(seed));
-  }
-  // Phase D: restrained entity polish (soft ambient skips jagged cages)
-  if (shouldApplyTerrariaEntityPass(key)) {
-    applyTerrariaEntityPass(ctx, w, h, terrariaEntityPassOpts(key));
   }
   scene.textures.addCanvas(key, canvas);
 }

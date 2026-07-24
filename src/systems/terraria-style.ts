@@ -1,8 +1,9 @@
 /**
  * Entity pixel polish for Graphics-v2 Phase D (Core Keeper readable silhouettes).
- * Outlines, optional jagged edges, drop shadows. Pure canvas helpers (no Phaser).
+ * Outlines + drop shadows on dense sprites. Pure canvas helpers (no Phaser).
  *
- * Soft ambient (koi/sign/crab…) never gets jagged grow — that created black cages.
+ * Soft ambient (koi/sign/crab…) skips outline/jagged/shadow entirely — stroking
+ * sparse silhouettes (or micro flecks in transparent cells) read as zebra hatch.
  *
  * @see docs/graphics-v2-style-bible.md
  * @see docs/graphics-v2-rebuild-plan.md Phase D
@@ -282,8 +283,9 @@ export function shouldApplyTerrariaEntityPass(key: string): boolean {
 }
 
 /**
- * Sparse silhouettes: jagged grow creates black tile-shaped cages.
- * Soft pass only — thin outline, no nibble/grow, no drop shadow.
+ * Sparse silhouettes: no outline/jagged/shadow — those turn body flecks and
+ * thin limbs into zebra hatch / black cages (seen on staging crabs).
+ * Soft ambient skips the entity pass entirely (all flags off).
  */
 const SOFT_AMBIENT_KEYS = new Set([
   'koi',
@@ -297,7 +299,7 @@ const SOFT_AMBIENT_KEYS = new Set([
   'palm', // sparse fronds
 ]);
 
-/** True if key uses soft ambient polish (no jagged). */
+/** True if key uses soft ambient polish (no outline/jagged/shadow). */
 export function isSoftAmbientEntityKey(key: string): boolean {
   if (SOFT_AMBIENT_KEYS.has(key)) return true;
   // Dynamic buddy frames stay dense (outline+shadow); not soft ambient
@@ -306,24 +308,24 @@ export function isSoftAmbientEntityKey(key: string): boolean {
 
 /**
  * Per-key pass options (Phase D).
- * Soft ambient = outline + light snap only.
- * Dense characters/trees = outline + restrained jagged + drop shadow.
+ * Soft ambient = no entity stroke (draw only + body micro grit).
+ * Dense characters/trees = clean outline + light drop shadow (no jagged nibble).
  */
 export function terrariaEntityPassOpts(key: string): TerrariaPassOpts {
   const seed = terrariaSeedFromKey(key);
   if (isSoftAmbientEntityKey(key)) {
     return {
-      outline: true,
+      outline: false,
       jagged: false,
       shadow: false,
-      snap: true,
+      snap: false,
       seed,
     };
   }
-  // Dense: outline + shadow; jagged on for foliage/creeps (restrained nibble in pass)
+  // Dense: readable silhouette + contact shadow; jagged off (nibble read as hatch)
   return {
     outline: true,
-    jagged: true,
+    jagged: false,
     shadow: true,
     snap: true,
     seed,

@@ -30,7 +30,7 @@ describe('entity polish Phase D', () => {
     expect(shouldApplyTerrariaEntityPass('koi')).toBe(true);
   });
 
-  it('soft ambient opts skip jagged grow (no tile-cage outline)', () => {
+  it('soft ambient opts skip outline/jagged/shadow (no zebra hatch)', () => {
     expect(isSoftAmbientEntityKey('koi')).toBe(true);
     expect(isSoftAmbientEntityKey('sign')).toBe(true);
     expect(isSoftAmbientEntityKey('crab')).toBe(true);
@@ -38,16 +38,19 @@ describe('entity polish Phase D', () => {
     const koi = terrariaEntityPassOpts('koi');
     expect(koi.jagged).toBe(false);
     expect(koi.shadow).toBe(false);
-    expect(koi.outline).toBe(true);
+    expect(koi.outline).toBe(false);
+    expect(koi.snap).toBe(false);
     const crab = terrariaEntityPassOpts('crab');
+    expect(crab.outline).toBe(false);
     expect(crab.jagged).toBe(false);
     const slime = terrariaEntityPassOpts('slime');
-    expect(slime.jagged).toBe(true);
+    expect(slime.jagged).toBe(false);
     expect(slime.shadow).toBe(true);
     expect(slime.outline).toBe(true);
     const player = terrariaEntityPassOpts('player');
     expect(player.outline).toBe(true);
     expect(player.shadow).toBe(true);
+    expect(player.jagged).toBe(false);
   });
 
   it('seed from key is stable', () => {
