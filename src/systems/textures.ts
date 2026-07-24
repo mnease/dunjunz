@@ -22,6 +22,7 @@ import {
   shouldApplyTerrariaEntityPass,
   terrariaEntityPassOpts,
 } from './terraria-style';
+import { drawWarmLightCookie } from './lighting';
 import {
   BARE_APPEARANCE,
   buddyTextureKey,
@@ -3716,24 +3717,11 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillRect(9, 5, 1, 1);
   });
 
-  // Soft radial light cookie (white→transparent) for erase-blend lighting.
-  // Large enough to scale down for torch / lantern / wall radii.
+  // Warm soft-stepped torch cookie (Phase E) — gold peak, not cold white.
+  // Alpha falloff drives erase-blend; RGB warms stamped pools. Size 256 for radii.
   const cookieSize = 256;
   canvasTex(scene, 'light_cookie', cookieSize, cookieSize, (ctx) => {
-    const g = ctx.createRadialGradient(
-      cookieSize / 2,
-      cookieSize / 2,
-      0,
-      cookieSize / 2,
-      cookieSize / 2,
-      cookieSize / 2,
-    );
-    g.addColorStop(0, 'rgba(255,255,255,1)');
-    g.addColorStop(0.35, 'rgba(255,255,255,0.75)');
-    g.addColorStop(0.7, 'rgba(255,255,255,0.25)');
-    g.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, cookieSize, cookieSize);
+    drawWarmLightCookie(ctx, cookieSize);
   });
 
   // Weather precip (simple hard pixels; not terraria post-process)

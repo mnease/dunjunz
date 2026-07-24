@@ -1,11 +1,11 @@
 # Dunjunz Graphics-v2 Rebuild Plan
 
-**Status:** Design LOCK + **Phase S + A + B + C + D shipped** on `graphics-v2`.  
+**Status:** Design LOCK + **Phase S + A + B + C + D + E shipped** on `graphics-v2`.  
 **North star:** Core Keeper–inspired discrete autotile world on clean-slate render path  
 **Style law:** [`graphics-v2-style-bible.md`](./graphics-v2-style-bible.md)  
 **Architecture detail:** [`graphics-system-v2-architecture.md`](./graphics-system-v2-architecture.md) (refined by this doc)  
 **Branch:** `graphics-v2` = **staging** · **`main`** = production only on promote  
-**Next implement:** Phase E lighting / weather visual pass  
+**Next implement:** Phase M promote (operator go/no-go after bake)  
 **Deploy law:** [`STAGING.md`](./STAGING.md)
 
 | Environment | Branch | URL |
@@ -291,16 +291,17 @@ Goal: **clean-slate render path** — no half-dead continuous path that can be r
 | Risks | Outline stacking too thick at ART_RES; anim reintroduces flicker holes |
 | Mitigate | Sparkle-only -b frames; never swap to legacy land keys |
 
-### Phase E — Lighting / weather visual pass (1–2 days)
+### Phase E — Lighting / weather visual pass (1–2 days) — **DONE on graphics-v2**
 
 | Field | Content |
 | --- | --- |
 | Goal | Soft Core Keeper–ish torch read on new terrain |
-| Work | Cookie warmth, optional stepped rings, vignette check, weather tint on new tiles |
+| Work | Warm soft-stepped `light_cookie` (`drawWarmLightCookie` / gold peak); warm veil `LIGHT_VEIL_RGB`; stamp after erase; ambient ladder contracts; weather tint kind helper + `weatherPrecipActive` reduceMotion gate |
 | Acceptance | Style Bible lighting rules; outdoor clear; dark survival still threatening but not pure black |
 | Playtest | outdoor day, indoor guild, B1, B2+, boss ambient |
 | Risks | Over-dark after denser dark edges on tiles |
 | Mitigate | Ambient ladder floors; Comb veto if combat clarity drops |
+| Tests | `lighting-phase-e.test.ts`, seasons-weather precip/room gates |
 
 ### Phase M — Merge to main (0.5–1 day after bake)
 

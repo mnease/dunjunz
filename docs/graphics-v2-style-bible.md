@@ -112,11 +112,11 @@ Core Keeper reads as *almost realistic while pixelated* because of **systems sta
 
 ### 2.6 Lighting (Core Keeper soft torch)
 
-22. **Ambient is a ladder, never pure black.** Survival dark floors still leave silhouette floor (existing `AMBIENT_*` contract in `lighting.ts` / `lighting-v2-model.md`).
-23. **Torches are warm** (gold peak ~`#ffc857` / `#f6ba6c` family). Cool blue fill light only for magic / ice setpieces.
-24. **Local lights soft-falloff** (smoothstep), optional stepped cookie rings for pixel read — never hard circle cutouts that look like flashlight cones on outdoor day.
+22. **Ambient is a ladder, never pure black.** Survival dark floors still leave silhouette floor (`AMBIENT_LADDER_DESC` / `AMBIENT_*` in `lighting.ts`). Outdoor `AMBIENT_SURFACE` (0.9) > indoor > lit dungeon > guild ≥ dark (0.12) > 0.
+23. **Torches are warm** (gold peak `#ffc857` / mid `#f6ba6c`). Cookie texture from `drawWarmLightCookie`; veil fill `LIGHT_VEIL_RGB` warm near-black; soft gold stamp after erase. Cool blue fill light only for magic / ice setpieces.
+24. **Local lights soft-falloff** (`lightCookieIntensity` smooth+step blend) — never hard white flashlight cones on outdoor day.
 25. **Outdoor ambient stays combat-clear** without a torch. Cookies add depth; they are not required for fairness outside survival dark.
-26. **UI / inventory / journal never dim under crawl veil.**
+26. **UI / inventory / journal never dim under crawl veil** (`panelOpen()` clears light RT).
 
 ### 2.7 Water, fluids, animation
 

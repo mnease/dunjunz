@@ -7,6 +7,9 @@ import {
   WEATHER_ROTATION,
   nextWeatherInRotation,
   isColdWeather,
+  isWeatherRoom,
+  shouldWeatherTintGround,
+  weatherPrecipActive,
 } from './seasons-weather';
 
 describe('seasons and weather', () => {
@@ -56,3 +59,66 @@ describe('seasons and weather', () => {
     expect(jul.season).toBe('summer');
   });
 });
+
+describe('Phase E weather room + precip gates', () => {
+  it('isWeatherRoom is outdoor surface only (not guild / dark / basements)', () => {
+    expect(
+      isWeatherRoom({ id: 'meadow_1', floor: 0, land: 'woodz' }),
+    ).toBe(true);
+    expect(
+      isWeatherRoom({ id: 'beach_start', floor: 0, land: 'surface' }),
+    ).toBe(true);
+    expect(
+      isWeatherRoom({ id: 'guild_hall', floor: 0, land: 'surface' }),
+    ).toBe(false);
+    expect(
+      isWeatherRoom({ id: 'cave_b2', floor: -2, land: 'dunjunz', dark: true }),
+    ).toBe(false);
+    expect(
+      isWeatherRoom({ id: 'basement', floor: -1, land: 'dunjunz' }),
+    ).toBe(false);
+  });
+
+  it('weatherPrecipActive requires outdoor room, precip, and no reduceMotion', () => {
+    const outdoor = { id: 'meadow_1', floor: 0, land: 'woodz' };
+    expect(
+      weatherPrecipActive({
+        room: outdoor,
+        precip: 'rain',
+        reduceMotion: false,
+      }),
+    ).toBe(true);
+    expect(
+      weatherPrecipActive({
+        room: outdoor,
+        precip: 'rain',
+        reduceMotion: true,
+      }),
+    ).toBe(false);
+    expect(
+      weatherPrecipActive({
+        room: outdoor,
+        precip: 'none',
+        reduceMotion: false,
+      }),
+    ).toBe(false);
+    expect(
+      weatherPrecipActive({
+        room: { id: 'guild_hall', floor: 0, land: 'surface' },
+        precip: 'rain',
+        reduceMotion: false,
+      }),
+    ).toBe(false);
+  });
+
+  it('shouldWeatherTintGround covers grass/dirt/sand and beach floor', () => {
+    expect(shouldWeatherTintGround('grass', false)).toBe(true);
+    expect(shouldWeatherTintGround('dirt', false)).toBe(true);
+    expect(shouldWeatherTintGround('sand', false)).toBe(true);
+    expect(shouldWeatherTintGround('floor', true)).toBe(true);
+    expect(shouldWeatherTintGround('floor', false)).toBe(false);
+    expect(shouldWeatherTintGround('wall', false)).toBe(false);
+    expect(shouldWeatherTintGround('water', false)).toBe(false);
+  });
+});
+

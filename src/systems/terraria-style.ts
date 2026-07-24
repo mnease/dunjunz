@@ -291,38 +291,10 @@ export function applyTerrariaEntityPass(
 }
 
 /**
- * Pixelated light cookie — stepped rings (Terraria torch-ish falloff).
- * White center → transparent, quantized by distance bands (not smooth gradient).
+ * Warm soft-stepped light cookie (Phase E — Style Bible gold torch).
+ * Delegates to lighting.drawWarmLightCookie so texture boot and tests share one path.
  */
-export function drawTerrariaLightCookie(
-  ctx: CanvasRenderingContext2D,
-  size: number,
-): void {
-  const cx = size / 2;
-  const cy = size / 2;
-  const maxR = size / 2;
-  const img = ctx.createImageData(size, size);
-  const d = img.data;
-  const steps = 10;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const dx = x - cx + 0.5;
-      const dy = y - cy + 0.5;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const t = Math.min(1, dist / maxR);
-      // Quantize into hard rings
-      const band = Math.floor(t * steps) / steps;
-      const intensity = Math.pow(1 - band, 1.45);
-      const a = Math.round(intensity * 255);
-      const i = (y * size + x) * 4;
-      d[i] = 255;
-      d[i + 1] = 255;
-      d[i + 2] = 255;
-      d[i + 3] = a < 6 ? 0 : a;
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-}
+export { drawWarmLightCookie as drawTerrariaLightCookie } from './lighting';
 
 /**
  * Keys that should NOT get entity outline (UI chrome, terrain frames, FX).

@@ -261,4 +261,37 @@ export function isWeatherRoom(room: {
   );
 }
 
+/**
+ * Logic tile kinds that take season groundTint outdoors (VisualTilemap).
+ * Kind-based so `at-grass-*` / `at-dirt-*` autotile frames still tint.
+ */
+export function weatherGroundTintKinds(): readonly string[] {
+  return ['grass', 'dirt', 'sand', 'snow', 'floor'] as const;
+}
+
+export function shouldWeatherTintGround(
+  kind: string,
+  onBeach: boolean,
+): boolean {
+  if (kind === 'grass' || kind === 'dirt' || kind === 'sand' || kind === 'snow') {
+    return true;
+  }
+  // Beach sand often stored as floor
+  return kind === 'floor' && onBeach;
+}
+
+/**
+ * Whether precip particles should spawn this frame (outdoor weather rooms only).
+ * reduceMotion always gates particles (Style Bible / accessibility).
+ */
+export function weatherPrecipActive(opts: {
+  room: { id?: string; floor?: number; dark?: boolean; land?: string };
+  precip: SeasonWeatherState['precip'];
+  reduceMotion: boolean;
+}): boolean {
+  if (opts.reduceMotion) return false;
+  if (opts.precip === 'none') return false;
+  return isWeatherRoom(opts.room);
+}
+
 export { SEASON_ORDER };

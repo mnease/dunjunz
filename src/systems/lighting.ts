@@ -69,6 +69,30 @@ export const GUILD_FIXTURE_RADIUS_MUL = 1.2;
 export const AMBIENT_BOSS_MUL = 0.92;
 
 /**
+ * Ambient ladder high → low (Style Bible §2.6). Outdoor clear > mid > dark.
+ * Never pure black; AMBIENT_DARK is the survival floor and must stay > 0.
+ */
+export const AMBIENT_LADDER_DESC = [
+  AMBIENT_SURFACE,
+  AMBIENT_INDOOR_SURFACE,
+  AMBIENT_LIT_DUNGEON,
+  AMBIENT_GUILD_HALL,
+  AMBIENT_DARK,
+] as const;
+
+/** Warm near-black crawl veil (gold-ember dark, not cold blue or pure black). */
+export const LIGHT_VEIL_RGB = 0x0c0906;
+
+/** Torch cookie peak — Style Bible gold family `#ffc857`. */
+export const TORCH_COOKIE_PEAK_RGB = { r: 255, g: 200, b: 87 } as const;
+/** Mid ring warm `#f6ba6c`. */
+export const TORCH_COOKIE_MID_RGB = { r: 246, g: 186, b: 108 } as const;
+/** Rim ember before full transparent. */
+export const TORCH_COOKIE_RIM_RGB = { r: 180, g: 100, b: 48 } as const;
+/** Phaser tint for soft warm stamp over erased pools. */
+export const TORCH_COOKIE_TINT = 0xffc857;
+
+/**
  * Room ambient brightness 0..1 before light sources.
  * Used everywhere in the crawl (all lands / floors).
  */
@@ -314,6 +338,111 @@ function clamp01(n: number): number {
 export function smoothstepFalloff(t: number): number {
   const x = clamp01(t);
   return x * x * (3 - 2 * x);
+}
+
+/**
+ * Soft-stepped light cookie intensity at normalized radius t (0 = center, 1 = rim).
+ * Blend of smooth falloff + quantized rings — Core Keeper torch read without
+ * hard flashlight cones (Style Bible §2.6).
+ */
+export function lightCookieIntensity(
+  t: number,
+  steps = 12,
+  power = 1.5,
+): number {
+  const x = clamp01(t);
+  const smooth = Math.pow(1 - x, power);
+  const band = Math.floor(x * steps) / steps;
+  const stepped = Math.pow(1 - band, power * 0.95);
+  // Prefer soft body, keep mild pixel rings for density
+  return clamp01(0.58 * smooth + 0.42 * stepped);
+}
+
+/**
+ * Warm gold RGBA for a cookie pixel (pure; used by texture gen + tests).
+ * Peak is Style Bible gold; alpha follows soft-stepped falloff.
+ */
+export function sampleWarmLightCookiePixel(
+  x: number,
+  y: number,
+  size: number,
+): { r: number; g: number; b: number; a: number } {
+  const cx = size / 2;
+  const cy = size / 2;
+  const maxR = size / 2;
+  const dx = x - cx + 0.5;
+  const dy = y - cy + 0.5;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const t = Math.min(1, dist / maxR);
+  const intensity = lightCookieIntensity(t);
+  const a = Math.round(intensity * 255);
+  if (a < 6) return { r: 0, g: 0, b: 0, a: 0 };
+  // Lerp peak → mid → rim by radius
+  let r: number;
+  let g: number;
+  let b: number;
+  if (t < 0.35) {
+    const u = t / 0.35;
+    r = Math.round(
+      TORCH_COOKIE_PEAK_RGB.r * (1 - u) + TORCH_COOKIE_MID_RGB.r * u,
+    );
+    g = Math.round(
+      TORCH_COOKIE_PEAK_RGB.g * (1 - u) + TORCH_COOKIE_MID_RGB.g * u,
+    );
+    b = Math.round(
+      TORCH_COOKIE_PEAK_RGB.b * (1 - u) + TORCH_COOKIE_MID_RGB.b * u,
+    );
+  } else {
+    const u = (t - 0.35) / 0.65;
+    r = Math.round(
+      TORCH_COOKIE_MID_RGB.r * (1 - u) + TORCH_COOKIE_RIM_RGB.r * u,
+    );
+    g = Math.round(
+      TORCH_COOKIE_MID_RGB.g * (1 - u) + TORCH_COOKIE_RIM_RGB.g * u,
+    );
+    b = Math.round(
+      TORCH_COOKIE_MID_RGB.b * (1 - u) + TORCH_COOKIE_RIM_RGB.b * u,
+    );
+  }
+  return { r, g, b, a };
+}
+
+/**
+ * Fill RGBA buffer with warm soft-stepped light cookie (pure — testable without DOM).
+ * `data` length must be size*size*4.
+ */
+export function fillWarmLightCookieData(
+  data: Uint8ClampedArray | number[],
+  size: number,
+): void {
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const p = sampleWarmLightCookiePixel(x, y, size);
+      const i = (y * size + x) * 4;
+      data[i] = p.r;
+      data[i + 1] = p.g;
+      data[i + 2] = p.b;
+      data[i + 3] = p.a;
+    }
+  }
+}
+
+/**
+ * Paint warm soft-stepped light cookie into a canvas (textures boot path).
+ * Delegates pixel math to fillWarmLightCookieData (same code tests exercise).
+ */
+export function drawWarmLightCookie(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+): void {
+  const img = ctx.createImageData(size, size);
+  fillWarmLightCookieData(img.data, size);
+  ctx.putImageData(img, 0, 0);
+}
+
+/** Soft warm stamp alpha over erased light pools (0..1). */
+export function warmCookieStampAlpha(intensity: number): number {
+  return Math.min(0.24, 0.07 + clamp01(intensity) * 0.14);
 }
 
 function wallLobe(

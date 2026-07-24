@@ -168,12 +168,15 @@ import {
   GUILD_FIXTURE_RADIUS_MUL,
   LIGHT_PEAK,
   LIGHT_RADIUS_TILES,
+  LIGHT_VEIL_RGB,
+  TORCH_COOKIE_TINT,
   sampleBrightness,
   shouldBurnCarriedFuel,
   stepAmbushState,
   tickLightFuel,
   tilesToPx,
   visionOverlayAlpha,
+  warmCookieStampAlpha,
   type AmbushState,
   type LightSource,
   type PlacedTorch,
@@ -188,6 +191,8 @@ import {
 import {
   isWeatherRoom,
   resolveSeasonWeather,
+  shouldWeatherTintGround,
+  weatherPrecipActive,
   type SeasonWeatherState,
 } from '../systems/seasons-weather';
 import { tickCombatBuffs } from '../systems/scrolls';
@@ -2159,13 +2164,8 @@ export class GameScene extends Phaser.Scene {
             : 0xffffff;
 
         if (weatherHere) {
-          if (
-            kind === 'grass' ||
-            kind === 'dirt' ||
-            kind === 'sand' ||
-            kind === 'snow' ||
-            (kind === 'floor' && onBeach)
-          ) {
+          // Kind-based tint so at-grass/at-dirt autotile frames still season-color
+          if (shouldWeatherTintGround(kind, onBeach)) {
             const gt = this.seasonWeather.groundTint;
             if (kind !== 'snow' && gt !== 0xffffff) {
               img.setTint(mulTint(gt, fluidTint));
@@ -2419,11 +2419,17 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.panelOpen() || this.paused) return;
     const sw = this.seasonWeather;
-    if (sw.precip === 'none') {
+    // Outdoor only + reduceMotion gate (pure helper — shared with tests)
+    if (
+      !weatherPrecipActive({
+        room: this.room,
+        precip: sw.precip,
+        reduceMotion: loadSettings().reduceMotion,
+      })
+    ) {
       if (this.weatherParticles.length) this.clearWeatherParticles();
       return;
     }
-    if (loadSettings().reduceMotion) return;
 
     const rate =
       sw.precip === 'rain' ? 0.085 : sw.precip === 'snow' ? 0.045 : 0.06;
@@ -2657,13 +2663,15 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.lightRt.setVisible(true);
-    this.lightRt.fill(0x02040a, baseAlpha);
+    // Warm ember veil (Phase E) — not cold blue, never pure black
+    this.lightRt.fill(LIGHT_VEIL_RGB, baseAlpha);
 
     const cam = this.cameras.main;
     const cookie = this.lightCookie;
     if (!cookie) return;
 
     const guildMood = this.room?.id === GUILD_HALL_ID;
+    // Pass 1: erase veil holes with soft-stepped cookie (alpha falloff)
     for (const s of sources) {
       if (!Number.isFinite(s.radiusPx) || s.radiusPx <= 0) {
         // full ambient — clear veil
@@ -2679,6 +2687,7 @@ export class GameScene extends Phaser.Scene {
       // Intensity: stronger erase near peak (guild: harder falloff punch)
       const base = guildMood ? 0.72 : 0.55;
       const peak = guildMood ? 0.58 : 0.5;
+      cookie.clearTint();
       cookie.setAlpha(Math.min(1, base + s.intensity * peak));
       cookie.setScale(scale);
       this.lightRt.erase(cookie, sx, sy);
@@ -2688,10 +2697,25 @@ export class GameScene extends Phaser.Scene {
     if (this.player && cookie) {
       const hx = this.player.x - cam.scrollX;
       const hy = this.player.y - cam.scrollY;
+      cookie.clearTint();
       cookie.setAlpha(0.35);
       cookie.setScale((tilesToPx(1.2) * 2) / 256);
       this.lightRt.erase(cookie, hx, hy);
     }
+
+    // Pass 2: soft gold stamp so torch pools read warm (Style Bible §2.6)
+    cookie.setTint(TORCH_COOKIE_TINT);
+    for (const s of sources) {
+      if (!Number.isFinite(s.radiusPx) || s.radiusPx <= 0) continue;
+      const sx = s.x - cam.scrollX;
+      const sy = s.y - cam.scrollY;
+      const scale = (s.radiusPx * 2) / 256;
+      cookie.setAlpha(warmCookieStampAlpha(s.intensity));
+      cookie.setScale(scale);
+      this.lightRt.draw(cookie, sx, sy);
+    }
+    cookie.clearTint();
+    cookie.setAlpha(1);
   }
 
   /** @deprecated name kept for call sites — redirects to refreshLighting */
