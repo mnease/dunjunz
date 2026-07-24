@@ -29,15 +29,33 @@ export type CloudBlob = {
   strength: number;
 };
 
-/** Outdoor bright lands where sun + cloud shade apply. */
+/**
+ * True when the room uses outdoor sun/cloud shade (not crawl light RT).
+ * Indoor surface rooms (guild hall, shops, inns) must return false so
+ * wall-torch cookies + ambient veil still run — guild_hall is land:surface
+ * but authored for AMBIENT_GUILD_HALL gloom + fixtures.
+ */
 export function isOutdoorSurface(room: {
   floor?: number;
   dark?: boolean;
   land?: string;
+  id?: string;
 }): boolean {
   if (room.dark === true) return false;
   const f = room.floor ?? 0;
   if (f < 0) return false;
+  const id = (room.id ?? '').toLowerCase();
+  // Indoor surface interiors: dungeon-style veil + torch cookies
+  if (
+    id === 'guild_hall' ||
+    id.includes('guild') ||
+    id.includes('shop') ||
+    id.includes('inn') ||
+    id.includes('barracks') ||
+    id.includes('library')
+  ) {
+    return false;
+  }
   const land = room.land ?? '';
   // Kingdom interiors stay soft indoor ambient (no cloud parade).
   if (land === 'kingdom' || land === 'village') return false;
@@ -45,13 +63,14 @@ export function isOutdoorSurface(room: {
   if (land === 'dwarvez') {
     return true;
   }
+  // True outdoor biomes only — do not treat every floor≥0 room as outdoor
+  // (that skipped light RT on indoor surface rooms and killed guild torches).
   return (
     land === 'surface' ||
     land === 'woodz' ||
     land === 'dezertz' ||
     land === 'roarhimz' ||
-    land === '' ||
-    f >= 0
+    land === ''
   );
 }
 

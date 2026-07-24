@@ -3085,6 +3085,7 @@ import {
   ambientForRoom,
   AMBIENT_DARK,
   AMBIENT_GUILD_HALL,
+  AMBIENT_INDOOR_SURFACE,
   AMBIENT_SURFACE,
   ambushCanDealContact,
   buildLightSources,
@@ -3788,6 +3789,32 @@ describe('surface sun + cloud shade', () => {
     expect(isOutdoorSurface({ floor: -2, land: 'dunjunz' })).toBe(false);
     expect(isOutdoorSurface({ floor: 0, land: 'kingdom' })).toBe(false);
     expect(isOutdoorSurface({ floor: 0, dark: true })).toBe(false);
+  });
+
+  it('guild hall is indoor (crawl light RT + torch cookies), not outdoor sun', () => {
+    // Regression: land:surface + floor 0 used to skip light RT and kill guild torches
+    expect(
+      isOutdoorSurface({
+        id: 'guild_hall',
+        floor: 0,
+        land: 'surface',
+      }),
+    ).toBe(false);
+    expect(
+      isOutdoorSurface({ id: 'weapon_shop', floor: 0, land: 'surface' }),
+    ).toBe(false);
+    // Meadow / beach style surface without indoor id stays outdoor
+    expect(
+      isOutdoorSurface({ id: 'overworld', floor: 0, land: 'surface' }),
+    ).toBe(true);
+    // Guild ambient is gloomy — below indoor-surface bright floor used by outdoor skip
+    const guildAmb = ambientForRoom({
+      id: 'guild_hall',
+      floor: 0,
+      land: 'surface',
+    });
+    expect(guildAmb).toBe(AMBIENT_GUILD_HALL);
+    expect(guildAmb).toBeLessThan(AMBIENT_INDOOR_SURFACE);
   });
 
   it('casts tree shadows SE of trunk along sun dir', () => {

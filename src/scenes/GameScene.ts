@@ -148,6 +148,7 @@ import {
   activeLightTier,
   addPlacedTorch,
   ambientForRoom,
+  AMBIENT_INDOOR_SURFACE,
   ambushAlpha,
   ambushCanDealContact,
   AMBUSH,
@@ -2632,17 +2633,23 @@ export class GameScene extends Phaser.Scene {
         .setScrollFactor(0);
     }
 
-    // Outdoor surface uses subtractive shade layer (not dungeon veil)
+    // Outdoor surface uses subtractive shade layer (not dungeon veil).
+    // Only when ambient is actually bright — gloomy indoor surface rooms
+    // (guild hall) keep crawl RT + torch cookies even if land is 'surface'.
     if (this.room && isOutdoorSurface(this.room)) {
-      try {
-        if (this.goAlive(this.lightRt)) {
-          this.lightRt!.clear();
-          this.lightRt!.setVisible(false);
+      const outdoorAmb = ambientForRoom(this.room);
+      if (outdoorAmb >= AMBIENT_INDOOR_SURFACE) {
+        try {
+          if (this.goAlive(this.lightRt)) {
+            this.lightRt!.clear();
+            this.lightRt!.setVisible(false);
+          }
+        } catch {
+          this.lightRt = null;
         }
-      } catch {
-        this.lightRt = null;
+        return;
       }
-      return;
+      // Fall through: dark indoor ambient still needs veil + fixtures
     }
 
     // Inventory / shop / mapz / forje: lift veil so bag/shop chrome stays readable.
