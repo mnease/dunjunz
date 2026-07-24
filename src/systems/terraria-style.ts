@@ -32,8 +32,12 @@ function parseHexColor(color: string): [number, number, number] {
 }
 
 /**
- * 1px dark outline around opaque silhouette (Terraria entity read).
+ * 1px dark outline around solid silhouette (Terraria entity read).
  * `cardinal` = only N/E/S/W neighbors (cleaner corners; less thick black steps).
+ * `bodyAlphaMin` = alpha needed to count as body (default 24). Use ~160 for
+ * foliage so soft contact shadows (rgba black ~0.1–0.25) are not rimmed —
+ * otherwise the outline draws a broken green ring under the trunk.
+ * Outline is only written into empty / very soft cells (alpha < bodyAlphaMin).
  */
 export function applyTerrariaOutline(
   ctx: CanvasRenderingContext2D,
@@ -42,12 +46,14 @@ export function applyTerrariaOutline(
   color = TERRARIA_OUTLINE,
   alpha = 255,
   cardinal = false,
+  bodyAlphaMin = 24,
 ): void {
   const img = ctx.getImageData(0, 0, w, h);
   const src = img.data;
   const out = new Uint8ClampedArray(src);
   const [or, og, ob] = parseHexColor(color);
   const a = Math.max(0, Math.min(255, alpha));
+  const bodyMin = Math.max(1, Math.min(255, bodyAlphaMin));
   const neigh: [number, number][] = cardinal
     ? [
         [0, -1],
@@ -69,22 +75,26 @@ export function applyTerrariaOutline(
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
-      if (opaque(src, i)) continue;
+      // Skip solid body; also leave soft contact-shadow pixels alone
+      if (src[i + 3]! >= bodyMin) continue;
       let edge = false;
       for (const [dx, dy] of neigh) {
         const nx = x + dx;
         const ny = y + dy;
         if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-        if (opaque(src, (ny * w + nx) * 4)) {
+        if (opaque(src, (ny * w + nx) * 4, bodyMin)) {
           edge = true;
           break;
         }
       }
       if (edge) {
+        // Prefer empty cells; if writing into soft shadow, composite under body
+        // by using max alpha so rim stays continuous at trunk roots
+        const prevA = src[i + 3]!;
         out[i] = or;
         out[i + 1] = og;
         out[i + 2] = ob;
-        out[i + 3] = a;
+        out[i + 3] = Math.max(a, prevA);
       }
     }
   }
@@ -232,6 +242,12 @@ export type TerrariaPassOpts = {
   outlineAlpha?: number;
   /** Cardinal-only neighbors for cleaner corners. */
   outlineCardinal?: boolean;
+  /**
+   * Min alpha for a pixel to count as solid body when riming.
+   * Raise for sprites with soft contact shadows (trees) so the rim hugs
+   * trunk/canopy only, not the translucent ground blob.
+   */
+  outlineBodyAlpha?: number;
   jagged?: boolean;
   shadow?: boolean;
   snap?: boolean;
@@ -252,6 +268,7 @@ export function applyTerrariaEntityPass(
     outlineColor = TERRARIA_OUTLINE,
     outlineAlpha = 255,
     outlineCardinal = false,
+    outlineBodyAlpha = 24,
     jagged = true,
     shadow = true,
     snap = true,
@@ -262,7 +279,15 @@ export function applyTerrariaEntityPass(
   if (jagged) applyTerrariaJaggedEdge(ctx, w, h, seed, 0.14);
   if (shadow) applyTerrariaDropShadow(ctx, w, h, 1, 2, 80);
   if (outline)
-    applyTerrariaOutline(ctx, w, h, outlineColor, outlineAlpha, outlineCardinal);
+    applyTerrariaOutline(
+      ctx,
+      w,
+      h,
+      outlineColor,
+      outlineAlpha,
+      outlineCardinal,
+      outlineBodyAlpha,
+    );
 }
 
 /**
@@ -381,8 +406,11 @@ export function terrariaEntityPassOpts(key: string): TerrariaPassOpts {
     return {
       outline: true,
       outlineColor: FOLIAGE_OUTLINE,
-      outlineAlpha: 220,
-      outlineCardinal: true,
+      outlineAlpha: 210,
+      // Full 8-neigh for continuous root/canopy rim (cardinal left gaps at base)
+      outlineCardinal: false,
+      // Soft ground shadow is ~alpha 25–64; only solid trunk/canopy count as body
+      outlineBodyAlpha: 160,
       jagged: false,
       shadow: false, // drawTreeSprite already paints ground contact shadow
       snap: false, // keep canopy greens; snap crushed them toward black

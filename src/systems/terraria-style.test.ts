@@ -55,7 +55,7 @@ describe('entity polish Phase D', () => {
     expect(player.jagged).toBe(false);
   });
 
-  it('foliage gets soft green cardinal rim, not purple-black sticker', () => {
+  it('foliage gets soft green rim that ignores soft ground shadow', () => {
     expect(isFoliageEntityKey('tree')).toBe(true);
     expect(isFoliageEntityKey('tree_redwood')).toBe(true);
     expect(isFoliageEntityKey('cactus')).toBe(true);
@@ -63,7 +63,8 @@ describe('entity polish Phase D', () => {
     const tree = terrariaEntityPassOpts('tree');
     expect(tree.outline).toBe(true);
     expect(tree.outlineColor).toBe(FOLIAGE_OUTLINE);
-    expect(tree.outlineCardinal).toBe(true);
+    expect(tree.outlineCardinal).toBe(false);
+    expect(tree.outlineBodyAlpha).toBe(160);
     expect(tree.shadow).toBe(false);
     expect(tree.snap).toBe(false);
     expect(tree.jagged).toBe(false);

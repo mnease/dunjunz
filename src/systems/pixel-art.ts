@@ -949,10 +949,11 @@ function drawRiverWater(
  * Layered oak tree — trunk bark + multi-lobe canopy with depth (not a green square).
  */
 export function drawTreeSprite(ctx: CanvasRenderingContext2D, _s: number): void {
-  // Ground shadow under trunk (depth cue)
-  fill(ctx, 'rgba(0,0,0,0.25)', 10, 28, 12, 3);
-  fill(ctx, 'rgba(0,0,0,0.15)', 8, 29, 16, 2);
-  fill(ctx, 'rgba(0,0,0,0.1)', 6, 30, 20, 1);
+  // Soft ground contact — low alpha so entity outline never rims it as body
+  // (outlineBodyAlpha 160). Warm-tinted so it blends with dirt/grass tiles.
+  fill(ctx, 'rgba(20, 12, 8, 0.22)', 11, 29, 10, 2);
+  fill(ctx, 'rgba(20, 12, 8, 0.14)', 9, 30, 14, 1);
+  fill(ctx, 'rgba(20, 12, 8, 0.08)', 8, 31, 16, 1);
 
   // Trunk with bark bands + bevel + knots
   shadedBlock(ctx, '#5a3a22', '#7a5a38', '#3a2410', 13, 16, 6, 14);
@@ -962,11 +963,12 @@ export function drawTreeSprite(ctx: CanvasRenderingContext2D, _s: number): void 
   fill(ctx, '#2a1808', 18, 18, 1, 10);
   fill(ctx, '#3a2410', 15, 22, 2, 2); // knot
   fill(ctx, '#6b4423', 15, 22, 1, 1);
-  // Root flare
+  // Root flare — solid feet so silhouette rim meets ground cleanly
   fill(ctx, '#4a3018', 11, 28, 4, 2);
   fill(ctx, '#4a3018', 17, 28, 4, 2);
-  fill(ctx, '#3a2410', 10, 29, 2, 1);
-  fill(ctx, '#3a2410', 20, 29, 2, 1);
+  fill(ctx, '#3a2410', 10, 29, 3, 1);
+  fill(ctx, '#3a2410', 19, 29, 3, 1);
+  fill(ctx, '#2a1808', 12, 30, 8, 1); // solid contact bar under roots
 
   // Canopy lobes (back → front for depth)
   const lobes: [number, number, number, number, string, string, string][] = [
