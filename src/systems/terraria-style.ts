@@ -12,53 +12,79 @@
 import { hash2 } from './fractal-noise';
 
 export const TERRARIA_OUTLINE = '#1a1420';
+/** Dark forest rim for foliage — not purple-black sticker stroke. */
+export const FOLIAGE_OUTLINE = '#163828';
 export const TERRARIA_SHADOW = 'rgba(10, 8, 16, 0.55)';
 
 function opaque(data: Uint8ClampedArray, i: number, aMin = 24): boolean {
   return data[i + 3]! >= aMin;
 }
 
+function parseHexColor(color: string): [number, number, number] {
+  if (color.startsWith('#') && color.length >= 7) {
+    return [
+      parseInt(color.slice(1, 3), 16),
+      parseInt(color.slice(3, 5), 16),
+      parseInt(color.slice(5, 7), 16),
+    ];
+  }
+  return [26, 20, 32];
+}
+
 /**
  * 1px dark outline around opaque silhouette (Terraria entity read).
+ * `cardinal` = only N/E/S/W neighbors (cleaner corners; less thick black steps).
  */
 export function applyTerrariaOutline(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
   color = TERRARIA_OUTLINE,
+  alpha = 255,
+  cardinal = false,
 ): void {
   const img = ctx.getImageData(0, 0, w, h);
   const src = img.data;
   const out = new Uint8ClampedArray(src);
-  const parse = color.startsWith('#')
+  const [or, og, ob] = parseHexColor(color);
+  const a = Math.max(0, Math.min(255, alpha));
+  const neigh: [number, number][] = cardinal
     ? [
-        parseInt(color.slice(1, 3), 16),
-        parseInt(color.slice(3, 5), 16),
-        parseInt(color.slice(5, 7), 16),
+        [0, -1],
+        [1, 0],
+        [0, 1],
+        [-1, 0],
       ]
-    : [26, 20, 32];
-  const [or, og, ob] = parse;
+    : [
+        [-1, -1],
+        [0, -1],
+        [1, -1],
+        [-1, 0],
+        [1, 0],
+        [-1, 1],
+        [0, 1],
+        [1, 1],
+      ];
 
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
       if (opaque(src, i)) continue;
-      // Neighbor opaque → become outline
       let edge = false;
-      for (let dy = -1; dy <= 1 && !edge; dy++) {
-        for (let dx = -1; dx <= 1 && !edge; dx++) {
-          if (dx === 0 && dy === 0) continue;
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-          if (opaque(src, (ny * w + nx) * 4)) edge = true;
+      for (const [dx, dy] of neigh) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        if (opaque(src, (ny * w + nx) * 4)) {
+          edge = true;
+          break;
         }
       }
       if (edge) {
         out[i] = or;
         out[i + 1] = og;
         out[i + 2] = ob;
-        out[i + 3] = 255;
+        out[i + 3] = a;
       }
     }
   }
@@ -200,6 +226,12 @@ export function applyTerrariaColorSnap(
 
 export type TerrariaPassOpts = {
   outline?: boolean;
+  /** Outline hex; foliage uses dark green, not purple-black. */
+  outlineColor?: string;
+  /** Outline alpha 0–255 (default 255). */
+  outlineAlpha?: number;
+  /** Cardinal-only neighbors for cleaner corners. */
+  outlineCardinal?: boolean;
   jagged?: boolean;
   shadow?: boolean;
   snap?: boolean;
@@ -217,6 +249,9 @@ export function applyTerrariaEntityPass(
 ): void {
   const {
     outline = true,
+    outlineColor = TERRARIA_OUTLINE,
+    outlineAlpha = 255,
+    outlineCardinal = false,
     jagged = true,
     shadow = true,
     snap = true,
@@ -226,7 +261,8 @@ export function applyTerrariaEntityPass(
   // Slightly lower nibble than v1 (0.2 → 0.14) — restrained Phase D silhouettes
   if (jagged) applyTerrariaJaggedEdge(ctx, w, h, seed, 0.14);
   if (shadow) applyTerrariaDropShadow(ctx, w, h, 1, 2, 80);
-  if (outline) applyTerrariaOutline(ctx, w, h);
+  if (outline)
+    applyTerrariaOutline(ctx, w, h, outlineColor, outlineAlpha, outlineCardinal);
 }
 
 /**
@@ -299,6 +335,17 @@ const SOFT_AMBIENT_KEYS = new Set([
   'palm', // sparse fronds
 ]);
 
+/**
+ * Foliage already has author dark lobe/edge shading. A purple-black sticker
+ * outline + extra drop shadow read as a thick mistaken border (staging trees).
+ * Soft dark-green cardinal rim only; no second shadow / color crush.
+ */
+const FOLIAGE_KEYS = new Set([
+  'tree',
+  'tree_redwood',
+  'cactus',
+]);
+
 /** True if key uses soft ambient polish (no outline/jagged/shadow). */
 export function isSoftAmbientEntityKey(key: string): boolean {
   if (SOFT_AMBIENT_KEYS.has(key)) return true;
@@ -306,10 +353,18 @@ export function isSoftAmbientEntityKey(key: string): boolean {
   return false;
 }
 
+/** True if key is foliage (soft green rim, no sticker black). */
+export function isFoliageEntityKey(key: string): boolean {
+  if (FOLIAGE_KEYS.has(key)) return true;
+  if (key.startsWith('tree_')) return true;
+  return false;
+}
+
 /**
  * Per-key pass options (Phase D).
  * Soft ambient = no entity stroke (draw only + body micro grit).
- * Dense characters/trees = clean outline + light drop shadow (no jagged nibble).
+ * Foliage = dark-green cardinal rim only (author shadow + lobe shade kept).
+ * Dense characters = clean outline + light drop shadow (no jagged nibble).
  */
 export function terrariaEntityPassOpts(key: string): TerrariaPassOpts {
   const seed = terrariaSeedFromKey(key);
@@ -319,6 +374,18 @@ export function terrariaEntityPassOpts(key: string): TerrariaPassOpts {
       jagged: false,
       shadow: false,
       snap: false,
+      seed,
+    };
+  }
+  if (isFoliageEntityKey(key)) {
+    return {
+      outline: true,
+      outlineColor: FOLIAGE_OUTLINE,
+      outlineAlpha: 220,
+      outlineCardinal: true,
+      jagged: false,
+      shadow: false, // drawTreeSprite already paints ground contact shadow
+      snap: false, // keep canopy greens; snap crushed them toward black
       seed,
     };
   }

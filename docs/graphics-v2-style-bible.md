@@ -95,7 +95,7 @@ Core Keeper reads as *almost realistic while pixelated* because of **systems sta
 
 ### 2.5 Outlines, shadows, depth
 
-18. **Entities:** Dense sprites get 1px dark outline (`#1a1420` family) + 1–2px drop shadow. Soft ambient (koi, signs, crabs, palms) gets **no** outline/jagged/shadow — outlining sparse silhouettes or micro flecks reads as zebra hatch. Micro-detail only mutates already-opaque body pixels.
+18. **Entities:** Dense sprites get 1px dark outline (`#1a1420` family) + 1–2px drop shadow. Soft ambient (koi, signs, crabs, palms) gets **no** outline/jagged/shadow — outlining sparse silhouettes or micro flecks reads as zebra hatch. **Foliage** (tree, redwood, cactus) gets a soft dark-green cardinal rim (`#163828`) only — no purple-black sticker stroke and no extra drop shadow (author art already shades lobes + ground). Micro-detail only mutates already-opaque body pixels.
 19. **Terrain frames** may include **internal** dark edge pixels where the mask says “open to other material.” Do not run entity outline pass on full-room ground.
 20. **Depth order (law):**
     ```
