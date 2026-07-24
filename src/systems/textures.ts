@@ -18,6 +18,11 @@ import {
   type ShoreMaterial,
 } from './shore';
 import {
+  applyTerrariaEntityPass,
+  shouldApplyTerrariaEntityPass,
+  terrariaEntityPassOpts,
+} from './terraria-style';
+import {
   BARE_APPEARANCE,
   buddyTextureKey,
   playerTextureKey,
@@ -164,6 +169,10 @@ function canvasTex(
     for (let i = 0; i < key.length; i++) seed = (seed * 31 + key.charCodeAt(i)) | 0;
     applyMicroDetail(ctx, w, h, Math.abs(seed));
   }
+  // Phase D: restrained entity polish (soft ambient skips jagged cages)
+  if (shouldApplyTerrariaEntityPass(key)) {
+    applyTerrariaEntityPass(ctx, w, h, terrariaEntityPassOpts(key));
+  }
   scene.textures.addCanvas(key, canvas);
 }
 
@@ -171,11 +180,16 @@ function canvasTex(
  * Phase A fluid autotile frame (author space = ART_BASE).
  * Full-cell solid fill always — open edges get foam/crust only (no holes).
  */
+/**
+ * Phase A/D fluid frame. `phase` only moves highlight sparkles — same body +
+ * open-edge silhouette (no holes). Phase 1 keys are `at-*-N-b` for anim swap.
+ */
 function drawAutotileFluidFrame(
   ctx: CanvasRenderingContext2D,
   s: number,
   material: FluidMaterial,
   mask: number,
+  phase = 0,
 ): void {
   const full = isFullFillMask(mask);
   if (material === 'water') {
@@ -184,7 +198,8 @@ function drawAutotileFluidFrame(
     const deep = '#1c3d81';
     const mid = '#3d7aab';
     const foam = '#b2cee9';
-    const hi = '#5a9cba';
+    const hi = phase === 0 ? '#5a9cba' : '#7ab8d0';
+    const hi2 = phase === 0 ? '#a8d8f0' : '#c0e8ff';
     ctx.fillStyle = body;
     ctx.fillRect(0, 0, s, s);
     // Subtle grit (fill only — silhouette fixed)
@@ -194,11 +209,18 @@ function drawAutotileFluidFrame(
         if (((i * 17 + j * 31 + mask * 3) & 7) === 0) ctx.fillRect(i, j, 1, 1);
       }
     }
+    // Phase-shifted sparkles only (same opaque footprint)
     ctx.fillStyle = hi;
     for (let i = 3; i < s - 3; i += 6) {
-      if (((i + mask) & 3) === 0) ctx.fillRect(i, 4 + (mask % 5), 2, 1);
+      if (((i + mask + phase * 2) & 3) === 0)
+        ctx.fillRect(i, 4 + ((mask + phase) % 5), 2, 1);
     }
-    // Open-edge foam (bit clear = open to non-water)
+    ctx.fillStyle = hi2;
+    for (let i = 4; i < s - 4; i += 7) {
+      if (((i * 3 + phase) & 5) === 0)
+        ctx.fillRect(i, 8 + ((mask + phase * 3) % 6), 1, 1);
+    }
+    // Open-edge foam (bit clear = open to non-water) — identical both phases
     const openN = (mask & EDGE_N) === 0;
     const openE = (mask & EDGE_E) === 0;
     const openS = (mask & EDGE_S) === 0;
@@ -216,20 +238,21 @@ function drawAutotileFluidFrame(
   } else {
     // Lava — orange body + dark crust on open edges
     const body = full ? '#c44b2b' : '#d45530';
-    const hot = '#e88b35';
-    const core = '#ffe82e';
+    const hot = phase === 0 ? '#e88b35' : '#f0a040';
+    const core = phase === 0 ? '#ffe82e' : '#fff060';
     const crust = '#5a2a18';
     ctx.fillStyle = body;
     ctx.fillRect(0, 0, s, s);
     ctx.fillStyle = hot;
     for (let i = 3; i < s - 3; i += 5) {
       for (let j = 3; j < s - 3; j += 5) {
-        if (((i * 13 + j * 19 + mask) & 5) === 0) ctx.fillRect(i, j, 2, 1);
+        if (((i * 13 + j * 19 + mask + phase) & 5) === 0)
+          ctx.fillRect(i, j, 2, 1);
       }
     }
-    if (full || ((mask + 1) & 3) === 0) {
+    if (full || ((mask + 1 + phase) & 3) === 0) {
       ctx.fillStyle = core;
-      ctx.fillRect(s / 2 - 2, s / 2 - 1, 3, 2);
+      ctx.fillRect(s / 2 - 2 + (phase % 2), s / 2 - 1, 3, 2);
     }
     const openN = (mask & EDGE_N) === 0;
     const openE = (mask & EDGE_E) === 0;
@@ -243,7 +266,7 @@ function drawAutotileFluidFrame(
   }
 }
 
-/** Boot all 16 fluid autotile keys for a material. */
+/** Boot all 16 fluid autotile keys + silhouette-safe -b anim frames (Phase D). */
 function generateAutotileFluidSet(
   scene: Phaser.Scene,
   material: FluidMaterial,
@@ -251,7 +274,12 @@ function generateAutotileFluidSet(
   for (const mask of allEdgeMasks()) {
     const key = autotileTextureKey(material, mask);
     canvasTex(scene, key, ART_RES, ART_RES, (ctx) => {
-      drawAutotileFluidFrame(ctx, ART_BASE, material, mask);
+      drawAutotileFluidFrame(ctx, ART_BASE, material, mask, 0);
+    });
+    // Phase D: alt frame — sparkle only, same silhouette
+    const alt = `${key}-b`;
+    canvasTex(scene, alt, ART_RES, ART_RES, (ctx) => {
+      drawAutotileFluidFrame(ctx, ART_BASE, material, mask, 1);
     });
   }
 }

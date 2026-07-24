@@ -1,14 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import {
+  fluidAnimAltKey,
+  fluidAnimFramePair,
+  isSolidFluidAutotileKey,
+} from './autotile';
+import {
+  isSoftAmbientEntityKey,
   shouldApplyTerrariaEntityPass,
   terrariaEntityPassOpts,
   terrariaSeedFromKey,
 } from './terraria-style';
 
-describe('terraria style', () => {
-  it('entity pass selector skips tiles and UI, keeps creeps/trees', () => {
+describe('entity polish Phase D', () => {
+  it('entity pass selector skips tiles, terrain at-*, UI; keeps creeps/trees', () => {
     expect(shouldApplyTerrariaEntityPass('tile-grass')).toBe(false);
     expect(shouldApplyTerrariaEntityPass('tile-door')).toBe(false);
+    expect(shouldApplyTerrariaEntityPass('at-water-15')).toBe(false);
+    expect(shouldApplyTerrariaEntityPass('at-grass-3')).toBe(false);
+    expect(shouldApplyTerrariaEntityPass('at-shore-dirt')).toBe(false);
     expect(shouldApplyTerrariaEntityPass('icon_sword')).toBe(false);
     expect(shouldApplyTerrariaEntityPass('light_cookie')).toBe(false);
     expect(shouldApplyTerrariaEntityPass('cground_x_1')).toBe(false);
@@ -22,6 +31,10 @@ describe('terraria style', () => {
   });
 
   it('soft ambient opts skip jagged grow (no tile-cage outline)', () => {
+    expect(isSoftAmbientEntityKey('koi')).toBe(true);
+    expect(isSoftAmbientEntityKey('sign')).toBe(true);
+    expect(isSoftAmbientEntityKey('crab')).toBe(true);
+    expect(isSoftAmbientEntityKey('slime')).toBe(false);
     const koi = terrariaEntityPassOpts('koi');
     expect(koi.jagged).toBe(false);
     expect(koi.shadow).toBe(false);
@@ -31,10 +44,40 @@ describe('terraria style', () => {
     const slime = terrariaEntityPassOpts('slime');
     expect(slime.jagged).toBe(true);
     expect(slime.shadow).toBe(true);
+    expect(slime.outline).toBe(true);
+    const player = terrariaEntityPassOpts('player');
+    expect(player.outline).toBe(true);
+    expect(player.shadow).toBe(true);
   });
 
   it('seed from key is stable', () => {
     expect(terrariaSeedFromKey('slime')).toBe(terrariaSeedFromKey('slime'));
     expect(terrariaSeedFromKey('a')).not.toBe(terrariaSeedFromKey('b'));
+  });
+});
+
+describe('fluid anim silhouette-safe keys Phase D', () => {
+  it('alt key only for solid at-water/lava masks', () => {
+    expect(fluidAnimAltKey('at-water-15')).toBe('at-water-15-b');
+    expect(fluidAnimAltKey('at-lava-0')).toBe('at-lava-0-b');
+    expect(fluidAnimAltKey('tile-water')).toBeNull();
+    expect(fluidAnimAltKey('at-grass-15')).toBeNull();
+    expect(fluidAnimAltKey('at-water-15-b')).toBeNull();
+  });
+
+  it('frame pair stays in solid fluid family (no land/void)', () => {
+    const pair = fluidAnimFramePair('at-water-15');
+    expect(pair).toEqual(['at-water-15', 'at-water-15-b']);
+    expect(pair!.every((k) => isSolidFluidAutotileKey(k))).toBe(true);
+    expect(pair!.every((k) => !k.includes('grass') && !k.includes('void'))).toBe(
+      true,
+    );
+  });
+
+  it('isSolidFluidAutotileKey accepts base and -b only', () => {
+    expect(isSolidFluidAutotileKey('at-water-15')).toBe(true);
+    expect(isSolidFluidAutotileKey('at-water-15-b')).toBe(true);
+    expect(isSolidFluidAutotileKey('at-dirt-3')).toBe(false);
+    expect(isSolidFluidAutotileKey('tile-water-pond')).toBe(false);
   });
 });

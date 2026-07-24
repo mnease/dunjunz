@@ -308,3 +308,29 @@ export function pickTextureKey(
   }
   return candidates[candidates.length - 1] ?? 'tile-floor';
 }
+
+/**
+ * Phase D fluid anim: alternate key for silhouette-safe sparkle frame.
+ * `at-water-15` → `at-water-15-b`. Non-autotile keys return null.
+ */
+export function fluidAnimAltKey(baseKey: string): string | null {
+  if (!/^at-(water|lava)-\d+$/.test(baseKey)) return null;
+  return `${baseKey}-b`;
+}
+
+/**
+ * Two-frame anim pair if both are autotile solid-body keys.
+ * Anim only swaps sparkles — same open-edge silhouette as Phase A.
+ */
+export function fluidAnimFramePair(
+  baseKey: string,
+): [string, string] | null {
+  const alt = fluidAnimAltKey(baseKey);
+  if (!alt) return null;
+  return [baseKey, alt];
+}
+
+/** True if key is a Phase A/D solid fluid autotile body (not land/void). */
+export function isSolidFluidAutotileKey(key: string): boolean {
+  return /^at-(water|lava)-\d+(-b)?$/.test(key);
+}

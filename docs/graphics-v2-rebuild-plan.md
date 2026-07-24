@@ -1,11 +1,11 @@
 # Dunjunz Graphics-v2 Rebuild Plan
 
-**Status:** Design LOCK + **Phase S + A + B + C shipped** on `graphics-v2`.  
+**Status:** Design LOCK + **Phase S + A + B + C + D shipped** on `graphics-v2`.  
 **North star:** Core Keeper–inspired discrete autotile world on clean-slate render path  
 **Style law:** [`graphics-v2-style-bible.md`](./graphics-v2-style-bible.md)  
 **Architecture detail:** [`graphics-system-v2-architecture.md`](./graphics-system-v2-architecture.md) (refined by this doc)  
 **Branch:** `graphics-v2` = **staging** · **`main`** = production only on promote  
-**Next implement:** Phase D entity polish + optional fluid anim  
+**Next implement:** Phase E lighting / weather visual pass  
 **Deploy law:** [`STAGING.md`](./STAGING.md)
 
 | Environment | Branch | URL |
@@ -280,16 +280,16 @@ Goal: **clean-slate render path** — no half-dead continuous path that can be r
 | Risks | Palette bleed across lands; over-tint fighting autotile dark edges |
 | Mitigate | Tint only fill variants; land palette tables in Style Bible |
 
-### Phase D — Entity polish + fluid anim (1–2 days)
+### Phase D — Entity polish + fluid anim (1–2 days) — **DONE on graphics-v2**
 
 | Field | Content |
 | --- | --- |
-| Goal | Entity outline/shadow restrained; optional 2-frame water/lava |
-| Work | Slim entity polish; ambientTiles key swap; no jagged on soft ambient |
-| Acceptance | Koi free of cages; player readable on dark; water anim silhouette-fixed |
+| Goal | Entity outline/shadow restrained; silhouette-safe 2-frame water/lava |
+| Work | `canvasTex` entity pass via `terrariaEntityPassOpts`; soft ambient no jagged; `at-*-N-b` sparkle frames; ambientTiles baseKey swap |
+| Acceptance | Koi jagged off; dense entities outline+shadow; fluid anim stays `at-water/lava-*` family |
 | Playtest | pond with koi; combat room with 3+ enemies; dark B2 torch room |
 | Risks | Outline stacking too thick at ART_RES; anim reintroduces flicker holes |
-| Mitigate | Static default; anim flag off until QA pass |
+| Mitigate | Sparkle-only -b frames; never swap to legacy land keys |
 
 ### Phase E — Lighting / weather visual pass (1–2 days)
 

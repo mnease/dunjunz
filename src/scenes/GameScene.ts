@@ -39,6 +39,8 @@ import {
   worldCell,
 } from '../systems/fractal-noise';
 import {
+  fluidAnimAltKey,
+  isSolidFluidAutotileKey,
   pickTextureKey,
   resolveRoomCellTextureCandidates,
 } from '../systems/autotile';
@@ -703,6 +705,8 @@ export class GameScene extends Phaser.Scene {
     kind: 'water' | 'lava';
     ty?: number;
     waterBody?: WaterBodyKind;
+    /** Phase D: solid autotile base key for silhouette-safe -b swap */
+    baseKey?: string;
   }[] = [];
   /** Live water body kinds for this room (key "x,y"). */
   private waterBodies = new Map<string, WaterBodyKind>();
@@ -2195,18 +2199,26 @@ export class GameScene extends Phaser.Scene {
           img.setTint(fluidTint);
         }
 
-        // Phase A: autotile fluids stay static (no legacy anim key swap).
-        if (
-          (kind === 'water' || kind === 'lava') &&
-          !texKey.startsWith('at-water-') &&
-          !texKey.startsWith('at-lava-')
-        ) {
-          this.ambientTiles.push({
-            img,
-            kind,
-            ty: y,
-            waterBody: kind === 'water' ? waterBody : undefined,
-          });
+        // Phase D: silhouette-safe fluid anim on at-water/lava-* (+ -b frames).
+        // Legacy non-autotile fluids can still use old key swap.
+        if (kind === 'water' || kind === 'lava') {
+          if (isSolidFluidAutotileKey(texKey)) {
+            const base = texKey.endsWith('-b') ? texKey.slice(0, -2) : texKey;
+            this.ambientTiles.push({
+              img,
+              kind,
+              ty: y,
+              waterBody: kind === 'water' ? waterBody : undefined,
+              baseKey: base,
+            });
+          } else {
+            this.ambientTiles.push({
+              img,
+              kind,
+              ty: y,
+              waterBody: kind === 'water' ? waterBody : undefined,
+            });
+          }
         }
 
         // Walk colliders: skip water that fords a doorway (universal door law)
@@ -7292,16 +7304,30 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Ambient water / lava — frame swap (discrete tiles; static-friendly)
+    // Ambient water / lava — Phase D silhouette-safe 2-frame swap on at-* keys
     if (motionAllowed() && this.ambientTiles.length) {
       const onBeach = this.room?.id === BEACH_START_ID;
-      const period = onBeach ? 260 : 420;
-      const frames = onBeach ? 3 : 2;
-      const next = Math.floor(this.animTime / period) % frames;
+      const period = onBeach ? 280 : 400;
+      const next = Math.floor(this.animTime / period) % 2;
       if (next !== this.ambientFrame) {
         this.ambientFrame = next;
-        for (const { img, kind, ty, waterBody } of this.ambientTiles) {
+        for (const { img, kind, ty, waterBody, baseKey } of this.ambientTiles) {
           if (!img.active) continue;
+          if (baseKey && isSolidFluidAutotileKey(baseKey)) {
+            // Sparkle-only -b frame; never swap to legacy land/void keys
+            const alt = fluidAnimAltKey(baseKey);
+            const k =
+              next === 0
+                ? baseKey
+                : alt && this.textures.exists(alt)
+                  ? alt
+                  : baseKey;
+            if (this.textures.exists(k) && img.texture.key !== k) {
+              img.setTexture(k);
+            }
+            continue;
+          }
+          // Legacy non-autotile fluids only
           if (kind === 'water') {
             const body = waterBody ?? (onBeach ? 'ocean' : 'pond');
             const lag = body === 'ocean' ? Math.floor((ty ?? 0) / 2) : 0;

@@ -1,8 +1,11 @@
 /**
- * Terraria-style pixel post-process — outlines, jagged edges, drop shadows,
- * hard light falloff. Pure canvas helpers (no Phaser).
+ * Entity pixel polish for Graphics-v2 Phase D (Core Keeper readable silhouettes).
+ * Outlines, optional jagged edges, drop shadows. Pure canvas helpers (no Phaser).
  *
- * @see docs/terraria-visual-system-v1.md
+ * Soft ambient (koi/sign/crab…) never gets jagged grow — that created black cages.
+ *
+ * @see docs/graphics-v2-style-bible.md
+ * @see docs/graphics-v2-rebuild-plan.md Phase D
  */
 
 import { hash2 } from './fractal-noise';
@@ -219,8 +222,9 @@ export function applyTerrariaEntityPass(
     seed = 0,
   } = opts;
   if (snap) applyTerrariaColorSnap(ctx, w, h, 12);
-  if (jagged) applyTerrariaJaggedEdge(ctx, w, h, seed, 0.2);
-  if (shadow) applyTerrariaDropShadow(ctx, w, h, 1, 2, 85);
+  // Slightly lower nibble than v1 (0.2 → 0.14) — restrained Phase D silhouettes
+  if (jagged) applyTerrariaJaggedEdge(ctx, w, h, seed, 0.14);
+  if (shadow) applyTerrariaDropShadow(ctx, w, h, 1, 2, 80);
   if (outline) applyTerrariaOutline(ctx, w, h);
 }
 
@@ -259,10 +263,11 @@ export function drawTerrariaLightCookie(
 }
 
 /**
- * Keys that should NOT get entity outline (UI chrome / pure tiles already continuous).
+ * Keys that should NOT get entity outline (UI chrome, terrain frames, FX).
  */
 export function shouldApplyTerrariaEntityPass(key: string): boolean {
   if (key.startsWith('tile-')) return false;
+  if (key.startsWith('at-')) return false; // autotile / shore terrain frames
   if (key.startsWith('cground_') || key.startsWith('cwater_')) return false;
   if (key.startsWith('icon_') || key.startsWith('rack_')) return false;
   if (key === 'light_cookie') return false;
@@ -271,14 +276,14 @@ export function shouldApplyTerrariaEntityPass(key: string): boolean {
   if (key.startsWith('precip_')) return false;
   if (key.startsWith('proj-') || key.startsWith('slash') || key === 'sword-swing')
     return false;
+  if (key.startsWith('slot_') || key === 'slot_frame') return false;
   // Entity / prop / character sprites — yes
   return true;
 }
 
 /**
- * Small ambient / underwater sprites: sparse silhouettes. Full jagged+grow
- * turns the 1px outline into tile-shaped black cages (koi/crab bug). Soft pass
- * only — thin outline, no nibble/grow, no drop shadow.
+ * Sparse silhouettes: jagged grow creates black tile-shaped cages.
+ * Soft pass only — thin outline, no nibble/grow, no drop shadow.
  */
 const SOFT_AMBIENT_KEYS = new Set([
   'koi',
@@ -289,14 +294,24 @@ const SOFT_AMBIENT_KEYS = new Set([
   'hornet',
   'heart',
   'key',
+  'palm', // sparse fronds
 ]);
 
+/** True if key uses soft ambient polish (no jagged). */
+export function isSoftAmbientEntityKey(key: string): boolean {
+  if (SOFT_AMBIENT_KEYS.has(key)) return true;
+  // Dynamic buddy frames stay dense (outline+shadow); not soft ambient
+  return false;
+}
+
 /**
- * Per-key pass options. Soft ambient = outline only (Terraria fish still read).
+ * Per-key pass options (Phase D).
+ * Soft ambient = outline + light snap only.
+ * Dense characters/trees = outline + restrained jagged + drop shadow.
  */
 export function terrariaEntityPassOpts(key: string): TerrariaPassOpts {
   const seed = terrariaSeedFromKey(key);
-  if (SOFT_AMBIENT_KEYS.has(key)) {
+  if (isSoftAmbientEntityKey(key)) {
     return {
       outline: true,
       jagged: false,
@@ -305,7 +320,7 @@ export function terrariaEntityPassOpts(key: string): TerrariaPassOpts {
       seed,
     };
   }
-  // Dense characters / trees: full Terraria entity pass
+  // Dense: outline + shadow; jagged on for foliage/creeps (restrained nibble in pass)
   return {
     outline: true,
     jagged: true,
