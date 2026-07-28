@@ -79,6 +79,24 @@ export function initAuthUi(): void {
     if (e.target === modal) setOpen(false);
   });
 
+  // Landing /account → /play?account=1 opens the sign-in panel
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('account') === '1' || params.get('signup') === '1') {
+      setMsg('');
+      void refreshAuthUi();
+      setOpen(true);
+      // Clean URL without reloading
+      params.delete('account');
+      params.delete('signup');
+      const q = params.toString();
+      const next = `${window.location.pathname}${q ? `?${q}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, '', next);
+    }
+  } catch {
+    /* ignore */
+  }
+
   guestForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(guestForm);

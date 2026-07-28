@@ -17,6 +17,14 @@
     {
       "source": "/play/",
       "destination": "/play/index.html"
+    },
+    {
+      "source": "/account",
+      "destination": "/account/index.html"
+    },
+    {
+      "source": "/account/",
+      "destination": "/account/index.html"
     }
   ]
 }
