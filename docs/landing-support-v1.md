@@ -1,11 +1,26 @@
 # Landing page + support model (v1)
 
-**Status:** ready to implement  
-**Date:** 2026-07-21  
+**Status:** live · StoryBrand rewrite 2026-07-28  
+**Date:** 2026-07-21 (orig) · updated 2026-07-28  
 **Owner:** EMA (captain) · implement via Mason  
 **Live domain:** https://dunjunz.com  
 **Game route:** https://dunjunz.com/play  
 **Repo homepage:** set to `https://dunjunz.com` (see §7)
+
+### StoryBrand flow (landing `/`)
+
+| Beat | Section id | Copy job |
+| --- | --- | --- |
+| Character + promise | `#top` | You are the crawler; free, no ads |
+| Problem (3 levels) | `#problem` | External / internal / philosophical |
+| Guide | `#guide` | Dunjunz / NeaseMedia empathy + authority |
+| Plan (3 steps) | `#plan` | Play → train/descend → Prizella + Bud |
+| Stakes | `#stakes` | Success vs failure |
+| Direct CTA | band | Play free |
+| Controls | `#controls` | Keys table |
+| Support | `#support` | Optional tip, never P2W |
+
+**Images:** illustrated scenes in `public/landing-*.jpg` + live canvas grab `public/story/title.png` (Playwright: `scripts/capture-landing-shots.mjs`).
 
 ---
 
