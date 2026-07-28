@@ -22,6 +22,7 @@ import { canHeroEquipGear, effectiveGearDef } from './class-gear';
 import { igniteLight, isLightItemId } from './lighting';
 import { isScrollOrTomeId, useScrollOrTome } from './scrolls';
 import {
+  isAchievementLootBoxTemplateId,
   isLootBoxTemplateId,
   openLootBox,
   type LootRevealItem,
@@ -202,6 +203,8 @@ export function listInventory(
 
   for (const [id, count] of Object.entries(save.stacks)) {
     if (!count || count <= 0) continue;
+    // Achievement crates claim from Achievements menu only (not bag).
+    if (isAchievementLootBoxTemplateId(id)) continue;
     const t = getTemplate(id);
     lines.push({
       templateId: id,
@@ -277,8 +280,15 @@ export function useInventoryItem(
   if (!t.usable) {
     return { ok: false, save, reason: 'CANNOT USE THAT HERE' };
   }
-  // Loot boxes (starter + tiered)
+  // Loot boxes — starter / specials from bag; tiered achievement boxes menu-only
   if (isLootBoxTemplateId(templateId)) {
+    if (isAchievementLootBoxTemplateId(templateId)) {
+      return {
+        ok: false,
+        save,
+        reason: 'OPEN THAT FROM ACHIEVEMENTS',
+      };
+    }
     const r = openLootBox(save, templateId);
     if (!r.ok) {
       return { ok: false, save: r.save, reason: r.reason };
@@ -536,6 +546,9 @@ export function migrateEquipment(save: SaveData & Record<string, unknown>): Save
         : [],
       achievementsUnlocked: Array.isArray(save.achievementsUnlocked)
         ? save.achievementsUnlocked
+        : [],
+      pendingAchievementBoxes: Array.isArray(save.pendingAchievementBoxes)
+        ? save.pendingAchievementBoxes
         : [],
     };
     return autoEquipEmptySlots(syncDerivedStats(next));

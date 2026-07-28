@@ -401,7 +401,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   loot_box_bronze: {
     id: 'loot_box_bronze',
     name: 'BRONZE LOOT BOX',
-    blurb: 'Common haul. Basic gear. E on crate or bag [U].',
+    blurb: 'Common haul. Open from Achievements menu.',
     kind: 'consumable',
     usable: true,
     stackable: true,
@@ -409,7 +409,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   loot_box_silver: {
     id: 'loot_box_silver',
     name: 'SILVER LOOT BOX',
-    blurb: 'Uncommon haul. Solid gear. E on crate or bag [U].',
+    blurb: 'Uncommon haul. Open from Achievements menu.',
     kind: 'consumable',
     usable: true,
     stackable: true,
@@ -417,7 +417,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   loot_box_gold: {
     id: 'loot_box_gold',
     name: 'GOLD LOOT BOX',
-    blurb: 'Rare haul. Fancy gear. E on crate or bag [U].',
+    blurb: 'Rare haul. Open from Achievements menu.',
     kind: 'consumable',
     usable: true,
     stackable: true,
@@ -425,7 +425,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   loot_box_platinum: {
     id: 'loot_box_platinum',
     name: 'PLATINUM LOOT BOX',
-    blurb: 'Epic haul. Serious gear. E on crate or bag [U].',
+    blurb: 'Epic haul. Open from Achievements menu.',
     kind: 'consumable',
     usable: true,
     stackable: true,
@@ -433,7 +433,7 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
   loot_box_diamond: {
     id: 'loot_box_diamond',
     name: 'DIAMOND LOOT BOX',
-    blurb: 'Legendary haul. Ridiculous gear. E on crate or bag [U].',
+    blurb: 'Legendary haul. Open from Achievements menu.',
     kind: 'consumable',
     usable: true,
     stackable: true,

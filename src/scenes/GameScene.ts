@@ -342,7 +342,6 @@ import {
   CRAWLER_STARTER_BOX_ID,
   grantLootBoxesForAchievements,
   isLootBoxTemplateId,
-  lootBoxTemplateId,
   openLootBox,
 } from '../systems/loot-boxes';
 import {
@@ -1011,12 +1010,13 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(500, () => this.checkHeroPick());
   }
 
-  /** Cloud/local save mutated outside the scene (account import, etc.). */
+  /** Cloud/local/journal save mutated outside the scene. */
   private onSaveUpdated = (): void => {
     // Scene may be shut down; ignore late cloud-save events
     if (!this.sys.isActive()) return;
     this.save = loadSave();
     this.emitHud();
+    this.game.events.emit('inventory-refresh', this.save);
   };
 
   private syncTouchPadMode(mode: TouchPadMode): void {
@@ -1732,12 +1732,12 @@ export class GameScene extends Phaser.Scene {
     else document.getElementById('journal-open')?.click();
   };
 
-  /** Unlock achievements; toast any new ones. */
+  /** Unlock achievements; toast any new ones. Boxes claim from Achievements menu. */
   private flushAchievements(): void {
     const { save, newly } = syncAchievements(this.save);
     this.save = save;
     if (!newly.length) return;
-    // Each new brag drops a weighted-tier loot box (bronze most common)
+    // Queue reward crates for Achievements menu (no world drop / bag stack).
     const boxed = grantLootBoxesForAchievements(this.save, newly);
     this.save = boxed.save;
     writeSave(this.save);
@@ -1747,17 +1747,18 @@ export class GameScene extends Phaser.Scene {
         this.game.events.emit('toast', `NEW ACHIEVEMENT: ${a.title}`);
       });
     });
-    boxed.boxes.forEach((b, i) => {
-      this.time.delayedCall(newly.length * 400 + i * 350, () => {
+    if (boxed.boxes.length) {
+      this.time.delayedCall(newly.length * 400, () => {
         playSfx('pickup');
+        const n = boxed.boxes.length;
         this.game.events.emit(
           'toast',
-          `LOOT BOX: ${b.tier.toUpperCase()} (FROM ${b.title})`,
+          n === 1
+            ? 'REWARD BOX WAITING IN ACHIEVEMENTS'
+            : `${n} REWARD BOXES WAITING IN ACHIEVEMENTS`,
         );
-        // Materialize each brag box mid-room with a flash of light
-        this.spawnLootCrateDrop(lootBoxTemplateId(b.tier));
       });
-    });
+    }
   }
 
   private onGearTargetToggle = (): void => {

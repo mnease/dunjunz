@@ -15,6 +15,12 @@ import {
   listAchievementsForUi,
   syncAchievements,
 } from '../systems/achievements';
+import {
+  grantLootBoxesForAchievements,
+  migrateAchievementBoxesFromStacks,
+  openPendingAchievementBox,
+  tierLabel,
+} from '../systems/loot-boxes';
 import { playSfx } from '../systems/audio';
 
 export type JournalTab = 'quests' | 'achievements';
@@ -33,9 +39,16 @@ const TAB_COPY: Record<
   achievements: {
     title: 'Achievements',
     blurb:
-      'Unlocks the bard bothers to write down. Locked rows stay spoiler-safe until you earn them.',
+      'Unlocks the bard bothers to write down. Reward boxes open here — not from the bag (for now).',
   },
 };
+
+function pushSaveToGame(save: ReturnType<typeof loadSave>): void {
+  writeSave(save);
+  window.dispatchEvent(
+    new CustomEvent('dunjunz-save-updated', { detail: save }),
+  );
+}
 
 /** Open the journal on a specific tab (used by topbar + game J key). */
 export function openJournal(tab: JournalTab = 'quests'): void {
@@ -102,12 +115,15 @@ export function initJournalUi(): void {
   };
 
   const render = () => {
-    let save = loadSave();
+    const prev = loadSave();
+    let save = migrateAchievementBoxesFromStacks(prev);
+    let dirty = save !== prev;
     const synced = syncAchievements(save);
     if (synced.newly.length) {
-      save = synced.save;
-      writeSave(save);
+      save = grantLootBoxesForAchievements(synced.save, synced.newly).save;
+      dirty = true;
     }
+    if (dirty) pushSaveToGame(save);
 
     if (activeTab === 'quests') {
       const list = listQuests(save);
@@ -129,12 +145,41 @@ export function initJournalUi(): void {
     } else {
       const list = listAchievementsForUi(save);
       const prog = achievementProgress(save);
+      const pending = save.pendingAchievementBoxes ?? [];
       if (summary) {
-        summary.textContent = `ACHIEVEMENTS  ${prog.unlocked}/${prog.total} UNLOCKED`;
+        summary.textContent =
+          pending.length > 0
+            ? `ACHIEVEMENTS  ${prog.unlocked}/${prog.total} · ${pending.length} BOX${pending.length === 1 ? '' : 'ES'} TO OPEN`
+            : `ACHIEVEMENTS  ${prog.unlocked}/${prog.total} UNLOCKED`;
       }
-      panelAchievements.innerHTML = list
-        .map(
-          (a) => `
+      const rewardBlock =
+        pending.length > 0
+          ? `<div class="journal-focus journal-rewards" role="region" aria-label="Reward boxes">
+              <p class="journal-focus-label">REWARD BOXES</p>
+              ${pending
+                .map(
+                  (b, i) => `
+                <article class="journal-row is-active journal-box-row" data-box-index="${i}">
+                  <header class="journal-row-head">
+                    <span class="journal-status" aria-hidden="true">▣</span>
+                    <h3 class="journal-title">${escapeHtml(tierLabel(b.tier))} LOOT BOX</h3>
+                    <span class="journal-progress">${escapeHtml(b.tier.toUpperCase())}</span>
+                  </header>
+                  <p class="journal-blurb">From: ${escapeHtml(b.fromTitle)}</p>
+                  <button type="button" class="btn primary journal-open-box" data-open-box="${i}">
+                    Open box
+                  </button>
+                </article>`,
+                )
+                .join('')}
+            </div>
+            <p class="journal-section-label">ALL ACHIEVEMENTS</p>`
+          : `<p class="journal-section-label">ALL ACHIEVEMENTS</p>`;
+      panelAchievements.innerHTML =
+        rewardBlock +
+        list
+          .map(
+            (a) => `
         <article class="journal-row ${a.unlocked ? 'is-done' : 'is-locked'}" data-status="${a.unlocked ? 'done' : 'locked'}">
           <header class="journal-row-head">
             <span class="journal-status" aria-label="${a.unlocked ? 'Unlocked' : 'Locked'}">${a.unlocked ? '★' : '·'}</span>
@@ -143,10 +188,54 @@ export function initJournalUi(): void {
           </header>
           <p class="journal-blurb">${a.unlocked ? escapeHtml(a.blurb) : 'Keep playing. The bard is watching.'}</p>
         </article>`,
-        )
-        .join('');
+          )
+          .join('');
     }
   };
+
+  const openBoxAt = (index: number) => {
+    const save = loadSave();
+    const r = openPendingAchievementBox(save, index);
+    if (!r.ok) {
+      playSfx('error');
+      return;
+    }
+    pushSaveToGame(r.save);
+    playSfx('success');
+    (
+      window as unknown as {
+        openDunjunzLootReveal?: (p: {
+          boxName: string;
+          boxTemplateId: string;
+          items: { templateId: string; name: string; qty?: number }[];
+        }) => void;
+      }
+    ).openDunjunzLootReveal?.({
+      boxName: r.boxName,
+      boxTemplateId: r.boxTemplateId,
+      items: r.grantedItems,
+    });
+    // Also fire event for any listeners
+    window.dispatchEvent(
+      new CustomEvent('dunjunz-loot-reveal', {
+        detail: {
+          boxName: r.boxName,
+          boxTemplateId: r.boxTemplateId,
+          items: r.grantedItems,
+        },
+      }),
+    );
+    render();
+  };
+
+  panelAchievements.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement | null;
+    const btn = t?.closest?.('[data-open-box]') as HTMLElement | null;
+    if (!btn) return;
+    const idx = Number(btn.getAttribute('data-open-box'));
+    if (!Number.isFinite(idx)) return;
+    openBoxAt(idx);
+  });
 
   openBtn.addEventListener('click', () => setOpen(true, 'quests'));
   achievementsBtn?.addEventListener('click', () =>

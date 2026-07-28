@@ -303,6 +303,15 @@ export interface SaveData {
   questsCompleted: string[];
   /** Unlocked achievement ids (brag-* keys for save compatibility). */
   achievementsUnlocked: string[];
+  /**
+   * Achievement reward crates — claim only from the Achievements menu.
+   * Not bag stacks / not world drops (for now).
+   */
+  pendingAchievementBoxes?: {
+    tier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+    fromTitle: string;
+    achievementId: string;
+  }[];
   // ── v6: hard mode + identity ─────────────────────────────
   /** Land currently being replayed on hard (null = normal). */
   hardRunLand?: LandId | null;

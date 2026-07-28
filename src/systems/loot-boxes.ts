@@ -146,7 +146,7 @@ export function rollLootBoxTier(rng: Rng = Math.random): LootBoxTier {
   return 'bronze';
 }
 
-/** Grant one random-tier box into stacks. */
+/** Grant one random-tier box into bag stacks (starter / special crates only). */
 export function grantRandomLootBox(
   save: SaveData,
   rng: Rng = Math.random,
@@ -160,6 +160,11 @@ export function grantRandomLootBox(
     tier,
     templateId,
   };
+}
+
+/** True for tiered achievement crates (not starter / elven specials). */
+export function isAchievementLootBoxTemplateId(id: string): boolean {
+  return LOOT_BOX_TIERS.some((t) => lootBoxTemplateId(t) === id);
 }
 
 /** Grant the fixed bronze Crawler Starter Box (once per flag). */
@@ -300,7 +305,8 @@ export function openLootBox(
 }
 
 /**
- * On new brag unlocks: grant one weighted-tier loot box per unlock.
+ * On new achievement unlocks: queue one weighted-tier box per unlock.
+ * Boxes live in `pendingAchievementBoxes` — claim only from Achievements menu.
  */
 export function grantLootBoxesForAchievements(
   save: SaveData,
@@ -308,19 +314,83 @@ export function grantLootBoxesForAchievements(
   rng: Rng = Math.random,
 ): {
   save: SaveData;
-  boxes: { tier: LootBoxTier; title: string }[];
+  boxes: { tier: LootBoxTier; title: string; achievementId: string }[];
 } {
   if (!newly.length) return { save, boxes: [] };
-  let next = save;
-  const boxes: { tier: LootBoxTier; title: string }[] = [];
+  const pending = [...(save.pendingAchievementBoxes ?? [])];
+  const boxes: { tier: LootBoxTier; title: string; achievementId: string }[] =
+    [];
   for (const a of newly) {
-    const g = grantRandomLootBox(next, rng);
-    next = g.save;
-    boxes.push({ tier: g.tier, title: a.title });
+    const tier = rollLootBoxTier(rng);
+    pending.push({
+      tier,
+      fromTitle: a.title,
+      achievementId: a.id,
+    });
+    boxes.push({ tier, title: a.title, achievementId: a.id });
   }
-  return { save: next, boxes };
+  return {
+    save: { ...save, pendingAchievementBoxes: pending },
+    boxes,
+  };
+}
+
+/**
+ * Move any tiered loot_box_* bag stacks into the Achievements queue
+ * (migration for older saves that dropped boxes into inventory / world).
+ */
+export function migrateAchievementBoxesFromStacks(save: SaveData): SaveData {
+  const stacks = { ...save.stacks };
+  const pending = [...(save.pendingAchievementBoxes ?? [])];
+  let moved = false;
+  for (const tier of LOOT_BOX_TIERS) {
+    const id = lootBoxTemplateId(tier);
+    const n = stacks[id] ?? 0;
+    if (n <= 0) continue;
+    for (let i = 0; i < n; i++) {
+      pending.push({
+        tier,
+        fromTitle: 'Past unlock',
+        achievementId: `migrated-${tier}-${pending.length}`,
+      });
+    }
+    delete stacks[id];
+    moved = true;
+  }
+  if (!moved) return save;
+  return { ...save, stacks, pendingAchievementBoxes: pending };
+}
+
+/**
+ * Open one pending achievement box by index. Rewards go to bag/stacks.
+ */
+export function openPendingAchievementBox(
+  save: SaveData,
+  index: number,
+  rng: Rng = Math.random,
+): OpenLootBoxResult {
+  const pending = [...(save.pendingAchievementBoxes ?? [])];
+  if (index < 0 || index >= pending.length) {
+    return { ok: false, save, reason: 'NO ACHIEVEMENT BOX' };
+  }
+  const box = pending[index]!;
+  pending.splice(index, 1);
+  const templateId = lootBoxTemplateId(box.tier);
+  // Temporarily materialize as a stack so openLootBox can consume it.
+  const stacks = { ...save.stacks };
+  stacks[templateId] = (stacks[templateId] ?? 0) + 1;
+  const withStack: SaveData = {
+    ...save,
+    stacks,
+    pendingAchievementBoxes: pending,
+  };
+  return openLootBox(withStack, templateId, rng);
 }
 
 export function tierLabel(tier: LootBoxTier): string {
   return tier.toUpperCase();
+}
+
+export function countPendingAchievementBoxes(save: SaveData): number {
+  return save.pendingAchievementBoxes?.length ?? 0;
 }

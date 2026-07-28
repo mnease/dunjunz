@@ -3767,17 +3767,41 @@ describe('loot boxes', () => {
     expect(counts.diamond).toBeLessThan(counts.platinum + 20);
   });
 
-  it('achievement unlocks grant a loot box each', async () => {
-    const { grantLootBoxesForAchievements, isLootBoxTemplateId } = await import(
-      './loot-boxes'
-    );
+  it('achievement unlocks queue a pending box (not bag stacks)', async () => {
+    const {
+      grantLootBoxesForAchievements,
+      isAchievementLootBoxTemplateId,
+      openPendingAchievementBox,
+      migrateAchievementBoxesFromStacks,
+    } = await import('./loot-boxes');
     const { ACHIEVEMENTS } = await import('./achievements');
-    const a = ACHIEVEMENTS[0]!;
+    const { listInventory } = await import('./inventory');
+    const a = ACHIEVEMENTS.find((x) => x.id === 'brag-first-bonk') ?? ACHIEVEMENTS[0]!;
     const r = grantLootBoxesForAchievements(defaultSave(), [a], () => 0.01);
     expect(r.boxes.length).toBe(1);
     expect(r.boxes[0]!.tier).toBe('bronze'); // low rng → bronze
-    const boxId = Object.keys(r.save.stacks).find(isLootBoxTemplateId);
-    expect(boxId).toBeTruthy();
+    expect(r.save.pendingAchievementBoxes?.length).toBe(1);
+    // Not in bag stacks
+    expect(
+      Object.keys(r.save.stacks).some(isAchievementLootBoxTemplateId),
+    ).toBe(false);
+    expect(
+      listInventory(r.save).some((l) => isAchievementLootBoxTemplateId(l.templateId)),
+    ).toBe(false);
+    const opened = openPendingAchievementBox(r.save, 0, () => 0.1);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(opened.save.pendingAchievementBoxes?.length ?? 0).toBe(0);
+    expect(opened.grantedItems.length).toBeGreaterThan(0);
+
+    // Migrate legacy bag stacks into pending
+    const legacy = {
+      ...defaultSave(),
+      stacks: { ...defaultSave().stacks, loot_box_silver: 2 },
+    };
+    const mig = migrateAchievementBoxesFromStacks(legacy);
+    expect(mig.stacks.loot_box_silver).toBeUndefined();
+    expect(mig.pendingAchievementBoxes?.length).toBe(2);
   });
 });
 

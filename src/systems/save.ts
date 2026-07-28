@@ -10,6 +10,7 @@ import { queueCloudSave } from './cloud-save';
 import { ensureBudProgress } from './best-bud-gear';
 import { setLastMode } from './humanz-save';
 import { migrateTutorial } from './tutorial';
+import { migrateAchievementBoxesFromStacks } from './loot-boxes';
 
 export function defaultSave(): SaveData {
   const attrs = defaultAttrs();
@@ -52,6 +53,7 @@ export function defaultSave(): SaveData {
     activeQuestId: null,
     questsCompleted: [],
     achievementsUnlocked: [],
+    pendingAchievementBoxes: [],
     hardRunLand: null,
     hardKilled: [],
     hardLandsCleared: [],
@@ -103,6 +105,9 @@ function withV5Fields(s: SaveData): SaveData {
     questsCompleted: Array.isArray(s.questsCompleted) ? s.questsCompleted : [],
     achievementsUnlocked: Array.isArray(s.achievementsUnlocked)
       ? s.achievementsUnlocked
+      : [],
+    pendingAchievementBoxes: Array.isArray(s.pendingAchievementBoxes)
+      ? s.pendingAchievementBoxes
       : [],
     hardRunLand: s.hardRunLand ?? null,
     hardKilled: Array.isArray(s.hardKilled) ? s.hardKilled : [],
@@ -258,6 +263,11 @@ export function loadSave(): SaveData {
       )
         ? (parsed as SaveData).achievementsUnlocked!
         : [],
+      pendingAchievementBoxes: Array.isArray(
+        (parsed as SaveData).pendingAchievementBoxes,
+      )
+        ? (parsed as SaveData).pendingAchievementBoxes!
+        : [],
     });
     next.level = levelFromXp(next.xp);
     next = ensureBudProgress(next);
@@ -269,6 +279,7 @@ export function loadSave(): SaveData {
     next = reconcileMapzFromCollected(next);
     next = migrateAttrPackages(next);
     next = migrateTutorial(next);
+    next = migrateAchievementBoxesFromStacks(next);
     return syncDerivedStats(next);
   } catch {
     return defaultSave();
