@@ -14,9 +14,40 @@ import {
 } from './items';
 import { grantCrawlerStarterBox } from './loot-boxes';
 import { syncDerivedStats } from './inventory';
+import {
+  boxOpenBlockedToast,
+  canOpenLootBoxInRoom,
+  isSafeRoom,
+  isSafeRoomDef,
+} from './safe-zones';
+
+// Re-export safe-zone helpers so existing tutorial imports keep working
+export {
+  boxOpenBlockedToast,
+  canOpenLootBoxInRoom,
+  isSafeRoom,
+  isSafeRoomDef,
+};
 
 export const FLAG_TUTORIAL_COMPLETE = 'tutorial_complete';
 export const FLAG_TUTORIAL_INTRO = 'tutorial_intro_seen';
+export const FLAG_TUTORIAL_INVENTORY = 'tutorial_inventory_opened';
+export const FLAG_TUTORIAL_BOX = 'tutorial_box_opened';
+export const FLAG_TUTORIAL_SAFE_ZONE = 'tutorial_safe_zone_learned';
+
+/** Ordered curriculum phases after intro. */
+export type TutorialPhase =
+  | 'weapons'
+  | 'inventory'
+  | 'boxes'
+  | 'safe_zone'
+  | 'graduate';
+
+export type ChecklistStep = {
+  id: string;
+  label: string;
+  done: boolean;
+};
 
 /** Ordered weapon drills (damage threshold with each, in order). */
 export const TUTORIAL_WEAPONS = [
@@ -153,6 +184,148 @@ export function drillDamageRequired(): number {
 
 export function isTutorialComplete(save: SaveData): boolean {
   return !!save.flags?.[FLAG_TUTORIAL_COMPLETE];
+}
+
+/**
+ * Current tutorial phase, or null when finished / graduated.
+ */
+export function tutorialPhase(save: SaveData): TutorialPhase | null {
+  if (isTutorialComplete(save)) return null;
+  if (!allWeaponHitsDone(save)) return 'weapons';
+  if (!save.flags?.[FLAG_TUTORIAL_INVENTORY]) return 'inventory';
+  if (!save.flags?.[FLAG_TUTORIAL_BOX]) return 'boxes';
+  if (!save.flags?.[FLAG_TUTORIAL_SAFE_ZONE]) return 'safe_zone';
+  return 'graduate';
+}
+
+/** Ready for graduation talk (all curriculum flags + weapon drills). */
+export function canGraduateTutorial(save: SaveData): boolean {
+  return tutorialPhase(save) === 'graduate';
+}
+
+export function markTutorialInventoryOpened(save: SaveData): SaveData {
+  if (save.flags?.[FLAG_TUTORIAL_INVENTORY]) return save;
+  if (isTutorialComplete(save)) return save;
+  // Only count once weapons phase is done (or anytime for veterans mid-path)
+  return {
+    ...save,
+    flags: { ...save.flags, [FLAG_TUTORIAL_INVENTORY]: true },
+  };
+}
+
+export function markTutorialBoxOpened(save: SaveData): SaveData {
+  if (save.flags?.[FLAG_TUTORIAL_BOX]) return save;
+  return {
+    ...save,
+    flags: { ...save.flags, [FLAG_TUTORIAL_BOX]: true },
+  };
+}
+
+export function markTutorialSafeZoneLearned(save: SaveData): SaveData {
+  if (save.flags?.[FLAG_TUTORIAL_SAFE_ZONE]) return save;
+  return {
+    ...save,
+    flags: { ...save.flags, [FLAG_TUTORIAL_SAFE_ZONE]: true },
+  };
+}
+
+/**
+ * Ensure a practice bronze box stack exists for the guild crate / phase 3.
+ */
+export function ensureTutorialPracticeBox(save: SaveData): SaveData {
+  if (isTutorialComplete(save)) return save;
+  if (!allWeaponHitsDone(save)) return save;
+  if (save.flags?.[FLAG_TUTORIAL_BOX]) return save;
+  const have = save.stacks?.loot_box_bronze ?? 0;
+  if (have > 0) return save;
+  return {
+    ...save,
+    stacks: {
+      ...save.stacks,
+      loot_box_bronze: 1,
+    },
+  };
+}
+
+/**
+ * Lower-left checklist for the active phase (null when no checklist).
+ */
+export function tutorialChecklist(save: SaveData): {
+  phase: TutorialPhase;
+  title: string;
+  steps: ChecklistStep[];
+} | null {
+  const phase = tutorialPhase(save);
+  if (!phase || phase === 'graduate') return null;
+
+  if (phase === 'weapons') {
+    const need = nextTutorialWeapon(save);
+    return {
+      phase,
+      title: 'Weapons tutorial',
+      steps: TUTORIAL_WEAPONS.map((w) => {
+        const done = weaponHitDone(save, w);
+        const pct = weaponProgressPct(save, w);
+        let label = `${w.charAt(0).toUpperCase()}${w.slice(1)}: equip from rack, then damage a dummy to 100%`;
+        if (!done && w === need && pct > 0) {
+          label = `${w.charAt(0).toUpperCase()}${w.slice(1)}: ${pct}% dummy damage (keep hitting)`;
+        }
+        return { id: `weapon-${w}`, label, done };
+      }),
+    };
+  }
+
+  if (phase === 'inventory') {
+    return {
+      phase,
+      title: 'Inventory tutorial',
+      steps: [
+        {
+          id: 'open-inventory',
+          label: 'Press I to open your inventory bag',
+          done: !!save.flags?.[FLAG_TUTORIAL_INVENTORY],
+        },
+        {
+          id: 'read-inventory',
+          label: 'Look at your items (then close with I or Esc)',
+          done: !!save.flags?.[FLAG_TUTORIAL_INVENTORY],
+        },
+      ],
+    };
+  }
+
+  if (phase === 'boxes') {
+    const opened = !!save.flags?.[FLAG_TUTORIAL_BOX];
+    return {
+      phase,
+      title: 'Boxes tutorial',
+      steps: [
+        {
+          id: 'safe-only',
+          label: 'Rule: boxes open only in safe zones (this Guild is safe)',
+          done: true,
+        },
+        {
+          id: 'open-box',
+          label: 'Open the practice crate in the Guild hall (walk up, press E)',
+          done: opened,
+        },
+      ],
+    };
+  }
+
+  // safe_zone
+  return {
+    phase: 'safe_zone',
+    title: 'Safe zones',
+    steps: [
+      {
+        id: 'learn-safe',
+        label: 'Talk to the Guild Master about safe zones',
+        done: !!save.flags?.[FLAG_TUTORIAL_SAFE_ZONE],
+      },
+    ],
+  };
 }
 
 export function weaponHitDone(save: SaveData, w: TutorialWeapon): boolean {
@@ -371,6 +544,9 @@ export function completeTutorial(save: SaveData): SaveData {
     ...save.flags,
     [FLAG_TUTORIAL_COMPLETE]: true,
     [FLAG_TUTORIAL_INTRO]: true,
+    [FLAG_TUTORIAL_INVENTORY]: true,
+    [FLAG_TUTORIAL_BOX]: true,
+    [FLAG_TUTORIAL_SAFE_ZONE]: true,
   };
   const stacks = { ...save.stacks };
   const req = drillDamageRequired();
@@ -727,87 +903,135 @@ export function guildEntranceToast(): string {
 
 /**
  * First-boot Guild Master monologue:
- * Welcome → game intro → guild identity → drill briefing.
+ * Welcome to Tutorial Guild → clear weapons tutorial in steps.
  */
 export function guildMasterIntroDialog(): string[] {
   return [
-    'WELCOME TO DUNJUNZ…',
+    'Welcome to the Tutorial Guild.',
+    'I am the Guild Master. I train crawlers so they leave alive.',
     '',
-    'THIS IS A LAND OF MEADOWS, CAVES,',
-    'AND THINGS THAT BITE BACK.',
-    'YOU WILL WALK, SWING, LOOT, AND TALK.',
-    'YOU WILL GET LOST. YOU WILL GET BETTER.',
+    'Your long quest is to rescue Princess Prizella.',
+    'Before the east door opens, you will practice here safely.',
     '',
-    'YOUR QUEST: RESCUE PRINCESS PRIZELLA.',
-    'SHE IS LOST SOMEWHERE OUT THERE —',
-    'PAST THE MEADOW, DOWN THE DUNGEONS,',
-    'THROUGH WOODZ AND DEZERTZ AND WORSE.',
+    'First lesson: weapons. Follow these steps carefully.',
     '',
-    'THIS IS THE TRAINING GUILD.',
-    'I AM THE TUTORIAL GUILD MASTER.',
-    'THESE HALLS ARE OLD. THE TORCHES REMEMBER.',
-    'BOOKS, LAMPS, SHADOWS — MY LIVING QUARTERS.',
-    'BEFORE THE EAST DOOR OPENS,',
-    'YOU TRAIN HERE, IN THE CENTER.',
+    'Step 1: Walk to the sword rack on the north wall.',
+    'Press E to open the rack, then choose a sword and equip it.',
     '',
-    'DEAL DAMAGE TO DUMMIES WITH FOUR WEAPONS:',
-    'SWORD → AXE → BOW → STAFF.',
-    `EACH WEAPON: ${DUMMY_DRILL_REQUIRED_PCT}% OF DUMMY HP.`,
-    'EACH RACK HOLDS SEVERAL REAL WEAPONS.',
-    'E = BROWSE · 1-9 = EQUIP ONE (IT LEAVES THE PEG).',
-    'EQUIP ANOTHER OR RETURN (E ON EMPTY) TO PUT IT BACK.',
-    'DUMMIES (SPACE / Z) TAKE THE HITS.',
-    'WHEN ALL FOUR ARE DONE, TALK TO ME.',
-    'THEN: EAST DOOR → MEADOW.',
+    'Step 2: Face a training dummy. Press Space or Z to attack.',
+    'Keep hitting until that sword drill reaches one hundred percent.',
+    '',
+    'Step 3: Return the sword (or switch racks) and equip an axe.',
+    'Finish the axe drill on a dummy the same way.',
+    '',
+    'Step 4: Equip a bow from the bow rack. You will get practice arrows.',
+    'Shoot a dummy until the bow drill is complete.',
+    '',
+    'Step 5: Equip a staff from the staff rack.',
+    'Use it on a dummy until the staff drill is complete.',
+    '',
+    'A checklist in the lower left tracks each step for you.',
+    'When all four weapons are done, talk to me again.',
   ];
 }
 
-export function guildMasterDialog(save: SaveData): string[] {
-  if (isTutorialComplete(save)) {
+/** Phase-specific coaching after the intro. */
+export function guildMasterPhaseDialog(save: SaveData): string[] {
+  const phase = tutorialPhase(save);
+  if (phase === 'inventory') {
     return [
-      'GUILD MASTER: YOU ARE GRADUATED.',
-      'EAST = MEADOW. CAVE MOUTH = DUNJUNZ.',
-      'TRAIL LEADS TO WOODZ AND DEZERTZ.',
-      'MOVE: WASD. ATTACK: SPACE/Z. BAG: I. TALK: E.',
-      'GO RESCUE PRINCESS PRIZELLA.',
+      'Good work with the weapons.',
+      '',
+      'Next lesson: your inventory.',
+      'Press I on the keyboard to open your bag.',
+      'You will see items, gear, and anything you are carrying.',
+      'Look around, then close it with I or Escape.',
+      'When you have opened it once, talk to me again.',
     ];
   }
-
-  if (allWeaponHitsDone(save)) {
+  if (phase === 'boxes') {
     return [
-      'GUILD MASTER: FOUR WEAPONS. FULL DAMAGE. CLEAN WORK.',
-      'BY THE POWER OF THE TRAINING GUILD…',
-      'EAST DOOR — OPEN.',
-      'THE MEADOW AND THE CAVE AWAIT.',
+      'Next lesson: loot boxes and crates.',
+      '',
+      'Important rule: you can only open boxes inside a safe zone.',
+      'This Tutorial Guild is a safe zone. Enemies cannot hurt you here.',
+      '',
+      'There is a practice crate in this hall.',
+      'Walk up to it and press E to open it.',
+      'If you try to open a box in a dangerous room, it will refuse.',
+      'Open the practice crate, then talk to me again.',
     ];
   }
-
+  if (phase === 'safe_zone') {
+    return [
+      'Last lesson for now: safe zones.',
+      '',
+      'A safe zone is a place where enemies cannot attack you.',
+      'You may open boxes only while you stand in a safe zone.',
+      'This Tutorial Guild is always a safe zone.',
+      'Doors into the Guild always lead to this same hall — like a portal.',
+      'You will find more safe rooms later in the dungeons.',
+      '',
+      'Remember that rule, and you are ready to graduate.',
+    ];
+  }
+  if (phase === 'graduate') {
+    return [
+      'You finished every lesson in this hall.',
+      'By the power of the Training Guild, you are graduated.',
+      'The east door is open. A starter crate is yours to claim here.',
+      'The meadow and the caves await. Rescue Princess Prizella.',
+    ];
+  }
+  // weapons mid-drill
   const need = nextTutorialWeapon(save);
   const lines: string[] = [
-    'GUILD MASTER: BACK TO DRILLS.',
-    `DEAL ${DUMMY_DRILL_REQUIRED_PCT}% DUMMY HP WITH EACH WEAPON.`,
+    'Back to the weapons lesson.',
+    'Equip the correct weapon from its rack, then damage a dummy to 100%.',
     '',
   ];
   for (const w of TUTORIAL_WEAPONS) {
     const done = weaponHitDone(save, w);
     const pct = weaponProgressPct(save, w);
     const mark = done
-      ? 'DONE'
+      ? 'done'
       : w === need
-        ? `← ${pct}%`
+        ? `${pct}% — do this next`
         : pct > 0
           ? `${pct}%`
-          : '…';
-    lines.push(`${w.toUpperCase()}: ${mark}`);
+          : 'not started';
+    lines.push(
+      `${w.charAt(0).toUpperCase()}${w.slice(1)}: ${mark}`,
+    );
   }
   lines.push('');
   if (need) {
-    lines.push(`NEXT: EQUIP ${need.toUpperCase()} FROM ITS RACK (E).`);
     lines.push(
-      `THEN DAMAGE A DUMMY TO ${DUMMY_DRILL_REQUIRED_PCT}% (${drillDamageRequired()} HP).`,
+      `Next: equip a ${need} from the ${need} rack (press E on the rack).`,
+    );
+    lines.push(
+      `Then attack a dummy until you deal full drill damage (${drillDamageRequired()} hit points).`,
     );
   }
   return lines;
+}
+
+export function guildMasterDialog(save: SaveData): string[] {
+  if (isTutorialComplete(save)) {
+    return [
+      'You already graduated from this Guild.',
+      'East leads to the meadow. The cave mouth leads into Dunjunz.',
+      'Move with WASD or the arrows. Attack with Space or Z.',
+      'Open your bag with I. Talk or use things with E.',
+      'Go rescue Princess Prizella. Come back through any Guild door anytime.',
+    ];
+  }
+
+  if (canGraduateTutorial(save)) {
+    return guildMasterPhaseDialog(save);
+  }
+
+  return guildMasterPhaseDialog(save);
 }
 
 export function dummyHitToast(

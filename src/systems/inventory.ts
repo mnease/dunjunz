@@ -27,6 +27,10 @@ import {
   openLootBox,
   type LootRevealItem,
 } from './loot-boxes';
+import {
+  boxOpenBlockedToast,
+  canOpenLootBoxInRoom,
+} from './safe-zones';
 
 export {
   computePlayerDamage,
@@ -280,14 +284,17 @@ export function useInventoryItem(
   if (!t.usable) {
     return { ok: false, save, reason: 'CANNOT USE THAT HERE' };
   }
-  // Loot boxes — starter / specials from bag; tiered achievement boxes menu-only
+  // Loot boxes — only inside safe zones (hard rule)
   if (isLootBoxTemplateId(templateId)) {
     if (isAchievementLootBoxTemplateId(templateId)) {
       return {
         ok: false,
         save,
-        reason: 'OPEN THAT FROM ACHIEVEMENTS',
+        reason: 'OPEN THAT FROM ACHIEVEMENTS (IN A SAFE ZONE)',
       };
+    }
+    if (!canOpenLootBoxInRoom(save.roomId)) {
+      return { ok: false, save, reason: boxOpenBlockedToast() };
     }
     const r = openLootBox(save, templateId);
     if (!r.ok) {

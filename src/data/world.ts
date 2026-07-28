@@ -119,6 +119,8 @@ export const ROOMS: Record<string, RoomDef> = {
     floor: 0,
     mapX: -1,
     mapY: 0,
+    /** Shared safe room — all guild doors portal here. */
+    safe: true,
     // East unlocks when tutorial_complete (locks behind you on entry)
     east: 'overworld',
     tiles: [
@@ -154,6 +156,22 @@ export const ROOMS: Record<string, RoomDef> = {
       { kind: 'rack', id: 'rack-axe', x: 7, y: 2 },
       { kind: 'rack', id: 'rack-bow', x: 9, y: 2 },
       { kind: 'rack', id: 'rack-staff', x: 11, y: 2 },
+      // Practice crate for boxes tutorial (open only in this safe zone)
+      {
+        kind: 'loot_crate',
+        id: 'guild-practice-crate',
+        x: 6,
+        y: 5,
+        lootBoxId: 'loot_box_bronze',
+      },
+      // Exit portal when you entered from a dungeon guild door
+      {
+        kind: 'portal',
+        id: 'portal-guild-exit',
+        x: 2,
+        y: 5,
+        portalTarget: 'guild_return',
+      },
       {
         kind: 'sign',
         id: 'guild-entrance-sign',
@@ -501,6 +519,7 @@ export const ROOMS: Record<string, RoomDef> = {
           'U = BACK TO THE SURFACE.',
           'N = DEEPER HALLS.',
           'E = THE SORRY CUBE. TALK OR FIGHT.',
+          'CYAN PORTAL = TUTORIAL GUILD (SAFE ZONE).',
         ],
       },
       {
@@ -521,6 +540,14 @@ export const ROOMS: Record<string, RoomDef> = {
         x: 8,
         y: 8,
         chestTable: 'dungeon',
+      },
+      // Shared Tutorial Guild portal — always the same guild_hall room
+      {
+        kind: 'portal',
+        id: 'portal-guild-b1',
+        x: 12,
+        y: 8,
+        portalTarget: 'guild_hall',
       },
     ],
   },

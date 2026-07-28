@@ -138,9 +138,13 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 - **USS Plot Hole / redshirt room soft-lock** — 16:9 rim seal closed single-tile open exits (trek east → gate). Seal now keeps walkable mouths with walkable interiors; regression test covers all linked room edges.
 - **ESC → Main Title freeze** — `scene.start('Title')` mid-`update` after pause could hang Phaser. Title exit is deferred one tick, Game+UI fully stopped, pause overlay has tappable **RESUME** / **MAIN MENU**.
 
+### Added
+
+- **Tutorial Guild curriculum** — phases: weapons (sword→axe→bow→staff) → inventory (I) → boxes (safe-zone only) → safe-zone lesson → graduate. Lower-left checklist tracks steps. Guild Master is a humanoid rodent mentor with full-sentence welcome/weapon tutorial. Bookshelves are full-tile solid. Hard rule: boxes open only in safe zones. Shared `guild_hall` portal from B1 entrance (and meadow west); same hall every time.
+
 ### Changed
 
-- **Achievement reward boxes → Achievements menu only** — no mid-room crate drops or bag stacks for tiered `loot_box_*`. Unlocks queue boxes under **Achievements → REWARD BOXES** (Open box). Starter box still bag/crate. Legacy bag boxes migrate into the menu queue.
+- **Achievement reward boxes → Achievements menu only** — no mid-room crate drops or bag stacks for tiered `loot_box_*`. Unlocks queue boxes under **Achievements → REWARD BOXES** (Open box). Starter box still bag/crate. Legacy bag boxes migrate into the menu queue. Boxes still require a safe zone to open.
 - **Quests + Achievements as separate tabs** — full-width journal tab bar; each has its own panel. Top bar: **Quests** (J) and **Achievements**; modal title/blurb switch per tab.
 - **Journal: Brags → Achievements** — tab label, summary, row status, and unlock toasts use **Achievements** / `NEW ACHIEVEMENT:` (internal `brag-*` ids unchanged for saves).
 - **Inventory layout (Comb + Pollen council)** — character strip on top (doll | compact equip | stats), bag grid left-aligned, inspect card on the right filling the old dead void. Zone plates (green character / gold bag / muted detail), larger pager hit targets, package spend buttons clamped above the bag band.

@@ -304,13 +304,16 @@ import {
 import { playMusic, playSfx, type MusicId } from '../systems/audio';
 import { loadSettings } from '../systems/settings';
 import {
-  allWeaponHitsDone,
+  boxOpenBlockedToast,
   canExitGuildEast,
+  canGraduateTutorial,
+  canOpenLootBoxInRoom,
   canUseDungeonStairs,
   completeTutorial,
   drillDamageRequired,
   dummyHitToast,
   eastDoorBlockedToast,
+  ensureTutorialPracticeBox,
   GUILD_HALL_ID,
   GUILD_MASTER_ID,
   guildMasterDialog,
@@ -319,9 +322,13 @@ import {
   equippedGuildLoaner,
   ensureCatalogInBag,
   isRackEmpty,
+  isSafeRoomDef,
   isTutorialComplete,
   listRackWeaponOptions,
+  markTutorialBoxOpened,
   markTutorialIntroSeen,
+  markTutorialInventoryOpened,
+  markTutorialSafeZoneLearned,
   needsTutorialIntro,
   nextTutorialWeapon,
   rackDialog,
@@ -333,6 +340,8 @@ import {
   stairsBlockedToast,
   stripGuildLoanerWeapons,
   takeWeaponFromRack,
+  tutorialChecklist,
+  tutorialPhase,
   tutorialWeaponFromEquip,
   weaponDamageDealt,
   type RackPickerPayload,
@@ -1281,6 +1290,14 @@ export class GameScene extends Phaser.Scene {
     if (open && this.player.body) {
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     }
+    if (open && !isTutorialComplete(this.save)) {
+      const before = this.save;
+      this.save = markTutorialInventoryOpened(this.save);
+      if (this.save !== before) {
+        writeSave(this.save);
+        this.emitTutorialChecklist();
+      }
+    }
   };
 
   private onMapzState = (open: boolean): void => {
@@ -1461,8 +1478,31 @@ export class GameScene extends Phaser.Scene {
     if (this.dialogLocked || this.paused || this.mapzOpen || this.forjingOpen) {
       return;
     }
+    // Opening inventory completes that tutorial step
+    if (!isTutorialComplete(this.save) && !this.inventoryOpen) {
+      const before = this.save;
+      this.save = markTutorialInventoryOpened(this.save);
+      if (this.save !== before) {
+        writeSave(this.save);
+        this.emitTutorialChecklist();
+        if (tutorialPhase(this.save) === 'boxes') {
+          this.save = ensureTutorialPracticeBox(this.save);
+          writeSave(this.save);
+          this.game.events.emit(
+            'toast',
+            'NEXT: OPEN THE PRACTICE CRATE IN THE GUILD',
+          );
+        }
+      }
+    }
     this.game.events.emit('inventory-toggle', this.save);
   };
+
+  /** Push lower-left checklist state to UIScene. */
+  private emitTutorialChecklist(): void {
+    const payload = tutorialChecklist(this.save);
+    this.game.events.emit('tutorial-checklist', payload);
+  }
 
   /** P — graduate this hero into Army Mode (needs Lv20+). Keep crawling for more. */
   private onGraduateArmyKey = (): void => {
@@ -1799,7 +1839,9 @@ export class GameScene extends Phaser.Scene {
         this.game.events.emit('toast', result.reason);
         return;
       }
-      this.save = result.save;
+      this.save = result.lootReveal
+        ? markTutorialBoxOpened(result.save)
+        : result.save;
       writeSave(this.save);
       this.emitHud();
       this.refreshDarkOverlay();
@@ -1810,6 +1852,7 @@ export class GameScene extends Phaser.Scene {
       );
       this.game.events.emit('inventory-refresh', this.save);
       if (result.lootReveal) {
+        this.emitTutorialChecklist();
         // Close bag so the big reveal window is the star
         if (this.inventoryOpen) {
           this.game.events.emit('inventory-toggle', this.save);
@@ -3024,10 +3067,15 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
+    // Shared guild: practice box for boxes phase + checklist HUD
+    if (resolved === GUILD_HALL_ID && !isTutorialComplete(this.save)) {
+      this.save = ensureTutorialPracticeBox(this.save);
+    }
     this.emitHud();
     writeSave(this.save);
     this.syncCompanion();
     this.flushAchievements();
+    this.emitTutorialChecklist();
 
     // Beach wake — identity (M/F) first, then lie → sit → stand
     if (resolved === BEACH_START_ID && needsBeachWake(this.save)) {
@@ -3602,20 +3650,23 @@ export class GameScene extends Phaser.Scene {
                 (def.id ?? '').startsWith('elf-guard')) &&
               this.textures.exists('elf_guard')
             ? 'elf_guard'
-            : def.id === 'captain' && this.textures.exists('captain')
-              ? 'captain'
-              : def.id === 'royal-goose' && this.textures.exists('royal_goose')
-                ? 'royal_goose'
-                : def.id === ASSISTANT_HONK_ID &&
-                    this.textures.exists('assistant_honk')
-                  ? 'assistant_honk'
-                  : isSkyRedwood && this.textures.exists('tree_redwood')
-                    ? 'tree_redwood'
-                    : oreTex && this.textures.exists(oreTex)
-                      ? oreTex
-                      : rackTex && this.textures.exists(rackTex)
-                        ? rackTex
-                        : (ENTITY_TEX[def.kind] ?? 'npc');
+            : def.id === GUILD_MASTER_ID &&
+                this.textures.exists('guild_master')
+              ? 'guild_master'
+              : def.id === 'captain' && this.textures.exists('captain')
+                ? 'captain'
+                : def.id === 'royal-goose' && this.textures.exists('royal_goose')
+                  ? 'royal_goose'
+                  : def.id === ASSISTANT_HONK_ID &&
+                      this.textures.exists('assistant_honk')
+                    ? 'assistant_honk'
+                    : isSkyRedwood && this.textures.exists('tree_redwood')
+                      ? 'tree_redwood'
+                      : oreTex && this.textures.exists(oreTex)
+                        ? oreTex
+                        : rackTex && this.textures.exists(rackTex)
+                          ? rackTex
+                          : (ENTITY_TEX[def.kind] ?? 'npc');
     const placed = this.roomExpand
       ? mapEntityTile(def.x, def.y, this.roomExpand)
       : { x: def.x, y: def.y };
@@ -3642,8 +3693,11 @@ export class GameScene extends Phaser.Scene {
       sprite.setTint(bud?.tint ?? 0x4ad4c8);
     }
     // royal-goose / assistant-honk use dedicated goose textures (no tint)
-    if (def.id === GUILD_MASTER_ID || def.id === 'old-man') {
-      sprite.setTint(0xffe08a); // guild gold — tutorial master
+    if (def.id === GUILD_MASTER_ID) {
+      // Rodent mentor texture is already colored — light warm wash only
+      sprite.clearTint();
+    } else if (def.id === 'old-man') {
+      sprite.setTint(0xffe08a);
     }
     if (def.id === RULES_LAWYER_ID) {
       sprite.setTint(0xc8c0e8); // binder grey-purple skeleton clerk
@@ -3699,6 +3753,7 @@ export class GameScene extends Phaser.Scene {
       'merchant',
       'sign',
       'chest',
+      'loot_crate',
       'key',
       'heart',
       'sword',
@@ -3797,8 +3852,9 @@ export class GameScene extends Phaser.Scene {
         bw = 14;
         bh = 12;
       } else if (def.kind === 'bookshelf') {
-        bw = 14;
-        bh = 12;
+        // Full-tile footprint so shelves are true impassable obstacles
+        bw = Math.max(20, Math.floor(fw * 0.92));
+        bh = Math.max(20, Math.floor(fh * 0.88));
       } else if (def.kind === 'chest' || def.kind === 'forje') {
         bw = 14;
         bh = 12;
@@ -3963,6 +4019,7 @@ export class GameScene extends Phaser.Scene {
       shopId: def.shopId,
       mapzId: def.mapzId,
       portalTarget: def.portalTarget,
+      lootBoxId: def.lootBoxId,
       contactDamage,
       // Cube / Rules Lawyer: peaceful until hit or chest; others chase
       aggressive:
@@ -4077,12 +4134,31 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const resolved = resolveRoomId(target ?? '');
-    if (!target || !ROOMS[resolved]) {
+    // Shared Tutorial Guild exit — return to the room you came from
+    let dest = target ?? '';
+    if (
+      actor.id === 'portal-guild-exit' ||
+      dest === 'guild_return'
+    ) {
+      dest =
+        this.save.guildReturnRoomId && ROOMS[this.save.guildReturnRoomId]
+          ? this.save.guildReturnRoomId
+          : 'overworld';
+    }
+    const resolved = resolveRoomId(dest);
+    if (!dest || !ROOMS[resolved]) {
       // Brief cooldown so a dead target does not spam toasts every frame
       this.portalCooldown = 400;
       this.game.events.emit('toast', 'PORTAL FLICKERS… NO SIGNAL');
       return;
+    }
+    // Entering the shared guild hall: remember where to return
+    if (resolved === GUILD_HALL_ID && this.room.id !== GUILD_HALL_ID) {
+      this.save = {
+        ...this.save,
+        guildReturnRoomId: this.room.id,
+      };
+      writeSave(this.save);
     }
     this.transitionLock = true;
     this.portalCooldown = 900;
@@ -4115,6 +4191,13 @@ export class GameScene extends Phaser.Scene {
         'toast',
         `EXIT PORTAL → ${destTitle.toUpperCase()}`,
       );
+    } else if (resolved === GUILD_HALL_ID) {
+      this.game.events.emit('toast', 'TUTORIAL GUILD — SAFE ZONE');
+    } else if (
+      actor.id === 'portal-guild-exit' ||
+      (target ?? '') === 'guild_return'
+    ) {
+      this.game.events.emit('toast', 'LEFT THE GUILD PORTAL');
     } else {
       this.game.events.emit('toast', 'PORTAL WHOOSH');
     }
@@ -4155,6 +4238,8 @@ export class GameScene extends Phaser.Scene {
 
   private hurtPlayer(from: Actor): void {
     if (!from.alive || this.invuln > 0 || this.dialogLocked || this.paused) return;
+    // Safe zones: no enemy contact damage (Tutorial Guild and future rest stops)
+    if (isSafeRoomDef(this.room)) return;
     // Peaceful cube / Rules Lawyer (not yet hit) — walk up and press E
     if (this.isUnprovokedPeaceful(from)) return;
     // Turn-based mode: contact starts a battle instead of real-time damage
@@ -5479,6 +5564,7 @@ export class GameScene extends Phaser.Scene {
     const r = recordDummyDamage(this.save, w, dmg);
     this.save = r.save;
     writeSave(this.save);
+    this.emitTutorialChecklist();
     // Reflect remaining drill HP on this dummy (shared progress pool)
     if (r.accepted) {
       actor.maxHp = r.required;
@@ -5492,9 +5578,12 @@ export class GameScene extends Phaser.Scene {
         `${w?.toUpperCase() ?? 'WEAPON'} CLEAR — NEXT: ${r.next.toUpperCase()}`,
       );
     } else if (r.advanced && !r.next) {
+      this.save = ensureTutorialPracticeBox(this.save);
+      writeSave(this.save);
+      this.emitTutorialChecklist();
       this.game.events.emit(
         'toast',
-        'ALL WEAPONS CLEAR — TALK TO GUILD MASTER',
+        'WEAPONS DONE — TALK TO GUILD MASTER (THEN INVENTORY)',
       );
     }
   }
@@ -5687,26 +5776,41 @@ export class GameScene extends Phaser.Scene {
     if (needsTutorialIntro(this.save)) {
       this.save = markTutorialIntroSeen(this.save);
       writeSave(this.save);
+      this.emitTutorialChecklist();
       this.game.events.emit('dialog-show', guildMasterIntroDialog());
-      this.game.events.emit('toast', 'RACKS (E) · DUMMIES (ATK) · MASTER (E)');
+      this.game.events.emit(
+        'toast',
+        'CHECKLIST LOWER LEFT · RACKS (E) · DUMMIES (ATK)',
+      );
       return;
     }
 
-    if (allWeaponHitsDone(this.save)) {
+    // Safe-zone lesson: talking completes that phase
+    if (tutorialPhase(this.save) === 'safe_zone') {
+      this.save = markTutorialSafeZoneLearned(this.save);
+      writeSave(this.save);
+      this.emitTutorialChecklist();
+      this.game.events.emit('dialog-show', guildMasterDialog(this.save));
+      this.game.events.emit('toast', 'SAFE ZONE LESSON LEARNED');
+      return;
+    }
+
+    if (canGraduateTutorial(this.save)) {
       this.save = completeTutorial(this.save);
       writeSave(this.save);
       this.refreshPlayerAppearance();
       this.syncWeaponRackSprites();
+      this.emitTutorialChecklist();
       // Unlock east door tiles live
       this.tileGrid = this.applyPersistentDoorUnlocks(this.tileGrid);
       this.rebuildMapTilesForUnlock();
       this.game.events.emit('dialog-show', [
         ...guildMasterDialog(this.save),
         '',
-        'RACK WEAPONS STAY IN THE HALL. LOANERS ONLY.',
-        'A STARTER CRATE APPEARS IN A FLASH OF LIGHT!',
-        'WALK TO IT AND PRESS E — OR OPEN FROM BAG [I].',
-        'SWORD, LEATHER SET, WOOD SHIELD. YOU EARNED IT.',
+        'Rack weapons stay in the hall as loaners only.',
+        'A starter crate appears in a flash of light!',
+        'Walk to it and press E — or open it from your bag with I.',
+        'You get a sword, a leather set, and a wood shield.',
       ]);
       this.game.events.emit(
         'toast',
@@ -5720,13 +5824,23 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    // Mid-curriculum coaching (weapons / inventory / boxes)
+    if (tutorialPhase(this.save) === 'boxes') {
+      this.save = ensureTutorialPracticeBox(this.save);
+      writeSave(this.save);
+    }
     const need = nextTutorialWeapon(this.save);
     this.game.events.emit('dialog-show', guildMasterDialog(this.save));
+    this.emitTutorialChecklist();
     if (need) {
       this.game.events.emit(
         'toast',
         `NEXT DRILL: ${need.toUpperCase()}`,
       );
+    } else if (tutorialPhase(this.save) === 'inventory') {
+      this.game.events.emit('toast', 'NEXT: PRESS I FOR INVENTORY');
+    } else if (tutorialPhase(this.save) === 'boxes') {
+      this.game.events.emit('toast', 'NEXT: OPEN THE PRACTICE CRATE (E)');
     }
   }
 
@@ -5861,6 +5975,11 @@ export class GameScene extends Phaser.Scene {
       this.destroyActor(actor);
       return;
     }
+    if (!canOpenLootBoxInRoom(this.room.id, this.room.safe)) {
+      playSfx('error');
+      this.game.events.emit('toast', boxOpenBlockedToast());
+      return;
+    }
     if ((this.save.stacks[templateId] ?? 0) <= 0) {
       this.game.events.emit('toast', 'ALREADY OPENED');
       this.destroyActor(actor);
@@ -5872,9 +5991,10 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('toast', r.reason);
       return;
     }
-    this.save = syncDerivedStats(r.save);
+    this.save = markTutorialBoxOpened(syncDerivedStats(r.save));
     writeSave(this.save);
     this.emitHud();
+    this.emitTutorialChecklist();
     // Flash on open
     const sx = actor.sprite.x;
     const sy = actor.sprite.y;
@@ -7823,6 +7943,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private hurtPlayerFromProjectile(dmg: number): void {
+    if (isSafeRoomDef(this.room)) return;
     if (this.invuln > 0 || this.dialogLocked || this.paused) return;
     if (
       isCompanionActive(this.save) &&

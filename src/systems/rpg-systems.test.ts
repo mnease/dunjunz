@@ -3467,15 +3467,23 @@ describe('tutorial guild hall', () => {
     expect(save.equipped.weapon).toBeNull();
   });
 
-  it('intro welcomes to Dunjunz, then guild master, then drills', () => {
+  it('intro welcomes to Tutorial Guild with full-sentence weapon steps', () => {
     const intro = guildMasterIntroDialog().join('\n');
-    expect(intro).toMatch(/WELCOME TO DUNJUNZ/i);
-    expect(intro).toMatch(/PRINCESS PRIZELLA|QUEST/i);
-    expect(intro).toMatch(/TRAINING GUILD/i);
-    expect(intro).toMatch(/TUTORIAL GUILD MASTER/i);
-    expect(intro).toMatch(/SWORD.*AXE.*BOW.*STAFF/s);
+    expect(intro).toMatch(/Welcome to the Tutorial Guild/i);
+    expect(intro).toMatch(/Guild Master/i);
+    expect(intro).toMatch(/Princess Prizella/i);
+    expect(intro).toMatch(/Step 1/i);
+    expect(intro).toMatch(/sword rack/i);
+    expect(intro).toMatch(/Step 2/i);
+    expect(intro).toMatch(/dummy/i);
+    expect(intro).toMatch(/axe/i);
+    expect(intro).toMatch(/bow/i);
+    expect(intro).toMatch(/staff/i);
+    expect(intro).toMatch(/checklist/i);
+    // Full sentences — not telegram fragments only
+    expect(intro.split(/[.!]/).filter((s) => s.trim().length > 20).length).toBeGreaterThan(4);
     const lines = guildMasterDialog(defaultSave());
-    expect(lines.some((l) => /SWORD|AXE|DUMMY|GUILD/i.test(l))).toBe(true);
+    expect(lines.some((l) => /sword|axe|dummy|weapon/i.test(l))).toBe(true);
   });
 
   it('beach wake voice greets crawler id and points north', async () => {
@@ -3524,6 +3532,62 @@ describe('tutorial guild hall', () => {
     // Idempotent
     save = completeTutorial(save);
     expect(save.stacks.crawler_starter_box).toBe(1);
+  });
+
+  it('tutorial phases, checklist, safe rooms, and box open gate', async () => {
+    const {
+      tutorialPhase,
+      tutorialChecklist,
+      canGraduateTutorial,
+      markTutorialInventoryOpened,
+      markTutorialBoxOpened,
+      markTutorialSafeZoneLearned,
+      isSafeRoom,
+      canOpenLootBoxInRoom,
+      boxOpenBlockedToast,
+      ensureTutorialPracticeBox,
+      recordDummyHit,
+    } = await import('./tutorial');
+    let save = defaultSave();
+    expect(tutorialPhase(save)).toBe('weapons');
+    const weaponsCheck = tutorialChecklist(save);
+    expect(weaponsCheck?.phase).toBe('weapons');
+    expect(weaponsCheck?.steps.length).toBe(4);
+    expect(weaponsCheck?.steps.every((s) => !s.done)).toBe(true);
+    expect(weaponsCheck?.steps[0]?.label.toLowerCase()).toMatch(/sword/);
+
+    for (const w of ['sword', 'axe', 'bow', 'staff'] as const) {
+      save = recordDummyHit(save, w).save;
+    }
+    expect(tutorialPhase(save)).toBe('inventory');
+    expect(tutorialChecklist(save)?.title.toLowerCase()).toMatch(/inventory/);
+
+    save = markTutorialInventoryOpened(save);
+    expect(tutorialPhase(save)).toBe('boxes');
+    save = ensureTutorialPracticeBox(save);
+    expect(save.stacks.loot_box_bronze).toBeGreaterThanOrEqual(1);
+
+    expect(isSafeRoom('guild_hall')).toBe(true);
+    expect(isSafeRoom('b1_entrance')).toBe(false);
+    expect(canOpenLootBoxInRoom('guild_hall')).toBe(true);
+    expect(canOpenLootBoxInRoom('b1_entrance')).toBe(false);
+    expect(boxOpenBlockedToast().toLowerCase()).toMatch(/safe zone/);
+
+    save = markTutorialBoxOpened(save);
+    expect(tutorialPhase(save)).toBe('safe_zone');
+    save = markTutorialSafeZoneLearned(save);
+    expect(tutorialPhase(save)).toBe('graduate');
+    expect(canGraduateTutorial(save)).toBe(true);
+    expect(tutorialChecklist(save)).toBeNull();
+
+    // Shared guild portal from dungeon
+    const { ROOMS } = await import('../data/world');
+    expect(ROOMS.guild_hall?.safe).toBe(true);
+    const guildPortal = (ROOMS.b1_entrance?.entities ?? []).find(
+      (e) => e.id === 'portal-guild-b1',
+    );
+    expect(guildPortal?.kind).toBe('portal');
+    expect(guildPortal?.portalTarget).toBe('guild_hall');
   });
 
   it('buildRackPickerPayload lists hanging weapons with blurbs', () => {

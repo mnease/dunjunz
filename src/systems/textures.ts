@@ -2561,6 +2561,39 @@ export function generateTextures(scene: Phaser.Scene): void {
     fill(ctx, '#4a3060', 17, 24, 5, 6);
   });
 
+  // Tutorial Guild Master — upright humanoid rodent mentor (original, Splinter-like)
+  canvasTex(scene, 'guild_master', ART_RES, ART_RES, (ctx) => {
+    // Robe / sash body
+    shadedBlock(ctx, '#4a3a28', '#6a5840', '#2a2014', 8, 14, 16, 12);
+    fill(ctx, '#c9a227', 8, 16, 16, 2); // sash
+    fill(ctx, '#3a2a18', 9, 18, 14, 6);
+    // Rat head
+    shadedBlock(ctx, '#8a7a68', '#c0b0a0', '#5a4a3a', 9, 4, 14, 11);
+    // Snout
+    shadedBlock(ctx, '#a09080', '#d0c0b0', '#6a5a4a', 12, 10, 8, 5);
+    fill(ctx, '#3a2820', 14, 13, 4, 2); // nose
+    // Ears
+    fill(ctx, '#8a6a60', 8, 2, 5, 5);
+    fill(ctx, '#c09088', 9, 3, 3, 3);
+    fill(ctx, '#8a6a60', 19, 2, 5, 5);
+    fill(ctx, '#c09088', 20, 3, 3, 3);
+    // Eyes (wise slits)
+    fill(ctx, '#1a1010', 12, 7, 2, 2);
+    fill(ctx, '#1a1010', 18, 7, 2, 2);
+    fill(ctx, '#e8e0d0', 12, 7, 1, 1);
+    fill(ctx, '#e8e0d0', 18, 7, 1, 1);
+    // Whiskers
+    fill(ctx, '#d8d0c0', 8, 12, 4, 1);
+    fill(ctx, '#d8d0c0', 20, 12, 4, 1);
+    // Staff / cane
+    fill(ctx, '#5a4020', 24, 12, 2, 16);
+    fill(ctx, '#c9a227', 23, 11, 4, 3);
+    // Feet
+    fill(ctx, '#3a2a18', 10, 26, 5, 4);
+    fill(ctx, '#3a2a18', 17, 26, 5, 4);
+    spark(ctx, 25, 12, '#ffc857');
+  });
+
   canvasTex(scene, 'merchant', ART_RES, ART_RES, (ctx) => {
     shadedBlock(ctx, '#8b5a2b', '#a06830', '#5a3d1a', 6, 14, 20, 12);
     fill(ctx, '#c9a227', 4, 12, 24, 5);

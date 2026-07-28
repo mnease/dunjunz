@@ -21,6 +21,11 @@ import {
   openPendingAchievementBox,
   tierLabel,
 } from '../systems/loot-boxes';
+import {
+  boxOpenBlockedToast,
+  canOpenLootBoxInRoom,
+  markTutorialBoxOpened,
+} from '../systems/tutorial';
 import { playSfx } from '../systems/audio';
 
 export type JournalTab = 'quests' | 'achievements';
@@ -195,12 +200,25 @@ export function initJournalUi(): void {
 
   const openBoxAt = (index: number) => {
     const save = loadSave();
+    if (!canOpenLootBoxInRoom(save.roomId)) {
+      playSfx('error');
+      window.dispatchEvent(
+        new CustomEvent('dunjunz-toast', {
+          detail: boxOpenBlockedToast(),
+        }),
+      );
+      // Prefer in-game toast if GameScene is live
+      (
+        window as unknown as { __dunjunzToast?: (m: string) => void }
+      ).__dunjunzToast?.(boxOpenBlockedToast());
+      return;
+    }
     const r = openPendingAchievementBox(save, index);
     if (!r.ok) {
       playSfx('error');
       return;
     }
-    pushSaveToGame(r.save);
+    pushSaveToGame(markTutorialBoxOpened(r.save));
     playSfx('success');
     (
       window as unknown as {

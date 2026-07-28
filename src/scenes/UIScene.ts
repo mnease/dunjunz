@@ -61,7 +61,7 @@ import {
   type MapzOpenPayload,
   type MapzViewModel,
 } from '../systems/mapz';
-import type { RackPickerPayload } from '../systems/tutorial';
+import type { ChecklistStep, RackPickerPayload } from '../systems/tutorial';
 import {
   canAfford,
   clampShopPage,
@@ -186,6 +186,9 @@ export class UIScene extends Phaser.Scene {
   private pauseResumeLabel: Phaser.GameObjects.Text | null = null;
   private pauseTitleLabel: Phaser.GameObjects.Text | null = null;
   private toastText: Phaser.GameObjects.Text | null = null;
+  /** Lower-left tutorial checklist (weapons → inventory → boxes → safe zone). */
+  private tutorialCheckBg: Phaser.GameObjects.Rectangle | null = null;
+  private tutorialCheckText: Phaser.GameObjects.Text | null = null;
 
   private invBg: Phaser.GameObjects.Rectangle | null = null;
   private invTitle: Phaser.GameObjects.Text | null = null;
@@ -443,6 +446,27 @@ export class UIScene extends Phaser.Scene {
         wordWrap: { width: GAME_W - 40 },
       })
       .setDepth(51)
+      .setScrollFactor(0)
+      .setVisible(false);
+
+    // Tutorial checklist — lower left (below quest strip, above dialog dock)
+    const checkY = GAME_H - 210;
+    this.tutorialCheckBg = this.add
+      .rectangle(8, checkY, 340, 160, 0x0a0c10, 0.88)
+      .setOrigin(0, 0)
+      .setStrokeStyle(2, 0x3a9a68, 0.75)
+      .setDepth(55)
+      .setScrollFactor(0)
+      .setVisible(false);
+    this.tutorialCheckText = this.add
+      .text(16, checkY + 8, '', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
+        color: '#7dffb3',
+        lineSpacing: 6,
+        wordWrap: { width: 320 },
+      })
+      .setDepth(56)
       .setScrollFactor(0)
       .setVisible(false);
 
@@ -1535,6 +1559,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('dialog-close', this.closeDialog, this);
     this.game.events.on('inventory-nav', this.onInventoryNav, this);
     this.game.events.on('toast', this.showToast, this);
+    this.game.events.on('tutorial-checklist', this.onTutorialChecklist, this);
     this.game.events.on('pause-ui', this.setPaused, this);
     this.game.events.on('ui-reset', this.onUiReset, this);
     this.game.events.on('inventory-toggle', this.onInventoryToggle, this);
@@ -1578,6 +1603,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('dialog-close', this.closeDialog, this);
       this.game.events.off('inventory-nav', this.onInventoryNav, this);
       this.game.events.off('toast', this.showToast, this);
+      this.game.events.off('tutorial-checklist', this.onTutorialChecklist, this);
       this.game.events.off('pause-ui', this.setPaused, this);
       this.game.events.off('ui-reset', this.onUiReset, this);
       this.game.events.off('inventory-toggle', this.onInventoryToggle, this);
@@ -3844,6 +3870,32 @@ export class UIScene extends Phaser.Scene {
     this.invBagSelected = i;
     this.invBagPage = Math.floor(i / UIScene.BAG_PAGE_SIZE);
     this.renderBagGrid(this.lastSave);
+  };
+
+  private onTutorialChecklist = (
+    payload: {
+      phase: string;
+      title: string;
+      steps: ChecklistStep[];
+    } | null,
+  ): void => {
+    if (!this.tutorialCheckBg || !this.tutorialCheckText) return;
+    if (!payload || !payload.steps?.length) {
+      this.tutorialCheckBg.setVisible(false);
+      this.tutorialCheckText.setVisible(false);
+      return;
+    }
+    const lines = [
+      payload.title.toUpperCase(),
+      ...payload.steps.map(
+        (s) => `${s.done ? '[x]' : '[ ]'} ${s.label}`,
+      ),
+    ];
+    this.tutorialCheckText.setText(lines.join('\n'));
+    const h = Math.min(200, 28 + payload.steps.length * 22);
+    this.tutorialCheckBg.setSize(340, h);
+    this.tutorialCheckBg.setVisible(true);
+    this.tutorialCheckText.setVisible(true);
   };
 
   private showToast = (msg: string): void => {

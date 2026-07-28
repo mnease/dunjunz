@@ -224,6 +224,11 @@ export interface RoomDef {
   dark?: boolean;
   /** Authored side role for P0 grammar / tests. */
   sideRole?: RoomSideRole;
+  /**
+   * Safe zone: no enemy attack damage; loot boxes may be opened.
+   * Tutorial Guild hall is always safe; other rooms may opt in.
+   */
+  safe?: boolean;
 }
 
 /** Combat presentation (Mirror of Changing). */
@@ -312,6 +317,11 @@ export interface SaveData {
     fromTitle: string;
     achievementId: string;
   }[];
+  /**
+   * Room to return to when leaving the shared Tutorial Guild via portal.
+   * Set when entering guild_hall from a dungeon (or other) guild door.
+   */
+  guildReturnRoomId?: string | null;
   // ── v6: hard mode + identity ─────────────────────────────
   /** Land currently being replayed on hard (null = normal). */
   hardRunLand?: LandId | null;
