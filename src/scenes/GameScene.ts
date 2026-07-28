@@ -1768,7 +1768,7 @@ export class GameScene extends Phaser.Scene {
     newly.forEach((a, i) => {
       this.time.delayedCall(i * 400, () => {
         playSfx('success');
-        this.game.events.emit('toast', `NEW BRAG: ${a.title}`);
+        this.game.events.emit('toast', `NEW ACHIEVEMENT: ${a.title}`);
       });
     });
     boxed.boxes.forEach((b, i) => {

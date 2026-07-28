@@ -1,6 +1,6 @@
 /**
- * Brags (achievements) — retro brag board, not corporate gamification.
- * Unlock copy: "NEW BRAG:" — bard energy, not Xbox energy.
+ * Achievements — player-facing unlock board (Journal).
+ * Unlock toast: "NEW ACHIEVEMENT:" — internal ids may still use brag-*.
  */
 
 import type { SaveData } from '../types';

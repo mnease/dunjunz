@@ -1,5 +1,5 @@
 /**
- * Journal modal — quests + brags (achievements).
+ * Journal modal — quests + achievements.
  * HTML shell for scrollable lists + keyboard (matches Settings pattern).
  */
 
@@ -17,7 +17,7 @@ import {
 } from '../systems/achievements';
 import { playSfx } from '../systems/audio';
 
-type Tab = 'quests' | 'brags';
+type Tab = 'quests' | 'achievements';
 
 let activeTab: Tab = 'quests';
 
@@ -26,7 +26,9 @@ export function initJournalUi(): void {
   const modal = document.getElementById('journal-modal');
   const closeBtns = document.querySelectorAll('[data-journal-close]');
   const tabQuests = document.getElementById('journal-tab-quests');
-  const tabBrags = document.getElementById('journal-tab-brags');
+  const tabAchievements =
+    document.getElementById('journal-tab-achievements') ??
+    document.getElementById('journal-tab-brags');
   const body = document.getElementById('journal-body');
   const summary = document.getElementById('journal-summary');
 
@@ -48,16 +50,19 @@ export function initJournalUi(): void {
   const setTab = (tab: Tab) => {
     activeTab = tab;
     tabQuests?.classList.toggle('is-active', tab === 'quests');
-    tabBrags?.classList.toggle('is-active', tab === 'brags');
+    tabAchievements?.classList.toggle('is-active', tab === 'achievements');
     tabQuests?.setAttribute('aria-selected', tab === 'quests' ? 'true' : 'false');
-    tabBrags?.setAttribute('aria-selected', tab === 'brags' ? 'true' : 'false');
+    tabAchievements?.setAttribute(
+      'aria-selected',
+      tab === 'achievements' ? 'true' : 'false',
+    );
     playSfx('ui_click');
     render();
   };
 
   const render = () => {
     let save = loadSave();
-    // Refresh brags when opening journal
+    // Refresh achievements when opening journal
     const synced = syncAchievements(save);
     if (synced.newly.length) {
       save = synced.save;
@@ -85,7 +90,7 @@ export function initJournalUi(): void {
       const list = listAchievementsForUi(save);
       const prog = achievementProgress(save);
       if (summary) {
-        summary.textContent = `BRAGS  ${prog.unlocked}/${prog.total} UNLOCKED`;
+        summary.textContent = `ACHIEVEMENTS  ${prog.unlocked}/${prog.total} UNLOCKED`;
       }
       body.innerHTML = list
         .map(
@@ -94,9 +99,9 @@ export function initJournalUi(): void {
           <header class="journal-row-head">
             <span class="journal-status" aria-label="${a.unlocked ? 'Unlocked' : 'Locked'}">${a.unlocked ? '★' : '·'}</span>
             <h3 class="journal-title">${escapeHtml(a.title)}</h3>
-            <span class="journal-progress">${a.unlocked ? 'BRAGGED' : '???'}</span>
+            <span class="journal-progress">${a.unlocked ? 'DONE' : '???'}</span>
           </header>
-          <p class="journal-blurb">${a.unlocked ? escapeHtml(a.blurb) : 'Keep playing. The bard is watching.'}</p>
+          <p class="journal-blurb">${a.unlocked ? escapeHtml(a.blurb) : 'Keep playing — more to unlock.'}</p>
         </article>`,
         )
         .join('');
@@ -111,7 +116,7 @@ export function initJournalUi(): void {
     if (e.target === modal) setOpen(false);
   });
   tabQuests?.addEventListener('click', () => setTab('quests'));
-  tabBrags?.addEventListener('click', () => setTab('brags'));
+  tabAchievements?.addEventListener('click', () => setTab('achievements'));
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modal.classList.contains('is-open')) {
@@ -181,12 +186,12 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
-/** Call after game events — unlocks brags and returns toast lines. */
+/** Call after game events — unlocks achievements and returns toast lines. */
 export function applyAchievementSync(): string[] {
   const save = loadSave();
   const { save: next, newly } = syncAchievements(save);
   if (!newly.length) return [];
   writeSave(next);
   (window as unknown as { __dunjunzRefreshJournal?: () => void }).__dunjunzRefreshJournal?.();
-  return newly.map((a) => `NEW BRAG: ${a.title}`);
+  return newly.map((a) => `NEW ACHIEVEMENT: ${a.title}`);
 }
