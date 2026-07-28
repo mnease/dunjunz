@@ -1722,8 +1722,14 @@ export class GameScene extends Phaser.Scene {
 
   private onJournalKey = (): void => {
     if (this.paused) return;
-    // HTML journal modal (quests + achievements)
-    document.getElementById('journal-open')?.click();
+    // HTML journal → Quests tab (Achievements has its own topbar entry)
+    const openJournal = (
+      window as unknown as {
+        __dunjunzOpenJournal?: (t: 'quests' | 'achievements') => void;
+      }
+    ).__dunjunzOpenJournal;
+    if (openJournal) openJournal('quests');
+    else document.getElementById('journal-open')?.click();
   };
 
   /** Unlock achievements; toast any new ones. */

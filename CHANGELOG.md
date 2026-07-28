@@ -140,6 +140,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Quests + Achievements as separate tabs** — full-width journal tab bar; each has its own panel. Top bar: **Quests** (J) and **Achievements**; modal title/blurb switch per tab.
 - **Journal: Brags → Achievements** — tab label, summary, row status, and unlock toasts use **Achievements** / `NEW ACHIEVEMENT:` (internal `brag-*` ids unchanged for saves).
 - **Inventory layout (Comb + Pollen council)** — character strip on top (doll | compact equip | stats), bag grid left-aligned, inspect card on the right filling the old dead void. Zone plates (green character / gold bag / muted detail), larger pager hit targets, package spend buttons clamped above the bag band.
 - **Inventory layout pass-2 (Comb + Pollen meticulous)** — equip labels hard-capped to 2 lines (short slot chrome + ellipsized name) so text no longer collides between rows. Inspect is a bag-height sibling card (same fill, quiet gold stroke, 14px gutter) with INSPECT header, icon well, and structured body/empty state — not a short purple void overlay.

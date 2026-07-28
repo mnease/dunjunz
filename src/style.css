@@ -1174,9 +1174,14 @@ body.touch-play.mobile-immersive #game-frame {
 }
 
 .journal-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.65rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin-bottom: 0.75rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #0a0c10;
 }
 
 .journal-tab {
@@ -1186,17 +1191,35 @@ body.touch-play.mobile-immersive #game-frame {
   line-height: 1.5;
   min-height: var(--touch-min);
   color: var(--muted);
-  background: #0a0c10;
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.55rem 0.9rem;
+  background: transparent;
+  border: none;
+  border-right: 2px solid var(--border);
+  border-radius: 0;
+  padding: 0.7rem 0.75rem;
   cursor: pointer;
+  width: 100%;
+}
+
+.journal-tab:last-child {
+  border-right: none;
 }
 
 .journal-tab.is-active {
   color: var(--bg);
   background: var(--neon);
-  border-color: #3a9a68;
+}
+
+.journal-tab:not(.is-active):hover {
+  color: var(--text);
+  background: #151a24;
+}
+
+.journal-blurb-tab {
+  margin: 0 0 0.65rem;
+}
+
+.journal-body[hidden] {
+  display: none !important;
 }
 
 .journal-summary {

@@ -1,5 +1,5 @@
 /**
- * Journal modal — quests + achievements.
+ * Journal modal — Quests and Achievements on separate tabs.
  * HTML shell for scrollable lists + keyboard (matches Settings pattern).
  */
 
@@ -17,50 +17,92 @@ import {
 } from '../systems/achievements';
 import { playSfx } from '../systems/audio';
 
-type Tab = 'quests' | 'achievements';
+export type JournalTab = 'quests' | 'achievements';
 
-let activeTab: Tab = 'quests';
+let activeTab: JournalTab = 'quests';
+
+const TAB_COPY: Record<
+  JournalTab,
+  { title: string; blurb: string }
+> = {
+  quests: {
+    title: 'Quests',
+    blurb:
+      'Track quests and <strong>WHERE</strong> to go next. Active jobs pin to the top. Press <strong>J</strong> anytime.',
+  },
+  achievements: {
+    title: 'Achievements',
+    blurb:
+      'Unlocks the bard bothers to write down. Locked rows stay spoiler-safe until you earn them.',
+  },
+};
+
+/** Open the journal on a specific tab (used by topbar + game J key). */
+export function openJournal(tab: JournalTab = 'quests'): void {
+  (
+    window as unknown as { __dunjunzOpenJournal?: (t: JournalTab) => void }
+  ).__dunjunzOpenJournal?.(tab);
+}
 
 export function initJournalUi(): void {
   const openBtn = document.getElementById('journal-open');
+  const achievementsBtn = document.getElementById('achievements-open');
   const modal = document.getElementById('journal-modal');
   const closeBtns = document.querySelectorAll('[data-journal-close]');
   const tabQuests = document.getElementById('journal-tab-quests');
   const tabAchievements = document.getElementById('journal-tab-achievements');
-  const body = document.getElementById('journal-body');
+  const panelQuests = document.getElementById('journal-panel-quests');
+  const panelAchievements = document.getElementById(
+    'journal-panel-achievements',
+  );
   const summary = document.getElementById('journal-summary');
+  const titleEl = document.getElementById('journal-title');
+  const blurbEl = document.getElementById('journal-blurb');
 
-  if (!openBtn || !modal || !body) return;
+  if (!openBtn || !modal || !panelQuests || !panelAchievements) return;
 
-  const setOpen = (open: boolean) => {
+  const setOpen = (open: boolean, tab?: JournalTab) => {
+    if (open && tab) activeTab = tab;
     modal.classList.toggle('is-open', open);
     modal.setAttribute('aria-hidden', open ? 'false' : 'true');
     if (open) {
       playSfx('ui_open');
+      applyTabChrome();
       render();
-      // focus first tab for keyboard users
-      tabQuests?.focus();
+      (activeTab === 'quests' ? tabQuests : tabAchievements)?.focus();
     } else {
       playSfx('ui_close');
     }
   };
 
-  const setTab = (tab: Tab) => {
+  const applyTabChrome = () => {
+    const isQuests = activeTab === 'quests';
+    tabQuests?.classList.toggle('is-active', isQuests);
+    tabAchievements?.classList.toggle('is-active', !isQuests);
+    tabQuests?.setAttribute('aria-selected', isQuests ? 'true' : 'false');
+    tabAchievements?.setAttribute('aria-selected', isQuests ? 'false' : 'true');
+    tabQuests?.setAttribute('tabindex', isQuests ? '0' : '-1');
+    tabAchievements?.setAttribute('tabindex', isQuests ? '-1' : '0');
+    panelQuests.hidden = !isQuests;
+    panelAchievements.hidden = isQuests;
+    const copy = TAB_COPY[activeTab];
+    if (titleEl) titleEl.textContent = copy.title;
+    if (blurbEl) blurbEl.innerHTML = copy.blurb;
+  };
+
+  const setTab = (tab: JournalTab) => {
+    if (activeTab === tab && modal.classList.contains('is-open')) {
+      render();
+      return;
+    }
     activeTab = tab;
-    tabQuests?.classList.toggle('is-active', tab === 'quests');
-    tabAchievements?.classList.toggle('is-active', tab === 'achievements');
-    tabQuests?.setAttribute('aria-selected', tab === 'quests' ? 'true' : 'false');
-    tabAchievements?.setAttribute(
-      'aria-selected',
-      tab === 'achievements' ? 'true' : 'false',
-    );
+    applyTabChrome();
     playSfx('ui_click');
     render();
   };
 
   const render = () => {
     let save = loadSave();
-    // Refresh achievements when opening journal
     const synced = syncAchievements(save);
     if (synced.newly.length) {
       save = synced.save;
@@ -72,7 +114,7 @@ export function initJournalUi(): void {
       const prog = countQuestProgress(save);
       const active = list.filter((q) => q.status === 'active');
       if (summary) {
-        summary.textContent = `QUESTS  ${prog.done}/${prog.total} DONE · ${prog.active} ACTIVE · Press J anytime`;
+        summary.textContent = `QUESTS  ${prog.done}/${prog.total} DONE · ${prog.active} ACTIVE`;
       }
       const focus =
         active.length > 0
@@ -82,7 +124,7 @@ export function initJournalUi(): void {
             </div>
             <p class="journal-section-label">ALL QUESTS</p>`
           : `<p class="journal-section-label">ALL QUESTS</p>`;
-      body.innerHTML =
+      panelQuests.innerHTML =
         focus + list.map((q) => questRowHtml(q, false)).join('');
     } else {
       const list = listAchievementsForUi(save);
@@ -90,7 +132,7 @@ export function initJournalUi(): void {
       if (summary) {
         summary.textContent = `ACHIEVEMENTS  ${prog.unlocked}/${prog.total} UNLOCKED`;
       }
-      body.innerHTML = list
+      panelAchievements.innerHTML = list
         .map(
           (a) => `
         <article class="journal-row ${a.unlocked ? 'is-done' : 'is-locked'}" data-status="${a.unlocked ? 'done' : 'locked'}">
@@ -106,7 +148,10 @@ export function initJournalUi(): void {
     }
   };
 
-  openBtn.addEventListener('click', () => setOpen(true));
+  openBtn.addEventListener('click', () => setOpen(true, 'quests'));
+  achievementsBtn?.addEventListener('click', () =>
+    setOpen(true, 'achievements'),
+  );
   closeBtns.forEach((el) =>
     el.addEventListener('click', () => setOpen(false)),
   );
@@ -116,28 +161,43 @@ export function initJournalUi(): void {
   tabQuests?.addEventListener('click', () => setTab('quests'));
   tabAchievements?.addEventListener('click', () => setTab('achievements'));
 
+  // Arrow keys between tabs when focus is on a tab control
+  const onTabKey = (e: KeyboardEvent) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    setTab(activeTab === 'quests' ? 'achievements' : 'quests');
+    (activeTab === 'quests' ? tabQuests : tabAchievements)?.focus();
+  };
+  tabQuests?.addEventListener('keydown', onTabKey);
+  tabAchievements?.addEventListener('keydown', onTabKey);
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modal.classList.contains('is-open')) {
       setOpen(false);
       return;
     }
-    // J opens journal when not typing in a form
+    // J opens Quests tab when not typing in a form
     if (
       (e.key === 'j' || e.key === 'J') &&
       !modal.classList.contains('is-open') &&
       !(e.target instanceof HTMLInputElement) &&
       !(e.target instanceof HTMLTextAreaElement)
     ) {
-      // Don't steal J from game if focus is canvas... still open is fine for journal
-      setOpen(true);
+      setOpen(true, 'quests');
     }
   });
 
-  // Expose refresh for game toasts path
-  (window as unknown as { __dunjunzRefreshJournal?: () => void }).__dunjunzRefreshJournal =
-    () => {
-      if (modal.classList.contains('is-open')) render();
-    };
+  (
+    window as unknown as {
+      __dunjunzRefreshJournal?: () => void;
+      __dunjunzOpenJournal?: (t: JournalTab) => void;
+    }
+  ).__dunjunzRefreshJournal = () => {
+    if (modal.classList.contains('is-open')) render();
+  };
+  (
+    window as unknown as { __dunjunzOpenJournal?: (t: JournalTab) => void }
+  ).__dunjunzOpenJournal = (t) => setOpen(true, t);
 }
 
 function questRowHtml(q: QuestLogEntry, focused = false): string {
@@ -190,6 +250,8 @@ export function applyAchievementSync(): string[] {
   const { save: next, newly } = syncAchievements(save);
   if (!newly.length) return [];
   writeSave(next);
-  (window as unknown as { __dunjunzRefreshJournal?: () => void }).__dunjunzRefreshJournal?.();
+  (
+    window as unknown as { __dunjunzRefreshJournal?: () => void }
+  ).__dunjunzRefreshJournal?.();
   return newly.map((a) => `NEW ACHIEVEMENT: ${a.title}`);
 }

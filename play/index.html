@@ -66,9 +66,24 @@
         </div>
         <nav class="topbar-nav" aria-label="Site">
           <span id="auth-status" class="auth-status" role="status">Local play</span>
-          <button type="button" id="journal-open" class="nav-btn" title="Quest log + where to go next">
+          <button
+            type="button"
+            id="journal-open"
+            class="nav-btn"
+            title="Quest log + where to go next"
+            data-journal-tab="quests"
+          >
             Quests
             <kbd class="nav-kbd">J</kbd>
+          </button>
+          <button
+            type="button"
+            id="achievements-open"
+            class="nav-btn nav-btn-ghost"
+            title="Achievements board"
+            data-journal-tab="achievements"
+          >
+            Achievements
           </button>
           <button
             type="button"
@@ -190,7 +205,7 @@
     >
       <div class="feedback-panel journal-panel">
         <header class="feedback-header">
-          <h2 id="journal-title">Journal</h2>
+          <h2 id="journal-title">Quests</h2>
           <button
             type="button"
             class="feedback-x"
@@ -200,19 +215,15 @@
             ×
           </button>
         </header>
-        <p class="feedback-blurb">
-          Track quests, achievements, and <strong>WHERE</strong> to go next.
-          Active jobs pin to the top. Press <strong>J</strong> anytime (or HUD
-          <strong>[J] LOG</strong>).
-        </p>
-        <div class="journal-tabs" role="tablist" aria-label="Journal sections">
+        <div class="journal-tabs" role="tablist" aria-label="Quests or Achievements">
           <button
             type="button"
             id="journal-tab-quests"
             class="journal-tab is-active"
             role="tab"
             aria-selected="true"
-            aria-controls="journal-body"
+            aria-controls="journal-panel-quests"
+            tabindex="0"
           >
             Quests
           </button>
@@ -222,16 +233,30 @@
             class="journal-tab"
             role="tab"
             aria-selected="false"
-            aria-controls="journal-body"
+            aria-controls="journal-panel-achievements"
+            tabindex="-1"
           >
             Achievements
           </button>
         </div>
         <p id="journal-summary" class="journal-summary" aria-live="polite"></p>
+        <p id="journal-blurb" class="feedback-blurb journal-blurb-tab">
+          Track quests and <strong>WHERE</strong> to go next. Active jobs pin to
+          the top. Press <strong>J</strong> anytime.
+        </p>
         <div
-          id="journal-body"
+          id="journal-panel-quests"
           class="journal-body"
           role="tabpanel"
+          aria-labelledby="journal-tab-quests"
+          tabindex="0"
+        ></div>
+        <div
+          id="journal-panel-achievements"
+          class="journal-body"
+          role="tabpanel"
+          aria-labelledby="journal-tab-achievements"
+          hidden
           tabindex="0"
         ></div>
         <div class="feedback-actions">
