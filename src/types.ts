@@ -301,7 +301,7 @@ export interface SaveData {
   activeQuestId: string | null;
   /** Completed champion quest ids (beyond main rescue / best bud). */
   questsCompleted: string[];
-  /** Unlocked brag (achievement) ids. */
+  /** Unlocked achievement ids (brag-* keys for save compatibility). */
   achievementsUnlocked: string[];
   // ── v6: hard mode + identity ─────────────────────────────
   /** Land currently being replayed on hard (null = normal). */

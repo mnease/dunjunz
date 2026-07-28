@@ -1,6 +1,6 @@
 /**
- * Brags (achievements) — retro brag board, not corporate gamification.
- * Unlock copy: "NEW BRAG:" — bard energy, not Xbox energy.
+ * Achievements — unlock board with bard flavor.
+ * Unlock copy: "NEW ACHIEVEMENT:" (ids keep brag-* for save compatibility).
  */
 
 import type { SaveData } from '../types';
@@ -8,7 +8,7 @@ import { isQuestCompleted, QUEST_SEWERZ_GOOSE } from './champion-quests';
 
 export interface AchievementDef {
   id: string;
-  /** Short brag title (ALL CAPS ok). */
+  /** Short achievement title (ALL CAPS ok). */
   title: string;
   /** One-line flavor. */
   blurb: string;
@@ -196,7 +196,7 @@ export function getAchievement(id: string): AchievementDef | null {
 }
 
 /**
- * Scan all brags; unlock any newly earned.
+ * Scan all achievements; unlock any newly earned.
  * Returns updated save + list of fresh unlocks (for toasts).
  */
 export function syncAchievements(save: SaveData): {

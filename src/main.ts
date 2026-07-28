@@ -58,7 +58,7 @@ const config: Phaser.Types.Core.GameConfig = {
 const game = new Phaser.Game(config);
 (window as unknown as { __DUNJUNZ_GAME__?: Phaser.Game }).__DUNJUNZ_GAME__ = game;
 
-// Page chrome: journal (quests/brags) + settings + account + feedback
+// Page chrome: journal (quests/achievements) + settings + account + feedback
 installAudioUnlock();
 initJournalUi();
 initHeroPickUi();

@@ -1823,7 +1823,7 @@ describe('champion quests + kingdom', () => {
   });
 });
 
-describe('quest log + brags', () => {
+describe('quest log + achievements', () => {
   it('lists main and champion quests with statuses', async () => {
     const { listQuests, countQuestProgress } = await import('./quest-log');
     let s = defaultSave();
@@ -1852,7 +1852,7 @@ describe('quest log + brags', () => {
     expect(prog.total).toBe(list.length);
   });
 
-  it('syncAchievements unlocks brags from save state', async () => {
+  it('syncAchievements unlocks achievements from save state', async () => {
     const { syncAchievements, ACHIEVEMENTS } = await import('./achievements');
     let s = defaultSave();
     s.killed = ['slime-1'];

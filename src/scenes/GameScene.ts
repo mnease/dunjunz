@@ -1722,11 +1722,11 @@ export class GameScene extends Phaser.Scene {
 
   private onJournalKey = (): void => {
     if (this.paused) return;
-    // HTML journal modal (quests + brags)
+    // HTML journal modal (quests + achievements)
     document.getElementById('journal-open')?.click();
   };
 
-  /** Unlock brags; toast any new ones (bard energy, not corporate). */
+  /** Unlock achievements; toast any new ones. */
   private flushAchievements(): void {
     const { save, newly } = syncAchievements(this.save);
     this.save = save;
@@ -1738,7 +1738,7 @@ export class GameScene extends Phaser.Scene {
     newly.forEach((a, i) => {
       this.time.delayedCall(i * 400, () => {
         playSfx('success');
-        this.game.events.emit('toast', `NEW BRAG: ${a.title}`);
+        this.game.events.emit('toast', `NEW ACHIEVEMENT: ${a.title}`);
       });
     });
     boxed.boxes.forEach((b, i) => {
