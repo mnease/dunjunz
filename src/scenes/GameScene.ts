@@ -318,6 +318,9 @@ import {
   GUILD_MASTER_ID,
   guildMasterDialog,
   guildMasterIntroDialog,
+  guildMasterPhaseDialog,
+  isGuildPracticeBoxId,
+  openGuildPracticeCrate,
   buildRackPickerPayload,
   equippedGuildLoaner,
   ensureCatalogInBag,
@@ -5785,13 +5788,17 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Safe-zone lesson: talking completes that phase
+    // Safe-zone lesson: show lesson dialog FIRST, then mark (never pretends to graduate)
     if (tutorialPhase(this.save) === 'safe_zone') {
+      const lesson = guildMasterPhaseDialog(this.save);
       this.save = markTutorialSafeZoneLearned(this.save);
       writeSave(this.save);
       this.emitTutorialChecklist();
-      this.game.events.emit('dialog-show', guildMasterDialog(this.save));
-      this.game.events.emit('toast', 'SAFE ZONE LESSON LEARNED');
+      this.game.events.emit('dialog-show', lesson);
+      this.game.events.emit(
+        'toast',
+        'SAFE ZONE LESSON LEARNED — TALK AGAIN TO GRADUATE',
+      );
       return;
     }
 
@@ -5804,6 +5811,7 @@ export class GameScene extends Phaser.Scene {
       // Unlock east door tiles live
       this.tileGrid = this.applyPersistentDoorUnlocks(this.tileGrid);
       this.rebuildMapTilesForUnlock();
+      // After completeTutorial, isTutorialComplete — graduated copy only
       this.game.events.emit('dialog-show', [
         ...guildMasterDialog(this.save),
         '',
@@ -5975,6 +5983,38 @@ export class GameScene extends Phaser.Scene {
       this.destroyActor(actor);
       return;
     }
+
+    // Tutorial Guild practice crate — pure open path (never soft-locks early E)
+    if (isGuildPracticeBoxId(templateId)) {
+      const r = openGuildPracticeCrate(
+        this.save,
+        this.room.id,
+        this.room.safe,
+      );
+      if (!r.ok) {
+        playSfx('error');
+        this.game.events.emit('toast', r.reason);
+        // Only remove crate when truly already claimed — not on "too early"
+        if (r.destroyCrate) this.destroyActor(actor);
+        return;
+      }
+      this.save = syncDerivedStats(r.save);
+      writeSave(this.save);
+      this.emitHud();
+      this.emitTutorialChecklist();
+      const sx = actor.sprite.x;
+      const sy = actor.sprite.y;
+      sparkBurst(this, sx, sy, 0xffc857, 12);
+      sparkBurst(this, sx, sy, 0xffffff, 6);
+      if (r.destroyCrate) this.destroyActor(actor);
+      this.showLootReveal({
+        boxName: r.boxName,
+        boxTemplateId: r.boxTemplateId,
+        items: r.grantedItems,
+      });
+      return;
+    }
+
     if (!canOpenLootBoxInRoom(this.room.id, this.room.safe)) {
       playSfx('error');
       this.game.events.emit('toast', boxOpenBlockedToast());

@@ -398,6 +398,15 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     usable: true,
     stackable: true,
   },
+  /** Guild tutorial practice crate — not an achievement box; open only in safe zones. */
+  guild_practice_box: {
+    id: 'guild_practice_box',
+    name: 'GUILD PRACTICE BOX',
+    blurb: 'Training haul. Open the crate in the Tutorial Guild (safe zone only).',
+    kind: 'consumable',
+    usable: true,
+    stackable: true,
+  },
   loot_box_bronze: {
     id: 'loot_box_bronze',
     name: 'BRONZE LOOT BOX',

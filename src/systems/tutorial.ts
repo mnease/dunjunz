@@ -12,7 +12,12 @@ import {
   getTemplate,
   mintItem,
 } from './items';
-import { grantCrawlerStarterBox } from './loot-boxes';
+import {
+  grantCrawlerStarterBox,
+  GUILD_PRACTICE_BOX_ID,
+  openLootBox,
+  type OpenLootBoxResult,
+} from './loot-boxes';
 import { syncDerivedStats } from './inventory';
 import {
   boxOpenBlockedToast,
@@ -230,20 +235,89 @@ export function markTutorialSafeZoneLearned(save: SaveData): SaveData {
 }
 
 /**
- * Ensure a practice bronze box stack exists for the guild crate / phase 3.
+ * Ensure a guild practice box stack exists for the hall crate.
+ * Uses guild_practice_box (not achievement loot_box_*), so migration cannot strip it.
+ * Granted as soon as the player is in the boxes phase (or later, if not yet opened).
  */
 export function ensureTutorialPracticeBox(save: SaveData): SaveData {
   if (isTutorialComplete(save)) return save;
-  if (!allWeaponHitsDone(save)) return save;
   if (save.flags?.[FLAG_TUTORIAL_BOX]) return save;
-  const have = save.stacks?.loot_box_bronze ?? 0;
+  // Only materialize once weapons + inventory are done (boxes phase)
+  const phase = tutorialPhase(save);
+  if (phase !== 'boxes' && phase !== 'safe_zone' && phase !== 'graduate') {
+    return save;
+  }
+  const have = save.stacks?.[GUILD_PRACTICE_BOX_ID] ?? 0;
   if (have > 0) return save;
   return {
     ...save,
     stacks: {
       ...save.stacks,
-      loot_box_bronze: 1,
+      [GUILD_PRACTICE_BOX_ID]: 1,
     },
+  };
+}
+
+export function isGuildPracticeBoxId(id: string | undefined): boolean {
+  return id === GUILD_PRACTICE_BOX_ID;
+}
+
+/**
+ * Pure open path for the guild practice crate.
+ * - Does not destroy progress if the stack is missing: re-grants then opens.
+ * - Refuses early phases without consuming the crate.
+ * - Never uses achievement-tier loot_box_* templates.
+ */
+export function openGuildPracticeCrate(
+  save: SaveData,
+  roomId: string | undefined,
+  roomSafe?: boolean,
+): OpenLootBoxResult & { destroyCrate: boolean; early: boolean } {
+  if (!canOpenLootBoxInRoom(roomId, roomSafe)) {
+    return {
+      ok: false,
+      save,
+      reason: boxOpenBlockedToast(),
+      destroyCrate: false,
+      early: false,
+    };
+  }
+  if (save.flags?.[FLAG_TUTORIAL_BOX]) {
+    return {
+      ok: false,
+      save,
+      reason: 'ALREADY OPENED',
+      destroyCrate: true,
+      early: false,
+    };
+  }
+  const phase = tutorialPhase(save);
+  if (phase === 'weapons' || phase === 'inventory') {
+    return {
+      ok: false,
+      save,
+      reason: 'FINISH EARLIER LESSONS FIRST — THEN OPEN THIS CRATE',
+      destroyCrate: false,
+      early: true,
+    };
+  }
+  // Boxes / safe_zone / graduate — ensure stack then open
+  let next = ensureTutorialPracticeBox(save);
+  if ((next.stacks?.[GUILD_PRACTICE_BOX_ID] ?? 0) <= 0) {
+    next = {
+      ...next,
+      stacks: { ...next.stacks, [GUILD_PRACTICE_BOX_ID]: 1 },
+    };
+  }
+  const r = openLootBox(next, GUILD_PRACTICE_BOX_ID);
+  if (!r.ok) {
+    return { ...r, destroyCrate: false, early: false };
+  }
+  return {
+    ...r,
+    save: markTutorialBoxOpened(r.save),
+    destroyCrate: true,
+    early: false,
   };
 }
 

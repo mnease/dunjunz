@@ -162,7 +162,7 @@ export const ROOMS: Record<string, RoomDef> = {
         id: 'guild-practice-crate',
         x: 6,
         y: 5,
-        lootBoxId: 'loot_box_bronze',
+        lootBoxId: 'guild_practice_box',
       },
       // Exit portal when you entered from a dungeon guild door
       {

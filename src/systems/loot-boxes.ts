@@ -29,6 +29,8 @@ export function lootBoxTemplateId(tier: LootBoxTier): string {
 }
 
 export const CRAWLER_STARTER_BOX_ID = 'crawler_starter_box';
+/** Tutorial Guild practice crate — not tiered achievement loot. */
+export const GUILD_PRACTICE_BOX_ID = 'guild_practice_box';
 
 export const STARTER_BOX_CONTENTS: readonly string[] = [
   'mild_sword',
@@ -38,6 +40,12 @@ export const STARTER_BOX_CONTENTS: readonly string[] = [
   'leather_greaves',
   'leather_shoes',
   'wood_shield',
+];
+
+/** Small practice haul for the guild boxes lesson. */
+export const GUILD_PRACTICE_BOX_CONTENTS: readonly string[] = [
+  'potion',
+  'leather_shoes',
 ];
 
 /** Weighted roll weights (higher = more common). */
@@ -117,6 +125,7 @@ const TIER_RARITY: Record<LootBoxTier, Rarity> = {
 
 export function isLootBoxTemplateId(id: string): boolean {
   if (id === CRAWLER_STARTER_BOX_ID) return true;
+  if (id === GUILD_PRACTICE_BOX_ID) return true;
   if (id === 'legendary_elven_box') return true;
   return LOOT_BOX_TIERS.some((t) => lootBoxTemplateId(t) === id);
 }
@@ -260,6 +269,9 @@ export function openLootBox(
 
   if (templateId === CRAWLER_STARTER_BOX_ID) {
     grants = [...STARTER_BOX_CONTENTS];
+    rarity = 'common';
+  } else if (templateId === GUILD_PRACTICE_BOX_ID) {
+    grants = [...GUILD_PRACTICE_BOX_CONTENTS];
     rarity = 'common';
   } else {
     const tier = lootBoxTierFromTemplate(templateId)!;

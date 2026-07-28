@@ -3546,8 +3546,18 @@ describe('tutorial guild hall', () => {
       canOpenLootBoxInRoom,
       boxOpenBlockedToast,
       ensureTutorialPracticeBox,
+      openGuildPracticeCrate,
+      guildMasterPhaseDialog,
+      guildMasterDialog,
+      isTutorialComplete,
+      completeTutorial,
       recordDummyHit,
     } = await import('./tutorial');
+    const {
+      GUILD_PRACTICE_BOX_ID,
+      isAchievementLootBoxTemplateId,
+      migrateAchievementBoxesFromStacks,
+    } = await import('./loot-boxes');
     let save = defaultSave();
     expect(tutorialPhase(save)).toBe('weapons');
     const weaponsCheck = tutorialChecklist(save);
@@ -3555,6 +3565,14 @@ describe('tutorial guild hall', () => {
     expect(weaponsCheck?.steps.length).toBe(4);
     expect(weaponsCheck?.steps.every((s) => !s.done)).toBe(true);
     expect(weaponsCheck?.steps[0]?.label.toLowerCase()).toMatch(/sword/);
+
+    // Early practice-crate open must NOT soft-lock (no destroy, no consume)
+    const early = openGuildPracticeCrate(save, 'guild_hall', true);
+    expect(early.ok).toBe(false);
+    expect(early.destroyCrate).toBe(false);
+    expect(early.early).toBe(true);
+    expect(early.reason).toMatch(/EARLIER LESSONS/i);
+    expect(save.flags?.tutorial_box_opened).toBeFalsy();
 
     for (const w of ['sword', 'axe', 'bow', 'staff'] as const) {
       save = recordDummyHit(save, w).save;
@@ -3565,7 +3583,15 @@ describe('tutorial guild hall', () => {
     save = markTutorialInventoryOpened(save);
     expect(tutorialPhase(save)).toBe('boxes');
     save = ensureTutorialPracticeBox(save);
-    expect(save.stacks.loot_box_bronze).toBeGreaterThanOrEqual(1);
+    expect(save.stacks[GUILD_PRACTICE_BOX_ID]).toBeGreaterThanOrEqual(1);
+    expect(isAchievementLootBoxTemplateId(GUILD_PRACTICE_BOX_ID)).toBe(false);
+    // Migration must not strip practice box
+    const mig = migrateAchievementBoxesFromStacks({
+      ...save,
+      stacks: { ...save.stacks, loot_box_bronze: 1, [GUILD_PRACTICE_BOX_ID]: 1 },
+    });
+    expect(mig.stacks[GUILD_PRACTICE_BOX_ID]).toBe(1);
+    expect(mig.stacks.loot_box_bronze).toBeUndefined();
 
     expect(isSafeRoom('guild_hall')).toBe(true);
     expect(isSafeRoom('b1_entrance')).toBe(false);
@@ -3573,12 +3599,43 @@ describe('tutorial guild hall', () => {
     expect(canOpenLootBoxInRoom('b1_entrance')).toBe(false);
     expect(boxOpenBlockedToast().toLowerCase()).toMatch(/safe zone/);
 
-    save = markTutorialBoxOpened(save);
+    // Open practice crate with ZERO stack still works (re-grants)
+    const noStack = {
+      ...save,
+      stacks: { ...save.stacks, [GUILD_PRACTICE_BOX_ID]: 0 },
+    };
+    delete noStack.stacks[GUILD_PRACTICE_BOX_ID];
+    const opened = openGuildPracticeCrate(noStack, 'guild_hall', true);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(opened.destroyCrate).toBe(true);
+    expect(opened.save.flags?.tutorial_box_opened).toBe(true);
+    save = opened.save;
     expect(tutorialPhase(save)).toBe('safe_zone');
+
+    // Safe-zone dialog content BEFORE mark — not graduation / east door
+    const lesson = guildMasterPhaseDialog(save);
+    const lessonText = lesson.join('\n');
+    expect(lessonText).toMatch(/safe zone/i);
+    expect(lessonText).toMatch(/Tutorial Guild/i);
+    expect(lessonText).not.toMatch(/graduated/i);
+    expect(lessonText).not.toMatch(/east door is open/i);
+    expect(isTutorialComplete(save)).toBe(false);
+    expect(canGraduateTutorial(save)).toBe(false);
+
     save = markTutorialSafeZoneLearned(save);
     expect(tutorialPhase(save)).toBe('graduate');
     expect(canGraduateTutorial(save)).toBe(true);
+    expect(isTutorialComplete(save)).toBe(false);
+    // Still not graduated until completeTutorial
+    const preGrad = guildMasterPhaseDialog(save).join('\n');
+    expect(preGrad).toMatch(/graduated|ready to graduate/i);
     expect(tutorialChecklist(save)).toBeNull();
+
+    save = completeTutorial(save);
+    expect(isTutorialComplete(save)).toBe(true);
+    const post = guildMasterDialog(save).join('\n');
+    expect(post).toMatch(/graduated/i);
 
     // Shared guild portal from dungeon
     const { ROOMS } = await import('../data/world');
@@ -3588,6 +3645,10 @@ describe('tutorial guild hall', () => {
     );
     expect(guildPortal?.kind).toBe('portal');
     expect(guildPortal?.portalTarget).toBe('guild_hall');
+    const practice = (ROOMS.guild_hall?.entities ?? []).find(
+      (e) => e.id === 'guild-practice-crate',
+    );
+    expect(practice?.lootBoxId).toBe(GUILD_PRACTICE_BOX_ID);
   });
 
   it('buildRackPickerPayload lists hanging weapons with blurbs', () => {

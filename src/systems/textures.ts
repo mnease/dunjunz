@@ -1089,6 +1089,7 @@ export function drawItemIcon(
   }
   if (
     itemId === 'crawler_starter_box' ||
+    itemId === 'guild_practice_box' ||
     itemId === 'loot_box_bronze' ||
     itemId === 'loot_box_silver' ||
     itemId === 'loot_box_gold' ||
@@ -1098,6 +1099,7 @@ export function drawItemIcon(
   ) {
     const colors: Record<string, { body: string; lid: string; band: string }> = {
       crawler_starter_box: { body: '#8a5a2a', lid: '#c97b3a', band: '#c9a227' },
+      guild_practice_box: { body: '#5a4a30', lid: '#a08850', band: '#7dffb3' },
       loot_box_bronze: { body: '#8a5a2a', lid: '#c97b3a', band: '#c9a227' },
       loot_box_silver: { body: '#6a738a', lid: '#c0c8d0', band: '#e0e8f0' },
       loot_box_gold: { body: '#8a6820', lid: '#ffc857', band: '#ffe08a' },
@@ -2175,6 +2177,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     'phaser',
     'arrows',
     'crawler_starter_box',
+    'guild_practice_box',
     'loot_box_bronze',
     'loot_box_silver',
     'loot_box_gold',

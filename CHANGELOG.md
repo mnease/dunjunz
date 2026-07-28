@@ -140,7 +140,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Added
 
-- **Tutorial Guild curriculum** — phases: weapons (sword→axe→bow→staff) → inventory (I) → boxes (safe-zone only) → safe-zone lesson → graduate. Lower-left checklist tracks steps. Guild Master is a humanoid rodent mentor with full-sentence welcome/weapon tutorial. Bookshelves are full-tile solid. Hard rule: boxes open only in safe zones. Shared `guild_hall` portal from B1 entrance (and meadow west); same hall every time.
+- **Tutorial Guild curriculum** — phases: weapons (sword→axe→bow→staff) → inventory (I) → boxes (safe-zone only) → safe-zone lesson → graduate. Lower-left checklist tracks steps. Guild Master is a humanoid rodent mentor with full-sentence welcome/weapon tutorial. Bookshelves are full-tile solid. Hard rule: boxes open only in safe zones. Shared `guild_hall` portal from B1 entrance (and meadow west); same hall every time. Practice crate uses `guild_practice_box` (not achievement bronze); early open refuses without removing the crate; safe-zone talk shows the lesson before marking and does not claim graduation until the next talk completes training.
 
 ### Changed
 
