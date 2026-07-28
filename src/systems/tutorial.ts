@@ -40,8 +40,9 @@ export const FLAG_TUTORIAL_INVENTORY = 'tutorial_inventory_opened';
 export const FLAG_TUTORIAL_BOX = 'tutorial_box_opened';
 export const FLAG_TUTORIAL_SAFE_ZONE = 'tutorial_safe_zone_learned';
 
-/** Ordered curriculum phases after intro. */
+/** Ordered curriculum phases (find guild first, then hall lessons). */
 export type TutorialPhase =
+  | 'find_guild'
   | 'weapons'
   | 'inventory'
   | 'boxes'
@@ -192,10 +193,25 @@ export function isTutorialComplete(save: SaveData): boolean {
 }
 
 /**
+ * True once the player has reached the Tutorial Guild hall
+ * (or already started drills / heard the Guild Master).
+ */
+export function hasFoundTutorialGuild(save: SaveData): boolean {
+  if (save.flags?.[FLAG_TUTORIAL_INTRO]) return true;
+  if ((save.visitedRooms ?? []).includes(GUILD_HALL_ID)) return true;
+  // Any weapon drill progress means they are already training
+  for (const w of TUTORIAL_WEAPONS) {
+    if (weaponHitDone(save, w) || weaponDamageDealt(save, w) > 0) return true;
+  }
+  return false;
+}
+
+/**
  * Current tutorial phase, or null when finished / graduated.
  */
 export function tutorialPhase(save: SaveData): TutorialPhase | null {
   if (isTutorialComplete(save)) return null;
+  if (!hasFoundTutorialGuild(save)) return 'find_guild';
   if (!allWeaponHitsDone(save)) return 'weapons';
   if (!save.flags?.[FLAG_TUTORIAL_INVENTORY]) return 'inventory';
   if (!save.flags?.[FLAG_TUTORIAL_BOX]) return 'boxes';
@@ -292,7 +308,11 @@ export function openGuildPracticeCrate(
     };
   }
   const phase = tutorialPhase(save);
-  if (phase === 'weapons' || phase === 'inventory') {
+  if (
+    phase === 'find_guild' ||
+    phase === 'weapons' ||
+    phase === 'inventory'
+  ) {
     return {
       ok: false,
       save,
@@ -331,6 +351,20 @@ export function tutorialChecklist(save: SaveData): {
 } | null {
   const phase = tutorialPhase(save);
   if (!phase || phase === 'graduate') return null;
+
+  if (phase === 'find_guild') {
+    return {
+      phase,
+      title: 'Tutorial',
+      steps: [
+        {
+          id: 'find-guild',
+          label: 'Find the tutorial guild',
+          done: false,
+        },
+      ],
+    };
+  }
 
   if (phase === 'weapons') {
     const need = nextTutorialWeapon(save);

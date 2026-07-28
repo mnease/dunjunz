@@ -3559,6 +3559,16 @@ describe('tutorial guild hall', () => {
       migrateAchievementBoxesFromStacks,
     } = await import('./loot-boxes');
     let save = defaultSave();
+    // Beach / pre-guild: only "Find the tutorial guild"
+    expect(tutorialPhase(save)).toBe('find_guild');
+    const findCheck = tutorialChecklist(save);
+    expect(findCheck?.phase).toBe('find_guild');
+    expect(findCheck?.steps).toHaveLength(1);
+    expect(findCheck?.steps[0]?.label).toBe('Find the tutorial guild');
+    expect(findCheck?.steps[0]?.done).toBe(false);
+
+    // Entering the guild advances to weapons checklist
+    save = { ...save, visitedRooms: [...(save.visitedRooms ?? []), 'guild_hall'] };
     expect(tutorialPhase(save)).toBe('weapons');
     const weaponsCheck = tutorialChecklist(save);
     expect(weaponsCheck?.phase).toBe('weapons');

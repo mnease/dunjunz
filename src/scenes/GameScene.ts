@@ -4592,6 +4592,8 @@ export class GameScene extends Phaser.Scene {
         });
         this.game.events.emit('dialog-show', beachWakeDialog(id));
         this.game.events.emit('toast', 'NORTH → MEADOW · WEST → GUILD');
+        // After the voice: checklist is only "Find the tutorial guild"
+        this.emitTutorialChecklist();
         // Fade remaining blur
         this.tweens.add({
           targets: this,
