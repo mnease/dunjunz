@@ -1823,26 +1823,7 @@ body.touch-play.mobile-immersive #game-frame {
   margin: var(--space-3) 0 0;
 }
 
-.sb-shot-doll {
-  display: flex;
-  flex-direction: column;
-  background:
-    radial-gradient(ellipse at 50% 60%, rgba(92, 77, 122, 0.35), transparent 65%),
-    #0a0c10;
-}
 
-.sb-paperdoll {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-width: 20rem;
-  margin: 1.25rem auto 0;
-  aspect-ratio: 1 / 1;
-  object-fit: contain;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  background: transparent;
-}
 
 .sb-steps {
   list-style: none;
@@ -1963,16 +1944,16 @@ body.touch-play.mobile-immersive #game-frame {
   }
 
   .sb-shot-row {
-    grid-template-columns: 1fr 1.4fr;
+    grid-template-columns: 1fr 1fr;
     align-items: stretch;
-  }
-
-  .sb-shot-row .sb-shot:first-child img {
-    aspect-ratio: 1 / 1;
   }
 
   .sb-stakes-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .landing-hero-figure-char {
+    justify-self: end;
   }
 }
 
@@ -2006,6 +1987,32 @@ body.touch-play.mobile-immersive #game-frame {
   object-fit: cover;
   background: #0a0c10;
   vertical-align: middle;
+}
+
+/* Hero character sprite (in-game art, not banner illustration) */
+.landing-hero-figure-char {
+  max-width: 22rem;
+  justify-self: center;
+}
+
+.landing-hero-link-char {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1.25rem 1rem;
+  background:
+    radial-gradient(ellipse at 50% 70%, rgba(92, 77, 122, 0.4), transparent 60%),
+    #0a0c10;
+}
+
+.landing-hero-char {
+  width: min(100%, 18rem);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: transparent;
 }
 
 .landing-figcap {
