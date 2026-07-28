@@ -1823,6 +1823,27 @@ body.touch-play.mobile-immersive #game-frame {
   margin: var(--space-3) 0 0;
 }
 
+.sb-shot-doll {
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse at 50% 60%, rgba(92, 77, 122, 0.35), transparent 65%),
+    #0a0c10;
+}
+
+.sb-paperdoll {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 20rem;
+  margin: 1.25rem auto 0;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: transparent;
+}
+
 .sb-steps {
   list-style: none;
   margin: 0 0 var(--space-4);
