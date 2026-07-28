@@ -23,6 +23,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         play: resolve(__dirname, 'play/index.html'),
+        account: resolve(__dirname, 'account/index.html'),
         // Dev/export only — paperdoll PNG pipeline
         paperdoll: resolve(__dirname, 'tools/paperdoll.html'),
       },
