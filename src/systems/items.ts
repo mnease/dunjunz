@@ -398,6 +398,15 @@ export const ITEM_TEMPLATES: Record<string, ItemTemplate> = {
     usable: true,
     stackable: true,
   },
+  crawler_basic_box: {
+    id: 'crawler_basic_box',
+    name: 'BRONZE CRAWLER BOX',
+    blurb:
+      'Basic crawler gear: torches, a potion, shoes, copper ring. Not the full starter kit.',
+    kind: 'consumable',
+    usable: true,
+    stackable: true,
+  },
   loot_box_bronze: {
     id: 'loot_box_bronze',
     name: 'BRONZE LOOT BOX',

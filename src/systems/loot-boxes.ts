@@ -30,6 +30,7 @@ export function lootBoxTemplateId(tier: LootBoxTier): string {
 
 export const CRAWLER_STARTER_BOX_ID = 'crawler_starter_box';
 
+/** Graduation kit — full leather + sword + shield (after tutorial). */
 export const STARTER_BOX_CONTENTS: readonly string[] = [
   'mild_sword',
   'leather_helmet',
@@ -38,6 +39,20 @@ export const STARTER_BOX_CONTENTS: readonly string[] = [
   'leather_greaves',
   'leather_shoes',
   'wood_shield',
+];
+
+/**
+ * Bronze crawler box for finding the Tutorial Guild — basic survival gear
+ * (not the full graduation kit).
+ */
+export const CRAWLER_BASIC_BOX_ID = 'crawler_basic_box';
+
+export const BASIC_BOX_CONTENTS: readonly string[] = [
+  'torch',
+  'torch',
+  'potion',
+  'leather_shoes',
+  'copper_ring',
 ];
 
 /** Weighted roll weights (higher = more common). */
@@ -117,6 +132,7 @@ const TIER_RARITY: Record<LootBoxTier, Rarity> = {
 
 export function isLootBoxTemplateId(id: string): boolean {
   if (id === CRAWLER_STARTER_BOX_ID) return true;
+  if (id === CRAWLER_BASIC_BOX_ID) return true;
   if (id === 'legendary_elven_box') return true;
   return LOOT_BOX_TIERS.some((t) => lootBoxTemplateId(t) === id);
 }
@@ -178,6 +194,26 @@ export function grantCrawlerStarterBox(save: SaveData): {
       ...save,
       stacks,
       flags: { ...save.flags, got_crawler_starter_box: true },
+    },
+  };
+}
+
+/** Grant bronze basic crawler box for finding the Tutorial Guild (once). */
+export function grantCrawlerBasicBox(save: SaveData): {
+  save: SaveData;
+  granted: boolean;
+} {
+  if (save.flags?.got_crawler_basic_box) {
+    return { save, granted: false };
+  }
+  const stacks = { ...save.stacks };
+  stacks[CRAWLER_BASIC_BOX_ID] = (stacks[CRAWLER_BASIC_BOX_ID] ?? 0) + 1;
+  return {
+    granted: true,
+    save: {
+      ...save,
+      stacks,
+      flags: { ...save.flags, got_crawler_basic_box: true },
     },
   };
 }
@@ -256,6 +292,9 @@ export function openLootBox(
   if (templateId === CRAWLER_STARTER_BOX_ID) {
     grants = [...STARTER_BOX_CONTENTS];
     rarity = 'common';
+  } else if (templateId === CRAWLER_BASIC_BOX_ID) {
+    grants = [...BASIC_BOX_CONTENTS];
+    rarity = 'common';
   } else {
     const tier = lootBoxTierFromTemplate(templateId)!;
     rarity = TIER_RARITY[tier];
@@ -299,8 +338,16 @@ export function openLootBox(
   };
 }
 
+export type AchievementBoxGrant = {
+  tier: LootBoxTier | 'basic';
+  title: string;
+  /** Stack template id for world crate spawn. */
+  templateId: string;
+};
+
 /**
- * On new brag unlocks: grant one weighted-tier loot box per unlock.
+ * On new brag unlocks: grant one loot box per unlock.
+ * Tutorial Guild brag → fixed bronze crawler basic box (not random tier).
  */
 export function grantLootBoxesForAchievements(
   save: SaveData,
@@ -308,15 +355,31 @@ export function grantLootBoxesForAchievements(
   rng: Rng = Math.random,
 ): {
   save: SaveData;
-  boxes: { tier: LootBoxTier; title: string }[];
+  boxes: AchievementBoxGrant[];
 } {
   if (!newly.length) return { save, boxes: [] };
   let next = save;
-  const boxes: { tier: LootBoxTier; title: string }[] = [];
+  const boxes: AchievementBoxGrant[] = [];
   for (const a of newly) {
+    if (a.id === 'brag-tutorial-guild') {
+      const g = grantCrawlerBasicBox(next);
+      next = g.save;
+      if (g.granted) {
+        boxes.push({
+          tier: 'basic',
+          title: a.title,
+          templateId: CRAWLER_BASIC_BOX_ID,
+        });
+      }
+      continue;
+    }
     const g = grantRandomLootBox(next, rng);
     next = g.save;
-    boxes.push({ tier: g.tier, title: a.title });
+    boxes.push({
+      tier: g.tier,
+      title: a.title,
+      templateId: g.templateId,
+    });
   }
   return { save: next, boxes };
 }

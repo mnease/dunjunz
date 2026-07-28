@@ -3783,10 +3783,12 @@ describe('loot boxes', () => {
       './loot-boxes'
     );
     const { ACHIEVEMENTS } = await import('./achievements');
-    const a = ACHIEVEMENTS[0]!;
+    // Use a normal brag (not tutorial-guild special basic box)
+    const a = ACHIEVEMENTS.find((x) => x.id === 'brag-first-bonk')!;
     const r = grantLootBoxesForAchievements(defaultSave(), [a], () => 0.01);
     expect(r.boxes.length).toBe(1);
     expect(r.boxes[0]!.tier).toBe('bronze'); // low rng → bronze
+    expect(r.boxes[0]!.templateId).toBeTruthy();
     const boxId = Object.keys(r.save.stacks).find(isLootBoxTemplateId);
     expect(boxId).toBeTruthy();
   });

@@ -26,6 +26,7 @@ import {
   openLootBox,
   type LootRevealItem,
 } from './loot-boxes';
+import { isTutorialComplete } from './tutorial';
 
 export {
   computePlayerDamage,
@@ -277,8 +278,16 @@ export function useInventoryItem(
   if (!t.usable) {
     return { ok: false, save, reason: 'CANNOT USE THAT HERE' };
   }
-  // Loot boxes (starter + tiered)
+  // Loot boxes (starter + tiered + crawler boxes)
   if (isLootBoxTemplateId(templateId)) {
+    // Bags stay closed until guild tutorial graduates
+    if (!isTutorialComplete(save)) {
+      return {
+        ok: false,
+        save,
+        reason: 'FINISH THE GUILD TUTORIAL FIRST',
+      };
+    }
     const r = openLootBox(save, templateId);
     if (!r.ok) {
       return { ok: false, save: r.save, reason: r.reason };

@@ -359,7 +359,6 @@ import {
   CRAWLER_STARTER_BOX_ID,
   grantLootBoxesForAchievements,
   isLootBoxTemplateId,
-  lootBoxTemplateId,
   openLootBox,
 } from '../systems/loot-boxes';
 import {
@@ -373,6 +372,10 @@ import {
   markBeachWakeSeen,
   needsBeachWake,
 } from '../systems/crawler-id';
+import {
+  markRoomVoiceHeard,
+  roomEntryVoiceDialog,
+} from '../systems/room-voice';
 import type { PlayerWakePose } from '../systems/appearance';
 import { BEACH_START_ID } from '../data/world';
 import { getCombatMode } from '../systems/combat-mode';
@@ -1480,6 +1483,14 @@ export class GameScene extends Phaser.Scene {
     if (this.dialogLocked || this.paused || this.mapzOpen || this.forjingOpen) {
       return;
     }
+    if (!isTutorialComplete(this.save)) {
+      playSfx('error');
+      this.game.events.emit(
+        'toast',
+        'INVENTORY LOCKED — FINISH THE GUILD TUTORIAL FIRST',
+      );
+      return;
+    }
     this.game.events.emit('inventory-toggle', this.save);
   };
 
@@ -1763,12 +1774,14 @@ export class GameScene extends Phaser.Scene {
     boxed.boxes.forEach((b, i) => {
       this.time.delayedCall(newly.length * 400 + i * 350, () => {
         playSfx('pickup');
+        const tierLabel =
+          b.tier === 'basic' ? 'BRONZE CRAWLER' : b.tier.toUpperCase();
         this.game.events.emit(
           'toast',
-          `LOOT BOX: ${b.tier.toUpperCase()} (FROM ${b.title})`,
+          `LOOT BOX: ${tierLabel} (FROM ${b.title})`,
         );
         // Materialize each brag box mid-room with a flash of light
-        this.spawnLootCrateDrop(lootBoxTemplateId(b.tier));
+        this.spawnLootCrateDrop(b.templateId);
       });
     });
   }
@@ -3101,13 +3114,16 @@ export class GameScene extends Phaser.Scene {
       this.maybeStartBeachIdentityThenWake();
     }
 
-    // Guild: door is locked until graduate; no auto monologue (speak to Master)
+    // Room-entry voice (beach-style) — Tutorial Guild first
+    this.maybePlayRoomEntryVoice(resolved);
+
+    // Guild: door is locked until graduate
     if (resolved === GUILD_HALL_ID && !isTutorialComplete(this.save)) {
       this.time.delayedCall(350, () => {
         if (this.leavingToTitle || this.room?.id !== GUILD_HALL_ID) return;
         this.game.events.emit(
           'toast',
-          'SPEAK WITH THE TUTORIAL GUILD MASTER',
+          'SPEAK WITH THE GUILD MASTER IN THE CENTER',
         );
       });
     }
@@ -5976,7 +5992,30 @@ export class GameScene extends Phaser.Scene {
     return { tx: cx, ty: cy };
   }
 
+  /**
+   * Beach-style voice on first visit to scripted rooms (Tutorial Guild first).
+   * Achievements flush already ran after markRoomVisited — brags show in Journal.
+   */
+  private maybePlayRoomEntryVoice(roomId: string): void {
+    const lines = roomEntryVoiceDialog(roomId, this.save);
+    if (!lines?.length) return;
+    this.save = markRoomVoiceHeard(this.save, roomId);
+    writeSave(this.save);
+    this.time.delayedCall(280, () => {
+      if (this.leavingToTitle || this.room?.id !== roomId) return;
+      this.game.events.emit('dialog-show', lines);
+    });
+  }
+
   private openWorldLootCrate(actor: Actor): void {
+    if (!isTutorialComplete(this.save)) {
+      playSfx('error');
+      this.game.events.emit(
+        'toast',
+        'BOXES LOCKED — FINISH THE GUILD TUTORIAL FIRST',
+      );
+      return;
+    }
     const templateId = actor.lootBoxId;
     if (!templateId || !isLootBoxTemplateId(templateId)) {
       this.game.events.emit('toast', 'EMPTY CRATE');
@@ -6086,6 +6125,14 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (best.kind === 'loot_crate') {
+      if (!isTutorialComplete(this.save)) {
+        playSfx('error');
+        this.game.events.emit(
+          'toast',
+          'BOXES LOCKED — FINISH THE GUILD TUTORIAL FIRST',
+        );
+        return;
+      }
       this.openWorldLootCrate(best);
       return;
     }

@@ -20,6 +20,12 @@ export interface AchievementDef {
 
 export const ACHIEVEMENTS: readonly AchievementDef[] = [
   {
+    id: 'brag-tutorial-guild',
+    title: 'YOU FOUND A TUTORIAL GUILD!',
+    blurb: 'The Guild Master waits in the center. Boots: dirty. Future: loud.',
+    test: (s) => (s.visitedRooms ?? []).includes('guild_hall'),
+  },
+  {
     id: 'brag-first-bonk',
     title: 'FIRST BONK',
     blurb: 'You hit something. It noticed. Mathematical.',
