@@ -144,6 +144,7 @@ Live: [dunjunz.com](https://dunjunz.com) · Play: [dunjunz.com/play](https://dun
 
 ### Changed
 
+- **Title modes for new players** — **Humanz & Villagez** and **Army Mode** stay locked until unlock conditions (finish Tutorial Guild; L20+ graduate or existing army). New crawlers only start **Dunjunz**.
 - **Achievement reward boxes → Achievements menu only** — no mid-room crate drops or bag stacks for tiered `loot_box_*`. Unlocks queue boxes under **Achievements → REWARD BOXES** (Open box). Starter box still bag/crate. Legacy bag boxes migrate into the menu queue. Boxes still require a safe zone to open.
 - **Quests + Achievements as separate tabs** — full-width journal tab bar; each has its own panel. Top bar: **Quests** (J) and **Achievements**; modal title/blurb switch per tab.
 - **Journal: Brags → Achievements** — tab label, summary, row status, and unlock toasts use **Achievements** / `NEW ACHIEVEMENT:` (internal `brag-*` ids unchanged for saves).

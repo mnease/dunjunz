@@ -2254,6 +2254,72 @@ describe('hard rewards', () => {
   });
 });
 
+// ── Mode unlock (title) ─────────────────────────────────
+import {
+  isGameModeUnlocked,
+  nextUnlockedModeIndex,
+  gameModeLockedToast,
+} from './mode-unlock';
+
+describe('title mode unlock for new players', () => {
+  it('locks Humanz and Army for fresh saves; Dunjunz always open', () => {
+    const fresh = defaultSave();
+    const ctx = {
+      save: fresh,
+      hasHumanzProgress: false,
+      armyMemberCount: 0,
+    };
+    expect(isGameModeUnlocked('dunjunz', ctx)).toBe(true);
+    expect(isGameModeUnlocked('humanz', ctx)).toBe(false);
+    expect(isGameModeUnlocked('army', ctx)).toBe(false);
+    expect(gameModeLockedToast('humanz')).toMatch(/TUTORIAL GUILD/i);
+    expect(gameModeLockedToast('army')).toMatch(/L?V?20|LEVEL|GRADUATE/i);
+  });
+
+  it('unlocks Humanz after tutorial complete; Army at L20 or existing roster', () => {
+    const tutored = {
+      ...defaultSave(),
+      flags: { ...defaultSave().flags, tutorial_complete: true },
+    };
+    expect(
+      isGameModeUnlocked('humanz', {
+        save: tutored,
+        hasHumanzProgress: false,
+        armyMemberCount: 0,
+      }),
+    ).toBe(true);
+    expect(
+      isGameModeUnlocked('army', {
+        save: tutored,
+        hasHumanzProgress: false,
+        armyMemberCount: 0,
+      }),
+    ).toBe(false);
+    const high = { ...tutored, level: 20, xp: 99999 };
+    expect(
+      isGameModeUnlocked('army', {
+        save: high,
+        hasHumanzProgress: false,
+        armyMemberCount: 0,
+      }),
+    ).toBe(true);
+    expect(
+      isGameModeUnlocked('army', {
+        save: freshSaveForArmyGate(),
+        hasHumanzProgress: false,
+        armyMemberCount: 1,
+      }),
+    ).toBe(true);
+    // Cursor skips locked rows
+    expect(nextUnlockedModeIndex(0, 1, [true, false, false])).toBe(0);
+    expect(nextUnlockedModeIndex(0, 1, [true, true, false])).toBe(1);
+  });
+});
+
+function freshSaveForArmyGate() {
+  return defaultSave();
+}
+
 // ── Humanz & Villagez ───────────────────────────────────
 import {
   applyDragonAction,

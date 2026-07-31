@@ -18,6 +18,13 @@ import {
 } from '../systems/humanz-save';
 import { loadArmySave, armySize } from '../systems/army';
 import { defaultCampaign } from '../systems/village-battle';
+import {
+  gameModeLockHint,
+  gameModeLockedToast,
+  isGameModeUnlocked,
+  nextUnlockedModeIndex,
+  type ModeUnlockContext,
+} from '../systems/mode-unlock';
 import { clearSave, loadSave, writeSave } from '../systems/save';
 import type { SaveData } from '../types';
 import { getLastAuthMe, refreshAuthUi } from '../ui/auth';
@@ -298,9 +305,7 @@ export class TitleScene extends Phaser.Scene {
     };
     const onUp = () => {
       if (this.phase === 'modeSelect') {
-        this.modeCursor = (this.modeCursor + MODE_COUNT - 1) % MODE_COUNT;
-        playSfx('ui_click');
-        this.renderModeSelect();
+        this.moveModeCursor(-1);
         return;
       }
       if (!this.cloudMode) return;
@@ -310,9 +315,7 @@ export class TitleScene extends Phaser.Scene {
     };
     const onDown = () => {
       if (this.phase === 'modeSelect') {
-        this.modeCursor = (this.modeCursor + 1) % MODE_COUNT;
-        playSfx('ui_click');
-        this.renderModeSelect();
+        this.moveModeCursor(1);
         return;
       }
       if (!this.cloudMode) return;
@@ -335,18 +338,10 @@ export class TitleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-W', onUp);
     this.input.keyboard?.on('keydown-S', onDown);
     this.input.keyboard?.on('keydown-LEFT', () => {
-      if (this.phase === 'modeSelect') {
-        this.modeCursor = (this.modeCursor + MODE_COUNT - 1) % MODE_COUNT;
-        playSfx('ui_click');
-        this.renderModeSelect();
-      }
+      if (this.phase === 'modeSelect') this.moveModeCursor(-1);
     });
     this.input.keyboard?.on('keydown-RIGHT', () => {
-      if (this.phase === 'modeSelect') {
-        this.modeCursor = (this.modeCursor + 1) % MODE_COUNT;
-        playSfx('ui_click');
-        this.renderModeSelect();
-      }
+      if (this.phase === 'modeSelect') this.moveModeCursor(1);
     });
     this.input.keyboard?.on('keydown-ONE', () => {
       if (this.phase === 'modeSelect') {
@@ -404,9 +399,7 @@ export class TitleScene extends Phaser.Scene {
     const down = touchAxisDown('down');
     if (up && !this.touchAxisLatch.up) {
       if (this.phase === 'modeSelect') {
-        this.modeCursor = (this.modeCursor + MODE_COUNT - 1) % MODE_COUNT;
-        playSfx('ui_click');
-        this.renderModeSelect();
+        this.moveModeCursor(-1);
       } else if (this.cloudMode) {
         this.slotCursor = (this.slotCursor + 2) % 3;
         playSfx('ui_click');
@@ -415,9 +408,7 @@ export class TitleScene extends Phaser.Scene {
     }
     if (down && !this.touchAxisLatch.down) {
       if (this.phase === 'modeSelect') {
-        this.modeCursor = (this.modeCursor + 1) % MODE_COUNT;
-        playSfx('ui_click');
-        this.renderModeSelect();
+        this.moveModeCursor(1);
       } else if (this.cloudMode) {
         this.slotCursor = (this.slotCursor + 1) % 3;
         playSfx('ui_click');
@@ -601,8 +592,8 @@ export class TitleScene extends Phaser.Scene {
     } else {
       this.prompt?.setText(
         touch
-          ? 'TAP PLAY OR NEW GAME — PICK A MODE\nDUNJUNZ · HUMANZ · ARMY'
-          : 'ENTER OR R — CHOOSE MODE\nDUNJUNZ · HUMANZ · ARMY',
+          ? 'TAP PLAY OR NEW GAME — START DUNJUNZ\n(OTHER MODES UNLOCK LATER)'
+          : 'ENTER OR R — START DUNJUNZ\nHUMANZ AFTER GUILD · ARMY AT L20+',
       );
     }
     this.rebuildTouchButtons(
@@ -649,26 +640,54 @@ export class TitleScene extends Phaser.Scene {
     );
   }
 
+  private modeUnlockCtx(): ModeUnlockContext {
+    return {
+      save: loadSave(),
+      hasHumanzProgress: hasHumanzProgress(),
+      armyMemberCount: armySize(loadArmySave()),
+    };
+  }
+
+  private modeUnlocked(mode: GameModeId): boolean {
+    return isGameModeUnlocked(mode, this.modeUnlockCtx());
+  }
+
+  private unlockedModeFlags(): boolean[] {
+    const modes: GameModeId[] = ['dunjunz', 'humanz', 'army'];
+    const ctx = this.modeUnlockCtx();
+    return modes.map((m) => isGameModeUnlocked(m, ctx));
+  }
+
+  private moveModeCursor(dir: 1 | -1): void {
+    const unlocked = this.unlockedModeFlags();
+    this.modeCursor = nextUnlockedModeIndex(this.modeCursor, dir, unlocked);
+    playSfx('ui_click');
+    this.renderModeSelect();
+  }
+
   private openModeSelect(): void {
     this.phase = 'modeSelect';
     this.cloudMode = false;
     for (const t of this.slotTexts) t.setVisible(false);
+    // New players land on Dunjunz only
+    this.modeCursor = 0;
+    if (!this.modeUnlocked('dunjunz')) this.modeCursor = 0;
     this.statusText?.setText(
       this.wantFresh ? 'NEW GAME — PICK A MODE' : 'START — PICK A MODE',
     );
     this.blurbText?.setText(
       [
         'DUNJUNZ: crawl · real-time · classes',
-        'HUMANZ: dragon vs town · turn-based',
-        'ARMY: graduate L20+ · unlimited roster',
+        'HUMANZ: unlock after Tutorial Guild',
+        `ARMY: unlock at L20+ (graduate with P)`,
       ].join('\n'),
     );
     for (const t of this.modeLines) t.setVisible(true);
     this.renderModeSelect();
     this.prompt?.setText(
       isTouchUiPreferred()
-        ? 'TAP A MODE TO START · OR CONFIRM / BACK BELOW'
-        : '↑↓ OR 1/2/3 SELECT    ENTER CONFIRM    ESC/R BACK',
+        ? 'TAP AN UNLOCKED MODE · LOCKED MODES STAY GREY'
+        : '↑↓ SELECT    ENTER CONFIRM    ESC/R BACK\nLOCKED MODES: FINISH GUILD / REACH L20',
     );
     this.rebuildTouchButtons(
       () => this.confirmMode(),
@@ -713,15 +732,20 @@ export class TitleScene extends Phaser.Scene {
         sub: 'Unlimited party · L20+ graduates · mass level',
       },
     ];
+    const ctx = this.modeUnlockCtx();
     modes.forEach((m, i) => {
-      const sel = i === this.modeCursor;
+      const unlocked = isGameModeUnlocked(m.id, ctx);
+      const sel = i === this.modeCursor && unlocked;
       const touch = isTouchUiPreferred();
+      const sub = unlocked ? m.sub : gameModeLockHint(m.id);
       this.modeLines[i]?.setText(
         touch
-          ? `${sel ? '▶ ' : '  '}${m.title}\n   ${m.sub}\n   (TAP)`
-          : `${sel ? '▶ ' : '  '}${m.title}\n   ${m.sub}`,
+          ? `${sel ? '▶ ' : unlocked ? '  ' : '🔒 '}${m.title}\n   ${sub}${unlocked ? '\n   (TAP)' : ''}`
+          : `${sel ? '▶ ' : unlocked ? '  ' : '· '}${m.title}\n   ${sub}`,
       );
-      this.modeLines[i]?.setColor(sel ? '#ffc857' : '#c5cde0');
+      this.modeLines[i]?.setColor(
+        !unlocked ? '#5a6270' : sel ? '#ffc857' : '#c5cde0',
+      );
       // Enlarge hit area for fat fingers
       this.modeLines[i]?.setPadding(12, 10, 12, 10);
     });
@@ -730,6 +754,11 @@ export class TitleScene extends Phaser.Scene {
   private confirmMode(): void {
     const modes: GameModeId[] = ['dunjunz', 'humanz', 'army'];
     const mode = modes[this.modeCursor] ?? 'dunjunz';
+    if (!this.modeUnlocked(mode)) {
+      playSfx('error');
+      this.statusText?.setText(gameModeLockedToast(mode));
+      return;
+    }
     playSfx('success');
     if (mode === 'humanz') {
       if (this.wantFresh) {
